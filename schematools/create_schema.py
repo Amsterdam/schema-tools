@@ -1,14 +1,11 @@
-import os
 import copy
 import json
 
-from sqlalchemy import inspect, create_engine
+from sqlalchemy import inspect
 from geoalchemy2.types import Geometry
 from sqlalchemy.types import DATE, VARCHAR, INTEGER, BOOLEAN, TEXT, NUMERIC, SMALLINT
 from sqlalchemy.dialects.postgresql.base import TIMESTAMP
 from sqlalchemy.dialects.postgresql.array import ARRAY
-
-engine = create_engine(os.getenv("DATABASE_URL"))
 
 DATASET_TMPL = {
     "type": "dataset",
@@ -60,14 +57,14 @@ def fix_name(field_name):
     return field_name.replace("_id", "").replace("_", " ")
 
 
-def fetch_schema_for(dataset_name):
+def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
     insp = inspect(engine)
     tables = []
 
-    for full_table_name in insp.get_table_names():
-        if not full_table_name.startswith(dataset_name):
-            continue
-        _, table_name = full_table_name.split("_", 1)
+    for full_table_name in tablenames:
+        table_name = full_table_name
+        if prefix is not None:
+            table_name = full_table_name[len(prefix) :]
         columns = {}
         relations = {}
         required_field_names = ["id", "schema"]
@@ -76,7 +73,8 @@ def fetch_schema_for(dataset_name):
             if len(fk["constrained_columns"]) > 1:
                 raise Exception("More than one fk col")
             constrained_column = fk["constrained_columns"][0]
-            relations[constrained_column] = fk["referred_table"]
+            if not constrained_column.startswith("_"):
+                relations[constrained_column] = fk["referred_table"]
         pk_info = insp.get_pk_constraint(full_table_name)
         if len(pk_info["constrained_columns"]) > 1:
             raise Exception("multicol pk")
@@ -85,7 +83,7 @@ def fetch_schema_for(dataset_name):
         # pk = pk_info["constrained_columns"][0]  # ASchema assumes 'id' for the pk
         for col in insp.get_columns(full_table_name):  # name, type, nullable
             col_name = col["name"]
-            if col_name == "id":
+            if col_name == "id" or col_name.startswith("_"):
                 continue
             col_type = col["type"].__class__
             if not col["nullable"]:
@@ -103,12 +101,8 @@ def fetch_schema_for(dataset_name):
         tables.append(table)
 
     dataset = copy.deepcopy(DATASET_TMPL)
-    dataset["id"] = "bag"
-    dataset["title"] = "bag"
+    dataset["id"] = dataset_id
+    dataset["title"] = dataset_id
     dataset["tables"] = tables
 
     return json.dumps(dataset)
-
-
-if __name__ == "__main__":
-    print(fetch_schema_for("bag"))  # brk, wkpb: less important
