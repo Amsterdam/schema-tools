@@ -26,9 +26,6 @@ TABLE_TMPL = {
         "additionalProperties": False,
         "required": [],
         "properties": {
-            "id": {
-                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id",
-            },
             "schema": {
                 "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema"
             },
@@ -71,7 +68,7 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
             table_name = full_table_name[len(prefix) :]
         columns = {}
         relations = {}
-        required_field_names = ["id", "schema"]
+        required_field_names = ["schema"]
         fks = insp.get_foreign_keys(full_table_name)
         for fk in fks:
             if len(fk["constrained_columns"]) > 1:
@@ -87,7 +84,7 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
         # pk = pk_info["constrained_columns"][0]  # ASchema assumes 'id' for the pk
         for col in insp.get_columns(full_table_name):  # name, type, nullable
             col_name = col["name"]
-            if col_name == "id" or col_name.startswith("_"):
+            if col_name.startswith("_"):
                 continue
             col_type = col["type"].__class__
             if not col["nullable"]:
@@ -98,7 +95,8 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
             columns[field_name].update({"relation": referred_table.replace("_", ":")})
         table = copy.deepcopy(TABLE_TMPL)
         table["id"] = table_name
-        table["schema"]["required"] = [fix_name(n) for n in required_field_names]
+        table["schema"]["required"] = [fix_name(fn, fv) for fn, fv in
+                                       map(lambda n: (n, columns.get(n, None)), required_field_names)]
         table["schema"]["properties"].update(
             {fix_name(fn, fv): fv for fn, fv in columns.items()}
         )

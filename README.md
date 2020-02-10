@@ -18,6 +18,6 @@ models.
 
 As example we can generate a BAG schema. Point DATABASE_URL to bag_v11 database and then run :
 
-    schema fetch tablenames | awk '/^bag_/{print}' | xargs schema create schema bag --prefix bag_ | jq
+    schema fetch tablenames | sort | awk '/^bag_/{print}' | xargs schema create schema bag --prefix bag_ | jq
 
 The **jq** formats it nicely and it can be redirected to the correct directory in the schemas repository directly.
