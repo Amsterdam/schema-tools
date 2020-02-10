@@ -53,8 +53,12 @@ DB_TO_ASCHEMA_TYPE = {
 }
 
 
-def fix_name(field_name):
-    return field_name.replace("_id", "").replace("_", " ")
+def fix_name(field_name, field_value=None):
+    if field_value is None or 'relation' in field_value:
+        ret = field_name.replace("_id", "").replace("_", " ")
+    else:
+        ret = field_name.replace("_", " ")
+    return ret
 
 
 def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
@@ -96,7 +100,7 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
         table["id"] = table_name
         table["schema"]["required"] = [fix_name(n) for n in required_field_names]
         table["schema"]["properties"].update(
-            {fix_name(fn): fv for fn, fv in columns.items()}
+            {fix_name(fn, fv): fv for fn, fv in columns.items()}
         )
         tables.append(table)
 
