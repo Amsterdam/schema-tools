@@ -18,6 +18,8 @@ DATASET_TMPL = {
 }
 
 
+# The display field will be hard-coded as 'id', because we cannot know this value
+# by purely inspecting the postgresql db.
 TABLE_TMPL = {
     "id": None,
     "type": "table",
@@ -26,6 +28,7 @@ TABLE_TMPL = {
         "type": "object",
         "additionalProperties": False,
         "required": [],
+        "display": "id",
         "properties": {
             "schema": {
                 "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema"
@@ -91,6 +94,7 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
             if not col["nullable"]:
                 required_field_names.append(col_name)
             columns[col_name] = DB_TO_ASCHEMA_TYPE[col_type].copy()
+            # XXX Add 'title' and 'description' to the column
 
         for field_name, referred_table in relations.items():
             columns[field_name].update({"relation": referred_table.replace("_", ":")})
