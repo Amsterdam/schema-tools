@@ -11,6 +11,7 @@ DATASET_TMPL = {
     "type": "dataset",
     "id": None,
     "title": None,
+    "status": "beschikbaar",
     "version": "0.0.1",
     "crs": "EPSG:28992",
     "tables": [],
@@ -51,7 +52,7 @@ DB_TO_ASCHEMA_TYPE = {
 
 
 def fix_name(field_name, field_value=None):
-    if field_value is None or 'relation' in field_value:
+    if field_value is None or "relation" in field_value:
         ret = field_name.replace("_id", "").replace("_", " ")
     else:
         ret = field_name.replace("_", " ")
@@ -95,8 +96,10 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
             columns[field_name].update({"relation": referred_table.replace("_", ":")})
         table = copy.deepcopy(TABLE_TMPL)
         table["id"] = table_name
-        table["schema"]["required"] = [fix_name(fn, fv) for fn, fv in
-                                       map(lambda n: (n, columns.get(n, None)), required_field_names)]
+        table["schema"]["required"] = [
+            fix_name(fn, fv)
+            for fn, fv in map(lambda n: (n, columns.get(n, None)), required_field_names)
+        ]
         table["schema"]["properties"].update(
             {fix_name(fn, fv): fv for fn, fv in columns.items()}
         )
