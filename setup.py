@@ -15,7 +15,7 @@ def read(filename):
 
 setup(
     name="amsterdam-schema-tools",
-    version="0.0.2",
+    version="0.0.3",
     url="https://github.com/amsterdam/schema-tools",
     license="Mozilla Public 2.0",
     author="Jan Murre",
@@ -24,7 +24,15 @@ setup(
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=("tests",)),
-    install_requires=["geoalchemy2", "psycopg2", "click"],
+    install_requires=[
+        "geoalchemy2",
+        "psycopg2",
+        "click",
+        "jsonschema",
+        "amsterdam-schema",
+        "ndjson",
+        "shapely",
+    ],
     entry_points="""
         [console_scripts]
         schema=schematools.cli:schema
