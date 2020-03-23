@@ -31,7 +31,7 @@ TABLE_TMPL = {
         "display": "id",
         "properties": {
             "schema": {
-                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema"
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
             },
         },
     },
@@ -47,7 +47,7 @@ DB_TO_ASCHEMA_TYPE = {
     INTEGER: {"type": "integer"},
     SMALLINT: {"type": "integer"},
     NUMERIC: {"type": "number"},
-    BOOLEAN: {"type": "integer"},
+    BOOLEAN: {"type": "boolean"},
     TEXT: {"type": "string"},
     ARRAY: {"type": "string"},
     Geometry: {"$ref": "https://geojson.org/schema/Geometry.json"},
