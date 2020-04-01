@@ -1,16 +1,11 @@
-from datetime import datetime
 import copy
 import json
 
 from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
-from geoalchemy2.types import Geometry
-from sqlalchemy.types import DATE, VARCHAR, INTEGER, BOOLEAN, TEXT, NUMERIC, SMALLINT
-from sqlalchemy.dialects.postgresql.base import TIMESTAMP
-from sqlalchemy.dialects.postgresql.array import ARRAY
 from string_utils import snake_case_to_camel
 
-from .models import Dataset, Table, Field
+from .models import Dataset, Table
 
 DATASET_TMPL = {
     "type": "dataset",
@@ -57,12 +52,14 @@ DB_TO_ASCHEMA_TYPE = {
     "ARRAY": {"type": "string"},
     "GEOMETRY": {"$ref": "https://geojson.org/schema/Geometry.json"},
     "POLYGON": {"$ref": "https://geojson.org/schema/Polygon.json"},
-    "MULTIPOLYGON":{"$ref": "https://geojson.org/schema/MultiPolygon.json"},
+    "MULTIPOLYGON": {"$ref": "https://geojson.org/schema/MultiPolygon.json"},
     "POINT": {"$ref": "https://geojson.org/schema/Point.json"},
     "MULTIPOINT": {"$ref": "https://geojson.org/schema/MultiPoint.json"},
     "LINESTRING": {"$ref": "https://geojson.org/schema/LineString.json"},
     "MULTILINESTRING": {"$ref": "https://geojson.org/schema/MultiLineString.json"},
-    "GEOMETRYCOLLECTION": {"$ref": "https://geojson.org/schema/GeometryCollection.json"},
+    "GEOMETRYCOLLECTION": {
+        "$ref": "https://geojson.org/schema/GeometryCollection.json"
+    },
 }
 
 
