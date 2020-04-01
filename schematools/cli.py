@@ -8,8 +8,13 @@ import requests
 
 from amsterdam_schema.utils import schema_def_from_url
 
-from .db import fetch_table_names, create_rows
-from .create_schema import fetch_schema_for
+from .db import (
+    fetch_table_names,
+    create_rows,
+    create_meta_tables,
+    create_meta_table_data,
+)
+from .create_schema import fetch_schema_for, fetch_schema_from_relational_schema
 
 
 SCHEMA_URL = os.getenv("SCHEMA_URL")
@@ -29,7 +34,7 @@ def schema():
 
 
 @schema.group()
-def create():
+def generate():
     pass
 
 
@@ -56,17 +61,17 @@ def tablenames(db_url):
     print("\n".join(fetch_table_names(engine)))
 
 
-@create.command("schema")
+@schema.command()
 @click.option("--prefix", "-p", help="Tables have prefix that needs to be stripped")
 @click.option("--db-url", help="DSN of database")
 @click.argument("dataset_id")
 @click.argument("tables", nargs=-1)
-def _schema(prefix, db_url, dataset_id, tables):
+def introspect(prefix, db_url, dataset_id, tables):
     engine = create_engine(db_url or os.getenv("DATABASE_URL"))
     print(fetch_schema_for(engine, dataset_id, tables, prefix))
 
 
-@create.command()
+@fetch.command()
 @click.option("--db-url", help="DSN of database")
 @click.argument("schema_name")
 @click.argument("table_name")
@@ -79,3 +84,27 @@ def records(db_url, schema_name, table_name, ndjson_path):
     with open(ndjson_path) as fh:
         data = list(fetch_rows(fh, srid))
     create_rows(engine, metadata, dataset_schema, table_name, data)
+
+
+@generate.command()
+@click.option("--db-url", help="DSN of database")
+@click.argument("schema_name")
+def arschema(db_url, schema_name):
+    # Add drop or not flag
+    engine = create_engine(db_url or os.getenv("DATABASE_URL"))
+    try:
+        dataset_schema = schema_def_from_url(SCHEMA_URL, schema_name)
+    except KeyError:
+        click.echo(f"Schema {schema_name} not found.")
+
+    create_meta_tables(engine)
+    create_meta_table_data(engine, dataset_schema)
+
+
+@fetch.command("schema")
+@click.option("--db-url", help="DSN of database")
+@click.argument("dataset_id")
+def _schema(db_url, dataset_id):
+    engine = create_engine(db_url or os.getenv("DATABASE_URL"))
+    json_schema = fetch_schema_from_relational_schema(engine, dataset_id)
+    click.echo(json_schema)
