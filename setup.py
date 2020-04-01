@@ -33,6 +33,7 @@ setup(
         "ndjson",
         "shapely",
         "python-string-utils",
+        "python-dateutil",
     ],
     entry_points="""
         [console_scripts]
