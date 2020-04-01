@@ -1,10 +1,16 @@
+from datetime import datetime
 import copy
 import json
 
 from sqlalchemy import inspect
+from sqlalchemy.orm import sessionmaker
+from geoalchemy2.types import Geometry
 from sqlalchemy.types import DATE, VARCHAR, INTEGER, BOOLEAN, TEXT, NUMERIC, SMALLINT
 from sqlalchemy.dialects.postgresql.base import TIMESTAMP
 from sqlalchemy.dialects.postgresql.array import ARRAY
+from string_utils import snake_case_to_camel
+
+from .models import Dataset, Table, Field
 
 DATASET_TMPL = {
     "type": "dataset",
@@ -123,3 +129,60 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
     dataset["tables"] = tables
 
     return json.dumps(dataset)
+
+
+def _serialize(obj, camelize=True):
+    if obj is None:
+        breakpoint()
+    results = {}
+    for attr in inspect(obj).attrs:
+        value = attr.value
+        key = attr.key
+        if camelize:
+            key = snake_case_to_camel(key, upper_case_first=False)
+        if value is None:
+            continue
+        if hasattr(value, "isoformat"):
+            value = attr.value.isoformat()
+        results[key] = value
+    return results
+
+
+def _extract_names(properties):
+    for prop in properties:
+        name = prop.pop("name").replace("_", " ")
+        yield {name: prop}
+
+
+def fetch_schema_from_relational_schema(engine, dataset_id):
+    session = sessionmaker(bind=engine)()
+    dataset = (
+        session.query(Dataset)
+        .join(Dataset.tables)
+        .join(Table.fields)
+        .filter(Dataset.id == dataset_id)
+        .first()
+    )
+
+    aschema = _serialize(dataset)
+    aschema["tables"] = [_serialize(t) for t in aschema["tables"]]
+    for table_dict in aschema["tables"]:
+        del table_dict["dataset"]
+        del table_dict["datasetId"]
+        table_dict["schema"] = {f: table_dict[f] for f in ("required", "display")}
+        table_dict["schema"]["$schema"] = "http://json-schema.org/draft-07/schema#"
+        table_dict["schema"]["type"] = "object"
+        table_dict["schema"]["additionalProperties"] = False
+        del table_dict["required"]
+        del table_dict["display"]
+        properties = [_serialize(f, camelize=False) for f in table_dict["fields"]]
+        del table_dict["fields"]
+        for prop in properties:
+            del prop["table"]
+            del prop["dataset_id"]
+            del prop["table_id"]
+            ref = prop.pop("ref", None)
+            if ref is not None:
+                prop["$ref"] = ref
+        table_dict["schema"]["properties"] = list(_extract_names(properties))
+    return json.dumps(aschema, indent=2)

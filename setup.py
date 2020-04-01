@@ -32,6 +32,7 @@ setup(
         "amsterdam-schema",
         "ndjson",
         "shapely",
+        "python-string-utils",
     ],
     entry_points="""
         [console_scripts]
