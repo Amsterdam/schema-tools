@@ -1,22 +1,22 @@
 import os
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.exc import SQLAlchemyError
+
 import click
-import ndjson
-from shapely.geometry import shape
-import jsonschema as js
 import requests
 
+import jsonschema as js
+import ndjson
 from amsterdam_schema.utils import schema_def_from_url
+from shapely.geometry import shape
+from sqlalchemy import MetaData, create_engine
+from sqlalchemy.exc import SQLAlchemyError
 
-from .db import (
-    fetch_table_names,
-    create_rows,
-    create_meta_tables,
-    create_meta_table_data,
-)
 from .create_schema import fetch_schema_for, fetch_schema_from_relational_schema
-
+from .db import (
+    create_meta_table_data,
+    create_meta_tables,
+    create_rows,
+    fetch_table_names,
+)
 
 SCHEMA_URL = os.getenv("SCHEMA_URL")
 metadata = MetaData()

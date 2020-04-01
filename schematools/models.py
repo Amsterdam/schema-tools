@@ -1,18 +1,13 @@
+from sqlalchemy import (
+    ARRAY,
+    Column,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    String,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-
-
-# from sqlalchemy.types import Array
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    ForeignKey,
-    DateTime,
-    ARRAY,
-    ForeignKeyConstraint,
-)
-
 
 Base = declarative_base()
 

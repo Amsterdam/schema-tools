@@ -1,11 +1,12 @@
 from collections import defaultdict
-from sqlalchemy import inspect, Table, Column, String, Boolean, Integer, Float, DateTime
-from sqlalchemy.orm import sessionmaker
-from geoalchemy2 import Geometry
-from dateutil.parser import parse as dtparse
-from string_utils import camel_case_to_snake
-from . import models
 
+from dateutil.parser import parse as dtparse
+from geoalchemy2 import Geometry
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Table, inspect
+from sqlalchemy.orm import sessionmaker
+from string_utils import camel_case_to_snake
+
+from . import models
 
 JSON_TYPE_TO_PG = {
     "string": String,
