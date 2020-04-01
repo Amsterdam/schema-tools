@@ -7,7 +7,7 @@ Install the package with: `pip install amsterdam-schema-tools`
 Currently, the following cli commands are available:
 
     - schema fetch tablenames
-    - schema create schema <dataset-id> <list-of-tablenames>
+    - schema introspect <dataset-id> <list-of-tablenames>
 
 The tools expect either a DATABASE_URL environment variable or a command-line option `--db-url` with a DSN.
 
@@ -18,6 +18,6 @@ models.
 
 As example we can generate a BAG schema. Point DATABASE_URL to bag_v11 database and then run :
 
-    schema fetch tablenames | sort | awk '/^bag_/{print}' | xargs schema create schema bag --prefix bag_ | jq
+    schema fetch tablenames | sort | awk '/^bag_/{print}' | xargs schema introspect bag --prefix bag_ | jq
 
 The **jq** formats it nicely and it can be redirected to the correct directory in the schemas repository directly.
