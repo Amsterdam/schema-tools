@@ -25,6 +25,7 @@ setup(
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=("tests",)),
     install_requires=[
+        "python-dateutil",
         "geoalchemy2",
         "psycopg2",
         "click",
@@ -42,8 +43,8 @@ setup(
         "Development Status :: 2 - Pre-Alpha",
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
     ],
+    python_requires=">=3.7",
 )
