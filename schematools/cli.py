@@ -1,5 +1,6 @@
 import os
 from sqlalchemy import create_engine, MetaData
+from sqlalchemy.exc import SQLAlchemyError
 import click
 import ndjson
 from shapely.geometry import shape
@@ -19,6 +20,14 @@ from .create_schema import fetch_schema_for, fetch_schema_from_relational_schema
 
 SCHEMA_URL = os.getenv("SCHEMA_URL")
 metadata = MetaData()
+
+
+def _get_engine(db_url):
+    """Initialize the SQLAlchemy engine, and report click errors"""
+    try:
+        return create_engine(db_url)
+    except SQLAlchemyError as e:
+        raise click.BadParameter(str(e), param_hint="--db-url")
 
 
 def fetch_rows(fh, srid):
@@ -55,30 +64,45 @@ def validate(meta_schema_url, schema_url):
 
 
 @fetch.command()
-@click.option("--db-url", help="DSN of database")
+@click.option(
+    "--db-url",
+    envvar="DATABASE_URL",
+    required=True,
+    help="DSN of database, can also use DATABASE_URL environment.",
+)
 def tablenames(db_url):
-    engine = create_engine(db_url or os.getenv("DATABASE_URL"))
+    engine = _get_engine(db_url)
     print("\n".join(fetch_table_names(engine)))
 
 
 @schema.command()
 @click.option("--prefix", "-p", help="Tables have prefix that needs to be stripped")
-@click.option("--db-url", help="DSN of database")
+@click.option(
+    "--db-url",
+    envvar="DATABASE_URL",
+    required=True,
+    help="DSN of database, can also use DATABASE_URL environment.",
+)
 @click.argument("dataset_id")
 @click.argument("tables", nargs=-1)
 def introspect(prefix, db_url, dataset_id, tables):
-    engine = create_engine(db_url or os.getenv("DATABASE_URL"))
+    engine = _get_engine(db_url)
     print(fetch_schema_for(engine, dataset_id, tables, prefix))
 
 
 @fetch.command()
-@click.option("--db-url", help="DSN of database")
+@click.option(
+    "--db-url",
+    envvar="DATABASE_URL",
+    required=True,
+    help="DSN of database, can also use DATABASE_URL environment.",
+)
 @click.argument("schema_name")
 @click.argument("table_name")
 @click.argument("ndjson_path")
 def records(db_url, schema_name, table_name, ndjson_path):
     # Add batching for rows.
-    engine = create_engine(db_url or os.getenv("DATABASE_URL"))
+    engine = _get_engine(db_url)
     dataset_schema = schema_def_from_url(SCHEMA_URL, schema_name)
     srid = dataset_schema["crs"].split(":")[-1]
     with open(ndjson_path) as fh:
@@ -87,24 +111,34 @@ def records(db_url, schema_name, table_name, ndjson_path):
 
 
 @generate.command()
-@click.option("--db-url", help="DSN of database")
+@click.option(
+    "--db-url",
+    envvar="DATABASE_URL",
+    required=True,
+    help="DSN of database, can also use DATABASE_URL environment.",
+)
 @click.argument("schema_name")
 def arschema(db_url, schema_name):
     # Add drop or not flag
-    engine = create_engine(db_url or os.getenv("DATABASE_URL"))
+    engine = _get_engine(db_url)
     try:
         dataset_schema = schema_def_from_url(SCHEMA_URL, schema_name)
     except KeyError:
-        click.echo(f"Schema {schema_name} not found.")
+        raise click.BadParameter(f"Schema {schema_name} not found.")
 
     create_meta_tables(engine)
     create_meta_table_data(engine, dataset_schema)
 
 
 @fetch.command("schema")
-@click.option("--db-url", help="DSN of database")
+@click.option(
+    "--db-url",
+    envvar="DATABASE_URL",
+    required=True,
+    help="DSN of database, can also use DATABASE_URL environment.",
+)
 @click.argument("dataset_id")
 def _schema(db_url, dataset_id):
-    engine = create_engine(db_url or os.getenv("DATABASE_URL"))
+    engine = _get_engine(db_url)
     json_schema = fetch_schema_from_relational_schema(engine, dataset_id)
     click.echo(json_schema)
