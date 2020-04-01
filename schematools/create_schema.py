@@ -2,7 +2,6 @@ import copy
 import json
 
 from sqlalchemy import inspect
-from geoalchemy2.types import Geometry
 from sqlalchemy.types import DATE, VARCHAR, INTEGER, BOOLEAN, TEXT, NUMERIC, SMALLINT
 from sqlalchemy.dialects.postgresql.base import TIMESTAMP
 from sqlalchemy.dialects.postgresql.array import ARRAY
@@ -41,16 +40,23 @@ TABLE_TMPL = {
 # specific types in geojson.org
 
 DB_TO_ASCHEMA_TYPE = {
-    DATE: {"type": "string", "format": "date"},
-    TIMESTAMP: {"type": "string", "format": "date-time"},
-    VARCHAR: {"type": "string"},
-    INTEGER: {"type": "integer"},
-    SMALLINT: {"type": "integer"},
-    NUMERIC: {"type": "number"},
-    BOOLEAN: {"type": "boolean"},
-    TEXT: {"type": "string"},
-    ARRAY: {"type": "string"},
-    Geometry: {"$ref": "https://geojson.org/schema/Geometry.json"},
+    "DATE": {"type": "string", "format": "date"},
+    "TIMESTAMP": {"type": "string", "format": "date-time"},
+    "VARCHAR": {"type": "string"},
+    "INTEGER": {"type": "integer"},
+    "SMALLINT": {"type": "integer"},
+    "NUMERIC": {"type": "number"},
+    "BOOLEAN": {"type": "boolean"},
+    "TEXT": {"type": "string"},
+    "ARRAY": {"type": "string"},
+    "GEOMETRY": {"$ref": "https://geojson.org/schema/Geometry.json"},
+    "POLYGON": {"$ref": "https://geojson.org/schema/Polygon.json"},
+    "MULTIPOLYGON":{"$ref": "https://geojson.org/schema/MultiPolygon.json"},
+    "POINT": {"$ref": "https://geojson.org/schema/Point.json"},
+    "MULTIPOINT": {"$ref": "https://geojson.org/schema/MultiPoint.json"},
+    "LINESTRING": {"$ref": "https://geojson.org/schema/LineString.json"},
+    "MULTILINESTRING": {"$ref": "https://geojson.org/schema/MultiLineString.json"},
+    "GEOMETRYCOLLECTION": {"$ref": "https://geojson.org/schema/GeometryCollection.json"},
 }
 
 
@@ -90,7 +96,9 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
             col_name = col["name"]
             if col_name.startswith("_"):
                 continue
-            col_type = col["type"].__class__
+            col_type = col["type"].__class__.__name__
+            if col_type == "Geometry":
+                col_type = col["type"].geometry_type
             if not col["nullable"]:
                 required_field_names.append(col_name)
             columns[col_name] = DB_TO_ASCHEMA_TYPE[col_type].copy()
