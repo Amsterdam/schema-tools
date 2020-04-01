@@ -108,7 +108,7 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
             # XXX Add 'title' and 'description' to the column
 
         for field_name, referred_table in relations.items():
-            columns[field_name].update({"relation": referred_table.replace("_", ":")})
+            columns[field_name].update({"relation": referred_table.replace("_", ":", 1)})
         table = copy.deepcopy(TABLE_TMPL)
         table["id"] = table_name
         table["schema"]["required"] = [
