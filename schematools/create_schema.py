@@ -1,5 +1,4 @@
 import copy
-import json
 
 from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
@@ -71,7 +70,7 @@ def fix_name(field_name, field_value=None):
     return ret
 
 
-def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
+def fetch_schema_for_db(engine, dataset_id, tablenames, prefix=None):
     insp = inspect(engine)
     tables = []
 
@@ -130,8 +129,7 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
     dataset["id"] = dataset_id
     dataset["title"] = dataset_id
     dataset["tables"] = tables
-
-    return json.dumps(dataset)
+    return dataset
 
 
 def _serialize(obj, camelize=True):
@@ -188,4 +186,4 @@ def fetch_schema_from_relational_schema(engine, dataset_id):
             if ref is not None:
                 prop["$ref"] = ref
         table_dict["schema"]["properties"] = list(_extract_names(properties))
-    return json.dumps(aschema, indent=2)
+    return aschema
