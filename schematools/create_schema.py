@@ -49,7 +49,7 @@ DB_TO_ASCHEMA_TYPE = {
     "NUMERIC": {"type": "number"},
     "BOOLEAN": {"type": "boolean"},
     "TEXT": {"type": "string"},
-    "ARRAY": {"type": "string"},
+    "ARRAY": {"type": "array"},
     "GEOMETRY": {"$ref": "https://geojson.org/schema/Geometry.json"},
     "POLYGON": {"$ref": "https://geojson.org/schema/Polygon.json"},
     "MULTIPOLYGON": {"$ref": "https://geojson.org/schema/MultiPolygon.json"},
@@ -104,11 +104,17 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
                 col_type = col["type"].geometry_type
             if not col["nullable"]:
                 required_field_names.append(col_name)
-            columns[col_name] = DB_TO_ASCHEMA_TYPE[col_type].copy()
+            aschema_type = DB_TO_ASCHEMA_TYPE[col_type].copy()
+            columns[col_name] = aschema_type
+            if col_type == "ARRAY":
+                item_type = col["type"].item_type.__class__.__name__
+                aschema_type["items"] = DB_TO_ASCHEMA_TYPE[item_type]
             # XXX Add 'title' and 'description' to the column
 
         for field_name, referred_table in relations.items():
-            columns[field_name].update({"relation": referred_table.replace("_", ":", 1)})
+            columns[field_name].update(
+                {"relation": referred_table.replace("_", ":", 1)}
+            )
         table = copy.deepcopy(TABLE_TMPL)
         table["id"] = table_name
         table["schema"]["required"] = [
