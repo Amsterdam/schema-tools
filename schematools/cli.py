@@ -4,7 +4,7 @@ import os
 import click
 import requests
 
-import jsonschema as js
+import jsonschema
 import ndjson
 from amsterdam_schema.utils import schema_def_from_url
 from shapely.geometry import shape
@@ -17,6 +17,7 @@ from .db import (
     create_meta_tables,
     create_rows,
     fetch_table_names,
+    ParserError,
 )
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
@@ -36,6 +37,19 @@ def fetch_rows(fh, srid):
     for row in data:
         row["geometry"] = f"SRID={srid};{shape(row['geometry']).wkt}"
         yield row
+
+
+def main():
+    """Main entry point.
+
+    This catches relevant errors, so the user is not
+    confronted with internal tracebacks.
+    """
+    try:
+        schema()
+    except (EnvironmentError, SQLAlchemyError, ParserError) as e:
+        click.echo(f"{e.__class__.__name__}: {e}", err=True)
+        exit(1)
 
 
 @click.group()
@@ -68,11 +82,18 @@ def introspect():
 def validate(json_schema_url, schema_url):
     """Validate a JSON file against a JSON schema."""
     response = requests.get(json_schema_url)
+    response.raise_for_status()
     schema = response.json()
 
     response = requests.get(schema_url)
+    response.raise_for_status()
     instance = response.json()
-    js.validate(instance=instance, schema=schema)
+
+    try:
+        jsonschema.validate(instance=instance, schema=schema)
+    except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+        click.echo(str(e), err=True)
+        exit(1)
 
 
 @show.command("tablenames")
