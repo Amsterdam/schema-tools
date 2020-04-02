@@ -26,6 +26,10 @@ JSON_TYPE_TO_PG = {
 }
 
 
+class ParserError(ValueError):
+    pass
+
+
 def fetch_table_names(engine):
     """ Fetches all tablenames, to be used in other commands
     """
@@ -63,7 +67,10 @@ def transformer_factory(model):
     }
 
     def _transformer(content):
-        return {k: transform_lookup[k](v) for k, v in content.items()}
+        try:
+            return {k: transform_lookup[k](v) for k, v in content.items()}
+        except ValueError as e:
+            raise ParserError(f"Failed to parse row: {e}, at {content!r}") from e
 
     return _transformer
 

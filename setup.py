@@ -37,7 +37,7 @@ setup(
     ],
     entry_points="""
         [console_scripts]
-        schema=schematools.cli:schema
+        schema=schematools.cli:main
     """,
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
