@@ -6,15 +6,14 @@ Install the package with: `pip install amsterdam-schema-tools`
 
 Currently, the following cli commands are available:
 
-    - schema fetch tablenames
-    - schema fetch schema
-    - schema introspect <dataset-id> <list-of-tablenames>
-    - schema generate arschema
-    - schema generate records
-    - schema validate
+- schema import schema
+- schema import ndjson
+- schema show schema <dataset-id>
+- schema show tablenames
+- schema introspect db <dataset-id> <list-of-tablenames>
+- schema validate
 
-The tools expect either a DATABASE_URL environment variable or a command-line
-option `--db-url` with a DSN.
+The tools expect either a `DATABASE_URL` environment variable or a command-line option `--db-url` with a DSN.
 
 The output is a json-schema output according to the Amsterdam schemas
 definition for the tables that are being processed.
@@ -24,9 +23,9 @@ definition for the tables that are being processed.
 The --prefix argument controls whether table prefixes are removed in the
 schema, because that is required for Django models.
 
-As example we can generate a BAG schema. Point DATABASE_URL to bag_v11 database and then run :
+As example we can generate a BAG schema. Point `DATABASE_URL` to `bag_v11` database and then run :
 
-    schema fetch tablenames | sort | awk '/^bag_/{print}' | xargs schema introspect bag --prefix bag_ | jq
+    schema show tablenames | sort | awk '/^bag_/{print}' | xargs schema introspect db bag --prefix bag_ | jq
 
 The **jq** formats it nicely and it can be redirected to the correct directory
 in the schemas repository directly.
