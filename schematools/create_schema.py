@@ -114,6 +114,8 @@ def fetch_schema_for_db(engine, dataset_id, tablenames, prefix=None):
             columns[field_name].update(
                 {"relation": referred_table.replace("_", ":", 1)}
             )
+
+        # Generate table section
         table = copy.deepcopy(TABLE_TMPL)
         table["id"] = table_name
         table["schema"]["required"] = [
@@ -125,6 +127,7 @@ def fetch_schema_for_db(engine, dataset_id, tablenames, prefix=None):
         )
         tables.append(table)
 
+    # Generate main section
     dataset = copy.deepcopy(DATASET_TMPL)
     dataset["id"] = dataset_id
     dataset["title"] = dataset_id
@@ -170,12 +173,12 @@ def fetch_schema_from_relational_schema(engine, dataset_id):
     for table_dict in aschema["tables"]:
         del table_dict["dataset"]
         del table_dict["datasetId"]
-        table_dict["schema"] = {f: table_dict[f] for f in ("required", "display")}
+        table_dict["schema"] = {f: table_dict.get(f) for f in ("required", "display")}
         table_dict["schema"]["$schema"] = "http://json-schema.org/draft-07/schema#"
         table_dict["schema"]["type"] = "object"
         table_dict["schema"]["additionalProperties"] = False
-        del table_dict["required"]
-        del table_dict["display"]
+        table_dict.pop("required", "")
+        table_dict.pop("display", "")
         properties = [_serialize(f, camelize=False) for f in table_dict["fields"]]
         del table_dict["fields"]
         for prop in properties:

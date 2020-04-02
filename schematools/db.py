@@ -80,7 +80,7 @@ def create_meta_table_data(engine, dataset_schema):
     ds_content = {
         camel_case_to_snake(k): v for k, v in dataset_schema.items() if k != "tables"
     }
-    ds_content["contact_point"] = str(ds_content["contact_point"])
+    ds_content["contact_point"] = str(ds_content.get("contact_point", ""))
     ds_transformer = transformer_factory(models.Dataset)
     dataset = models.Dataset(**ds_transformer(ds_content))
     session.add(dataset)
@@ -93,7 +93,7 @@ def create_meta_table_data(engine, dataset_schema):
         table = models.Table(
             **{
                 **table_content,
-                **{f: table_data["schema"][f] for f in ("required", "display")},
+                **{f: table_data["schema"].get(f) for f in ("required", "display")},
             }
         )
         table.dataset_id = dataset.id
