@@ -135,8 +135,6 @@ def fetch_schema_for(engine, dataset_id, tablenames, prefix=None):
 
 
 def _serialize(obj, camelize=True):
-    if obj is None:
-        breakpoint()
     results = {}
     for attr in inspect(obj).attrs:
         value = attr.value
@@ -166,6 +164,8 @@ def fetch_schema_from_relational_schema(engine, dataset_id):
         .filter(Dataset.id == dataset_id)
         .first()
     )
+    if not dataset:
+        raise ValueError(f"Dataset {dataset_id} not found.")
 
     aschema = _serialize(dataset)
     aschema["tables"] = [_serialize(t) for t in aschema["tables"]]
