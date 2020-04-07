@@ -11,6 +11,7 @@ Currently, the following cli commands are available:
 - schema show schema <dataset-id>
 - schema show tablenames
 - schema introspect db <dataset-id> <list-of-tablenames>
+- schema introspect geojson <dataset-id> \*.geojson
 - schema validate
 
 The tools expect either a `DATABASE_URL` environment variable or a command-line option `--db-url` with a DSN.

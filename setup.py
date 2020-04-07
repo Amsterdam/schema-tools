@@ -35,6 +35,8 @@ setup(
         "python-string-utils",
         "python-dateutil",
     ],
+    extra={"tests": ["pytest", "pytest-cov"]},
+    tests_requires=["pytest", "pytest-cov"],
     entry_points="""
         [console_scripts]
         schema=schematools.cli:main
