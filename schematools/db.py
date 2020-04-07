@@ -1,12 +1,14 @@
+"""Datbase storage of metadata from imported Amsterdam schema files."""
 from collections import defaultdict
 
 from dateutil.parser import parse as dtparse
 from geoalchemy2 import Geometry
 from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Table, inspect
 from sqlalchemy.orm import sessionmaker
-from string_utils import camel_case_to_snake
+from string_utils import camel_case_to_snake, snake_case_to_camel
 
-from . import models
+from schematools import models
+from schematools.utils import ParserError
 
 JSON_TYPE_TO_PG = {
     "string": String,
@@ -24,10 +26,6 @@ JSON_TYPE_TO_PG = {
         geometry_type="POINT", srid=28992
     ),
 }
-
-
-class ParserError(ValueError):
-    pass
 
 
 def fetch_table_names(engine):
@@ -112,3 +110,61 @@ def create_meta_table_data(engine, dataset_schema):
             session.add(field)
 
     session.commit()
+
+
+def fetch_schema_from_relational_schema(engine, dataset_id) -> dict:
+    """Restore the schema based on the stored metadata"""
+    session = sessionmaker(bind=engine)()
+    dataset = (
+        session.query(models.Dataset)
+        .join(models.Dataset.tables)
+        .join(models.Table.fields)
+        .filter(models.Dataset.id == dataset_id)
+        .first()
+    )
+    if not dataset:
+        raise ValueError(f"Dataset {dataset_id} not found.")
+
+    aschema = _serialize(dataset)
+    aschema["tables"] = [_serialize(t) for t in aschema["tables"]]
+    for table_dict in aschema["tables"]:
+        del table_dict["dataset"]
+        del table_dict["datasetId"]
+        table_dict["schema"] = {f: table_dict.get(f) for f in ("required", "display")}
+        table_dict["schema"]["$schema"] = "http://json-schema.org/draft-07/schema#"
+        table_dict["schema"]["type"] = "object"
+        table_dict["schema"]["additionalProperties"] = False
+        table_dict.pop("required", "")
+        table_dict.pop("display", "")
+        properties = [_serialize(f, camelize=False) for f in table_dict["fields"]]
+        del table_dict["fields"]
+        for prop in properties:
+            del prop["table"]
+            del prop["dataset_id"]
+            del prop["table_id"]
+            ref = prop.pop("ref", None)
+            if ref is not None:
+                prop["$ref"] = ref
+        table_dict["schema"]["properties"] = list(_extract_names(properties))
+    return aschema
+
+
+def _serialize(obj, camelize=True):
+    results = {}
+    for attr in inspect(obj).attrs:
+        value = attr.value
+        key = attr.key
+        if camelize:
+            key = snake_case_to_camel(key, upper_case_first=False)
+        if value is None:
+            continue
+        if hasattr(value, "isoformat"):
+            value = attr.value.isoformat()
+        results[key] = value
+    return results
+
+
+def _extract_names(properties):
+    for prop in properties:
+        name = prop.pop("name").replace("_", " ")
+        yield {name: prop}
