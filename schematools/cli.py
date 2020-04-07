@@ -18,6 +18,7 @@ from .db import (
     fetch_schema_from_relational_schema,
 )
 from schematools.introspect.db import introspect_db_schema
+from schematools.introspect.geojson import introspect_geojson_files
 from .utils import ParserError
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
@@ -138,6 +139,15 @@ def introspect_db(prefix, db_url, dataset_id, tables):
     """Generate a schema for the tables in a database"""
     engine = _get_engine(db_url)
     aschema = introspect_db_schema(engine, dataset_id, tables, prefix)
+    click.echo(json.dumps(aschema, indent=2))
+
+
+@introspect.command("geojson")
+@click.argument("dataset_id")
+@click.argument("files", nargs=-1)
+def introspect_geojson(dataset_id, files):
+    """Generate a schema from a GeoJSON file."""
+    aschema = introspect_geojson_files(dataset_id, files)
     click.echo(json.dumps(aschema, indent=2))
 
 
