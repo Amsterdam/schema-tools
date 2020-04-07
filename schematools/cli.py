@@ -1,5 +1,4 @@
 import json
-import os
 
 import click
 import requests
@@ -11,14 +10,15 @@ from shapely.geometry import shape
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from .create_schema import fetch_schema_for_db, fetch_schema_from_relational_schema
 from .db import (
     create_meta_table_data,
     create_meta_tables,
     create_rows,
     fetch_table_names,
-    ParserError,
+    fetch_schema_from_relational_schema,
 )
+from schematools.introspect.db import introspect_db_schema
+from .utils import ParserError
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
 metadata = MetaData()
@@ -137,7 +137,7 @@ def show_schema(db_url, dataset_id):
 def introspect_db(prefix, db_url, dataset_id, tables):
     """Generate a schema for the tables in a database"""
     engine = _get_engine(db_url)
-    aschema = fetch_schema_for_db(engine, dataset_id, tables, prefix)
+    aschema = introspect_db_schema(engine, dataset_id, tables, prefix)
     click.echo(json.dumps(aschema, indent=2))
 
 
