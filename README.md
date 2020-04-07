@@ -18,7 +18,7 @@ The tools expect either a `DATABASE_URL` environment variable or a command-line 
 The output is a json-schema output according to the Amsterdam schemas
 definition for the tables that are being processed.
 
-## schema introspect
+## Generate amsterdam schema from existing database tables
 
 The --prefix argument controls whether table prefixes are removed in the
 schema, because that is required for Django models.
@@ -30,18 +30,18 @@ As example we can generate a BAG schema. Point `DATABASE_URL` to `bag_v11` datab
 The **jq** formats it nicely and it can be redirected to the correct directory
 in the schemas repository directly.
 
-## schema fetch schema and schema generate arschema
+## Express amsterdam schema information in relational tables
 
 Amsterdam schema is expressed as jsonschema. However, to make it easier for people with a
-more relational mind- or toolset it is possible to express amsterdam schema in a set of
+more relational mind- or toolset it is possible to express amsterdam schema as a set of
 relational tables. These tables are *meta_dataset*, *meta_table* and *meta_field*.
 
 It is possible to convert a jsonschema into the relational table structure and vice-versa.
 
 This command converts a dataset from an existing dataset in jsonschema format:
 
-    schema generate arschema <id of dataset>
+    schema import schema <id of dataset>
 
 To convert from relational tables back to jsonschema:
 
-    schema fetch schema <id of dataset>
+    schema show schema <id of dataset>
