@@ -9,6 +9,8 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
+__all__ = ["Base", "Dataset", "Table", "Field"]
+
 Base = declarative_base()
 
 
