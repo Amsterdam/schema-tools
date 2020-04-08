@@ -100,10 +100,16 @@ def create_meta_table_data(engine, dataset_schema):
         for field_name, field_value in table_data["schema"]["properties"].items():
             field_content = {
                 k.replace("$", ""): v
-                for k, v in field_value.items()  # if not k.startswith("$")
+                for k, v in field_value.items()
+                if not k in {"$comment"}
             }
             field_content["name"] = field_name
-            field = models.Field(**field_content)
+            try:
+                field = models.Field(**field_content)
+            except TypeError as e:
+                raise NotImplementedError(
+                    f'Import failed: at "{field_name}": {field_value!r}:\n{e}'
+                ) from e
 
             field.table_id = table.id
             field.dataset_id = dataset.id
