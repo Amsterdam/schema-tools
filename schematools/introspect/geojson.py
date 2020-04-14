@@ -1,6 +1,7 @@
 """Converting a GeoJSON input file to Amsterdam Schema"""
 import json
 import re
+from copy import deepcopy
 from decimal import Decimal as D
 from os.path import basename, splitext
 from typing import List, Optional, Tuple
@@ -17,7 +18,7 @@ def introspect_geojson_files(dataset_id, files) -> dict:
     for file in files:
         tables.extend(introspect_geojson_file(file))
 
-    aschema = DATASET_TMPL.copy()
+    aschema = deepcopy(DATASET_TMPL)
     aschema["id"] = dataset_id
     aschema["tables"] = tables
     return aschema
@@ -70,7 +71,7 @@ def geojson_to_table(geojson: dict, file_name: str) -> List[dict]:
     # Overlay all results into the amsterdam schem table format.
     result = []
     for name, table_data in all_schema.items():
-        table = TABLE_TMPL.copy()
+        table = deepcopy(TABLE_TMPL)
         table["id"] = name if name == default_name else f"{default_name}_{name}"
         table["schema"].update(all_schema[name])
         table["schema"]["properties"].update(all_properties[name])
