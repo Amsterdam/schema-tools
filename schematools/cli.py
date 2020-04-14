@@ -140,7 +140,10 @@ def show_schema(db_url, dataset_id):
 @click.argument("dataset_id")
 def show_mapfile(schema_url, dataset_id):
     """Generate a mapfile based on a dataset schema."""
-    dataset_schema = schema_def_from_url(schema_url, dataset_id)
+    try:
+        dataset_schema = schema_def_from_url(schema_url, dataset_id)
+    except KeyError:
+        raise click.BadParameter(f"Schema {dataset_id} not found.")
     click.echo(create_mapfile(dataset_schema))
 
 
@@ -185,7 +188,7 @@ def import_ndjson(db_url, schema_url, schema_location, table_name, ndjson_path):
 @argument_schema_location
 @click.argument("table_name")
 @click.argument("geojson_path")
-def import_ndjson(db_url, schema_url, schema_location, table_name, geojson_path):
+def import_geojson(db_url, schema_url, schema_location, table_name, geojson_path):
     """Import a GeoJSON file into a table."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_url, schema_location)
