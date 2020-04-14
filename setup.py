@@ -34,6 +34,8 @@ setup(
         "shapely",
         "python-string-utils",
         "python-dateutil",
+        "jinja2",
+        "mappyfile",
     ],
     extra={"tests": ["pytest", "pytest-cov"]},
     tests_requires=["pytest", "pytest-cov"],

@@ -20,6 +20,7 @@ from .db import (
 from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
 from .utils import ParserError
+from .maps import create_mapfile
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
 metadata = MetaData()
@@ -119,10 +120,27 @@ def show_tablenames(db_url):
 )
 @click.argument("dataset_id")
 def show_schema(db_url, dataset_id):
-    """Generate a schema based on an exising relational database."""
+    """Generate a schema based on an existing relational database."""
     engine = _get_engine(db_url)
     aschema = fetch_schema_from_relational_schema(engine, dataset_id)
     click.echo(json.dumps(aschema, indent=2))
+
+
+@show.command("mapfile")
+@click.option(
+    "--schema-url",
+    envvar="SCHEMA_URL",
+    default=DEFAULT_SCHEMA_URL,
+    show_default=True,
+    required=True,
+    help="Url where valid amsterdam schema files are found. "
+    "SCHEMA_URL can also be provided as environment variable.",
+)
+@click.argument("dataset_id")
+def show_mapfile(schema_url, dataset_id):
+    """Generate a mapfile based on a dataset schema."""
+    dataset_schema = schema_def_from_url(schema_url, dataset_id)
+    click.echo(create_mapfile(dataset_schema))
 
 
 @introspect.command("db")
