@@ -3,6 +3,7 @@ DATASET_TMPL = {
     "id": None,
     "title": None,
     "status": "beschikbaar",
+    "description": None,
     "version": "0.0.1",
     "crs": "EPSG:28992",
     "tables": [],
