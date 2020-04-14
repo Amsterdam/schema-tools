@@ -2,7 +2,6 @@ from amsterdam_schema.types import DatasetSchema
 from .generators.mapfile import MapfileGenerator
 
 # XXX see generators/mapfile.py about this import
-from .generators.schema import Dataset
 from .interfaces.mapfile.serializers import MappyfileSerializer
 
 

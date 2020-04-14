@@ -139,7 +139,10 @@ def show_schema(db_url, dataset_id):
 @click.argument("dataset_id")
 def show_mapfile(schema_url, dataset_id):
     """Generate a mapfile based on a dataset schema."""
-    dataset_schema = schema_def_from_url(schema_url, dataset_id)
+    try:
+        dataset_schema = schema_def_from_url(schema_url, dataset_id)
+    except KeyError:
+        raise click.BadParameter(f"Schema {dataset_id} not found.")
     click.echo(create_mapfile(dataset_schema))
 
 
@@ -192,7 +195,10 @@ def import_ndjson(db_url, schema_url, dataset_id, table_name, ndjson_path):
     """Import an NDJSON file into a table."""
     # Add batching for rows.
     engine = _get_engine(db_url)
-    dataset_schema = schema_def_from_url(schema_url, dataset_id)
+    try:
+        dataset_schema = schema_def_from_url(schema_url, dataset_id)
+    except KeyError:
+        raise click.BadParameter(f"Schema {dataset_id} not found.")
     srid = dataset_schema["crs"].split(":")[-1]
     with open(ndjson_path) as fh:
         data = list(fetch_rows(fh, srid))
