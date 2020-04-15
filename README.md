@@ -46,3 +46,13 @@ This command converts a dataset from an existing dataset in jsonschema format:
 To convert from relational tables back to jsonschema:
 
     schema show schema <id of dataset>
+
+
+## Generating amsterdam schema from existing GeoJSON files
+
+The following command can be used to inspect and import the GeoJSON files:
+
+    schema introspect geojson <dataset-id> *.geojson > schema.json
+    edit schema.json  # fine-tune the table names
+    schema import geojson schema.json <table1> file1.geojson
+    schema import geojson schema.json <table2> file2.geojson

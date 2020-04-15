@@ -4,25 +4,24 @@ import click
 import requests
 
 import jsonschema
-import ndjson
+from amsterdam_schema.types import DatasetSchema
 from amsterdam_schema.utils import schema_def_from_url
-from shapely.geometry import shape
-from sqlalchemy import MetaData, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from .db import (
     create_meta_table_data,
     create_meta_tables,
-    create_rows,
     fetch_table_names,
     fetch_schema_from_relational_schema,
 )
 from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
+from .importer.geojson import GeoJSONImporter
+from .importer.ndjson import NDJSONImporter
 from .utils import ParserError
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
-metadata = MetaData()
 
 option_db_url = click.option(
     "--db-url",
@@ -50,13 +49,6 @@ def _get_engine(db_url):
         return create_engine(db_url)
     except SQLAlchemyError as e:
         raise click.BadParameter(str(e), param_hint="--db-url")
-
-
-def fetch_rows(fh, srid):
-    data = ndjson.load(fh)
-    for row in data:
-        row["geometry"] = f"SRID={srid};{shape(row['geometry']).wkt}"
-        yield row
 
 
 def main():
@@ -162,14 +154,25 @@ def introspect_geojson(dataset_id, files):
 @click.argument("table_name")
 @click.argument("ndjson_path")
 def import_ndjson(db_url, schema_url, schema_location, table_name, ndjson_path):
-    """Import an NDJSON file into a table."""
-    # Add batching for rows.
+    """Import a NDJSON file into a table."""
     engine = _get_engine(db_url)
-    dataset_schema = schema_def_from_url(schema_url, schema_location)
-    srid = dataset_schema["crs"].split(":")[-1]
-    with open(ndjson_path) as fh:
-        data = list(fetch_rows(fh, srid))
-    create_rows(engine, metadata, dataset_schema, table_name, data)
+    dataset_schema = _get_dataset_schema(schema_url, schema_location)
+    importer = NDJSONImporter(dataset_schema, engine)
+    importer.load_file(ndjson_path, table_name)
+
+
+@import_.command("geojson")
+@option_db_url
+@option_schema_url
+@argument_schema_location
+@click.argument("table_name")
+@click.argument("geojson_path")
+def import_ndjson(db_url, schema_url, schema_location, table_name, geojson_path):
+    """Import a GeoJSON file into a table."""
+    engine = _get_engine(db_url)
+    dataset_schema = _get_dataset_schema(schema_url, schema_location)
+    importer = GeoJSONImporter(dataset_schema, engine)
+    importer.load_file(geojson_path, table_name)
 
 
 @import_.command("schema")

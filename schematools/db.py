@@ -1,31 +1,14 @@
 """Datbase storage of metadata from imported Amsterdam schema files."""
 from collections import defaultdict
 
+from amsterdam_schema.types import DatasetSchema
 from dateutil.parser import parse as dtparse
-from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Table, inspect
+from sqlalchemy import DateTime, inspect
 from sqlalchemy.orm import sessionmaker
 from string_utils import camel_case_to_snake, snake_case_to_camel
 
 from schematools import models
 from schematools.utils import ParserError
-
-JSON_TYPE_TO_PG = {
-    "string": String,
-    "boolean": Boolean,
-    "integer": Integer,
-    "number": Float,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/class": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/dataset": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema": String,
-    "https://geojson.org/schema/Geometry.json": Geometry(
-        geometry_type="GEOMETRY", srid=28992
-    ),
-    "https://geojson.org/schema/Point.json": Geometry(
-        geometry_type="POINT", srid=28992
-    ),
-}
 
 
 def fetch_table_names(engine):
@@ -33,21 +16,6 @@ def fetch_table_names(engine):
     """
     insp = inspect(engine)
     return insp.get_table_names()
-
-
-def fetch_pg_table(dataset_schema, table_name, metadata) -> Table:
-    dataset_table = dataset_schema.get_table_by_id(table_name)
-    table_key = f"{dataset_schema.id}_{table_name}"
-    columns = [
-        Column(field.name, JSON_TYPE_TO_PG[field.type])
-        for field in dataset_table.fields
-    ]
-    return Table(table_key, metadata, *columns)
-
-
-def create_rows(engine, metadata, dataset_schema, table_name, data):
-    pg_table = fetch_pg_table(dataset_schema, table_name, metadata)
-    engine.execute(pg_table.insert().values(), data)
 
 
 def create_meta_tables(engine):
@@ -73,7 +41,7 @@ def transformer_factory(model):
     return _transformer
 
 
-def create_meta_table_data(engine, dataset_schema):
+def create_meta_table_data(engine, dataset_schema: DatasetSchema):
     session = sessionmaker(bind=engine)()
     ds_content = {
         camel_case_to_snake(k): v for k, v in dataset_schema.items() if k != "tables"

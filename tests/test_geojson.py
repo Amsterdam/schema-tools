@@ -40,7 +40,7 @@ def test_geojson_to_table():
         ],
     }
 
-    result = geojson_to_table(geojson, "unittest.geojson")
+    result = geojson_to_table(iter(geojson["features"]), "unittest.geojson")
     assert result == [
         {
             "id": "unittest_relation",  # @id field was parsed as "relation"

@@ -1,11 +1,11 @@
 """Converting a GeoJSON input file to Amsterdam Schema"""
-import json
 import re
 from copy import deepcopy
 from decimal import Decimal as D
 from os.path import basename, splitext
-from typing import List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
+from schematools.importer.geojson import read_geojson, split_id
 from schematools.introspect.utils import DATASET_TMPL, TABLE_TMPL
 from schematools.utils import ParserError
 
@@ -26,28 +26,20 @@ def introspect_geojson_files(dataset_id, files) -> dict:
 
 def introspect_geojson_file(file_name) -> List[dict]:
     """Convert a single GeoJSON file into a JSON Schema"""
-    with open(file_name) as f:
-        geojson = json.load(f)
-        return geojson_to_table(geojson, file_name=file_name)
+    features = read_geojson(file_name)
+    return geojson_to_table(features, file_name=file_name)
 
 
-def geojson_to_table(geojson: dict, file_name: str) -> List[dict]:
+def geojson_to_table(geojson_features: Iterable[dict], file_name: str) -> List[dict]:
     """Read the GeoJSON contents, return the table with JSON Schema.
 
     :param filename: This is provided for error messages.
     """
-    if geojson.get("type") != "FeatureCollection":
-        raise ParserError(f"{file_name} is not a valid GeoJSON file")
-
     default_name = splitext(basename(file_name))[0]
     all_schema = {}
     all_properties = {}
 
-    for feature in geojson.get("features", []):
-        feature_type = feature.get("type")
-        if feature_type != "Feature":
-            raise ParserError(f"Expected 'Feature' in {file_name}, not {feature_type}")
-
+    for feature in geojson_features:
         # Parse feature['id'], determine the datatype of this feature
         table_name, id_value = _parse_id(feature, default_name)
 
@@ -85,15 +77,8 @@ def _parse_id(feature, default_name) -> Tuple[str, Optional[str]]:
     # Support optional "id" field at feature level
     try:
         id_value = feature["id"]
-    except KeyError:
-        return default_name, None
-
-    # When the ID format is name/identifier,
-    # this detects that different feature types are part of the same file.
-    match = ID_FORMAT.match(id_value)
-    if match:
-        return match.group(1), match.groups(2)
-    else:
+        return split_id(id_value)
+    except (KeyError, ValueError):
         return default_name, None
 
 
