@@ -24,6 +24,25 @@ from .utils import ParserError
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
 metadata = MetaData()
 
+option_db_url = click.option(
+    "--db-url",
+    envvar="DATABASE_URL",
+    required=True,
+    help="DSN of database, can also use DATABASE_URL environment.",
+)
+option_schema_url = click.option(
+    "--schema-url",
+    envvar="SCHEMA_URL",
+    default=DEFAULT_SCHEMA_URL,
+    show_default=True,
+    required=True,
+    help="Url where valid amsterdam schema files are found. "
+    "SCHEMA_URL can also be provided as environment variable.",
+)
+argument_schema_location = click.argument(
+    "schema_location", metavar="(DATASET-ID | DATASET-FILENAME)",
+)
+
 
 def _get_engine(db_url):
     """Initialize the SQLAlchemy engine, and report click errors"""
@@ -98,12 +117,7 @@ def validate(json_schema_url, schema_url):
 
 
 @show.command("tablenames")
-@click.option(
-    "--db-url",
-    envvar="DATABASE_URL",
-    required=True,
-    help="DSN of database, can also use DATABASE_URL environment.",
-)
+@option_db_url
 def show_tablenames(db_url):
     """Retrieve tablenames from a database."""
     engine = _get_engine(db_url)
@@ -111,12 +125,7 @@ def show_tablenames(db_url):
 
 
 @show.command("schema")
-@click.option(
-    "--db-url",
-    envvar="DATABASE_URL",
-    required=True,
-    help="DSN of database to inspect, can also use DATABASE_URL environment.",
-)
+@option_db_url
 @click.argument("dataset_id")
 def show_schema(db_url, dataset_id):
     """Generate a schema based on an exising relational database."""
@@ -127,12 +136,7 @@ def show_schema(db_url, dataset_id):
 
 @introspect.command("db")
 @click.option("--prefix", "-p", help="Tables have prefix that needs to be stripped")
-@click.option(
-    "--db-url",
-    envvar="DATABASE_URL",
-    required=True,
-    help="DSN of database, can also use DATABASE_URL environment.",
-)
+@option_db_url
 @click.argument("dataset_id")
 @click.argument("tables", nargs=-1)
 def introspect_db(prefix, db_url, dataset_id, tables):
@@ -144,7 +148,7 @@ def introspect_db(prefix, db_url, dataset_id, tables):
 
 @introspect.command("geojson")
 @click.argument("dataset_id")
-@click.argument("files", nargs=-1)
+@click.argument("files", nargs=-1, required=True)
 def introspect_geojson(dataset_id, files):
     """Generate a schema from a GeoJSON file."""
     aschema = introspect_geojson_files(dataset_id, files)
@@ -152,29 +156,16 @@ def introspect_geojson(dataset_id, files):
 
 
 @import_.command("ndjson")
-@click.option(
-    "--db-url",
-    envvar="DATABASE_URL",
-    required=True,
-    help="DSN of database, can also use DATABASE_URL environment.",
-)
-@click.option(
-    "--schema-url",
-    envvar="SCHEMA_URL",
-    default=DEFAULT_SCHEMA_URL,
-    show_default=True,
-    required=True,
-    help="Url where valid amsterdam schema files are found. "
-    "SCHEMA_URL can also be provided as environment variable.",
-)
-@click.argument("dataset_id")
+@option_db_url
+@option_schema_url
+@argument_schema_location
 @click.argument("table_name")
 @click.argument("ndjson_path")
-def import_ndjson(db_url, schema_url, dataset_id, table_name, ndjson_path):
+def import_ndjson(db_url, schema_url, schema_location, table_name, ndjson_path):
     """Import an NDJSON file into a table."""
     # Add batching for rows.
     engine = _get_engine(db_url)
-    dataset_schema = schema_def_from_url(schema_url, dataset_id)
+    dataset_schema = schema_def_from_url(schema_url, schema_location)
     srid = dataset_schema["crs"].split(":")[-1]
     with open(ndjson_path) as fh:
         data = list(fetch_rows(fh, srid))
@@ -182,30 +173,28 @@ def import_ndjson(db_url, schema_url, dataset_id, table_name, ndjson_path):
 
 
 @import_.command("schema")
-@click.option(
-    "--db-url",
-    envvar="DATABASE_URL",
-    required=True,
-    help="DSN of database to write into, can also use DATABASE_URL environment.",
-)
-@click.option(
-    "--schema-url",
-    envvar="SCHEMA_URL",
-    default=DEFAULT_SCHEMA_URL,
-    show_default=True,
-    required=True,
-    help="Url where valid amsterdam schema files are found. "
-    "SCHEMA_URL can also be provided as environment variable.",
-)
-@click.argument("dataset_id")
-def import_schema(db_url, schema_url, dataset_id):
+@option_db_url
+@option_schema_url
+@argument_schema_location
+def import_schema(db_url, schema_url, schema_location):
     """Import the schema definition into the local database."""
     # Add drop or not flag
     engine = _get_engine(db_url)
-    try:
-        dataset_schema = schema_def_from_url(schema_url, dataset_id)
-    except KeyError:
-        raise click.BadParameter(f"Schema {dataset_id} not found.")
+    dataset_schema = _get_dataset_schema(schema_url, schema_location)
 
     create_meta_tables(engine)
     create_meta_table_data(engine, dataset_schema)
+
+
+def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
+    """Find the dataset schema for the given dataset"""
+    if "." in schema_location or "/" in schema_location:
+        click.echo(f"Reading schema from {schema_location}")
+        return DatasetSchema.from_file(schema_location)
+    else:
+        # Read the schema from the online repository.
+        click.echo(f"Reading schemas from {schema_url}")
+        try:
+            return schema_def_from_url(schema_url, schema_location)
+        except KeyError:
+            raise click.BadParameter(f"Schema {schema_location} not found.")
