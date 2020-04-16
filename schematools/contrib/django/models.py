@@ -222,11 +222,11 @@ class DynamicModel(models.Model):
 
 
 def schema_models_factory(
-    dataset: DatasetSchema, tables=None
+        dataset: DatasetSchema, tables=None, base_app_name=None
 ) -> List[Type[DynamicModel]]:
     """Generate Django models from the data of the schema."""
     return [
-        model_factory(table)
+        model_factory(table=table, base_app_name=base_app_name)
         for table in dataset.tables
         if tables is None or table.id in tables
     ]
