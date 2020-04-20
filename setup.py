@@ -36,13 +36,15 @@ setup(
         "jinja2",
         "mappyfile",
     ],
-    extra={
+    extras_require={
         "tests": ["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"],
-        "django": ["django >= 3.0.4",
-                   "django-postgres-unlimited-varchar >= 1.1.0",
-                   "django-gisserver >= 0.5"],
+        "django": [
+            "django >= 3.0.4",
+            "django-postgres-unlimited-varchar >= 1.1.0",
+            "django-gisserver >= 0.5",
+        ],
     },
-    tests_requires=["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"],
+    tests_require=["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"],
     entry_points="""
         [console_scripts]
         schema=schematools.cli:main
