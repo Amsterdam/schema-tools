@@ -7,12 +7,8 @@ import mappyfile
 from . import types
 
 
-def remove_none_values(items):
-    return filter(lambda i: i[1] is not None, items)
-
-
 def schema_dict(items):
-    return dict(remove_none_values(items))
+    return {k: v for k, v in items if v is not None}
 
 
 @dataclass

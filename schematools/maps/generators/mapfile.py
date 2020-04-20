@@ -3,10 +3,6 @@ from dataclasses import dataclass
 import typing
 from amsterdam_schema.types import DatasetSchema, DatasetTableSchema
 
-# XXX bring in line with new amsterdam_schema ??
-# amsterdam_schema was changed backwards incompatible
-# now just moved the old schema def inside this package
-# from dataservices import amsterdam_schema as schema
 from ..interfaces.mapfile import types, serializers
 
 

@@ -3,4 +3,4 @@ from . import create
 
 
 def create_mapfile(dataset: DatasetSchema):
-    return create.CreateMapfileFromDataset()(dataset)
+    return create.create_map_from_dataset(dataset)

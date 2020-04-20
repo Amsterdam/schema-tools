@@ -5,10 +5,8 @@ from .generators.mapfile import MapfileGenerator
 from .interfaces.mapfile.serializers import MappyfileSerializer
 
 
-class CreateMapfileFromDataset:
+def create_map_from_dataset(dataset: DatasetSchema):
     """ Creates a Mapfile from a dataset in JSON """
 
     _generator = MapfileGenerator(serializer=MappyfileSerializer())
-
-    def __call__(self, dataset: DatasetSchema):
-        return self._generator(dataset)
+    return _generator(dataset)
