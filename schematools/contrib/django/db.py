@@ -1,7 +1,7 @@
 from django.db import connection
 
-from amsterdam_schema.types import DatasetSchema
-from .models import schema_models_factory
+from schematools.types import DatasetSchema
+from .factories import schema_models_factory
 
 
 def create_tables(dataset: DatasetSchema, tables=None):

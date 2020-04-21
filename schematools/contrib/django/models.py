@@ -1,19 +1,31 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict, List, Tuple, Type
-from urllib.parse import urlparse
-
-from django.contrib.gis.db import models
-from django.contrib.postgres.fields import ArrayField
-from django.db.models.base import ModelBase
-from django.conf import settings
-from django_postgres_unlimited_varchar import UnlimitedCharField
+import logging
 from string_utils import slugify
+from typing import Any, Dict, List, Tuple, Type
+
+from django.conf import settings
+from django.contrib.gis.db import models as gis_models
+from django.contrib.postgres.fields import ArrayField, JSONField
+from django.db import models, transaction
+from django.utils.functional import cached_property
+from django.utils.translation import gettext_lazy as _
+from django_postgres_unlimited_varchar import UnlimitedCharField
 
 from gisserver.types import CRS
 
-from amsterdam_schema.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
+from schematools.types import (
+    DatasetFieldSchema,
+    DatasetSchema,
+    DatasetTableSchema,
+    is_possible_display_field,
+    get_db_table_name
+)
+
+logger = logging.getLogger(__name__)
+
+GEOJSON_PREFIX = "https://geojson.org/schema/"
 
 # Could be used to check fieldnames
 ALLOWED_ID_PATTERN = re.compile(r"[a-zA-Z][ \w\d]*")
@@ -29,101 +41,6 @@ RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 
 
-class FieldMaker:
-    """Generate the field for a JSON-Schema property"""
-
-    def __init__(
-        self,
-        field_cls: Type[models.Field],
-        value_getter: Callable[[DatasetSchema], Dict[str, Any]] = None,
-        **kwargs,
-    ):
-        self.field_cls = field_cls
-        self.value_getter = value_getter
-        self.kwargs = kwargs
-        self.modifiers = [
-            getattr(self, an) for an in dir(self) if an.startswith("handle_")
-        ]
-
-    def _make_related_classname(self, relation_urn):
-        dataset_name, table_name = relation_urn.split(":")
-        return f"{dataset_name}.{table_name.capitalize()}"
-
-    def handle_basic(
-        self,
-        dataset: DatasetSchema,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        kwargs["primary_key"] = field.is_primary
-        kwargs["null"] = not field.required
-        if self.value_getter:
-            kwargs = {**kwargs, **self.value_getter(dataset, field)}
-        return field_cls, args, kwargs
-
-    def handle_relation(
-        self,
-        dataset: DatasetSchema,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        relation = field.relation
-
-        if relation is not None:
-            field_cls = models.ForeignKey
-            args = [self._make_related_classname(relation), models.SET_NULL]
-            # In schema foeign keys should be specified without _id,
-            # but the db_column should be with _id
-            kwargs["db_column"] = f"{slugify(field.name, sign='_')}_id"
-            kwargs["db_constraint"] = False  # don't expect relations to exist.
-        return field_cls, args, kwargs
-
-    def handle_date(
-        self,
-        dataset: DatasetSchema,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        format_ = field.format
-        if format_ is not None:
-            field_cls = DATE_MODELS_LOOKUP[format_]
-        return field_cls, args, kwargs
-
-    def handle_array(
-        self,
-        dataset: DatasetSchema,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        if field.data.get("type", "").lower() == "array":
-            array_type = field.data.get("items", {}).get("type", "string")
-            base_field, _ = JSON_TYPE_TO_DJANGO[array_type]
-            kwargs["base_field"] = base_field()
-        return field_cls, args, kwargs
-
-    def __call__(
-        self, field: DatasetFieldSchema, dataset: DatasetSchema
-    ) -> TypeAndSignature:
-        field_cls = self.field_cls
-        kwargs = self.kwargs
-        args = []
-
-        for modifier in self.modifiers:
-            field_cls, args, kwargs = modifier(
-                dataset, field, field_cls, *args, **kwargs
-            )
-
-        return field_cls, args, kwargs
-
-
 def fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> Dict[str, Any]:
     return {"srid": CRS.from_string(dataset.data["crs"]).srid}
 
@@ -137,49 +54,49 @@ JSON_TYPE_TO_DJANGO = {
     "/definitions/id": (models.IntegerField, None),
     "/definitions/schema": (UnlimitedCharField, None),
     "https://geojson.org/schema/Geometry.json": (
-        models.GeometryField,
+        gis_models.GeometryField,
         dict(
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
     ),
     "https://geojson.org/schema/Point.json": (
-        models.PointField,
+        gis_models.PointField,
         dict(
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
     ),
     "https://geojson.org/schema/MultiPoint.json": (
-        models.MultiPointField,
+        gis_models.MultiPointField,
         dict(
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
     ),
     "https://geojson.org/schema/Polygon.json": (
-        models.PolygonField,
+        gis_models.PolygonField,
         dict(
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
     ),
     "https://geojson.org/schema/MultiPolygon.json": (
-        models.MultiPolygonField,
+        gis_models.MultiPolygonField,
         dict(
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
     ),
     "https://geojson.org/schema/LineString.json": (
-        models.LineStringField,
+        gis_models.LineStringField,
         dict(
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
     ),
     "https://geojson.org/schema/MultiLineString.json": (
-        models.MultiLineStringField,
+        gis_models.MultiLineStringField,
         dict(
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
     ),
     "https://geojson.org/schema/GeometryCollection.json": (
-        models.GeometryCollectionField,
+        gis_models.GeometryCollectionField,
         dict(
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
@@ -221,97 +138,229 @@ class DynamicModel(models.Model):
         return cls._table_schema.id
 
 
-def schema_models_factory(
-        dataset: DatasetSchema, tables=None, base_app_name=None
-) -> List[Type[DynamicModel]]:
-    """Generate Django models from the data of the schema."""
-    return [
-        model_factory(table=table, base_app_name=base_app_name)
-        for table in dataset.tables
-        if tables is None or table.id in tables
-    ]
+class Dataset(models.Model):
+    """A registry of all available datasets that are uploaded in the API server.
+
+    Each model holds the contents of an "Amsterdam Schema",
+    that contains multiple tables.
+    """
+
+    name = models.CharField(_("Name"), unique=True, max_length=50)
+    ordering = models.IntegerField(_("Ordering"), default=1)
+    enable_api = models.BooleanField(default=True)
+
+    auth = models.CharField(_("Authorization"), blank=True, null=True, max_length=250)
+    schema_data = JSONField(_("Amsterdam Schema Contents"))
+
+    class Meta:
+        ordering = ("ordering", "name")
+        verbose_name = _("Dataset")
+        verbose_name_plural = _("Datasets")
+
+    def __str__(self):
+        return self.name
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # The check makes sure that deferred fields are not checked for changes,
+        # nor that creating the model
+        self._old_schema_data = (
+            self.schema_data
+            if "schema_data" in self.__dict__ and not self._state.adding
+            else None
+        )
+
+    def save(self, *args, **kwargs):
+        """Perform a final data validation check, and additional updates."""
+        if "schema_data" in self.__dict__:
+            # Make sure the schema_data field is properly filled with an actual dict.
+            if self.schema_data and not isinstance(self.schema_data, dict):
+                logger.debug(
+                    "Invalid data in Dataset.schema_data, expected dict: %r",
+                    self.schema_data,
+                )
+                raise RuntimeError("Invalid data in Dataset.schema_data")
+
+        if self.schema_data_changed() and (self.schema_data or not self._state.adding):
+            self.__dict__.pop("schema", None)  # clear cached property
+            # The extra "and" above avoids the transaction savepoint for an empty dataset.
+            # Ensure both changes are saved together
+            with transaction.atomic():
+                super().save(*args, **kwargs)
+                self.save_schema_tables()
+        else:
+            super().save(*args, **kwargs)
+
+    save.alters_data = True
+
+    def save_schema_tables(self):
+        """Expose the schema data to the DatasetTable.
+        This allows other projects (e.g. geosearch) to process our dynamic tables.
+        """
+        if not self.schema_data:
+            # no schema stored -> no tables
+            if self._old_schema_data:
+                self.tables.all().delete()
+            return
+
+        new_definitions = {slugify(t.id, sign="_"): t for t in self.schema.tables}
+        new_names = set(new_definitions.keys())
+        existing_models = {t.name: t for t in self.tables.all()}
+        existing_names = set(existing_models.keys())
+
+        # Create models for newly added tables
+        for added_name in new_names - existing_names:
+            table = new_definitions[added_name]
+            DatasetTable.create_for_schema(self, table)
+
+        # Remove tables that are no longer part of the schema.
+        for removed_name in existing_names - new_names:
+            existing_models[removed_name].delete()
+
+    save_schema_tables.alters_data = True
+
+    @cached_property
+    def schema(self) -> DatasetSchema:
+        """Provide access to the schema data"""
+        if not self.schema_data:
+            raise RuntimeError("Dataset.schema_data is empty")
+
+        return DatasetSchema.from_dict(self.schema_data)
+
+    def schema_data_changed(self):
+        """Check whether the schema_data attribute changed"""
+        return (
+            "schema_data" in self.__dict__  # this checks for deferred attributes
+            and self.schema_data != self._old_schema_data
+        )
+
+    def create_models(self) -> List[Type[DynamicModel]]:
+        """Extract the models found in the schema"""
+        from schematools.contrib.django.factories import schema_models_factory
+        return schema_models_factory(self.schema)
 
 
-def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[DynamicModel]:
-    """Generate a Django model class from a JSON Schema definition."""
-    dataset = table._parent_schema
-    app_label = dataset.id
-    base_app_name = base_app_name or "dso_api.dynamic_api"
-    module_name = f"{base_app_name}.{app_label}.models"
-    model_name = f"{table.id.capitalize()}"
+class DatasetTable(models.Model):
+    """Exposed metadata per schema.
 
-    # Generate fields
-    fields = {}
-    display_field = None
-    for field in table.fields:
-        type_ = field.type
-        # skip schema field for now
-        if type_.endswith("definitions/schema"):
-            continue
-        # reduce amsterdam schema refs to their fragment
-        if type_.startswith(settings.SCHEMA_DEFS_URL):
-            type_ = urlparse(type_).fragment
-        base_class, init_kwargs = JSON_TYPE_TO_DJANGO[type_]
-        if init_kwargs is None:
-            init_kwargs = {}
+    This table can be read by the 'geosearch' project to locate all our tables and data sources.
+    """
 
-        # Generate field object
-        kls, args, kwargs = FieldMaker(base_class, **init_kwargs)(field, dataset)
-        if kls is None:
-            # Some fields are not mapped into classes
-            continue
-        model_field = kls(*args, **kwargs)
-
-        # Generate name, fix if needed.
-        field_name = slugify(field.name, sign="_")
-        model_field.name = field_name
-        fields[field_name] = model_field
-
-        if not display_field and is_possible_display_field(field):
-            display_field = field.name
-
-    # Generate Meta part
-    meta_cls = type(
-        "Meta",
-        (),
-        {
-            "managed": False,
-            "db_table": get_db_table_name(table),
-            "app_label": app_label,
-            "verbose_name": table.id.title(),
-            "ordering": ("id",),
-        },
+    dataset = models.ForeignKey(
+        Dataset, on_delete=models.CASCADE, related_name="tables"
     )
+    name = models.CharField(max_length=100)
 
-    # Generate the model
-    return ModelBase(
-        model_name,
-        (DynamicModel,),
-        {
-            **fields,
-            "_dataset_schema": dataset,
-            "_table_schema": table,
-            "_display_field": "",
-            "__module__": module_name,
-            "Meta": meta_cls,
-        },
+    # Exposed metadata from the jsonschema, so other utils can query these
+    auth = models.CharField(max_length=250, blank=True, null=True)
+    enable_geosearch = models.BooleanField(default=True)
+    db_table = models.CharField(max_length=100, unique=True)
+    display_field = models.CharField(max_length=50, null=True, blank=True)
+    geometry_field = models.CharField(max_length=50, null=True, blank=True)
+    geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        ordering = ("name",)
+        verbose_name = _("Dataset Table")
+        verbose_name_plural = _("Dataset Tables")
+        unique_together = [
+            ("dataset", "name"),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def _get_field_values(cls, table):
+        ret = {}
+
+        # XXX For now, be OK with missing "display", is mandatory in aschema v1.1.1
+        ret["display_field"] = table["schema"].get("display")
+        ret["geometry_field"] = None
+        ret["geometry_field_type"] = None
+        for field in table.fields:
+            # Take the first geojson field as geometry field
+            if not ret["geometry_field"] and field.type.startswith(GEOJSON_PREFIX):
+                ret["geometry_field"] = field.name
+                match = re.search(r"schema\/(?P<schema>\w+)\.json", field.type)
+                if match is not None:
+                    ret["geometry_field_type"] = match.group("schema")
+                break
+
+            # Take the first string field as display name.
+            if not ret["display_field"] and is_possible_display_field(field):
+                ret["display_field"] = field.name
+
+            if ret["display_field"] and ret["geometry_field"]:
+                break
+        return ret
+
+    @classmethod
+    def create_for_schema(
+        cls, dataset: Dataset, table: DatasetTableSchema
+    ) -> DatasetTable:
+        """Create a DatasetTable object based on the Amsterdam Schema table spec.
+
+        (The table spec contains a JSON-schema for all fields).
+        """
+        enable_geosearch = True
+        if dataset.name in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]:
+            enable_geosearch = False
+
+        claims = table.get("auth", [])
+        if isinstance(claims, str):
+            claims = [claims]
+
+        instance = cls.objects.create(
+            dataset=dataset,
+            name=slugify(table.id, sign="_"),
+            db_table=get_db_table_name(table),
+            auth=" ".join(claims),
+            enable_geosearch=enable_geosearch,
+            **cls._get_field_values(table),
+        )
+
+        for field in table.fields:
+            DatasetField.create_for_schema(instance, field)
+
+        return instance
+
+
+class DatasetField(models.Model):
+    """Exposed metadata per field.
+    """
+
+    table = models.ForeignKey(
+        DatasetTable, on_delete=models.CASCADE, related_name="fields"
     )
+    name = models.CharField(max_length=100)
 
+    # Exposed metadata from the jsonschema, so other utils can query these
+    auth = models.CharField(max_length=250, blank=True, null=True)
 
-def is_possible_display_field(field: DatasetFieldSchema) -> bool:
-    """See whether the field is a possible candidate as display field"""
-    # TODO: the schema needs to provide a display field!
-    return (
-        field.type == "string"
-        and "$ref" not in field
-        and " " not in field.name
-        and not field.name.endswith("_id")
-    )
+    class Meta:
+        ordering = ("name",)
+        verbose_name = _("Dataset Field")
+        verbose_name_plural = _("Dataset Fields")
+        unique_together = [
+            ("table", "name"),
+        ]
 
+    def __str__(self):
+        return self.name
 
-def get_db_table_name(table: DatasetTableSchema) -> str:
-    """Generate the table name for a database schema."""
-    dataset = table._parent_schema
-    app_label = dataset.id
-    table_id = table.id
-    return slugify(f"{app_label}_{table_id}", sign="_")
+    @classmethod
+    def create_for_schema(
+        cls, table: DatasetTableSchema, field: DatasetFieldSchema
+    ) -> DatasetField:
+        """Create a DatasetField object based on the Amsterdam Schema field spec.
+
+        """
+        claims = field.get("auth", [])
+        if isinstance(claims, str):
+            claims = [claims]
+
+        return cls.objects.create(
+            table=table, name=slugify(field.name, sign="_"), auth=" ".join(claims)
+        )

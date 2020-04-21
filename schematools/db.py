@@ -1,14 +1,14 @@
 """Datbase storage of metadata from imported Amsterdam schema files."""
 from collections import defaultdict
 
-from amsterdam_schema.types import DatasetSchema
 from dateutil.parser import parse as dtparse
 from sqlalchemy import DateTime, inspect
 from sqlalchemy.orm import sessionmaker
 from string_utils import camel_case_to_snake, snake_case_to_camel
 
 from schematools import models
-from schematools.utils import ParserError
+from schematools.exceptions import ParserError
+from schematools.types import DatasetSchema
 
 
 def fetch_table_names(engine):
