@@ -3,9 +3,9 @@ from typing import List, Optional
 from django.conf import settings
 from django.core.management import BaseCommand
 
-from dso_api.datasets.models import Dataset
-from amsterdam_schema.types import DatasetSchema
-from amsterdam_schema.utils import schema_defs_from_url
+from schematools.contrib.django.models import Dataset
+from schematools.types import DatasetSchema
+from schematools.utils import schema_defs_from_url
 
 from .create_tables import create_tables
 

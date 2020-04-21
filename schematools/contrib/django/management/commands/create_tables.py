@@ -4,8 +4,8 @@ from typing import Iterable
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, router, transaction
 
-from dso_api.datasets.models import Dataset
-from schematools.contrib.django.models import schema_models_factory
+from schematools.contrib.django.models import Dataset
+from schematools.contrib.django.factories import schema_models_factory
 
 
 class Command(BaseCommand):
