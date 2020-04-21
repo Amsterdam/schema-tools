@@ -7,7 +7,6 @@ from typing import Iterable, List, Optional, Tuple
 
 from schematools.importer.geojson import read_geojson, split_id
 from schematools.introspect.utils import DATASET_TMPL, TABLE_TMPL
-from schematools.utils import ParserError
 
 ID_FORMAT = re.compile(r"^([a-z0-9_]+)[/.](\d+)$", re.I)
 
