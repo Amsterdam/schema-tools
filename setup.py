@@ -37,7 +37,7 @@ setup(
         "jinja2",
         "mappyfile",
     ],
-    extra={"tests": ["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"},
+    extra={"tests": ["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"]},
     tests_requires=["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"],
     entry_points="""
         [console_scripts]
