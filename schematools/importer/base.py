@@ -1,6 +1,6 @@
 from itertools import islice
 
-from amsterdam_schema.types import DatasetSchema
+from schematools.types import DatasetSchema
 from geoalchemy2 import Geometry
 from sqlalchemy import Boolean, Column, Float, Integer, MetaData, String, Table
 

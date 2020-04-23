@@ -4,8 +4,6 @@ import click
 import requests
 
 import jsonschema
-from amsterdam_schema.types import DatasetSchema
-from amsterdam_schema.utils import schema_def_from_url
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -15,12 +13,14 @@ from .db import (
     fetch_table_names,
     fetch_schema_from_relational_schema,
 )
-from schematools.introspect.db import introspect_db_schema
-from schematools.introspect.geojson import introspect_geojson_files
+from .exceptions import ParserError
+from .introspect.db import introspect_db_schema
+from .introspect.geojson import introspect_geojson_files
 from .importer.geojson import GeoJSONImporter
 from .importer.ndjson import NDJSONImporter
-from .utils import ParserError
 from .maps import create_mapfile
+from .types import DatasetSchema
+from .utils import schema_def_from_url
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
 

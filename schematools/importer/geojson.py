@@ -4,7 +4,7 @@ from typing import Any, Iterable, Tuple
 
 from shapely.geometry import shape
 
-from ..utils import ParserError
+from ..exceptions import ParserError
 from .base import BaseImporter
 
 ID_FORMAT = re.compile(r"^([a-z0-9_]+)[/.](\d+)$", re.I)

@@ -29,7 +29,6 @@ setup(
         "psycopg2",
         "click",
         "jsonschema",
-        "amsterdam-schema",
         "ndjson",
         "shapely",
         "python-string-utils",
@@ -37,7 +36,12 @@ setup(
         "jinja2",
         "mappyfile",
     ],
-    extra={"tests": ["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"]},
+    extra={
+        "tests": ["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"],
+        "django": ["django >= 3.0.4",
+                   "django-postgres-unlimited-varchar >= 1.1.0",
+                   "django-gisserver >= 0.5"],
+    },
     tests_requires=["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"],
     entry_points="""
         [console_scripts]
