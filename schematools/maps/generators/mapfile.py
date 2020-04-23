@@ -1,7 +1,7 @@
 from collections import ChainMap
 from dataclasses import dataclass
 import typing
-from amsterdam_schema.types import DatasetSchema, DatasetTableSchema
+from schematools.types import DatasetSchema, DatasetTableSchema
 
 from ..interfaces.mapfile import types, serializers
 
