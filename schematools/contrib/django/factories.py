@@ -13,7 +13,7 @@ from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
     is_possible_display_field,
-    get_db_table_name
+    get_db_table_name,
 )
 from .models import (
     DATE_MODELS_LOOKUP,
@@ -59,6 +59,21 @@ class FieldMaker:
             kwargs = {**kwargs, **self.value_getter(dataset, field)}
         return field_cls, args, kwargs
 
+    def handle_array(
+        self,
+        dataset: DatasetSchema,
+        field: DatasetFieldSchema,
+        field_cls,
+        *args,
+        **kwargs,
+    ) -> TypeAndSignature:
+        if field.data.get("type", "").lower() == "array":
+            base_field, _ = JSON_TYPE_TO_DJANGO[
+                field.data.get("entity", {}).get("type", "string")
+            ]
+            kwargs["base_field"] = base_field()
+        return field_cls, args, kwargs
+
     def handle_relation(
         self,
         dataset: DatasetSchema,
@@ -72,6 +87,12 @@ class FieldMaker:
         if relation is not None:
             field_cls = models.ForeignKey
             args = [self._make_related_classname(relation), models.SET_NULL]
+
+            parent_table_name = field._parent_table.parent
+            if parent_table_name is not None:
+                kwargs["related_name"] = field._parent_table.id.replace(
+                    parent_table_name, "")[1:]
+
             # In schema foeign keys should be specified without _id,
             # but the db_column should be with _id
             kwargs["db_column"] = f"{slugify(field.name, sign='_')}_id"
@@ -89,20 +110,6 @@ class FieldMaker:
         format_ = field.format
         if format_ is not None:
             field_cls = DATE_MODELS_LOOKUP[format_]
-        return field_cls, args, kwargs
-
-    def handle_array(
-        self,
-        dataset: DatasetSchema,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        if field.data.get("type", "").lower() == "array":
-            array_type = field.data.get("items", {}).get("type", "string")
-            base_field, _ = JSON_TYPE_TO_DJANGO[array_type]
-            kwargs["base_field"] = base_field()
         return field_cls, args, kwargs
 
     def __call__(
@@ -126,7 +133,7 @@ def schema_models_factory(
     """Generate Django models from the data of the schema."""
     return [
         model_factory(table=table, base_app_name=base_app_name)
-        for table in dataset.tables
+        for table in dataset.get_tables(include_nested=True)
         if tables is None or table.id in tables
     ]
 
@@ -146,6 +153,9 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
         type_ = field.type
         # skip schema field for now
         if type_.endswith("definitions/schema"):
+            continue
+        # skip nested tables
+        if field.is_nested_table:
             continue
         # reduce amsterdam schema refs to their fragment
         if type_.startswith(settings.SCHEMA_DEFS_URL):

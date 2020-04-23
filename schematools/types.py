@@ -7,17 +7,18 @@ from collections import UserDict
 from string_utils import slugify
 
 import jsonschema
+from schematools import SCHEMA_VERSION
 
 SUPPORTED_REFS = {
     "https://geojson.org/schema/Geometry.json",
     "https://geojson.org/schema/Point.json",
     "https://geojson.org/schema/Polygon.json",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/class",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/dataset",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/year",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/uri",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema",
+    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/id",
+    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/class",
+    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/dataset",
+    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/year",
+    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/uri",
+    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/schema",
 }
 
 
@@ -73,18 +74,70 @@ class DatasetSchema(SchemaType):
     @property
     def tables(self) -> typing.List[DatasetTableSchema]:
         """Access the tables within the file"""
-        return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
+        tables = []
+        for table_schema in self["tables"]:
+            table = DatasetTableSchema(table_schema, _parent_schema=self)
+            tables.append(table)
+        return tables
+
+    def get_tables(self, include_nested=False) -> typing.List[DatasetTableSchema]:
+        """List tables, including nested"""
+        tables = self.tables
+        if include_nested:
+            tables += self.nested_tables
+        return tables
 
     def get_table_by_id(self, table_id: str) -> DatasetTableSchema:
-        for table in self["tables"]:
-            if table["id"] == table_id:
-                return DatasetTableSchema(table, _parent_schema=self)
+        for table in self.get_tables(include_nested=True):
+            if table.id == table_id:
+                return table
 
         available = "', '".join([table["id"] for table in self["tables"]])
         raise ValueError(
             f"Table '{table_id}' does not exist "
             f"in schema '{self.id}', available are: '{available}'"
         )
+
+    @property
+    def nested_tables(self) -> typing.List[DatasetTableSchema]:
+        """Access list of nested tables"""
+        tables = []
+        for table in self.tables:
+            for field in table.fields:
+                if field_is_nested_table(field):
+                    # Map Arrays into tables.
+                    sub_table_schema = dict(
+                        id=f"{table.id}_{field.name}",
+                        type="table",
+                        schema={
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "type": "object",
+                            "additionalProperties": False,
+                            "parentTable": table.id,
+                            "required": [
+                                "id",
+                                "schema"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "description": ""
+                                },
+                                "schema": {
+                                    "$ref":
+                                    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/schema"
+                                },
+                                "parent": {
+                                    "type": "integer",
+                                    "relation": f"{self.id}:{table.id}"
+                                },
+                                **field["items"]["properties"]
+                            }
+                        }
+                    )
+                    sub_table = DatasetTableSchema(sub_table_schema, _parent_schema=self)
+                    tables.append(sub_table)
+        return tables
 
 
 class DatasetTableSchema(SchemaType):
@@ -122,6 +175,10 @@ class DatasetTableSchema(SchemaType):
     def _resolve(self, ref):
         """Resolve the actual data type of a remote URI reference."""
         return jsonschema.RefResolver(ref, referrer=self)
+
+    @property
+    def parent(self):
+        return self["schema"].get("parentTable")
 
 
 class DatasetFieldSchema(DatasetType):
@@ -162,6 +219,10 @@ class DatasetFieldSchema(DatasetType):
     def format(self) -> typing.Optional[str]:
         return self.get("format")
 
+    @property
+    def is_nested_table(self) -> bool:
+        return field_is_nested_table(self)
+
 
 class DatasetRow(DatasetType):
     """ An actual instance of data """
@@ -188,3 +249,12 @@ def get_db_table_name(table: DatasetTableSchema) -> str:
     app_label = dataset.id
     table_id = table.id
     return slugify(f"{app_label}_{table_id}", sign="_")
+
+
+def field_is_nested_table(field) -> bool:
+    """
+    Checks if field is a possible nested table.
+    """
+    return field.get("type") == "array" \
+        and "items" in field \
+        and field["items"].get("type") == "object"
