@@ -178,7 +178,7 @@ class DatasetTableSchema(SchemaType):
         return jsonschema.RefResolver(ref, referrer=self)
 
     @property
-    def is_nested(self):
+    def has_parent_table(self):
         return "parentTableID" in self["schema"]
 
 
