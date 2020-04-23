@@ -1,4 +1,4 @@
-from amsterdam_schema.types import DatasetSchema
+from schematools.types import DatasetSchema
 from .generators.mapfile import MapfileGenerator
 
 # XXX see generators/mapfile.py about this import
