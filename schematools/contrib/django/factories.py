@@ -88,10 +88,8 @@ class FieldMaker:
             field_cls = models.ForeignKey
             args = [self._make_related_classname(relation), models.SET_NULL]
 
-            parent_table_name = field._parent_table.parent
-            if parent_table_name is not None:
-                kwargs["related_name"] = field._parent_table.id.replace(
-                    parent_table_name, "")[1:]
+            if field._parent_table.is_nested:
+                kwargs["related_name"] = field._parent_table["originalID"]
 
             # In schema foeign keys should be specified without _id,
             # but the db_column should be with _id

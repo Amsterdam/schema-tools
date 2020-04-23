@@ -108,12 +108,13 @@ class DatasetSchema(SchemaType):
                     # Map Arrays into tables.
                     sub_table_schema = dict(
                         id=f"{table.id}_{field.name}",
+                        originalID=field.name,
                         type="table",
                         schema={
                             "$schema": "http://json-schema.org/draft-07/schema#",
                             "type": "object",
                             "additionalProperties": False,
-                            "parentTable": table.id,
+                            "parentTableID": table.id,
                             "required": [
                                 "id",
                                 "schema"
@@ -177,8 +178,8 @@ class DatasetTableSchema(SchemaType):
         return jsonschema.RefResolver(ref, referrer=self)
 
     @property
-    def parent(self):
-        return self["schema"].get("parentTable")
+    def is_nested(self):
+        return "parentTableID" in self["schema"]
 
 
 class DatasetFieldSchema(DatasetType):

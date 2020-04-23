@@ -144,7 +144,7 @@ class DynamicModel(models.Model):
         """
         Check if table is sub table for another table.
         """
-        return cls._table_schema.get("schema", {}).get("parentTable") is not None
+        return cls._table_schema.get("schema", {}).get("parentTableID") is not None
 
 
 class Dataset(models.Model):
