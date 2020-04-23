@@ -140,7 +140,7 @@ class DynamicModel(models.Model):
         return slugify(cls._table_schema.id, sign="_")
 
     @classmethod
-    def is_inner_table(cls):
+    def has_parent_table(cls):
         """
         Check if table is sub table for another table.
         """
