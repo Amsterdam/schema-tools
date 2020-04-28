@@ -84,6 +84,9 @@ def table_factory(dataset_schema: DatasetSchema, table_name) -> Table:
 
     columns = []
     for field in dataset_table.fields:
+        if field.type.endswith("#/definitions/schema"):
+            continue
+
         try:
             col_type = JSON_TYPE_TO_PG[field.type]
         except KeyError:
