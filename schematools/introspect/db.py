@@ -9,6 +9,7 @@ from .utils import DATASET_TMPL, TABLE_TMPL
 
 DB_TO_ASCHEMA_TYPE = {
     "DATE": {"type": "string", "format": "date"},
+    "TIME": {"type": "string", "format": "time"},
     "TIMESTAMP": {"type": "string", "format": "date-time"},
     "VARCHAR": {"type": "string"},
     "INTEGER": {"type": "integer"},
