@@ -76,9 +76,9 @@ class DatasetSchema(SchemaType):
         return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
 
     def get_table_by_id(self, table_id: str) -> DatasetTableSchema:
-        for table in self.tables:
-            if table.id == table_id:
-                return table
+        for table in self["tables"]:
+            if table["id"] == table_id:
+                return DatasetTableSchema(table, _parent_schema=self)
         raise ValueError(f"Schema of table '{table_id}' does not exist in {self}")
 
 
