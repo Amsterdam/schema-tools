@@ -79,7 +79,12 @@ class DatasetSchema(SchemaType):
         for table in self["tables"]:
             if table["id"] == table_id:
                 return DatasetTableSchema(table, _parent_schema=self)
-        raise ValueError(f"Schema of table '{table_id}' does not exist in {self}")
+
+        available = "', '".join([table["id"] for table in self["tables"]])
+        raise ValueError(
+            f"Table '{table_id}' does not exist "
+            f"in schema '{self.id}', available are: '{available}'"
+        )
 
 
 class DatasetTableSchema(SchemaType):
