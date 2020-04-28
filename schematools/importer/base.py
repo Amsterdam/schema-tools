@@ -54,10 +54,11 @@ def chunked(generator, size):
 class BaseImporter:
     """Base importer that holds common data."""
 
-    def __init__(self, dataset_schema, engine):
+    def __init__(self, dataset_schema: DatasetSchema, engine, logger=None):
         self.engine = engine
         self.dataset_schema = dataset_schema
         self.srid = dataset_schema["crs"].split(":")[-1]
+        self.logger = LogfileLogger(logger) if logger else CliLogger()
 
     def get_db_table_name(self, table_name):
         dataset_table = self.dataset_schema.get_table_by_id(table_name)
@@ -67,6 +68,7 @@ class BaseImporter:
         self,
         file_name,
         table_name,
+        batch_size=100,
         db_table_name=None,
         truncate=False,
         **kwargs,
@@ -84,15 +86,16 @@ class BaseImporter:
         self.prepare_table(table, truncate=truncate)
 
         data_generator = self.parse_records(file_name, **kwargs)
-        print("Importing data [each dot is 100 records]: ", end="", flush=True)
+        self.logger.log_start(file_name, size=batch_size)
         num_imported = 0
+        insert_statement = table.insert()
 
-        for records in chunked(data_generator, 100):
-            self.engine.execute(pg_table.insert(), records)
-            print(".", end="", flush=True)
+        for records in chunked(data_generator, size=batch_size):
+            self.engine.execute(insert_statement, records)
             num_imported += len(records)
+            self.logger.log_progress(num_imported)
 
-        print(f" Done importing {num_imported} records", flush=True)
+        self.logger.log_done(num_imported)
 
     def parse_records(self, filename, **kwargs):
         """Yield all records from the filename"""
@@ -105,6 +108,35 @@ class BaseImporter:
         elif truncate:
             print(table.delete())
             self.engine.execute(table.delete())
+
+
+class CliLogger:
+    def __index__(self, batch_size):
+        self.batch_size = batch_size
+
+    def log_start(self, file_name, size):
+        print(f"Importing data [each dot is {size} records]: ", end="", flush=True)
+
+    def log_progress(self, num_imported):
+        print(".", end="", flush=True)
+
+    def log_done(self, num_imported):
+        print(f" Done importing {num_imported} records", flush=True)
+
+
+class LogfileLogger(CliLogger):
+    def __init__(self, logger):
+        self.logger = logger
+
+    def log_start(self, file_name, size):
+        self.logger.info("Importing %s with %d records each:", file_name, size)
+
+    def log_progress(self, num_imported):
+        self.logger.info("- imported %d records", num_imported)
+
+    def log_done(self, num_imported):
+        self.logger.info("Done")
+
 
 def table_factory(
     dataset_table: DatasetTableSchema,
