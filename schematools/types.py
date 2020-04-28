@@ -7,18 +7,18 @@ from collections import UserDict
 from string_utils import slugify
 
 import jsonschema
-from schematools import SCHEMA_VERSION
+from schematools import AMSTERDAM_SCHEMA_VERSION
 
 SUPPORTED_REFS = {
     "https://geojson.org/schema/Geometry.json",
     "https://geojson.org/schema/Point.json",
     "https://geojson.org/schema/Polygon.json",
-    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/id",
-    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/class",
-    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/dataset",
-    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/year",
-    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/uri",
-    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/schema",
+    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/id",
+    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/class",
+    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/dataset",
+    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/year",
+    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/uri",
+    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/schema",
 }
 
 
@@ -104,41 +104,43 @@ class DatasetSchema(SchemaType):
         tables = []
         for table in self.tables:
             for field in table.fields:
-                if field_is_nested_table(field):
-                    # Map Arrays into tables.
-                    sub_table_schema = dict(
-                        id=f"{table.id}_{field.name}",
-                        originalID=field.name,
-                        type="table",
-                        schema={
-                            "$schema": "http://json-schema.org/draft-07/schema#",
-                            "type": "object",
-                            "additionalProperties": False,
-                            "parentTableID": table.id,
-                            "required": [
-                                "id",
-                                "schema"
-                            ],
-                            "properties": {
-                                "id": {
-                                    "type": "integer",
-                                    "description": ""
-                                },
-                                "schema": {
-                                    "$ref":
-                                    f"https://schemas.data.amsterdam.nl/schema@{SCHEMA_VERSION}#/definitions/schema"
-                                },
-                                "parent": {
-                                    "type": "integer",
-                                    "relation": f"{self.id}:{table.id}"
-                                },
-                                **field["items"]["properties"]
-                            }
-                        }
-                    )
-                    sub_table = DatasetTableSchema(sub_table_schema, _parent_schema=self)
-                    tables.append(sub_table)
+                if field.is_nested_table:
+                    tables.append(self.build_nested_table(table=table, field=field))
         return tables
+
+    def build_nested_table(self, table, field):
+        # Map Arrays into tables.
+        sub_table_schema = dict(
+            id=f"{table.id}_{field.name}",
+            originalID=field.name,
+            type="table",
+            schema={
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "additionalProperties": False,
+                "parentTableID": table.id,
+                "required": [
+                    "id",
+                    "schema"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "description": ""
+                    },
+                    "schema": {
+                        "$ref":
+                        f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/schema"
+                    },
+                    "parent": {
+                        "type": "integer",
+                        "relation": f"{self.id}:{table.id}"
+                    },
+                    **field["items"]["properties"]
+                }
+            }
+        )
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self)
 
 
 class DatasetTableSchema(SchemaType):
@@ -222,7 +224,11 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def is_nested_table(self) -> bool:
-        return field_is_nested_table(self)
+        """
+        Checks if field is a possible nested table.
+        """
+        return self.get("type") == "array" \
+            and self.get("items", {}).get("type") == "object"
 
 
 class DatasetRow(DatasetType):
@@ -250,12 +256,3 @@ def get_db_table_name(table: DatasetTableSchema) -> str:
     app_label = dataset.id
     table_id = table.id
     return slugify(f"{app_label}_{table_id}", sign="_")
-
-
-def field_is_nested_table(field) -> bool:
-    """
-    Checks if field is a possible nested table.
-    """
-    return field.get("type") == "array" \
-        and "items" in field \
-        and field["items"].get("type") == "object"
