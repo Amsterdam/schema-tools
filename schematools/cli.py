@@ -174,12 +174,15 @@ def introspect_geojson(dataset_id, files):
 @argument_schema_location
 @click.argument("table_name")
 @click.argument("ndjson_path")
-def import_ndjson(db_url, schema_url, schema_location, table_name, ndjson_path):
+@click.option("--truncate-table", is_flag=True)
+def import_ndjson(
+    db_url, schema_url, schema_location, table_name, ndjson_path, truncate_table
+):
     """Import a NDJSON file into a table."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_url, schema_location)
     importer = NDJSONImporter(dataset_schema, engine)
-    importer.load_file(ndjson_path, table_name)
+    importer.load_file(ndjson_path, table_name, truncate=truncate_table)
 
 
 @import_.command("geojson")
