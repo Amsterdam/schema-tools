@@ -33,6 +33,7 @@ setup(
         "shapely",
         "python-string-utils",
         "python-dateutil",
+        "requests",
         "jinja2",
         "mappyfile",
     ],
