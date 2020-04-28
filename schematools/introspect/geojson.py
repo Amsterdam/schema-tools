@@ -11,7 +11,7 @@ from schematools.introspect.utils import DATASET_TMPL, TABLE_TMPL
 ID_FORMAT = re.compile(r"^([a-z0-9_]+)[/.](\d+)$", re.I)
 
 
-def introspect_geojson_files(dataset_id, files) -> dict:
+def introspect_geojson_files(dataset_id: str, files: List[str]) -> dict:
     """Generate Amsterdam Schema from GeoJSON files."""
     tables = []
     for file in files:
