@@ -1,6 +1,7 @@
 from itertools import islice
+from typing import Optional
 
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, DatasetTableSchema
 from geoalchemy2 import Geometry
 from sqlalchemy import Boolean, Column, Float, Integer, MetaData, String, Table
 
@@ -58,9 +59,30 @@ class BaseImporter:
         self.dataset_schema = dataset_schema
         self.srid = dataset_schema["crs"].split(":")[-1]
 
-    def load_file(self, file_name, table_name, **kwargs):
+    def get_db_table_name(self, table_name):
+        dataset_table = self.dataset_schema.get_table_by_id(table_name)
+        return get_table_name(dataset_table)
+
+    def load_file(
+        self,
+        file_name,
+        table_name,
+        db_table_name=None,
+        truncate=False,
+        **kwargs,
+    ):
         """Import a file into the database table"""
-        pg_table = table_factory(self.dataset_schema, table_name)
+        dataset_table = self.dataset_schema.get_table_by_id(table_name)
+        if db_table_name is None:
+            db_table_name = get_table_name(dataset_table)
+
+        # Get a table to import into
+        metadata = MetaData(bind=self.engine)
+        table = table_factory(
+            dataset_table, metadata=metadata, db_table_name=db_table_name
+        )
+        self.prepare_table(table, truncate=truncate)
+
         data_generator = self.parse_records(file_name, **kwargs)
         print("Importing data [each dot is 100 records]: ", end="", flush=True)
         num_imported = 0
@@ -76,11 +98,27 @@ class BaseImporter:
         """Yield all records from the filename"""
         raise NotImplementedError()
 
+    def prepare_table(self, table, truncate=False):
+        """Create the table if needed"""
+        if not table.exists():
+            table.create()
+        elif truncate:
+            print(table.delete())
+            self.engine.execute(table.delete())
 
-def table_factory(dataset_schema: DatasetSchema, table_name) -> Table:
-    """Generate an SQLAlchemy Table object to work with the JSON Schema"""
-    dataset_table = dataset_schema.get_table_by_id(table_name)
-    table_name = f"{dataset_schema.id}_{table_name}".replace("-", "_")
+def table_factory(
+    dataset_table: DatasetTableSchema,
+    metadata: Optional[MetaData] = None,
+    db_table_name=None,
+) -> Table:
+    """Generate an SQLAlchemy Table object to work with the JSON Schema
+
+    :param dataset_table: The Amsterdam Schema definition of the table
+    :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
+    :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
+    """
+    if db_table_name is None:
+        db_table_name = get_table_name(dataset_table)
 
     columns = []
     for field in dataset_table.fields:
@@ -102,4 +140,10 @@ def table_factory(dataset_schema: DatasetSchema, table_name) -> Table:
 
         columns.append(Column(field.name, col_type, **col_kwargs))
 
-    return Table(table_name, MetaData(), *columns)
+    return Table(db_table_name, metadata or MetaData(), *columns)
+
+
+def get_table_name(dataset_table: DatasetTableSchema) -> str:
+    """Generate the database identifier for the table."""
+    schema = dataset_table._parent_schema
+    return f"{schema.id}_{dataset_table.id}".replace("-", "_")
