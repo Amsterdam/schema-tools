@@ -60,6 +60,7 @@ class Table(Base):
     date_modified = Column(DateTime)
     license = Column(String)
     schema = Column(String)
+    schema_version = Column(String)
 
     dataset = relationship("Dataset", backref="tables")
 

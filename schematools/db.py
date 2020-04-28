@@ -1,5 +1,6 @@
 """Datbase storage of metadata from imported Amsterdam schema files."""
 from collections import defaultdict
+import json
 
 from dateutil.parser import parse as dtparse
 from sqlalchemy import DateTime, inspect
@@ -69,7 +70,7 @@ def create_meta_table_data(engine, dataset_schema: DatasetSchema):
             field_content = {
                 k.replace("$", ""): v
                 for k, v in field_value.items()
-                if not k in {"$comment"}
+                if k not in {"$comment"}
             }
             field_content["name"] = field_name
             try:
@@ -100,6 +101,8 @@ def fetch_schema_from_relational_schema(engine, dataset_id) -> dict:
         raise ValueError(f"Dataset {dataset_id} not found.")
 
     aschema = _serialize(dataset)
+    contact_point = aschema["contactPoint"]
+    aschema["contactPoint"] = json.loads(contact_point)
     aschema["tables"] = [_serialize(t) for t in aschema["tables"]]
     for table_dict in aschema["tables"]:
         del table_dict["dataset"]
@@ -119,7 +122,15 @@ def fetch_schema_from_relational_schema(engine, dataset_id) -> dict:
             ref = prop.pop("ref", None)
             if ref is not None:
                 prop["$ref"] = ref
-        table_dict["schema"]["properties"] = list(_extract_names(properties))
+            elif "geojson" in prop["type"]:
+                prop["$ref"] = prop["type"]
+                del prop["type"]
+        schema_properties = _extract_names(properties)
+        schema_version = table_dict.pop("schemaVersion")
+        schema_properties["schema"] = {
+            "$ref": f"https://schemas.data.amsterdam.nl/schema@{schema_version}#/definitions/schema"
+        }
+        table_dict["schema"]["properties"] = schema_properties
     return aschema
 
 
@@ -139,6 +150,8 @@ def _serialize(obj, camelize=True):
 
 
 def _extract_names(properties):
+    result = {}
     for prop in properties:
         name = prop.pop("name").replace("_", " ")
-        yield {name: prop}
+        result[name] = prop
+    return result
