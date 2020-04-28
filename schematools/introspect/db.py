@@ -14,6 +14,7 @@ DB_TO_ASCHEMA_TYPE = {
     "INTEGER": {"type": "integer"},
     "SMALLINT": {"type": "integer"},
     "NUMERIC": {"type": "number"},
+    "DOUBLE_PRECISION": {"type": "number"},
     "BOOLEAN": {"type": "boolean"},
     "TEXT": {"type": "string"},
     "ARRAY": {"type": "array"},
