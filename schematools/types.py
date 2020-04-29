@@ -125,7 +125,7 @@ class DatasetSchema(SchemaType):
                 ],
                 "properties": {
                     "id": {
-                        "type": "integer",
+                        "type": "integer/autoincrement",
                         "description": ""
                     },
                     "schema": {

@@ -48,6 +48,7 @@ def fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> Dict[str, A
 JSON_TYPE_TO_DJANGO = {
     "string": (UnlimitedCharField, None),
     "integer": (models.IntegerField, None),
+    "integer/autoincrement": (models.AutoField, None),
     "date": (models.DateField, None),
     "time": (models.TimeField, None),
     "number": (models.FloatField, None),
