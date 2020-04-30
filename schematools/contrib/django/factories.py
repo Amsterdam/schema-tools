@@ -91,7 +91,7 @@ class FieldMaker:
             if field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
 
-            # In schema foeign keys should be specified without _id,
+            # In schema foreign keys should be specified without _id,
             # but the db_column should be with _id
             kwargs["db_column"] = f"{slugify(field.name, sign='_')}_id"
             kwargs["db_constraint"] = False  # don't expect relations to exist.
