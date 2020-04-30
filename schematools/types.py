@@ -61,11 +61,7 @@ class DatasetSchema(SchemaType):
     @property
     def tables(self) -> typing.List[DatasetTableSchema]:
         """Access the tables within the file"""
-        tables = []
-        for table_schema in self["tables"]:
-            table = DatasetTableSchema(table_schema, _parent_schema=self)
-            tables.append(table)
-        return tables
+        return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
 
     def get_tables(self, include_nested=False) -> typing.List[DatasetTableSchema]:
         """List tables, including nested"""
