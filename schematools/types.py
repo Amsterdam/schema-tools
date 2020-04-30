@@ -7,19 +7,6 @@ from collections import UserDict
 from string_utils import slugify
 
 import jsonschema
-from schematools import AMSTERDAM_SCHEMA_VERSION
-
-SUPPORTED_REFS = {
-    "https://geojson.org/schema/Geometry.json",
-    "https://geojson.org/schema/Point.json",
-    "https://geojson.org/schema/Polygon.json",
-    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/id",
-    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/class",
-    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/dataset",
-    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/year",
-    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/uri",
-    f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/schema",
-}
 
 
 class SchemaType(UserDict):
@@ -130,7 +117,7 @@ class DatasetSchema(SchemaType):
                     },
                     "schema": {
                         "$ref":
-                        f"https://schemas.data.amsterdam.nl/schema@{AMSTERDAM_SCHEMA_VERSION}#/definitions/schema"
+                        f"/definitions/schema"
                     },
                     "parent": {
                         "type": "integer",
