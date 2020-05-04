@@ -20,7 +20,7 @@ from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
     is_possible_display_field,
-    get_db_table_name
+    get_db_table_name,
 )
 
 logger = logging.getLogger(__name__)
@@ -130,12 +130,12 @@ class DynamicModel(models.Model):
 
     @classmethod
     def get_dataset_id(cls) -> str:
-        return cls._table_schema._parent_schema.id
+        return slugify(cls._table_schema._parent_schema.id, sign="_")
 
     @classmethod
     def get_table_id(cls) -> str:
         """Give access to the table name"""
-        return cls._table_schema.id
+        return slugify(cls._table_schema.id, sign="_")
 
 
 class Dataset(models.Model):
@@ -238,6 +238,7 @@ class Dataset(models.Model):
     def create_models(self) -> List[Type[DynamicModel]]:
         """Extract the models found in the schema"""
         from schematools.contrib.django.factories import schema_models_factory
+
         return schema_models_factory(self.schema)
 
 
