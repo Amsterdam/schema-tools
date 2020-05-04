@@ -33,7 +33,7 @@ def sqlalchemy_connect_url(request, db_url):
 
 @pytest.fixture()
 def schema_url():
-    return "https://schemas.data.amsterdam.nl/datasets/"
+    return os.environ.get("SCHEMA_URL", "https://schemas.data.amsterdam.nl/datasets/")
 
 
 @pytest.fixture(scope="function")
@@ -51,7 +51,7 @@ def dbsession(engine, dbsession, sqlalchemy_keep_db) -> Session:
 
 
 @pytest.fixture()
-def schemas_mock(requests_mock: Mocker):
+def schemas_mock(requests_mock: Mocker, schema_url):
     """Mock the requests to import schemas.
 
     This allows to run "schema import schema afvalwegingen".
@@ -59,7 +59,7 @@ def schemas_mock(requests_mock: Mocker):
     # `requests_mock` is a fixture from the requests_mock package
     afvalwegingen_json = HERE / "files" / "afvalwegingen.json"
     requests_mock.get(
-        "https://schemas.data.amsterdam.nl/datasets/",
+        schema_url,
         json=[
             {
                 "name": "afvalwegingen",
@@ -69,7 +69,7 @@ def schemas_mock(requests_mock: Mocker):
         ],
     )
     requests_mock.get(
-        "https://schemas.data.amsterdam.nl/datasets/afvalwegingen/",
+        f"{schema_url}afvalwegingen/",
         json=[
             {
                 "name": "afvalwegingen",
@@ -81,7 +81,7 @@ def schemas_mock(requests_mock: Mocker):
     )
     with open(afvalwegingen_json, "rb") as fh:
         requests_mock.get(
-            "https://schemas.data.amsterdam.nl/datasets/afvalwegingen/afvalwegingen",
+            f"{schema_url}afvalwegingen/afvalwegingen",
             content=fh.read(),
         )
     yield requests_mock
