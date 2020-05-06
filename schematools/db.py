@@ -150,8 +150,4 @@ def _serialize(obj, camelize=True):
 
 
 def _extract_names(properties):
-    result = {}
-    for prop in properties:
-        name = prop.pop("name").replace("_", " ")
-        result[name] = prop
-    return result
+    return {prop.pop("name").replace("_", " "): prop for prop in properties}
