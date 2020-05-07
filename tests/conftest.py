@@ -81,7 +81,6 @@ def schemas_mock(requests_mock: Mocker, schema_url):
     )
     with open(afvalwegingen_json, "rb") as fh:
         requests_mock.get(
-            f"{schema_url}afvalwegingen/afvalwegingen",
-            content=fh.read(),
+            f"{schema_url}afvalwegingen/afvalwegingen", content=fh.read(),
         )
     yield requests_mock
