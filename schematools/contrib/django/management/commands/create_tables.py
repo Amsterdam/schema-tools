@@ -13,7 +13,7 @@ class Command(BaseCommand):
     requires_system_checks = False  # don't test URLs (which create models)
 
     def handle(self, *args, **options):
-        create_tables(self, Dataset.objects.all(), allow_unmanaged=True)
+        create_tables(self, Dataset.objects.db_enabled(), allow_unmanaged=True)
 
 
 def create_tables(  # noqa:C901
@@ -28,7 +28,12 @@ def create_tables(  # noqa:C901
     # First create all models. This allows Django to resolve  model relations.
     models = []
     for dataset in datasets:
-        models.extend(schema_models_factory(dataset.schema, base_app_name="dso_api.dynamic_api"))
+        if not dataset.enable_db:
+            continue  # in case create_tables() is called by import_schemas
+
+        models.extend(
+            schema_models_factory(dataset.schema, base_app_name="dso_api.dynamic_api")
+        )
 
     # Create all tables
     with connection.schema_editor() as schema_editor:

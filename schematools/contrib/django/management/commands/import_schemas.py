@@ -14,12 +14,25 @@ class Command(BaseCommand):
     help = "Import all known Amsterdam schema files."
     requires_system_checks = False
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--create-tables", dest="create_tables", action="store_true"
+        )
+        parser.add_argument(
+            "--no-create-tables", dest="create_tables", action="store_false"
+        )
+        parser.set_defaults(create_tables=True)
+
     def handle(self, *args, **options):
         datasets = self.import_schemas(settings.SCHEMA_URL)
 
         if not datasets:
             self.stdout.write("No new datasets imported")
-        else:
+            return
+
+        # Reasons for not creating tables directly are to manually configure the
+        # "Datasets" model flags first. E.g. disable "enable_db", set a remote URL.
+        if options["create_tables"]:
             create_tables(self, datasets, allow_unmanaged=True)
 
     def import_schemas(self, schema_url) -> List[Dataset]:

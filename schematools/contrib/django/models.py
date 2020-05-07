@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import re
 import logging
-from string_utils import slugify
+import re
 from typing import Any, Dict, List, Tuple, Type
 
 from django.conf import settings
@@ -11,24 +10,24 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
+
 from django_postgres_unlimited_varchar import UnlimitedCharField
-
 from gisserver.types import CRS
-
 from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,
-    is_possible_display_field,
     get_db_table_name,
+    is_possible_display_field,
 )
+from string_utils import slugify
+
+from . import managers
+from .validators import URLPathValidator
 
 logger = logging.getLogger(__name__)
 
 GEOJSON_PREFIX = "https://geojson.org/schema/"
-
-# Could be used to check fieldnames
-ALLOWED_ID_PATTERN = re.compile(r"[a-zA-Z][ \w\d]*")
 
 DATE_MODELS_LOOKUP = {
     "date": models.DateField,
@@ -156,11 +155,19 @@ class Dataset(models.Model):
     """
 
     name = models.CharField(_("Name"), unique=True, max_length=50)
-    ordering = models.IntegerField(_("Ordering"), default=1)
-    enable_api = models.BooleanField(default=True)
-
-    auth = models.CharField(_("Authorization"), blank=True, null=True, max_length=250)
     schema_data = JSONField(_("Amsterdam Schema Contents"))
+
+    # Settings for publishing the schema:
+    enable_api = models.BooleanField(default=True)
+    enable_db = models.BooleanField(default=True)
+    endpoint_url = models.URLField(blank=True, null=True)
+    url_prefix = models.CharField(
+        max_length=100, blank=True, validators=[URLPathValidator()]
+    )
+    auth = models.CharField(_("Authorization"), blank=True, null=True, max_length=250)
+    ordering = models.IntegerField(_("Ordering"), default=1)
+
+    objects = managers.DatasetQuerySet.as_manager()
 
     class Meta:
         ordering = ("ordering", "name")
@@ -249,7 +256,10 @@ class Dataset(models.Model):
         """Extract the models found in the schema"""
         from schematools.contrib.django.factories import schema_models_factory
 
-        return schema_models_factory(self.schema)
+        if not self.enable_db:
+            return []
+        else:
+            return schema_models_factory(self.schema)
 
 
 class DatasetTable(models.Model):
