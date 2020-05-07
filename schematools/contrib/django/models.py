@@ -48,6 +48,9 @@ def fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> Dict[str, A
 JSON_TYPE_TO_DJANGO = {
     "string": (UnlimitedCharField, None),
     "integer": (models.IntegerField, None),
+    "integer/autoincrement": (models.AutoField, None),
+    "date": (models.DateField, None),
+    "time": (models.TimeField, None),
     "number": (models.FloatField, None),
     "boolean": (models.BooleanField, None),
     "array": (ArrayField, None),
@@ -137,6 +140,13 @@ class DynamicModel(models.Model):
         """Give access to the table name"""
         return slugify(cls._table_schema.id, sign="_")
 
+    @classmethod
+    def has_parent_table(cls):
+        """
+        Check if table is sub table for another table.
+        """
+        return cls._table_schema.get("schema", {}).get("parentTableID") is not None
+
 
 class Dataset(models.Model):
     """A registry of all available datasets that are uploaded in the API server.
@@ -204,7 +214,7 @@ class Dataset(models.Model):
                 self.tables.all().delete()
             return
 
-        new_definitions = {slugify(t.id, sign="_"): t for t in self.schema.tables}
+        new_definitions = {slugify(t.id, sign="_"): t for t in self.schema.get_tables(include_nested=True)}
         new_names = set(new_definitions.keys())
         existing_models = {t.name: t for t in self.tables.all()}
         existing_names = set(existing_models.keys())

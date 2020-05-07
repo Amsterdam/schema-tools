@@ -8,18 +8,6 @@ from string_utils import slugify
 
 import jsonschema
 
-SUPPORTED_REFS = {
-    "https://geojson.org/schema/Geometry.json",
-    "https://geojson.org/schema/Point.json",
-    "https://geojson.org/schema/Polygon.json",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/class",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/dataset",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/year",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/uri",
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema",
-}
-
 
 class SchemaType(UserDict):
     def __repr__(self):
@@ -75,16 +63,67 @@ class DatasetSchema(SchemaType):
         """Access the tables within the file"""
         return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
 
+    def get_tables(self, include_nested=False) -> typing.List[DatasetTableSchema]:
+        """List tables, including nested"""
+        tables = self.tables
+        if include_nested:
+            tables += self.nested_tables
+        return tables
+
     def get_table_by_id(self, table_id: str) -> DatasetTableSchema:
-        for table in self["tables"]:
-            if table["id"] == table_id:
-                return DatasetTableSchema(table, _parent_schema=self)
+        for table in self.get_tables(include_nested=True):
+            if table.id == table_id:
+                return table
 
         available = "', '".join([table["id"] for table in self["tables"]])
         raise ValueError(
             f"Table '{table_id}' does not exist "
             f"in schema '{self.id}', available are: '{available}'"
         )
+
+    @property
+    def nested_tables(self) -> typing.List[DatasetTableSchema]:
+        """Access list of nested tables"""
+        tables = []
+        for table in self.tables:
+            for field in table.fields:
+                if field.is_nested_table:
+                    tables.append(self.build_nested_table(table=table, field=field))
+        return tables
+
+    def build_nested_table(self, table, field):
+        # Map Arrays into tables.
+        sub_table_schema = dict(
+            id=f"{table.id}_{field.name}",
+            originalID=field.name,
+            type="table",
+            schema={
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "additionalProperties": False,
+                "parentTableID": table.id,
+                "required": [
+                    "id",
+                    "schema"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer/autoincrement",
+                        "description": ""
+                    },
+                    "schema": {
+                        "$ref":
+                        f"/definitions/schema"
+                    },
+                    "parent": {
+                        "type": "integer",
+                        "relation": f"{self.id}:{table.id}"
+                    },
+                    **field["items"]["properties"]
+                }
+            }
+        )
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self)
 
 
 class DatasetTableSchema(SchemaType):
@@ -122,6 +161,10 @@ class DatasetTableSchema(SchemaType):
     def _resolve(self, ref):
         """Resolve the actual data type of a remote URI reference."""
         return jsonschema.RefResolver(ref, referrer=self)
+
+    @property
+    def has_parent_table(self):
+        return "parentTableID" in self["schema"]
 
 
 class DatasetFieldSchema(DatasetType):
@@ -161,6 +204,14 @@ class DatasetFieldSchema(DatasetType):
     @property
     def format(self) -> typing.Optional[str]:
         return self.get("format")
+
+    @property
+    def is_nested_table(self) -> bool:
+        """
+        Checks if field is a possible nested table.
+        """
+        return self.get("type") == "array" \
+            and self.get("items", {}).get("type") == "object"
 
 
 class DatasetRow(DatasetType):
