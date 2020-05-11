@@ -132,12 +132,12 @@ class DynamicModel(models.Model):
 
     @classmethod
     def get_dataset_id(cls) -> str:
-        return slugify(cls._table_schema._parent_schema.id, sign="_")
+        return cls._table_schema.dataset.id
 
     @classmethod
     def get_table_id(cls) -> str:
         """Give access to the table name"""
-        return slugify(cls._table_schema.id, sign="_")
+        return cls._table_schema.id
 
     @classmethod
     def has_parent_table(cls):
