@@ -54,7 +54,9 @@ class FieldMaker:
         **kwargs,
     ) -> TypeAndSignature:
         kwargs["primary_key"] = field.is_primary
-        kwargs["null"] = not field.required
+        if not field.is_primary:
+            # Primary can not be Null
+            kwargs["null"] = not field.required
         if self.value_getter:
             kwargs = {**kwargs, **self.value_getter(dataset, field)}
         return field_cls, args, kwargs
@@ -86,7 +88,8 @@ class FieldMaker:
 
         if relation is not None:
             field_cls = models.ForeignKey
-            args = [self._make_related_classname(relation), models.SET_NULL]
+            on_delete = models.CASCADE if field.required else models.SET_NULL
+            args = [self._make_related_classname(relation), on_delete]
 
             if field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]

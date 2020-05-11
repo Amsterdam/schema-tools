@@ -70,4 +70,3 @@ def schema_def_from_file(filename) -> Dict[str, types.DatasetSchema]:
     with open(filename, "r") as file_handler:
         schema_info = json.load(file_handler)
         return {schema_info["id"]: types.DatasetSchema.from_dict(schema_info)}
-
