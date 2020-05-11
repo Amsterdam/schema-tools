@@ -129,7 +129,7 @@ class FieldMaker:
 
 
 def schema_models_factory(
-        dataset: DatasetSchema, tables=None, base_app_name=None
+    dataset: DatasetSchema, tables=None, base_app_name=None
 ) -> List[Type[DynamicModel]]:
     """Generate Django models from the data of the schema."""
     return [

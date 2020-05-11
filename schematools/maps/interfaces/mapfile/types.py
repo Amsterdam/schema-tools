@@ -12,7 +12,7 @@ class LayerType(str, enum.Enum):
 class Metadata(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self['__type__'] = 'metadata'
+        self["__type__"] = "metadata"
 
 
 @dataclass
@@ -26,10 +26,7 @@ class Connection:
 
     @classmethod
     def for_postgres(cls, user, pw, dbname, host):
-        return cls(
-            "postgis",
-            f"user={user} password={pw} dbname={dbname} host={host}"
-        )
+        return cls("postgis", f"user={user} password={pw} dbname={dbname} host={host}")
 
     def __str__(self):
         return self.data
@@ -38,9 +35,7 @@ class Connection:
 class Data(str):
     @classmethod
     def for_postgres(cls, column, table, srid=None, UNIQUE=None):
-        result = cls(
-            f"{column} from {table}"
-        )
+        result = cls(f"{column} from {table}")
         if srid:
             result += f" USING srid={srid}"
         if UNIQUE:
@@ -51,6 +46,7 @@ class Data(str):
 @dataclass
 class FeatureClass:
     """ Used for rendering a feature """
+
     name: typing.Optional[str] = None
     expression: typing.Optional[str] = None
     # https://mapserver.org/mapfile/style.html#style
@@ -58,19 +54,13 @@ class FeatureClass:
     # https://mapserver.org/mapfile/label.html#label
     labels: typing.List[dict] = field(default_factory=list)
 
-    __type__: str = field(init=False, default='class')
+    __type__: str = field(init=False, default="class")
 
     def add_style(self, d):
-        self.styles.append({
-            '__type__': 'style',
-            **d
-        })
+        self.styles.append({"__type__": "style", **d})
 
     def add_label(self, d):
-        self.labels.append({
-            '__type__': 'label',
-            **d
-        })
+        self.labels.append({"__type__": "label", **d})
 
 
 Filename = str
@@ -93,7 +83,7 @@ class Layer:
     labelitem: typing.Optional[str] = None
     metadata: Metadata = field(default_factory=Metadata)
 
-    __type__: str = field(init=False, default='layer')
+    __type__: str = field(init=False, default="layer")
 
     def __post_init__(self, connection: Connection = None):
         if connection:
@@ -104,7 +94,7 @@ class Layer:
 @dataclass
 class Web:
     metadata: Metadata = field(default_factory=Metadata)
-    __type__: str = field(init=False, default='web')
+    __type__: str = field(init=False, default="web")
 
 
 @dataclass

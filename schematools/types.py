@@ -102,26 +102,14 @@ class DatasetSchema(SchemaType):
                 "type": "object",
                 "additionalProperties": False,
                 "parentTableID": table.id,
-                "required": [
-                    "id",
-                    "schema"
-                ],
+                "required": ["id", "schema"],
                 "properties": {
-                    "id": {
-                        "type": "integer/autoincrement",
-                        "description": ""
-                    },
-                    "schema": {
-                        "$ref":
-                        f"/definitions/schema"
-                    },
-                    "parent": {
-                        "type": "integer",
-                        "relation": f"{self.id}:{table.id}"
-                    },
-                    **field["items"]["properties"]
-                }
-            }
+                    "id": {"type": "integer/autoincrement", "description": ""},
+                    "schema": {"$ref": f"/definitions/schema"},
+                    "parent": {"type": "integer", "relation": f"{self.id}:{table.id}"},
+                    **field["items"]["properties"],
+                },
+            },
         )
         return DatasetTableSchema(sub_table_schema, _parent_schema=self)
 
@@ -210,8 +198,10 @@ class DatasetFieldSchema(DatasetType):
         """
         Checks if field is a possible nested table.
         """
-        return self.get("type") == "array" \
+        return (
+            self.get("type") == "array"
             and self.get("items", {}).get("type") == "object"
+        )
 
 
 class DatasetRow(DatasetType):
