@@ -130,6 +130,11 @@ class DatasetTableSchema(SchemaType):
             raise ValueError("Invalid JSON-schema contents of table")
 
     @property
+    def dataset(self) -> typing.Optional[DatasetSchema]:
+        """The dataset that this table is part of."""
+        return self._parent_schema
+
+    @property
     def fields(self):
         required = set(self["schema"]["required"])
         for name, spec in self["schema"]["properties"].items():
@@ -163,6 +168,11 @@ class DatasetFieldSchema(DatasetType):
         self._name = _name
         self._parent_table = _parent_table
         self._required = _required
+
+    @property
+    def table(self) -> typing.Optional[DatasetTableSchema]:
+        """The table that this field is a part of"""
+        return self._parent_table
 
     @property
     def name(self) -> str:
