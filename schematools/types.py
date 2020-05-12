@@ -163,16 +163,30 @@ class DatasetTableSchema(SchemaType):
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """
 
-    def __init__(self, *args, _name=None, _parent_table=None, _required=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        _name=None,
+        _parent_table=None,
+        _parent_field=None,
+        _required=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self._name = _name
         self._parent_table = _parent_table
+        self._parent_field = _parent_field
         self._required = _required
 
     @property
     def table(self) -> typing.Optional[DatasetTableSchema]:
         """The table that this field is a part of"""
         return self._parent_table
+
+    @property
+    def parent_field(self) -> typing.Optional[DatasetFieldSchema]:
+        """Provide access to the top-level field where is is a property for."""
+        return self._parent_field
 
     @property
     def name(self) -> str:
@@ -202,6 +216,27 @@ class DatasetFieldSchema(DatasetType):
     @property
     def format(self) -> typing.Optional[str]:
         return self.get("format")
+
+    @property
+    def is_object(self) -> bool:
+        """Tell whether the field references an object."""
+        return self.get("type") == "object"
+
+    @property
+    def sub_fields(self) -> typing.List[DatasetFieldSchema]:
+        """Return the fields for a nested object."""
+        if not self.is_object:
+            return
+
+        required = set(self["required"])
+        for name, spec in self["properties"].items():
+            yield DatasetFieldSchema(
+                _name=name,
+                _parent_table=self._parent_table,
+                _parent_field=self,
+                _required=(name in required),
+                **spec,
+            )
 
     @property
     def is_nested_table(self) -> bool:
