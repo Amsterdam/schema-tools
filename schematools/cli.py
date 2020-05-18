@@ -90,17 +90,23 @@ def introspect():
 
 
 @schema.command()
-@click.argument("json_schema_url")
-@click.argument("schema_url")
-def validate(json_schema_url, schema_url):
-    """Validate a JSON file against a JSON schema."""
-    response = requests.get(json_schema_url)
+@click.argument("meta_schema_url")
+@click.argument("schema_location")
+def validate(meta_schema_url, schema_location):
+    """ Validate a JSON file against the amsterdam schema meta schema.
+    schema_location can be a url or a filesystem path.
+    """
+    response = requests.get(meta_schema_url)
     response.raise_for_status()
     schema = response.json()
 
-    response = requests.get(schema_url)
-    response.raise_for_status()
-    instance = response.json()
+    if not schema_location.startswith("http"):
+        with open(schema_location) as f:
+            instance = json.load(f)
+    else:
+        response = requests.get(schema_location)
+        response.raise_for_status()
+        instance = response.json()
 
     try:
         jsonschema.validate(instance=instance, schema=schema)
