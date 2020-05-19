@@ -96,7 +96,7 @@ class FieldMaker:
 
             # In schema foreign keys should be specified without _id,
             # but the db_column should be with _id
-            kwargs["db_column"] = f"{slugify(field.name, sign='_')}_id"
+            kwargs["db_column"] = f"{slugify(field.name, separator='_')}_id"
             kwargs["db_constraint"] = False  # don't expect relations to exist.
         return field_cls, args, kwargs
 
@@ -173,7 +173,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
         model_field = kls(*args, **kwargs)
 
         # Generate name, fix if needed.
-        field_name = slugify(field.name, sign="_")
+        field_name = slugify(field.name, separator="_")
         model_field.name = field_name
         fields[field_name] = model_field
 

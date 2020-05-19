@@ -273,4 +273,4 @@ def get_db_table_name(table: DatasetTableSchema) -> str:
     dataset = table._parent_schema
     app_label = dataset.id
     table_id = table.id
-    return slugify(f"{app_label}_{table_id}", sign="_")
+    return slugify(f"{app_label}_{table_id}", separator="_")

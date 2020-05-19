@@ -222,7 +222,7 @@ class Dataset(models.Model):
             return
 
         new_definitions = {
-            slugify(t.id, sign="_"): t
+            slugify(t.id, separator="_"): t
             for t in self.schema.get_tables(include_nested=True)
         }
         new_names = set(new_definitions.keys())
@@ -338,7 +338,7 @@ class DatasetTable(models.Model):
 
         instance = cls.objects.create(
             dataset=dataset,
-            name=slugify(table.id, sign="_"),
+            name=slugify(table.id, separator="_"),
             db_table=get_db_table_name(table),
             auth=" ".join(claims),
             enable_geosearch=enable_geosearch,
@@ -386,5 +386,5 @@ class DatasetField(models.Model):
             claims = [claims]
 
         return cls.objects.create(
-            table=table, name=slugify(field.name, sign="_"), auth=" ".join(claims)
+            table=table, name=slugify(field.name, separator="_"), auth=" ".join(claims)
         )
