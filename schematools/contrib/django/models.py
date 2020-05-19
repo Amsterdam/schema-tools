@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from django.conf import settings
 from django.contrib.gis.db import models as gis_models
@@ -188,6 +188,26 @@ class Dataset(models.Model):
             else None
         )
 
+    @classmethod
+    def create_for_schema(cls, schema: DatasetSchema) -> Dataset:
+        """Create the schema based on the Amsterdam Schema JSON input"""
+        return cls.objects.create(
+            name=slugify(schema.id, "_"),
+            schema_data=schema.json_data(),
+            auth=_serialize_claims(schema),
+        )
+
+    def save_for_schema(self, schema: DatasetSchema):
+        """Update this model with schema data"""
+        self.schema_data = schema.json_data()
+        self.auth = _serialize_claims(schema)
+
+        if self.schema_data_changed():
+            self.save(update_fields=["schema_data", "auth"])
+            return True
+        else:
+            return False
+
     def save(self, *args, **kwargs):
         """Perform a final data validation check, and additional updates."""
         if "schema_data" in self.__dict__:
@@ -222,8 +242,7 @@ class Dataset(models.Model):
             return
 
         new_definitions = {
-            slugify(t.id, sign="_"): t
-            for t in self.schema.get_tables(include_nested=True)
+            slugify(t.id, "_"): t for t in self.schema.get_tables(include_nested=True)
         }
         new_names = set(new_definitions.keys())
         existing_models = {t.name: t for t in self.tables.all()}
@@ -332,15 +351,11 @@ class DatasetTable(models.Model):
         if dataset.name in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]:
             enable_geosearch = False
 
-        claims = table.get("auth", [])
-        if isinstance(claims, str):
-            claims = [claims]
-
         instance = cls.objects.create(
             dataset=dataset,
-            name=slugify(table.id, sign="_"),
+            name=slugify(table.id, "_"),
             db_table=get_db_table_name(table),
-            auth=" ".join(claims),
+            auth=_serialize_claims(table),
             enable_geosearch=enable_geosearch,
             **cls._get_field_values(table),
         )
@@ -381,10 +396,17 @@ class DatasetField(models.Model):
         """Create a DatasetField object based on the Amsterdam Schema field spec.
 
         """
-        claims = field.get("auth", [])
-        if isinstance(claims, str):
-            claims = [claims]
-
         return cls.objects.create(
-            table=table, name=slugify(field.name, sign="_"), auth=" ".join(claims)
+            table=table, name=slugify(field.name, "_"), auth=_serialize_claims(field)
         )
+
+
+def _serialize_claims(schema_object) -> Optional[str]:
+    """Convert the schema/table/field auth claims to a string format"""
+    claims = schema_object.get("auth")
+    if not claims:
+        return None
+    elif isinstance(claims, str):
+        return claims
+    else:
+        return " ".join(claims)
