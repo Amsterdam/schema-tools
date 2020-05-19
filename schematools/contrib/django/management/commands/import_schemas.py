@@ -69,15 +69,12 @@ class Command(BaseCommand):
         try:
             dataset = Dataset.objects.get(name=schema.id)
         except Dataset.DoesNotExist:
-            dataset = Dataset.objects.create(
-                name=schema.id, schema_data=schema.json_data()
-            )
+            dataset = Dataset.create_for_schema(schema)
             self.stdout.write(f"  Created {name}")
             return dataset
         else:
-            dataset.schema_data = schema.json_data()
-            if dataset.schema_data_changed():
-                dataset.save()
+            updated = dataset.save_for_schema(schema)
+            if updated:
                 self.stdout.write(f"  Updated {name}")
                 return dataset
 
