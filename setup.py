@@ -43,12 +43,14 @@ setup(
             "django >= 3.0.4",
             "django-postgres-unlimited-varchar >= 1.1.0",
             "django-gisserver >= 0.5",
+            "django-environ",
         ],
     },
     tests_require=["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"],
     entry_points="""
         [console_scripts]
         schema=schematools.cli:main
+        django=schematools.contrib.django.cli:main
     """,
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
