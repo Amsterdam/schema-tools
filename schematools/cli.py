@@ -20,7 +20,8 @@ from .importer.geojson import GeoJSONImporter
 from .importer.ndjson import NDJSONImporter
 from .maps import create_mapfile
 from .types import DatasetSchema
-from .utils import schema_def_from_url
+from .utils import schema_def_from_url, schema_fetch_url_file
+from .provenance.create import ProvenaceIteration
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
 
@@ -111,6 +112,19 @@ def validate(meta_schema_url, schema_location):
     try:
         jsonschema.validate(instance=instance, schema=schema)
     except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+        click.echo(str(e), err=True)
+        exit(1)
+
+
+@show.command("provenance")
+@click.argument("schema_location")
+def show_provenance(schema_location):
+    """Retrieve the key-values pairs of the source column (specified as a 'provenance' property of an attribute) and its translated name (the attribute name itself)"""
+    data = schema_fetch_url_file(schema_location)
+    try:
+        instance = ProvenaceIteration(data)
+        click.echo(instance.final_dic)
+    except (jsonschema.ValidationError, jsonschema.SchemaError, KeyError) as e:
         click.echo(str(e), err=True)
         exit(1)
 
