@@ -12,10 +12,10 @@ class ProvenaceIteration:
     def __init__(self, dataschema: DatasetSchema):
         """Trigger processing"""
 
-        self.get_number_of_tables(dataschema)
+        self.set_number_of_tables(dataschema)
         self.set_dataset_for_final_listing(dataschema)
 
-    def get_number_of_tables(self, dataschema: DatasetSchema):
+    def set_number_of_tables(self, dataschema: DatasetSchema):
         """Retrieving the number of tables in datasetschema for looping purpose"""
         for item in dataschema:
             if item == "tables":
@@ -30,11 +30,7 @@ class ProvenaceIteration:
             # At first make root branch dataset and take id field as value for dataschema attribute
             self.final_dic["dataset"] = dataschema["id"]
             # Add provenance element on dataset level
-            self.final_dic["provenance"] = (
-                dataschema["provenance"]
-                if "provenance" in dataschema
-                else "na"  # not applicable
-            )
+            self.final_dic["provenance"] = dataschema.get("provenance", "na")
             # and make tables branch to hold the tables provenance data
             self.final_dic["tables"] = []
 
@@ -51,12 +47,12 @@ class ProvenaceIteration:
 
                 self.temp_dic_tables["table"] = dictionary[n]["id"]
                 self.temp_dic_tables["provenance"] = (
-                    dictionary["provenance"]
-                    if "provenance" in dictionary
+                    dictionary[n]["provenance"]
+                    if "provenance" in dictionary[n]
                     else "na"  # not applicable
                 )
                 self.temp_dic_tables["properties"] = []
-                self.get_provenance(dictionary[n], n)
+                self.get_provenance(dictionary[n]["schema"]["properties"], n)
                 # add table result within element tables in final result
                 self.final_dic["tables"].append(self.temp_dic_tables)
                 # clean up temp_dic to enforce a new object for next table
@@ -64,17 +60,17 @@ class ProvenaceIteration:
 
     def get_provenance(self, dictionary, parent_item):
         """Extrating the provenance data within a table using recursive call backs (calling it self)"""
+
         if type(dictionary) is dict:
+
             for i in dictionary:
                 self.temp_dic_columns = {}
 
                 if i == "provenance":
-
                     self.temp_dic_columns[dictionary[i]] = parent_item
                     self.temp_dic_tables["properties"].append(
                         dict(self.temp_dic_columns)
                     )
-
                 else:
                     # contiue
                     self.get_provenance(dictionary[i], i)
