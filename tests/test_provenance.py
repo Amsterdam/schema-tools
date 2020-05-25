@@ -70,9 +70,9 @@ def test_provenance_result():
 
     result = ProvenaceIteration(test_data)
     result = result.final_dic
-    print(result)
+    # print(result)
     result = count_num_of_levels(result)
-    print(result)
+    # print(result)
     assert result == 3  # always three levels: dataset, table and property
 
 
