@@ -159,6 +159,11 @@ class DatasetTableSchema(SchemaType):
     def has_parent_table(self):
         return "parentTableID" in self["schema"]
 
+    @property
+    def filters(self):
+        """Fetch list of additional filters"""
+        return self["schema"].get("additionalFilters", {})
+
 
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """
