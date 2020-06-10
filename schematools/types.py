@@ -59,6 +59,10 @@ class DatasetSchema(SchemaType):
         return cls(obj)
 
     @property
+    def identifier(self):
+        return self.get("identifier", "pk")
+
+    @property
     def tables(self) -> typing.List[DatasetTableSchema]:
         """Access the tables within the file"""
         return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
@@ -112,6 +116,20 @@ class DatasetSchema(SchemaType):
             },
         )
         return DatasetTableSchema(sub_table_schema, _parent_schema=self)
+
+    @property
+    def temporal(self):
+        temporal_configuration = self.get("temporal", None)
+        if temporal_configuration is None:
+            return None
+
+        for key, [start_field, end_field] in temporal_configuration.get("dimensions", {}).items():
+            temporal_configuration["dimensions"][key] = [
+                slugify(start_field, separator="_"),
+                slugify(end_field, separator="_"),
+            ]
+
+        return temporal_configuration
 
 
 class DatasetTableSchema(SchemaType):
