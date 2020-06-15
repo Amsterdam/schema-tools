@@ -182,6 +182,16 @@ class DatasetTableSchema(SchemaType):
         """Fetch list of additional filters"""
         return self["schema"].get("additionalFilters", {})
 
+    @property
+    def relations(self):
+        """Fetch list of additional (backwards or N-N) relations
+
+        This is a dictionary of names for existing forward relations
+        in other tables with either the 'embedded' or 'summary'
+        property
+        """
+        return self["schema"].get("additionalRelations", {})
+
 
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """
