@@ -325,6 +325,7 @@ class DatasetTable(models.Model):
         ret["geometry_field_type"] = None
         for field in table.fields:
             # Take the first geojson field as geometry field
+            # TODO Change this to use the mainGeometry field from the table schema
             if not ret["geometry_field"] and field.type.startswith(GEOJSON_PREFIX):
                 ret["geometry_field"] = field.name
                 match = re.search(r"schema\/(?P<schema>\w+)\.json", field.type)
