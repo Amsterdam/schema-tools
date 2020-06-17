@@ -44,16 +44,18 @@ def split_id(id_value) -> Tuple[str, str]:
 class GeoJSONImporter(BaseImporter):
     """Import an GeoJSON file into the database."""
 
-    def parse_records(self, file_name, **kwargs):
+    def parse_records(self, file_name, dataset_table, **kwargs):
         """Provide an iterator the reads the NDJSON records"""
         features = read_geojson(file_name)
+        main_geometry = dataset_table.main_geometry
         for feature in features:
-            wkt = shape(feature["geometry"]).wkt
+            if main_geometry is not None:
+                wkt = shape(feature[main_geometry]).wkt
             record = dict(
                 self._clean_value(name, value)
-                for name, value in feature["properties"].items()
+                for name, value in feature[main_geometry].items()
             )
-            record["geometry"] = f"SRID={self.srid};{wkt}"
+            record[main_geometry] = f"SRID={self.srid};{wkt}"
             yield record
 
     def _clean_value(self, name: str, value: Any) -> Tuple[str, Any]:

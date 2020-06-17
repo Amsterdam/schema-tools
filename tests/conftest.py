@@ -12,6 +12,11 @@ HERE = Path(__file__).parent
 
 
 @pytest.fixture(scope="session")
+def here():
+    return HERE
+
+
+@pytest.fixture(scope="session")
 def db_url():
     """Get the DATABASE_URL, prepend test_ to it."""
     url = os.environ.get("DATABASE_URL", "postgresql://localhost/schematools")

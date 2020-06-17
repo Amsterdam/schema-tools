@@ -97,17 +97,19 @@ def validate(meta_schema_url, schema_location):
     """ Validate a JSON file against the amsterdam schema meta schema.
     schema_location can be a url or a filesystem path.
     """
-    response = requests.get(meta_schema_url)
-    response.raise_for_status()
-    schema = response.json()
 
-    if not schema_location.startswith("http"):
-        with open(schema_location) as f:
-            instance = json.load(f)
-    else:
-        response = requests.get(schema_location)
-        response.raise_for_status()
-        instance = response.json()
+    def _fetch_json(location):
+        if not location.startswith("http"):
+            with open(location) as f:
+                json_obj = json.load(f)
+        else:
+            response = requests.get(location)
+            response.raise_for_status()
+            json_obj = response.json()
+        return json_obj
+
+    schema = _fetch_json(meta_schema_url)
+    instance = _fetch_json(schema_location)
 
     try:
         jsonschema.validate(instance=instance, schema=schema)

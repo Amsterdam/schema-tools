@@ -29,7 +29,7 @@ setup(
         "psycopg2",
         "click",
         "jsonschema",
-        "ndjson",
+        "ndjson>=0.3.0",
         "shapely",
         "python-string-utils",
         "python-dateutil",
