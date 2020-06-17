@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Dict
 
 import requests
+from string_utils import slugify
 
 from . import types
+
+
+re_camel_case = re.compile(r'(((?<=[a-z0-9])[A-Z])|([A-Z0-9](?![A-Z0-9]|$)))')
 
 
 def schema_defs_from_url(schemas_url) -> Dict[str, types.DatasetSchema]:
@@ -84,3 +89,23 @@ def schema_fetch_url_file(schema_url_file):
         schema_location = response.json()
 
     return schema_location
+
+
+def toCamelCase(name):
+    """
+    Unify field/column/dataset name from Space separated/Snake Case/Camel case
+    to camelCase.
+    """
+    name = " ".join(name.split("_"))
+    words = re_camel_case.sub(r' \1', name).strip().lower().split(" ")
+    return "".join(w.lower() if i is 0 else w.title() for i, w in enumerate(words))
+
+
+def to_snake_case(name):
+    """
+    Convert field/column/dataset name from Space separated/Snake Case/Camel case
+    to snake_case.
+    """
+    # Convert to field name, avoiding snake_case to snake_case issues.
+    name = toCamelCase(name)
+    return slugify(re_camel_case.sub(r' \1', name).strip().lower(), separator="_")

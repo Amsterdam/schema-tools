@@ -4,8 +4,6 @@ from __future__ import annotations
 import json
 import typing
 from collections import UserDict
-from string_utils import slugify
-
 import jsonschema
 
 
@@ -119,6 +117,7 @@ class DatasetSchema(SchemaType):
 
     @property
     def temporal(self):
+        from schematools.utils import to_snake_case
         temporal_configuration = self.get("temporal", None)
         if temporal_configuration is None:
             return None
@@ -127,8 +126,8 @@ class DatasetSchema(SchemaType):
             "dimensions", {}
         ).items():
             temporal_configuration["dimensions"][key] = [
-                slugify(start_field, separator="_"),
-                slugify(end_field, separator="_"),
+                to_snake_case(start_field),
+                to_snake_case(end_field),
             ]
 
         return temporal_configuration
@@ -319,7 +318,8 @@ def is_possible_display_field(field: DatasetFieldSchema) -> bool:
 
 def get_db_table_name(table: DatasetTableSchema) -> str:
     """Generate the table name for a database schema."""
+    from schematools.utils import to_snake_case
     dataset = table._parent_schema
     app_label = dataset.id
     table_id = table.id
-    return slugify(f"{app_label}_{table_id}", separator="_")
+    return to_snake_case(f"{app_label}_{table_id}")

@@ -6,7 +6,6 @@ from urllib.parse import urlparse
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
 from django.conf import settings
-from string_utils import slugify
 
 from schematools.types import (
     DatasetFieldSchema,
@@ -15,6 +14,7 @@ from schematools.types import (
     is_possible_display_field,
     get_db_table_name,
 )
+from schematools.utils import to_snake_case
 from .models import (
     DATE_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
@@ -96,7 +96,7 @@ class FieldMaker:
 
             # In schema foreign keys should be specified without _id,
             # but the db_column should be with _id
-            kwargs["db_column"] = f"{slugify(field.name, separator='_')}_id"
+            kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
             kwargs["db_constraint"] = False  # don't expect relations to exist.
         return field_cls, args, kwargs
 
@@ -173,7 +173,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
         model_field = kls(*args, **kwargs)
 
         # Generate name, fix if needed.
-        field_name = slugify(field.name, separator="_")
+        field_name = to_snake_case(field.name)
         model_field.name = field_name
         fields[field_name] = model_field
 
