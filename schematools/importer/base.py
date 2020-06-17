@@ -47,7 +47,7 @@ def chunked(generator, size):
     # Based on more-itertools. islice returns results until 'size',
     # iter() repeatedly calls make_chunk until the '[]' sentinel is returned.
     gen = iter(generator)
-    make_chunk = lambda: list(islice(gen, size))
+    make_chunk = lambda: list(islice(gen, size))  # NoQA
     return iter(make_chunk, [])
 
 
@@ -85,7 +85,7 @@ class BaseImporter:
         )
         self.prepare_table(table, truncate=truncate)
 
-        data_generator = self.parse_records(file_name, **kwargs)
+        data_generator = self.parse_records(file_name, dataset_table, **kwargs)
         self.logger.log_start(file_name, size=batch_size)
         num_imported = 0
         insert_statement = table.insert()
@@ -97,7 +97,7 @@ class BaseImporter:
 
         self.logger.log_done(num_imported)
 
-    def parse_records(self, filename, **kwargs):
+    def parse_records(self, filename, dataset_table, **kwargs):
         """Yield all records from the filename"""
         raise NotImplementedError()
 

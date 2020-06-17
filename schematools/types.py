@@ -123,7 +123,9 @@ class DatasetSchema(SchemaType):
         if temporal_configuration is None:
             return None
 
-        for key, [start_field, end_field] in temporal_configuration.get("dimensions", {}).items():
+        for key, [start_field, end_field] in temporal_configuration.get(
+            "dimensions", {}
+        ).items():
             temporal_configuration["dimensions"][key] = [
                 slugify(start_field, separator="_"),
                 slugify(end_field, separator="_"),
@@ -164,6 +166,20 @@ class DatasetTableSchema(SchemaType):
     def display_field(self):
         """Tell which fields can be used as display field."""
         return self["schema"].get("display", None)
+
+    @property
+    def main_geometry(self):
+        """The main geometry field, if there is a geometry field available.
+            Default to "geometry" for existing schemas without a mainGeometry field.
+        """
+        return self["schema"].get("mainGeometry", "geometry")
+
+    @property
+    def identifier(self):
+        """The main identifier field, if there is an identifier field available.
+            Default to "id" for existing schemas without an identifier field.
+        """
+        return self["schema"].get("identifier", "id")
 
     def validate(self, row: dict):
         """Validate a record against the schema."""
@@ -240,7 +256,7 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def is_primary(self) -> bool:
-        return self.name == "id"
+        return self.name == self.table.identifier
 
     @property
     def relation(self) -> typing.Optional[str]:
