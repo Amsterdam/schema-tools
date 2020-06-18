@@ -1,6 +1,7 @@
 import copy
 
 from sqlalchemy import inspect
+from string_utils import snake_case_to_camel
 
 from .utils import DATASET_TMPL, TABLE_TMPL
 
@@ -13,6 +14,7 @@ DB_TO_ASCHEMA_TYPE = {
     "TIMESTAMP": {"type": "string", "format": "date-time"},
     "VARCHAR": {"type": "string"},
     "INTEGER": {"type": "integer"},
+    "BIGINT": {"type": "integer"},
     "SMALLINT": {"type": "integer"},
     "NUMERIC": {"type": "number"},
     "DOUBLE_PRECISION": {"type": "number"},
@@ -33,11 +35,10 @@ DB_TO_ASCHEMA_TYPE = {
 
 
 def fix_name(field_name, field_value=None):
+    ret = field_name
     if field_value is None or "relation" in field_value:
-        ret = field_name.replace("_id", "").replace("_", " ")
-    else:
-        ret = field_name.replace("_", " ")
-    return ret
+        ret = field_name.replace("_id", "")
+    return snake_case_to_camel(ret, upper_case_first=False)
 
 
 def introspect_db_schema(engine, dataset_id, tablenames, prefix=None):
