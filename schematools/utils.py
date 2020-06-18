@@ -5,7 +5,7 @@ import re
 from typing import Dict
 
 import requests
-from string_utils import slugify
+from string_utils import slugify, camel_case_to_snake
 
 from . import types
 
@@ -98,7 +98,7 @@ def toCamelCase(name):
     """
     name = " ".join(name.split("_"))
     words = re_camel_case.sub(r' \1', name).strip().lower().split(" ")
-    return "".join(w.lower() if i is 0 else w.title() for i, w in enumerate(words))
+    return "".join(w.lower() if i == 0 else w.title() for i, w in enumerate(words))
 
 
 def to_snake_case(name):
@@ -108,4 +108,4 @@ def to_snake_case(name):
     """
     # Convert to field name, avoiding snake_case to snake_case issues.
     name = toCamelCase(name)
-    return slugify(re_camel_case.sub(r' \1', name).strip().lower(), separator="_")
+    return slugify(camel_case_to_snake(name), separator="_")
