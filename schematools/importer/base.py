@@ -165,10 +165,10 @@ def table_factory(
                 f"Field type '{field.type}' is not implemented."
             ) from None
 
-        col_kwargs = {}
-        if field.name == "id":
+        col_kwargs = {"nullable": not field.required}
+        if field.is_primary:
             col_kwargs["primary_key"] = True
-            col_kwargs["nullable"] = True
+            col_kwargs["nullable"] = False
 
         columns.append(Column(field.name, col_type, **col_kwargs))
 
