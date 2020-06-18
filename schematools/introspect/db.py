@@ -2,6 +2,7 @@ import copy
 
 from sqlalchemy import inspect
 from string_utils import snake_case_to_camel
+from ..utils import toCamelCase
 
 from .utils import DATASET_TMPL, TABLE_TMPL
 
@@ -38,7 +39,7 @@ def fix_name(field_name, field_value=None):
     ret = field_name
     if field_value is None or "relation" in field_value:
         ret = field_name.replace("_id", "")
-    return snake_case_to_camel(ret, upper_case_first=False)
+    return toCamelCase(ret)
 
 
 def introspect_db_schema(engine, dataset_id, tablenames, prefix=None):
