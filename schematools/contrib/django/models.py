@@ -10,6 +10,7 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
+from django.utils.text import camel_case_to_spaces
 
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
@@ -20,7 +21,7 @@ from schematools.types import (
     get_db_table_name,
     is_possible_display_field,
 )
-from string_utils import slugify
+from schematools.utils import to_snake_case
 
 from . import managers
 from .validators import URLPathValidator
@@ -192,7 +193,7 @@ class Dataset(models.Model):
     def create_for_schema(cls, schema: DatasetSchema) -> Dataset:
         """Create the schema based on the Amsterdam Schema JSON input"""
         return cls.objects.create(
-            name=slugify(schema.id, "_"),
+            name=to_snake_case(schema.id),
             schema_data=schema.json_data(),
             auth=_serialize_claims(schema),
         )
@@ -242,7 +243,7 @@ class Dataset(models.Model):
             return
 
         new_definitions = {
-            slugify(t.id, "_"): t for t in self.schema.get_tables(include_nested=True)
+            to_snake_case(t.id): t for t in self.schema.get_tables(include_nested=True)
         }
         new_names = set(new_definitions.keys())
         existing_models = {t.name: t for t in self.tables.all()}
@@ -353,7 +354,7 @@ class DatasetTable(models.Model):
 
         instance = cls.objects.create(
             dataset=dataset,
-            name=slugify(table.id, "_"),
+            name=to_snake_case(table.id),
             db_table=get_db_table_name(table),
             auth=_serialize_claims(table),
             enable_geosearch=enable_geosearch,
@@ -397,7 +398,7 @@ class DatasetField(models.Model):
 
         """
         return cls.objects.create(
-            table=table, name=slugify(field.name, "_"), auth=_serialize_claims(field)
+            table=table, name=to_snake_case(field.name), auth=_serialize_claims(field)
         )
 
 

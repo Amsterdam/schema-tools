@@ -5,7 +5,7 @@ from django.core.management import BaseCommand
 
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetSchema
-from schematools.utils import schema_defs_from_url
+from schematools.utils import schema_defs_from_url, to_snake_case
 
 from .create_tables import create_tables
 
@@ -67,7 +67,7 @@ class Command(BaseCommand):
     def import_schema(self, name: str, schema: DatasetSchema) -> Optional[Dataset]:
         """Import a single dataset schema."""
         try:
-            dataset = Dataset.objects.get(name=schema.id)
+            dataset = Dataset.objects.get(name=to_snake_case(schema.id))
         except Dataset.DoesNotExist:
             dataset = Dataset.create_for_schema(schema)
             self.stdout.write(f"  Created {name}")
