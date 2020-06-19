@@ -5,12 +5,12 @@ import re
 from typing import Dict
 
 import requests
-from string_utils import slugify, camel_case_to_snake
+from string_utils import slugify
 
 from . import types
 
 
-re_camel_case = re.compile(r'(((?<=[a-z0-9])[A-Z])|([A-Z0-9](?![A-Z0-9]|$)))')
+re_camel_case = re.compile(r'(((?<=[a-z])[A-Z])|([A-Z0-9](?![A-Z]|$)))')
 
 
 def schema_defs_from_url(schemas_url) -> Dict[str, types.DatasetSchema]:
@@ -108,4 +108,4 @@ def to_snake_case(name):
     """
     # Convert to field name, avoiding snake_case to snake_case issues.
     name = toCamelCase(name)
-    return slugify(camel_case_to_snake(name), separator="_")
+    return slugify(re_camel_case.sub(r' \1', name).strip().lower(), separator="_")

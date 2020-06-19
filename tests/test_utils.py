@@ -1,5 +1,6 @@
 from schematools.utils import to_snake_case, toCamelCase
 
+
 def test_toCamelCase():
     """Confirm that:
      - space separated name is converted to camelCase
@@ -12,6 +13,7 @@ def test_toCamelCase():
     assert toCamelCase("TestNameMagic") == "testNameMagic"
     assert toCamelCase("test_name_magic") == "testNameMagic"
 
+
 def test_to_snake_case():
     """Confirm that:
      - space separated name converted to snake_case
@@ -19,7 +21,7 @@ def test_to_snake_case():
      - snake_case converted to snake_case
     """
     assert to_snake_case("test name magic") == "test_name_magic"
-    assert to_snake_case("test name magic2") == "test_name_magic2"
+    assert to_snake_case("test name magic22") == "test_name_magic_22"
     assert to_snake_case("TestNameMagic") == "test_name_magic"
     assert to_snake_case("testNameMagic") == "test_name_magic"
     assert to_snake_case("test_name_magic") == "test_name_magic"
