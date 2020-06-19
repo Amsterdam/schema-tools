@@ -25,3 +25,5 @@ def test_to_snake_case():
     assert to_snake_case("TestNameMagic") == "test_name_magic"
     assert to_snake_case("testNameMagic") == "test_name_magic"
     assert to_snake_case("test_name_magic") == "test_name_magic"
+    assert to_snake_case("verlengingSluitingstijd1") == "verlenging_sluitingstijd_1"
+
