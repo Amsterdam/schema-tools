@@ -170,7 +170,8 @@ def table_factory(
             col_kwargs["primary_key"] = True
             col_kwargs["nullable"] = False
 
-        columns.append(Column(field.name, col_type, **col_kwargs))
+        id_postfix = "_id" if field.relation else ""
+        columns.append(Column(f"{field.name}{id_postfix}", col_type, **col_kwargs))
 
     return Table(db_table_name, metadata or MetaData(), *columns)
 
