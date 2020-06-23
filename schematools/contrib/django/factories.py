@@ -14,7 +14,7 @@ from schematools.types import (
     is_possible_display_field,
     get_db_table_name,
 )
-from schematools.utils import to_snake_case
+from schematools.utils import to_snake_case, toCamelCase
 from .models import (
     DATE_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
@@ -43,7 +43,7 @@ class FieldMaker:
 
     def _make_related_classname(self, relation_urn):
         dataset_name, table_name = relation_urn.split(":")
-        return f"{dataset_name}.{table_name.capitalize()}"
+        return f"{dataset_name}.{to_snake_case(table_name)}"
 
     def handle_basic(
         self,
@@ -145,7 +145,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
     app_label = dataset.id
     base_app_name = base_app_name or "dso_api.dynamic_api"
     module_name = f"{base_app_name}.{app_label}.models"
-    model_name = f"{table.id.capitalize()}"
+    model_name = f"{to_snake_case(table.id)}"
 
     # Generate fields
     fields = {}
