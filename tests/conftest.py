@@ -1,4 +1,5 @@
 import os
+import json
 from pathlib import Path
 from urllib.parse import urlparse, ParseResult
 
@@ -7,6 +8,7 @@ from requests_mock import Mocker
 from sqlalchemy.orm import Session
 
 from schematools import models
+from schematools.types import DatasetSchema
 
 HERE = Path(__file__).parent
 
@@ -89,3 +91,14 @@ def schemas_mock(requests_mock: Mocker, schema_url):
             f"{schema_url}afvalwegingen/afvalwegingen", content=fh.read(),
         )
     yield requests_mock
+
+
+@pytest.fixture()
+def afval_schema_json() -> dict:
+    path = HERE / "files/afval.json"
+    return json.loads(path.read_text())
+
+
+@pytest.fixture()
+def afval_schema(afval_schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(afval_schema_json)
