@@ -38,7 +38,7 @@ setup(
         "mappyfile",
     ],
     extras_require={
-        "tests": ["pytest", "pytest-cov", "pytest-sqlalchemy", "requests-mock"],
+        "tests": ["pytest", "pytest-cov", "pytest-django", "pytest-sqlalchemy", "requests-mock"],
         "django": [
             "django >= 3.0.4",
             "django-postgres-unlimited-varchar >= 1.1.0",
