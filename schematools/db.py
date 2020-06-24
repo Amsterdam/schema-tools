@@ -10,6 +10,7 @@ from string_utils import camel_case_to_snake, snake_case_to_camel
 from schematools import models
 from schematools.exceptions import ParserError
 from schematools.types import DatasetSchema
+from schematools.utils import toCamelCase
 
 
 def fetch_table_names(engine):
@@ -150,4 +151,4 @@ def _serialize(obj, camelize=True):
 
 
 def _extract_names(properties):
-    return {prop.pop("name").replace("_", " "): prop for prop in properties}
+    return {toCamelCase(prop.pop("name")): prop for prop in properties}
