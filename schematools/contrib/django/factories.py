@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Tuple, Type
 from urllib.parse import urlparse
 
 from django.contrib.gis.db import models
+from django.contrib.postgres.fields import ArrayField
 from django.db.models.base import ModelBase
 from django.conf import settings
 
@@ -69,7 +70,8 @@ class FieldMaker:
         *args,
         **kwargs,
     ) -> TypeAndSignature:
-        if field.data.get("type", "").lower() == "array":
+        if isinstance(field_cls, ArrayField) and not field.nm_relation:
+            # if field.data.get("type", "").lower() == "array":
             base_field, _ = JSON_TYPE_TO_DJANGO[
                 field.data.get("entity", {}).get("type", "string")
             ]
@@ -85,11 +87,14 @@ class FieldMaker:
         **kwargs,
     ) -> TypeAndSignature:
         relation = field.relation
+        nm_relation = field.nm_relation
 
-        if relation is not None:
-            field_cls = models.ForeignKey
-            on_delete = models.CASCADE if field.required else models.SET_NULL
-            args = [self._make_related_classname(relation), on_delete]
+        if relation is not None or nm_relation is not None:
+            assert not (relation and nm_relation)
+            field_cls = models.ManyToManyField if nm_relation else models.ForeignKey
+            args = [self._make_related_classname(relation or nm_relation)]
+            if relation:
+                args.append(models.CASCADE if field.required else models.SET_NULL)
 
             if field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
@@ -116,7 +121,7 @@ class FieldMaker:
             # In schema foreign keys should be specified without _id,
             # but the db_column should be with _id
             kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
-            kwargs["db_constraint"] = False  # don't expect relations to exist.
+            kwargs["db_constraint"] = False  # relation is not mandatory
         return field_cls, args, kwargs
 
     def handle_date(

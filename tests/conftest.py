@@ -1,6 +1,7 @@
 import os
 import json
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urlparse, ParseResult
 
 import pytest
@@ -94,11 +95,24 @@ def schemas_mock(requests_mock: Mocker, schema_url):
 
 
 @pytest.fixture()
-def afval_schema_json() -> dict:
-    path = HERE / "files/afval.json"
-    return json.loads(path.read_text())
+def schema_json() -> Callable[[str], dict]:
+    def _json_fetcher(filename) -> dict:
+        path = HERE / "files" / filename
+        return json.loads(path.read_text())
+
+    return _json_fetcher
 
 
 @pytest.fixture()
-def afval_schema(afval_schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(afval_schema_json)
+def afval_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("afval.json"))
+
+
+@pytest.fixture()
+def meetbouten_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("meetbouten.json"))
+
+
+@pytest.fixture()
+def parkeervakken_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("parkeervakken.json"))

@@ -49,3 +49,24 @@ def test_model_factory_relations(afval_schema):
     assert (
         cluster_fk.related_model._table_schema.id == models["clusters"]._table_schema.id
     )
+
+
+def test_model_factory_n_m_relations(meetbouten_schema):
+    """Prove that n-m relations between models can be resolved"""
+    models = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            meetbouten_schema, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    nm_ref = models["metingen"]._meta.get_field("refereertaanreferentiepunten")
+
+
+def test_model_factory_sub_objects(parkeervakken_schema):
+    """Prove that subobjects between models can be resolved"""
+    models = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            parkeervakken_schema, base_app_name="dso_api.dynamic_api"
+        )
+    }

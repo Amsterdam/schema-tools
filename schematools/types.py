@@ -118,6 +118,7 @@ class DatasetSchema(SchemaType):
     @property
     def temporal(self):
         from schematools.utils import to_snake_case
+
         temporal_configuration = self.get("temporal", None)
         if temporal_configuration is None:
             return None
@@ -262,6 +263,12 @@ class DatasetFieldSchema(DatasetType):
         return self.get("relation")
 
     @property
+    def nm_relation(self) -> typing.Optional[str]:
+        if self.type != "array":
+            return None
+        return self.get("items", {}).get("relation")
+
+    @property
     def format(self) -> typing.Optional[str]:
         return self.get("format")
 
@@ -319,6 +326,7 @@ def is_possible_display_field(field: DatasetFieldSchema) -> bool:
 def get_db_table_name(table: DatasetTableSchema) -> str:
     """Generate the table name for a database schema."""
     from schematools.utils import to_snake_case
+
     dataset = table._parent_schema
     app_label = dataset.id
     table_id = table.id

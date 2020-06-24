@@ -28,6 +28,56 @@
           }
         }
       }
+    },
+    {
+      "id": "metingen",
+      "type": "table",
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/meetbouten/metingen.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema", "id"],
+        "display": "id",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unieke identificatie voor dit object"
+          },
+          "refereertaanreferentiepunten": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "relation": "meetbouten:referentiepunten"
+            },
+            "description": "De referentiepunten waar de metingen aan worden opgehangen"
+          }
+        }
+      }
+    },
+    {
+      "id": "referentiepunten",
+      "type": "table",
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/meetbouten/referentiepunten.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema", "id"],
+        "display": "id",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unieke identificatie voor dit object"
+          }
+        }
+      }
     }
   ]
 }
