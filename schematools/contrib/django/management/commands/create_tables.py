@@ -12,12 +12,20 @@ class Command(BaseCommand):
     help = "Create the tables based on the uploaded Amsterdam schema's."
     requires_system_checks = False  # don't test URLs (which create models)
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--skip", dest="skip", nargs="*", help="Schemas that need to be skipped",
+        )
+
     def handle(self, *args, **options):
-        create_tables(self, Dataset.objects.db_enabled(), allow_unmanaged=True)
+        skip = options.get("skip")
+        create_tables(
+            self, Dataset.objects.db_enabled(), allow_unmanaged=True, skip=skip
+        )
 
 
 def create_tables(  # noqa:C901
-    command: BaseCommand, datasets: Iterable[Dataset], allow_unmanaged=False
+    command: BaseCommand, datasets: Iterable[Dataset], allow_unmanaged=False, skip=None
 ):  # noqa:C901
     """Create tables for all updated datasets.
     This is a separate function to allow easy reuse.
@@ -27,8 +35,9 @@ def create_tables(  # noqa:C901
 
     # First create all models. This allows Django to resolve  model relations.
     models = []
+    to_be_skipped = set(skip if skip is not None else [])
     for dataset in datasets:
-        if not dataset.enable_db:
+        if not dataset.enable_db or dataset.name in to_be_skipped:
             continue  # in case create_tables() is called by import_schemas
 
         models.extend(
