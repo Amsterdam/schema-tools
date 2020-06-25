@@ -10,7 +10,6 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
-from django.utils.text import camel_case_to_spaces
 
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS

@@ -46,6 +46,15 @@ class Command(BaseCommand):
             metavar="bool",
             help="Enable the API endpoint.",
         )
+        parser.add_argument(
+            "--enable-geosearch",
+            dest="enable_geosearch",
+            nargs="?",
+            type=_strtobool,
+            const=True,
+            metavar="bool",
+            help="Enable GeoSearch for all tables in dataset.",
+        )
         parser.add_argument("--url-prefix", help="Set a prefix for the API URL.")
         parser.add_argument("--auth", help="Assign OAuth roles.")
         parser.add_argument(
@@ -74,6 +83,10 @@ class Command(BaseCommand):
                 options["enable_db"] = False
 
         changed = False
+        if options.get("enable_geosearch") is not None:
+            dataset.tables.all().update(enable_geosearch=options.get("enable_geosearch"))
+            changed = True
+
         for field in self.setting_options:
             value = options.get(field)
             if value is None:
