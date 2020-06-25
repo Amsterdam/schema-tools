@@ -1,0 +1,51 @@
+{
+  "id": "parkeervakken",
+  "type": "dataset",
+  "status": "beschikbaar",
+  "title": "",
+  "version": "0.0.1",
+  "crs": "EPSG:28992",
+  "tables": [
+    {
+      "id": "parkeervakken",
+      "type": "table",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "schema"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": ""
+          },
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema"
+          },
+          "regimes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "soort": {
+                  "type": "string",
+                  "description": ""
+                },
+                "eType": {
+                  "type": "string",
+                  "description": ""
+                },
+                "dagen": {
+                  "type": "array",
+                  "entity": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
