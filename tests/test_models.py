@@ -53,20 +53,25 @@ def test_model_factory_relations(afval_schema):
 
 def test_model_factory_n_m_relations(meetbouten_schema):
     """Prove that n-m relations between models can be resolved"""
-    models = {
+    model_dict = {
         cls._meta.model_name: cls
         for cls in schema_models_factory(
             meetbouten_schema, base_app_name="dso_api.dynamic_api"
         )
     }
-    nm_ref = models["metingen"]._meta.get_field("refereertaanreferentiepunten")
+    nm_ref = model_dict["metingen"]._meta.get_field("refereertaanreferentiepunten")
+    assert isinstance(nm_ref, models.ManyToManyField)
 
 
 def test_model_factory_sub_objects(parkeervakken_schema):
-    """Prove that subobjects between models can be resolved"""
-    models = {
+    """Prove that subobjects between models lead to extra child model"""
+    model_dict = {
         cls._meta.model_name: cls
         for cls in schema_models_factory(
             parkeervakken_schema, base_app_name="dso_api.dynamic_api"
         )
     }
+    assert "parkeervakken_regimes" in model_dict
+    fields_dict = {f.name: f for f in model_dict["parkeervakken_regimes"]._meta.fields}
+    assert "parent" in fields_dict
+    assert isinstance(fields_dict["parent"], models.ForeignKey)
