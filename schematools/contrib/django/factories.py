@@ -4,7 +4,6 @@ from typing import Any, Callable, Dict, List, Tuple, Type
 from urllib.parse import urlparse
 
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import ArrayField
 from django.db.models.base import ModelBase
 from django.conf import settings
 
@@ -70,8 +69,7 @@ class FieldMaker:
         *args,
         **kwargs,
     ) -> TypeAndSignature:
-        if isinstance(field_cls, ArrayField) and not field.nm_relation:
-            # if field.data.get("type", "").lower() == "array":
+        if field.data.get("type", "").lower() == "array" and not field.nm_relation:
             base_field, _ = JSON_TYPE_TO_DJANGO[
                 field.data.get("entity", {}).get("type", "string")
             ]
