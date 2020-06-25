@@ -42,7 +42,7 @@ def fix_name(field_name, field_value=None):
     return toCamelCase(ret)
 
 
-def introspect_db_schema(engine, dataset_id, tablenames, prefix=None):
+def introspect_db_schema(engine, dataset_id, tablenames, db_schema=None, prefix=None):
     """Generate an amsterdam schema file based on an existing database."""
     insp = inspect(engine)
     tables = []
@@ -54,20 +54,22 @@ def introspect_db_schema(engine, dataset_id, tablenames, prefix=None):
         columns = {}
         relations = {}
         required_field_names = ["schema"]
-        fks = insp.get_foreign_keys(full_table_name)
+        fks = insp.get_foreign_keys(full_table_name, schema=db_schema)
         for fk in fks:
             if len(fk["constrained_columns"]) > 1:
                 raise Exception("More than one fk col")
             constrained_column = fk["constrained_columns"][0]
             if not constrained_column.startswith("_"):
                 relations[constrained_column] = fk["referred_table"]
-        pk_info = insp.get_pk_constraint(full_table_name)
+        pk_info = insp.get_pk_constraint(full_table_name, schema=db_schema)
         if len(pk_info["constrained_columns"]) > 1:
             raise Exception("multicol pk")
         if len(pk_info["constrained_columns"]) == 0:
             raise Exception("no pk")
         # pk = pk_info["constrained_columns"][0]  # ASchema assumes 'id' for the pk
-        for col in insp.get_columns(full_table_name):  # name, type, nullable
+        for col in insp.get_columns(
+            full_table_name, schema=db_schema
+        ):  # name, type, nullable
             col_name = col["name"]
             if col_name.startswith("_"):
                 continue

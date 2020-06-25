@@ -170,14 +170,17 @@ def show_mapfile(schema_url, dataset_id):
 
 
 @introspect.command("db")
+@click.option(
+    "--db-schema", "-s", help="Tables are in a different postgres schema (not 'public')"
+)
 @click.option("--prefix", "-p", help="Tables have prefix that needs to be stripped")
 @option_db_url
 @click.argument("dataset_id")
 @click.argument("tables", nargs=-1)
-def introspect_db(prefix, db_url, dataset_id, tables):
+def introspect_db(db_schema, prefix, db_url, dataset_id, tables):
     """Generate a schema for the tables in a database"""
     engine = _get_engine(db_url)
-    aschema = introspect_db_schema(engine, dataset_id, tables, prefix)
+    aschema = introspect_db_schema(engine, dataset_id, tables, db_schema, prefix)
     click.echo(json.dumps(aschema, indent=2))
 
 
