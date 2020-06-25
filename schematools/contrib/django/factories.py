@@ -54,7 +54,7 @@ class FieldMaker:
         **kwargs,
     ) -> TypeAndSignature:
         kwargs["primary_key"] = field.is_primary
-        if not field.is_primary:
+        if not field.is_primary and field.nm_relation is None:
             # Primary can not be Null
             kwargs["null"] = not field.required
         if self.value_getter:
@@ -94,7 +94,9 @@ class FieldMaker:
             if relation:
                 args.append(models.CASCADE if field.required else models.SET_NULL)
 
-            if field._parent_table.has_parent_table:
+            if nm_relation is not None:
+                kwargs["related_name"] = field._parent_table.id
+            elif field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
             else:
                 related_name = None
