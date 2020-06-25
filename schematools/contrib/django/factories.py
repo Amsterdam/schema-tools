@@ -14,7 +14,7 @@ from schematools.types import (
     is_possible_display_field,
     get_db_table_name,
 )
-from schematools.utils import to_snake_case, toCamelCase
+from schematools.utils import to_snake_case
 from .models import (
     DATE_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
