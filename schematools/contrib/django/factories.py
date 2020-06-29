@@ -96,21 +96,20 @@ class FieldMaker:
             else:
                 related_name = None
                 _, related_table_name = relation.split(":")
-                relations = {}
-                for table in dataset.tables:
-                    if table.id == related_table_name and table.relations:
-                        relations = table.relations
-                        break
-                if relations:
-                    for name, relation in relations.items():
+                try:
+                    table = dataset.get_table_by_id(related_table_name)
+                    for name, relation in table.relations.items():
                         if (
                             relation["table"] == field.table.id
                             and relation["field"] == field.name
                         ):
                             related_name = name
                             break
+                except ValueError:
+                    pass
+
                 if related_name:
-                    kwargs["related_name"] = name
+                    kwargs["related_name"] = related_name
                 else:
                     kwargs["related_name"] = "+"
 
