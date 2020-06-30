@@ -98,7 +98,9 @@ class BaseImporter:
         )
         self.prepare_tables(tables, truncate=truncate)
 
-        data_generator = self.parse_records(file_name, dataset_table, **kwargs)
+        data_generator = self.parse_records(
+            file_name, dataset_table, db_table_name, **kwargs
+        )
         self.logger.log_start(file_name, size=batch_size)
         num_imported = 0
         insert_statements = {
@@ -117,7 +119,7 @@ class BaseImporter:
 
         self.logger.log_done(num_imported)
 
-    def parse_records(self, filename, dataset_table, **kwargs):
+    def parse_records(self, filename, dataset_table, db_table_name=None, **kwargs):
         """Yield all records from the filename"""
         raise NotImplementedError()
 
