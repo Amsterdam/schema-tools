@@ -4,6 +4,7 @@ from typing import Any, Iterable, Tuple
 
 from shapely.geometry import shape
 
+from . import get_table_name
 from ..exceptions import ParserError
 from .base import BaseImporter
 
@@ -48,15 +49,22 @@ class GeoJSONImporter(BaseImporter):
         """Provide an iterator the reads the NDJSON records"""
         features = read_geojson(file_name)
         main_geometry = dataset_table.main_geometry
+        db_table_name = get_table_name(dataset_table)
+        relation_field_names = [
+            field.name for field in dataset_table.fields if field.relation is not None
+        ]
         for feature in features:
             if main_geometry is not None:
-                wkt = shape(feature[main_geometry]).wkt
+                wkt = shape(feature["geometry"]).wkt
             record = dict(
                 self._clean_value(name, value)
-                for name, value in feature[main_geometry].items()
+                for name, value in feature["geometry"].items()
             )
-            record[main_geometry] = f"SRID={self.srid};{wkt}"
-            yield record
+            for relation_field_name in relation_field_names:
+                record[f"{relation_field_name}_id"] = record[relation_field_name]
+                del record[relation_field_name]
+            record[main_geometry] = f"SRID={self.srid};{wkt}" if main_geometry else None
+            yield {db_table_name: [record]}
 
     def _clean_value(self, name: str, value: Any) -> Tuple[str, Any]:
         if name[0] in "@$":

@@ -1,9 +1,22 @@
+from functools import reduce
 from itertools import islice
-from typing import Optional
+import operator
+from typing import Optional, Dict
 
 from schematools.types import DatasetSchema, DatasetTableSchema
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, Column, Float, Integer, MetaData, String, Table
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Float,
+    Integer,
+    MetaData,
+    String,
+    Table,
+)
+
+from . import get_table_name
+
 
 JSON_TYPE_TO_PG = {
     "string": String,
@@ -80,18 +93,25 @@ class BaseImporter:
 
         # Get a table to import into
         metadata = MetaData(bind=self.engine)
-        table = table_factory(
+        tables = table_factory(
             dataset_table, metadata=metadata, db_table_name=db_table_name
         )
-        self.prepare_table(table, truncate=truncate)
+        self.prepare_tables(tables, truncate=truncate)
 
         data_generator = self.parse_records(file_name, dataset_table, **kwargs)
         self.logger.log_start(file_name, size=batch_size)
         num_imported = 0
-        insert_statement = table.insert()
+        insert_statements = {
+            table_name: table.insert() for table_name, table in tables.items()
+        }
 
         for records in chunked(data_generator, size=batch_size):
-            self.engine.execute(insert_statement, records)
+            # every record is keyed on tablename + inside there is a list
+            for table_name, insert_statement in insert_statements.items():
+                table_records = reduce(
+                    operator.add, [record.get(table_name, []) for record in records], []
+                )
+                self.engine.execute(insert_statement, table_records)
             num_imported += len(records)
             self.logger.log_progress(num_imported)
 
@@ -101,13 +121,14 @@ class BaseImporter:
         """Yield all records from the filename"""
         raise NotImplementedError()
 
-    def prepare_table(self, table, truncate=False):
-        """Create the table if needed"""
-        if not table.exists():
-            table.create()
-        elif truncate:
-            print(table.delete())
-            self.engine.execute(table.delete())
+    def prepare_tables(self, tables, truncate=False):
+        """Create the tables if needed"""
+        for table in tables.values():
+            if not table.exists():
+                table.create()
+            elif truncate:
+                print(table.delete())
+                self.engine.execute(table.delete())
 
 
 class CliLogger:
@@ -142,7 +163,7 @@ def table_factory(
     dataset_table: DatasetTableSchema,
     metadata: Optional[MetaData] = None,
     db_table_name=None,
-) -> Table:
+) -> Dict[str, Table]:
     """Generate an SQLAlchemy Table object to work with the JSON Schema
 
     :param dataset_table: The Amsterdam Schema definition of the table
@@ -152,12 +173,50 @@ def table_factory(
     if db_table_name is None:
         db_table_name = get_table_name(dataset_table)
 
+    # XXX Just define: dataset id, table id and use everywhere
+    # collect all datasets at the beginning, for lookups
+
+    metadata = metadata or MetaData()
+    through_tables = {}
     columns = []
     for field in dataset_table.fields:
         if field.type.endswith("#/definitions/schema"):
             continue
 
+        # XXX need th throw in some snakifying here and there
         try:
+            nm_relation = field.nm_relation
+            if nm_relation is not None:
+                # We need a 'through' table
+                related_dataset, related_table = nm_relation.split(":")
+                through_columns = [
+                    Column("id", Integer, primary_key=True),
+                    Column(
+                        f"{dataset_table.id}_id",
+                        String,
+                        # ForeignKey(f"{db_table_name}.{dataset_table.identifier}"),
+                    ),
+                    # XXX _id should be the identifier, so look into the schema
+                    # for the related dataset
+                    Column(
+                        f"{related_table}_id",
+                        String,
+                        # ForeignKey(f"{related_dataset}_{related_table}.id"),
+                    ),
+                ]
+                through_table_id = f"{db_table_name}_{field.name}"
+                through_tables[through_table_id] = Table(
+                    through_table_id, metadata, *through_columns,
+                )
+
+                # We also need a table object for the destination table
+                # Table(
+                #     f"{related_dataset}_{related_table}",
+                #     metadata,
+                #     Column("id", String, primary_key=True),
+                # )
+                continue
+
             col_type = JSON_TYPE_TO_PG[field.type]
         except KeyError:
             raise NotImplementedError(
@@ -173,10 +232,4 @@ def table_factory(
         id_postfix = "_id" if field.relation else ""
         columns.append(Column(f"{field.name}{id_postfix}", col_type, **col_kwargs))
 
-    return Table(db_table_name, metadata or MetaData(), *columns)
-
-
-def get_table_name(dataset_table: DatasetTableSchema) -> str:
-    """Generate the database identifier for the table."""
-    schema = dataset_table._parent_schema
-    return f"{schema.id}_{dataset_table.id}".replace("-", "_")
+    return {db_table_name: Table(db_table_name, metadata, *columns), **through_tables}
