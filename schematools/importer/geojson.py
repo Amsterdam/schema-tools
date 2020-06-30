@@ -59,7 +59,7 @@ class GeoJSONImporter(BaseImporter):
                 wkt = shape(feature["geometry"]).wkt
             record = dict(
                 self._clean_value(name, value)
-                for name, value in feature["geometry"].items()
+                for name, value in feature["properties"].items()
             )
             for relation_field_name in relation_field_names:
                 record[f"{relation_field_name}_id"] = record[relation_field_name]
