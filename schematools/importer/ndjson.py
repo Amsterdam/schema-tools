@@ -8,11 +8,12 @@ from . import get_table_name
 class NDJSONImporter(BaseImporter):
     """Import an NDJSON file into the database."""
 
-    def parse_records(self, file_name, dataset_table, **kwargs):
+    def parse_records(self, file_name, dataset_table, db_table_name, **kwargs):
         """Provide an iterator the reads the NDJSON records"""
         main_geometry = dataset_table.main_geometry
         identifier = dataset_table.identifier
-        db_table_name = get_table_name(dataset_table)
+        if db_table_name is None:
+            db_table_name = get_table_name(dataset_table)
         relation_field_names = [
             field.name for field in dataset_table.fields if field.relation is not None
         ]
