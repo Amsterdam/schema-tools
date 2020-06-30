@@ -93,6 +93,25 @@ class FieldMaker:
 
             if field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
+            else:
+                related_name = None
+                _, related_table_name = relation.split(":")
+                try:
+                    table = dataset.get_table_by_id(related_table_name)
+                    for name, relation in table.relations.items():
+                        if (
+                            relation["table"] == field.table.id
+                            and relation["field"] == field.name
+                        ):
+                            related_name = name
+                            break
+                except ValueError:
+                    pass
+
+                if related_name:
+                    kwargs["related_name"] = related_name
+                else:
+                    kwargs["related_name"] = "+"
 
             # In schema foreign keys should be specified without _id,
             # but the db_column should be with _id
