@@ -192,7 +192,6 @@ def table_factory(
                 # We need a 'through' table for the n-m relation
                 related_dataset, related_table = nm_relation.split(":")
                 through_columns = [
-                    Column("id", Integer, primary_key=True),
                     Column(f"{dataset_table.id}_id", String,),
                     Column(f"{related_table}_id", String,),
                 ]
