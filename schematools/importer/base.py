@@ -166,17 +166,17 @@ def table_factory(
     metadata: Optional[MetaData] = None,
     db_table_name=None,
 ) -> Dict[str, Table]:
-    """Generate an SQLAlchemy Table object to work with the JSON Schema
+    """Generate one or more SQLAlchemy Table objects to work with the JSON Schema
 
     :param dataset_table: The Amsterdam Schema definition of the table
     :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
     :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
+
+    The returned tables are keyed on the name of the table. The same goes for the incoming data,
+    so during creation or records, the data can be associated with the correct table.
     """
     if db_table_name is None:
         db_table_name = get_table_name(dataset_table)
-
-    # XXX Just define: dataset id, table id and use everywhere
-    # collect all datasets at the beginning, for lookups
 
     metadata = metadata or MetaData()
     through_tables = {}
@@ -185,38 +185,22 @@ def table_factory(
         if field.type.endswith("#/definitions/schema"):
             continue
 
-        # XXX need th throw in some snakifying here and there
+        # XXX still need to throw in some snakifying here and there
         try:
             nm_relation = field.nm_relation
             if nm_relation is not None:
-                # We need a 'through' table
+                # We need a 'through' table for the n-m relation
                 related_dataset, related_table = nm_relation.split(":")
                 through_columns = [
                     Column("id", Integer, primary_key=True),
-                    Column(
-                        f"{dataset_table.id}_id",
-                        String,
-                        # ForeignKey(f"{db_table_name}.{dataset_table.identifier}"),
-                    ),
-                    # XXX _id should be the identifier, so look into the schema
-                    # for the related dataset
-                    Column(
-                        f"{related_table}_id",
-                        String,
-                        # ForeignKey(f"{related_dataset}_{related_table}.id"),
-                    ),
+                    Column(f"{dataset_table.id}_id", String,),
+                    Column(f"{related_table}_id", String,),
                 ]
                 through_table_id = f"{db_table_name}_{field.name}"
                 through_tables[through_table_id] = Table(
                     through_table_id, metadata, *through_columns,
                 )
 
-                # We also need a table object for the destination table
-                # Table(
-                #     f"{related_dataset}_{related_table}",
-                #     metadata,
-                #     Column("id", String, primary_key=True),
-                # )
                 continue
 
             col_type = JSON_TYPE_TO_PG[field.type]
