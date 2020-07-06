@@ -15,7 +15,7 @@ def read(filename):
 
 setup(
     name="amsterdam-schema-tools",
-    version="0.9.1",
+    version="0.9.2",
     url="https://github.com/amsterdam/schema-tools",
     license="Mozilla Public 2.0",
     author="Jan Murre",
@@ -38,7 +38,13 @@ setup(
         "mappyfile",
     ],
     extras_require={
-        "tests": ["pytest", "pytest-cov", "pytest-django", "pytest-sqlalchemy", "requests-mock"],
+        "tests": [
+            "pytest",
+            "pytest-cov",
+            "pytest-django",
+            "pytest-sqlalchemy",
+            "requests-mock",
+        ],
         "django": [
             "django >= 3.0.4",
             "django-postgres-unlimited-varchar >= 1.1.0",
