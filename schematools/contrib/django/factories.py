@@ -225,7 +225,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
             **fields,
             "_dataset_schema": dataset,
             "_table_schema": table,
-            "_display_field": "",
+            "_display_field": table.display_field,
             "__module__": module_name,
             "Meta": meta_cls,
         },
