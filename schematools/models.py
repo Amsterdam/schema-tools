@@ -1,5 +1,4 @@
 from sqlalchemy import (
-    ARRAY,
     Column,
     DateTime,
     ForeignKey,
@@ -15,7 +14,7 @@ Base = declarative_base()
 
 
 class Dataset(Base):
-    __tablename__ = "meta_dataset"
+    __tablename__ = "ams_schema_dataset"
     id = Column(String, primary_key=True)
     type = Column(String)
     title = Column(String)
@@ -36,25 +35,25 @@ class Dataset(Base):
     accrual_periodicity = Column(String)
     spatial_description = Column(String)
     spatial_coordinates = Column(String)
-    theme = Column(ARRAY(String))
+    theme = Column(String)
     publisher = Column(String)
     owner = Column(String)
     authorization_grantor = Column(String)
-    keywords = Column(ARRAY(String))
+    keywords = Column(String)
     has_beginning = Column(DateTime)
     has_end = Column(DateTime)
     crs = Column(String)
 
 
 class Table(Base):
-    __tablename__ = "meta_table"
+    __tablename__ = "ams_schema_table"
     id = Column(String, primary_key=True)
-    dataset_id = Column(String, ForeignKey("meta_dataset.id"), primary_key=True)
+    dataset_id = Column(String, ForeignKey("ams_schema_dataset.id"), primary_key=True)
     type = Column(String)
     title = Column(String)
     description = Column(String)
     display = Column(String)
-    required = Column(ARRAY(String))
+    required = Column(String)
     date_created = Column(DateTime)
     auth = Column(String)
     date_modified = Column(DateTime)
@@ -66,7 +65,7 @@ class Table(Base):
 
 
 class Field(Base):
-    __tablename__ = "meta_field"
+    __tablename__ = "ams_schema_field"
     name = Column(String, primary_key=True)
     table_id = Column(String, primary_key=True)
     ref = Column(String)
@@ -79,12 +78,13 @@ class Field(Base):
     relation = Column(String)
     auth = Column(String)
     unit = Column(String)
-    enum = Column(ARRAY(String))
+    enum = Column(String)
 
     table = relationship("Table", backref="fields")
 
     __table_args__ = (
         ForeignKeyConstraint(
-            ["table_id", "dataset_id"], ["meta_table.id", "meta_table.dataset_id"]
+            ["table_id", "dataset_id"],
+            ["ams_schema_table.id", "ams_schema_table.dataset_id"],
         ),
     )
