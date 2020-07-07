@@ -45,10 +45,14 @@ argument_schema_location = click.argument(
 )
 
 
-def _get_engine(db_url):
+def _get_engine(db_url, pg_schemas=None):
     """Initialize the SQLAlchemy engine, and report click errors"""
+    kwargs = {}
+    if pg_schemas is not None:
+        csearch_path = ",".join(pg_schemas + ["public"])
+        kwargs["connect_args"] = {"options": f"-csearch_path={csearch_path}"}
     try:
-        return create_engine(db_url)
+        return create_engine(db_url, **kwargs)
     except SQLAlchemyError as e:
         raise click.BadParameter(str(e), param_hint="--db-url")
 
@@ -143,8 +147,8 @@ def show_tablenames(db_url):
 @option_db_url
 @click.argument("dataset_id")
 def show_schema(db_url, dataset_id):
-    """Generate a schema based on an existing relational database."""
-    engine = _get_engine(db_url)
+    """Generate a json schema based on a schema define in a relational database."""
+    engine = _get_engine(db_url, pg_schemas=["meta"])
     aschema = fetch_schema_from_relational_schema(engine, dataset_id)
     click.echo(json.dumps(aschema, indent=2))
 
