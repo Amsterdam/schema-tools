@@ -49,6 +49,7 @@ JSON_TYPE_TO_DJANGO = {
     "integer": (models.IntegerField, None),
     "integer/autoincrement": (models.AutoField, None),
     "date": (models.DateField, None),
+    "datetime": (models.DateTimeField, None),
     "time": (models.TimeField, None),
     "number": (models.FloatField, None),
     "boolean": (models.BooleanField, None),

@@ -23,7 +23,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--no-create-tables", dest="create_tables", action="store_false"
         )
-        parser.set_defaults(create_tables=True)
+        parser.set_defaults(create_tables=False)
 
     def handle(self, *args, **options):
         if options["schema"]:
