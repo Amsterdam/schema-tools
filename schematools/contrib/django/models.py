@@ -118,8 +118,9 @@ class DynamicModel(models.Model):
 
     def __str__(self):
         if self._display_field:
-            return getattr(self, self._display_field)
+            return str(getattr(self, to_snake_case(self._display_field)))
         else:
+            # this will not be shown in the dso-api view and will be omitted when display field is empty or not present
             return f"(no title: {self._meta.object_name} #{self.pk})"
 
     # These classmethods could have been a 'classproperty',
