@@ -260,13 +260,15 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def relation(self) -> typing.Optional[str]:
+        if self.type == "array":
+            return None
         return self.get("relation")
 
     @property
     def nm_relation(self) -> typing.Optional[str]:
         if self.type != "array":
             return None
-        return self.get("items", {}).get("relation")
+        return self.get("relation")
 
     @property
     def format(self) -> typing.Optional[str]:
