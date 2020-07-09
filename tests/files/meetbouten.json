@@ -50,9 +50,9 @@
           "refereertaanreferentiepunten": {
             "type": "array",
             "items": {
-              "type": "string",
-              "relation": "meetbouten:referentiepunten"
+              "type": "string"
             },
+            "relation": "meetbouten:referentiepunten",
             "description": "De referentiepunten waar de metingen aan worden opgehangen"
           }
         }
