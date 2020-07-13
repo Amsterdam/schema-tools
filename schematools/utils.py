@@ -4,6 +4,7 @@ import json
 import re
 from typing import Dict
 
+from cachetools.func import ttl_cache
 import requests
 from string_utils import slugify
 
@@ -15,6 +16,7 @@ re_camel_case = re.compile(
 )
 
 
+@ttl_cache(ttl=16)
 def schema_defs_from_url(schemas_url) -> Dict[str, types.DatasetSchema]:
     """Fetch all schema definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
