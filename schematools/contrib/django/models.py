@@ -255,6 +255,11 @@ class Dataset(models.Model):
             table = new_definitions[added_name]
             DatasetTable.create_for_schema(self, table)
 
+        # Update models for updated tables
+        for changed_name in existing_names & new_names:
+            table = new_definitions[changed_name]
+            existing_models[changed_name].save_for_schema(table)
+
         # Remove tables that are no longer part of the schema.
         for removed_name in existing_names - new_names:
             existing_models[removed_name].delete()
@@ -349,23 +354,41 @@ class DatasetTable(models.Model):
 
         (The table spec contains a JSON-schema for all fields).
         """
-        enable_geosearch = True
-        if dataset.name in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]:
-            enable_geosearch = False
-
-        instance = cls.objects.create(
-            dataset=dataset,
-            name=to_snake_case(table.id),
-            db_table=get_db_table_name(table),
-            auth=_serialize_claims(table),
-            enable_geosearch=enable_geosearch,
-            **cls._get_field_values(table),
-        )
-
-        for field in table.fields:
-            DatasetField.create_for_schema(instance, field)
-
+        instance = cls(dataset=dataset)
+        instance.save_for_schema(table)
         return instance
+
+    def save_for_schema(self, table: DatasetTableSchema):
+        """Save changes to the dataset table."""
+        self.name = to_snake_case(table.id)
+        self.db_table = get_db_table_name(table)
+        self.auth = _serialize_claims(table)
+        self.enable_geosearch = (
+            table.dataset.id
+            not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
+        )
+        for field, value in self._get_field_values(table).items():
+            setattr(self, field, value)
+
+        is_creation = not self._state.adding
+        self.save()
+
+        new_definitions = {to_snake_case(f.name): f for f in table.fields}
+        new_names = set(new_definitions.keys())
+        existing_fields = {f.name: f for f in self.fields.all()} if is_creation else {}
+        existing_names = set(existing_fields.keys())
+
+        # Create new fields
+        for added_name in new_names - existing_names:
+            DatasetField.create_for_schema(self, field=new_definitions[added_name])
+
+        # Update existing fields
+        for changed_name in existing_names & new_names:
+            field = new_definitions[changed_name]
+            existing_fields[changed_name].save_for_schema(field=field)
+
+        for removed_name in existing_names - new_names:
+            existing_fields[removed_name].delete()
 
 
 class DatasetField(models.Model):
@@ -393,14 +416,20 @@ class DatasetField(models.Model):
 
     @classmethod
     def create_for_schema(
-        cls, table: DatasetTableSchema, field: DatasetFieldSchema
+        cls, table: DatasetTable, field: DatasetFieldSchema
     ) -> DatasetField:
         """Create a DatasetField object based on the Amsterdam Schema field spec.
 
         """
-        return cls.objects.create(
-            table=table, name=to_snake_case(field.name), auth=_serialize_claims(field)
-        )
+        instance = cls(table=table)
+        instance.save_for_schema(field)
+        return instance
+
+    def save_for_schema(self, field: DatasetFieldSchema):
+        """Update the field with the provided schema data."""
+        self.name = to_snake_case(field.name)
+        self.auth = _serialize_claims(field)
+        self.save()
 
 
 def _serialize_claims(schema_object) -> Optional[str]:
