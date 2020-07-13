@@ -36,6 +36,7 @@ setup(
         "requests",
         "jinja2",
         "mappyfile",
+        "cachetools"
     ],
     extras_require={
         "tests": [
