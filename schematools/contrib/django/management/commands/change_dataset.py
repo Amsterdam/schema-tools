@@ -84,7 +84,9 @@ class Command(BaseCommand):
 
         changed = False
         if options.get("enable_geosearch") is not None:
-            dataset.tables.all().update(enable_geosearch=options.get("enable_geosearch"))
+            dataset.tables.all().update(
+                enable_geosearch=options.get("enable_geosearch")
+            )
             changed = True
 
         for field in self.setting_options:

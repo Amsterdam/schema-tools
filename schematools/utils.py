@@ -10,7 +10,9 @@ from string_utils import slugify
 from . import types
 
 
-re_camel_case = re.compile(r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])")
+re_camel_case = re.compile(
+    r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
+)
 
 
 def schema_defs_from_url(schemas_url) -> Dict[str, types.DatasetSchema]:
