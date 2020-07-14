@@ -369,7 +369,7 @@ class DatasetTable(models.Model):
         self.db_table = get_db_table_name(table)
         self.auth = _serialize_claims(table)
         self.enable_geosearch = (
-            table.dataset.id
+            table.dataset.name
             not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
         )
         for field, value in self._get_field_values(table).items():
