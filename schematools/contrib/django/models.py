@@ -148,6 +148,11 @@ class DynamicModel(models.Model):
         """
         return cls._table_schema.get("schema", {}).get("parentTableID") is not None
 
+    @classmethod
+    def has_display_field(cls):
+        """Tell whether a display field is configured."""
+        return cls._display_field is not None
+
 
 class Dataset(models.Model):
     """A registry of all available datasets that are uploaded in the API server.
