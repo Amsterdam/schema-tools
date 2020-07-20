@@ -26,9 +26,11 @@ FORMAT_MODELS_LOOKUP = {
     "time": Time,
     "date-time": DateTime,
 }
+metadata = MetaData()
 
 JSON_TYPE_TO_PG = {
     "string": String,
+    "object": String,
     "boolean": Boolean,
     "integer": Integer,
     "number": Float,
@@ -108,6 +110,10 @@ class BaseImporter:
         self.engine = engine
         self.dataset_schema = dataset_schema
         self.srid = dataset_schema["crs"].split(":")[-1]
+        self.dataset_table = None
+        self.fields_provenances = None
+        self.db_table_name = None
+        self.tables = []
         self.logger = LogfileLogger(logger) if logger else CliLogger()
 
     def get_db_table_name(self, table_name):
@@ -138,39 +144,43 @@ class BaseImporter:
             fixed_records.append(fixed_record)
         return fixed_records
 
+    def generate_tables(self, table_name, db_table_name=None, truncate=False):
+        """ Generate the tablemodels and tables
+        """
+        self.dataset_table = self.dataset_schema.get_table_by_id(table_name)
+        # Collect provenance info for easy re-use
+        self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
+        self.db_table_name = db_table_name
+        if db_table_name is None:
+            self.db_table_name = get_table_name(self.dataset_table)
+        # Bind the metadata
+        metadata.bind = self.engine
+        # Get a table to import into
+        self.tables = table_factory(
+            self.dataset_table, metadata=metadata, db_table_name=self.db_table_name
+        )
+        self.prepare_tables(self.tables, truncate=truncate)
+
     def load_file(
         self,
         file_name,
-        table_name,
         batch_size=100,
-        db_table_name=None,
-        truncate=False,
         **kwargs,
     ):
         """Import a file into the database table"""
-        dataset_table = self.dataset_schema.get_table_by_id(table_name)
-        # Collect provenance info for easy re-use
-        fields_provenances = self.fetch_fields_provenances(dataset_table)
-        if db_table_name is None:
-            db_table_name = get_table_name(dataset_table)
 
-        # Get a table to import into
-        metadata = MetaData(bind=self.engine)
-        tables = table_factory(
-            dataset_table, metadata=metadata, db_table_name=db_table_name
-        )
-        self.prepare_tables(tables, truncate=truncate)
-
+        if self.dataset_table is None:
+            raise ValueError("Import needs to be initialized with table info")
         data_generator = self.parse_records(
             file_name,
-            dataset_table,
-            db_table_name,
-            **{"fields_provenances": fields_provenances, **kwargs},
+            self.dataset_table,
+            self.db_table_name,
+            **{"fields_provenances": self.fields_provenances, **kwargs},
         )
         self.logger.log_start(file_name, size=batch_size)
         num_imported = 0
         insert_statements = {
-            table_name: table.insert() for table_name, table in tables.items()
+            table_name: table.insert() for table_name, table in self.tables.items()
         }
 
         for records in chunked(data_generator, size=batch_size):
@@ -179,10 +189,11 @@ class BaseImporter:
                 table_records = reduce(
                     operator.add, [record.get(table_name, []) for record in records], []
                 )
-                self.engine.execute(
-                    insert_statement,
-                    self.fix_fieldnames(fields_provenances, table_records),
-                )
+                if table_records:
+                    self.engine.execute(
+                        insert_statement,
+                        self.fix_fieldnames(self.fields_provenances, table_records),
+                    )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
 
@@ -253,18 +264,35 @@ def table_factory(
     for field in dataset_table.fields:
         if field.type.endswith("#/definitions/schema"):
             continue
+        field_name = to_snake_case(field.name)
 
         # XXX still need to throw in some snakifying here and there
         try:
+
             nm_relation = field.nm_relation
             if nm_relation is not None:
                 # We need a 'through' table for the n-m relation
-                related_dataset, related_table = nm_relation.split(":")
+                related_dataset, related_table = [
+                    to_snake_case(part) for part in nm_relation.split(":")
+                ]
                 through_columns = [
                     Column(f"{dataset_table.id}_id", String,),
                     Column(f"{related_table}_id", String,),
                 ]
-                through_table_id = f"{db_table_name}_{field.name}"
+                # Through table means that in schema definition there is
+                # an object with one or more fields defining the relation
+                if field.is_through_table:
+                    for through_field_name, through_field_type_info in field["items"][
+                        "properties"
+                    ].items():
+                        through_columns.append(
+                            Column(
+                                through_field_name,
+                                JSON_TYPE_TO_PG[through_field_type_info["type"]],
+                            )
+                        )
+
+                through_table_id = f"{db_table_name}_{related_dataset}_{related_table}"
                 through_tables[through_table_id] = Table(
                     through_table_id, metadata, *through_columns,
                 )
@@ -285,7 +313,6 @@ def table_factory(
             col_kwargs["nullable"] = False
 
         id_postfix = "_id" if field.relation else ""
-        field_name = to_snake_case(field.name)
         columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
 
     return {db_table_name: Table(db_table_name, metadata, *columns), **through_tables}

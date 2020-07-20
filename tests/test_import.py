@@ -5,7 +5,8 @@ from schematools.importer.ndjson import NDJSONImporter
 def test_camelcased_names_during_import(here, engine, gebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
     importer = NDJSONImporter(gebieden_schema, engine)
-    importer.load_file(ndjson_path, "bouwblokken", truncate=True)
+    importer.generate_tables("bouwblokken", truncate=True)
+    importer.load_file(ndjson_path)
     records = [
         dict(r)
         for r in engine.execute("SELECT * from gebieden_bouwblokken ORDER BY id")

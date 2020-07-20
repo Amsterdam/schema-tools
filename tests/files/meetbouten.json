@@ -13,14 +13,27 @@
         "type": "object",
         "additionalProperties": false,
         "required": ["nummer", "schema"],
-        "identifier": "nummer",
+        "identifier": ["nummer"],
         "mainGeometry": "geometrie",
         "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
           "nummer": {
             "type": "integer"
           },
-          "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          "ligtinbuurt": {
+            "relation": "gebieden:buurten",
+            "type": "object",
+            "properties": {
+              "identificatie": {
+                "type": "string"
+              },
+              "volgnummer": {
+                "type": "string"
+              }
+            },
+            "description": "De buurt waarbinnen de meetbout ligt"
           },
           "geometrie": {
             "$ref": "https://geojson.org/schema/Point.json",
@@ -37,22 +50,33 @@
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "additionalProperties": false,
-        "required": ["schema", "id"],
-        "display": "id",
+        "identifier": ["identificatie"],
+        "required": ["schema", "identificatie"],
+        "display": "identificatie",
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "id": {
+          "identificatie": {
             "type": "string",
             "description": "Unieke identificatie voor dit object"
           },
+          "hoortbijmeetbout": {
+            "type": "string",
+            "relation": "meetbouten:meetbouten",
+            "description": "De meetbout waarop de meting is gedaan"
+          },
           "refereertaanreferentiepunten": {
+            "relation": "meetbouten:referentiepunten",
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "object",
+              "properties": {
+                "identificatie": {
+                  "type": "string"
+                }
+              }
             },
-            "relation": "meetbouten:referentiepunten",
             "description": "De referentiepunten waar de metingen aan worden opgehangen"
           }
         }

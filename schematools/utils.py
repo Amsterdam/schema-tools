@@ -9,6 +9,7 @@ import requests
 from string_utils import slugify
 
 from . import types
+from . import RELATION_INDICATOR
 
 
 re_camel_case = re.compile(
@@ -88,5 +89,9 @@ def to_snake_case(name):
     to snake_case.
     """
     # Convert to field name, avoiding snake_case to snake_case issues.
-    name = toCamelCase(name)
-    return slugify(re_camel_case.sub(r" \1", name).strip().lower(), separator="_")
+    # Also preserve RELATION_INDICATOR in names (RELATION_INDICATOR are used for object relations)
+    name_parts = [toCamelCase(part) for part in name.split(RELATION_INDICATOR)]
+    return RELATION_INDICATOR.join(
+        slugify(re_camel_case.sub(r" \1", part).strip().lower(), separator="_")
+        for part in name_parts
+    )

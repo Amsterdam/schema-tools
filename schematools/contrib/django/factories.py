@@ -11,7 +11,6 @@ from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,
-    is_possible_display_field,
     get_db_table_name,
 )
 from schematools.utils import to_snake_case
@@ -42,8 +41,18 @@ class FieldMaker:
         ]
 
     def _make_related_classname(self, relation_urn):
-        dataset_name, table_name = relation_urn.split(":")
-        return f"{dataset_name}.{to_snake_case(table_name)}"
+        related_dataset, related_table = [
+            to_snake_case(part) for part in relation_urn.split(":")
+        ]
+        return f"{related_dataset}.{related_table}"
+
+    def _make_through_classname(self, dataset_id, left_table_id, relation_urn):
+        right_dataset, right_table = [
+            to_snake_case(part) for part in relation_urn.split(":")
+        ]
+        left_table = to_snake_case(left_table_id)
+        through_table_id = f"{left_table}_{right_dataset}_{right_table}"
+        return f"{dataset_id}.{through_table_id}"
 
     def handle_basic(
         self,
@@ -96,6 +105,10 @@ class FieldMaker:
 
             if nm_relation is not None:
                 kwargs["related_name"] = field._parent_table.id
+                # kwargs["db_constraint"] = True
+                kwargs["through"] = self._make_through_classname(
+                    dataset.id, field._parent_table.id, nm_relation
+                )
             elif field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
             else:
@@ -120,8 +133,9 @@ class FieldMaker:
 
             # In schema foreign keys should be specified without _id,
             # but the db_column should be with _id
-            kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
-            kwargs["db_constraint"] = False  # relation is not mandatory
+            if nm_relation is None:
+                kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
+                kwargs["db_constraint"] = False  # relation is not mandatory
         return field_cls, args, kwargs
 
     def handle_date(
@@ -158,7 +172,7 @@ def schema_models_factory(
     """Generate Django models from the data of the schema."""
     return [
         model_factory(table=table, base_app_name=base_app_name)
-        for table in dataset.get_tables(include_nested=True)
+        for table in dataset.get_tables(include_nested=True, include_through=True)
         if tables is None or table.id in tables
     ]
 
@@ -171,6 +185,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
     module_name = f"{base_app_name}.{app_label}.models"
     model_name = to_snake_case(table.id)
     display_field = to_snake_case(table.display_field) if table.display_field else None
+    is_temporal = table.is_temporal
 
     # Generate fields
     fields = {}
@@ -218,7 +233,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
             "db_table": get_db_table_name(table),
             "app_label": app_label,
             "verbose_name": table.id.title(),
-            "ordering": (to_snake_case(table.identifier),),
+            "ordering": [to_snake_case(fn) for fn in table.identifier],
         },
     )
 
@@ -231,6 +246,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
             "_dataset_schema": dataset,
             "_table_schema": table,
             "_display_field": display_field,
+            "_is_temporal": is_temporal,
             "__module__": module_name,
             "Meta": meta_cls,
         },

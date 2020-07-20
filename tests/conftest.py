@@ -8,8 +8,8 @@ import pytest
 from requests_mock import Mocker
 from sqlalchemy.orm import Session
 
-from schematools import models
 from schematools.types import DatasetSchema
+from schematools.importer.base import metadata
 
 HERE = Path(__file__).parent
 
@@ -47,7 +47,6 @@ def schema_url():
 @pytest.fixture(scope="function")
 def dbsession(engine, dbsession, sqlalchemy_keep_db) -> Session:
     """Override the 'dbsession' to create filled database tables."""
-    models.Base.metadata.create_all(bind=engine)
     try:
         yield dbsession
     finally:
@@ -55,7 +54,7 @@ def dbsession(engine, dbsession, sqlalchemy_keep_db) -> Session:
 
         # Drop all test tables after the tests completed
         if not sqlalchemy_keep_db:
-            models.Base.metadata.drop_all(bind=engine)
+            metadata.drop_all(bind=engine)
 
 
 @pytest.fixture()
@@ -103,3 +102,13 @@ def parkeervakken_schema(schema_json) -> DatasetSchema:
 @pytest.fixture()
 def gebieden_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("gebieden.json"))
+
+
+@pytest.fixture()
+def ggwgebieden_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("ggwgebieden.json"))
+
+
+@pytest.fixture()
+def stadsdelen_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("stadsdelen.json"))
