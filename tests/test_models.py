@@ -75,3 +75,47 @@ def test_model_factory_sub_objects(parkeervakken_schema):
     fields_dict = {f.name: f for f in model_dict["parkeervakken_regimes"]._meta.fields}
     assert "parent" in fields_dict
     assert isinstance(fields_dict["parent"], models.ForeignKey)
+
+
+def test_model_factory_temporary_1_n_relation(ggwgebieden_schema):
+    """Prove that extra relation fields are added to temporary relation"""
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            ggwgebieden_schema, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    related_temporary_fields = {
+        "stadsdelen_identificatie",
+        "stadsdelen_volgnummer",
+    }
+    assert (
+        set(f.name for f in model_dict["ggwgebieden"]._meta.fields)
+        > related_temporary_fields
+    )
+
+
+def test_model_factory_temporary_n_m_relation(ggwgebieden_schema):
+    """Prove that through table is created for n_m relation """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            ggwgebieden_schema, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    # The through table is created
+    through_table_name = "ggwgebieden_gebieden_buurten"
+    assert through_table_name in model_dict
+
+    # Through table has refs to both 'sides' and extra fields for the relation
+    through_table_field_names = {
+        "ggwgebieden",
+        "buurten",
+        "identificatie",
+        "volgnummer",
+    }
+    fields_dict = {f.name: f for f in model_dict[through_table_name]._meta.fields}
+
+    assert set(fields_dict.keys()) > through_table_field_names
+    for field_name in ("ggwgebieden", "buurten"):
+        assert isinstance(fields_dict[field_name], models.ForeignKey)

@@ -5,19 +5,13 @@
   "status": "beschikbaar",
   "version": "0.0.1",
   "crs": "EPSG:28992",
-  "temporal": {
-    "identifier": "volgnummer",
-    "dimensions": {
-      "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-    }
-  },
   "tables": [
     {
-      "id": "bouwblokken",
+      "id": "stadsdelen",
       "mainGeometry": "geometrie",
       "type": "table",
       "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
+        "$id": "https://github.com/Amsterdam/schemas/gebieden/stadsdelen.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "additionalProperties": false,
@@ -32,22 +26,10 @@
             "type": "string",
             "description": "Unieke identificatie voor dit object, inclusief volgnummer"
           },
-          "beginGeldigheid": {
+          "ligtInGemeente": {
             "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
-          },
-          "eindGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is komen te vervallen.",
-            "provenance": "eindgeldigheid"
-          },
-          "ligtInBuurt": {
-            "type": "string",
-            "relation": "gebieden:buurten",
-            "provenance": "ligtinbuurt",
-            "description": "De buurt waar het bouwblok in ligt."
+            "$comment": "relation brk:gemeentes *stringify*",
+            "description": "De gemeente waar het stadsdeel in ligt."
           }
         }
       }

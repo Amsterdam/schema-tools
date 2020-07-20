@@ -33,7 +33,7 @@ FORMAT_MODELS_LOOKUP = {
     "date": models.DateField,
     "time": models.TimeField,
     "date-time": models.DateTimeField,
-    "uri": models.URLField
+    "uri": models.URLField,
 }
 
 RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
@@ -55,6 +55,7 @@ JSON_TYPE_TO_DJANGO = {
     "number": (models.FloatField, None),
     "boolean": (models.BooleanField, None),
     "array": (ArrayField, None),
+    "object": (object, None),
     "/definitions/id": (models.IntegerField, None),
     "/definitions/schema": (UnlimitedCharField, None),
     "https://geojson.org/schema/Geometry.json": (
@@ -158,6 +159,11 @@ class DynamicModel(models.Model):
     def get_display_field(cls):
         """Return the name of the display field, for usage by Django models."""
         return cls._display_field
+
+    @classmethod
+    def is_temporal(cls):
+        """Indicates if this model has temporary characteristics."""
+        return cls._is_temporal
 
 
 class Dataset(models.Model):
@@ -320,6 +326,7 @@ class DatasetTable(models.Model):
     display_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
+    is_temporal = models.BooleanField(null=False, blank=False, default=False)
 
     class Meta:
         ordering = ("name",)
@@ -338,6 +345,7 @@ class DatasetTable(models.Model):
             "display_field": table.display_field,
             "geometry_field": None,
             "geometry_field_type": None,
+            "is_temporal": table.is_temporal,
         }
 
         for field in table.fields:

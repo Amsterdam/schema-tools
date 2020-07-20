@@ -5,6 +5,7 @@ import json
 import typing
 from collections import UserDict
 import jsonschema
+from . import RELATION_INDICATOR
 
 
 class SchemaType(UserDict):
@@ -76,11 +77,15 @@ class DatasetSchema(SchemaType):
         """Access the tables within the file"""
         return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
 
-    def get_tables(self, include_nested=False) -> typing.List[DatasetTableSchema]:
+    def get_tables(
+        self, include_nested=False, include_through=False,
+    ) -> typing.List[DatasetTableSchema]:
         """List tables, including nested"""
         tables = self.tables
         if include_nested:
             tables += self.nested_tables
+        if include_through:
+            tables += self.through_tables
         return tables
 
     def get_table_by_id(self, table_id: str) -> DatasetTableSchema:
@@ -104,6 +109,16 @@ class DatasetSchema(SchemaType):
                     tables.append(self.build_nested_table(table=table, field=field))
         return tables
 
+    @property
+    def through_tables(self) -> typing.List[DatasetTableSchema]:
+        """Access list of through_tables (for n-m relations) """
+        tables = []
+        for table in self.tables:
+            for field in table.fields:
+                if field.is_through_table:
+                    tables.append(self.build_through_table(table=table, field=field))
+        return tables
+
     def build_nested_table(self, table, field):
         # Map Arrays into tables.
         sub_table_schema = dict(
@@ -120,6 +135,39 @@ class DatasetSchema(SchemaType):
                     "id": {"type": "integer/autoincrement", "description": ""},
                     "schema": {"$ref": f"/definitions/schema"},
                     "parent": {"type": "integer", "relation": f"{self.id}:{table.id}"},
+                    **field["items"]["properties"],
+                },
+            },
+        )
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self)
+
+    def build_through_table(self, table, field):
+        from schematools.utils import to_snake_case
+
+        # Build the through_table for n-m relation
+        left_dataset = to_snake_case(self.id)
+        left_table = to_snake_case(table.id)
+        right_dataset, right_table = [
+            to_snake_case(part) for part in field.nm_relation.split(":")
+        ]
+        sub_table_schema = dict(
+            id=f"{left_table}_{right_dataset}_{right_table}",
+            type="table",
+            schema={
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["schema"],
+                "properties": {
+                    "schema": {"$ref": f"/definitions/schema"},
+                    left_table: {
+                        "type": "integer",
+                        "relation": f"{left_dataset}:{left_table}",
+                    },
+                    right_table: {
+                        "type": "integer",
+                        "relation": f"{right_dataset}:{right_table}",
+                    },
                     **field["items"]["properties"],
                 },
             },
@@ -169,14 +217,33 @@ class DatasetTableSchema(SchemaType):
     def fields(self):
         required = set(self["schema"]["required"])
         for name, spec in self["schema"]["properties"].items():
-            yield DatasetFieldSchema(
+            field_schema = DatasetFieldSchema(
                 _name=name, _parent_table=self, _required=(name in required), **spec
+            )
+            # Add extra field for relations of type object
+            if field_schema.relation is not None and field_schema.is_object:
+                for subfield_schema in field_schema.sub_fields:
+                    yield subfield_schema
+            yield field_schema
+
+        # If compound key, add PK field
+        # XXX we should we check for an existing "id" field, avoid collisions
+        if self.has_compound_key:
+            yield DatasetFieldSchema(
+                _name="id", _parent_table=self, _required=True, type="string"
             )
 
     @property
     def display_field(self):
         """Tell which fields can be used as display field."""
         return self["schema"].get("display", None)
+
+    @property
+    def is_temporal(self):
+        """Indicates if this is a table with temporal charateristics """
+        return self["schema"].get(
+            "isTemporal", self._parent_schema.temporal is not None
+        )
 
     @property
     def main_geometry(self):
@@ -190,7 +257,17 @@ class DatasetTableSchema(SchemaType):
         """The main identifier field, if there is an identifier field available.
             Default to "id" for existing schemas without an identifier field.
         """
-        return self["schema"].get("identifier", "id")
+        identifier = self["schema"].get("identifier", ["id"])
+        # Convert identifier to a list, to be backwards compatible with older schemas
+        if not isinstance(identifier, list):
+            identifier = [identifier]
+        return identifier
+
+    @property
+    def has_compound_key(self):
+        if isinstance(self.identifier, str):
+            return False
+        return len(self.identifier) > 1
 
     def validate(self, row: dict):
         """Validate a record against the schema."""
@@ -271,7 +348,11 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def is_primary(self) -> bool:
-        return self.name == self.table.identifier
+        """ When name is 'id' the field should be the primary key
+            For compound keys (table.identifier has > 1 item), an 'id'
+            field is autogenerated.
+        """
+        return self.name == "id" or [self.name] == self.table.identifier
 
     @property
     def relation(self) -> typing.Optional[str]:
@@ -307,34 +388,28 @@ class DatasetFieldSchema(DatasetType):
     @property
     def sub_fields(self) -> typing.List[DatasetFieldSchema]:
         """Return the fields for a nested object."""
+        field_name_prefix = ""
         if self.is_object:
             # Field has direct sub fields (type=object)
-            required = set(self["required"])
-            return [
-                DatasetFieldSchema(
-                    _name=name,
-                    _parent_table=self._parent_table,
-                    _parent_field=self,
-                    _required=(name in required),
-                    **spec,
-                )
-                for name, spec in self["properties"].items()
-            ]
+            required = set(self.get("required", []))
+            properties = self["properties"]
         elif self.is_nested_table:
             # Field has an array of objects (type=array)
-            required = self.items.get("required") or ()
-            return [
-                DatasetFieldSchema(
-                    _name=name,
-                    _parent_table=self._parent_table,
-                    _parent_field=self,
-                    _required=(name in required),
-                    **spec,
-                )
-                for name, spec in self.items["properties"].items()
-            ]
+            required = set(self.items.get("required") or ())
+            properties = self.items["properties"]
 
-        return []
+        if self.relation is not None:
+            field_name_prefix = self.relation.split(":")[1] + RELATION_INDICATOR
+        required = set(self.get("required", []))
+        for name, spec in properties.items():
+            field_name = f"{field_name_prefix}{name}"
+            yield DatasetFieldSchema(
+                _name=field_name,
+                _parent_table=self._parent_table,
+                _parent_field=self,
+                _required=(name in required),
+                **spec,
+            )
 
     @property
     def is_nested_table(self) -> bool:
@@ -343,6 +418,18 @@ class DatasetFieldSchema(DatasetType):
         """
         return (
             self.get("type") == "array"
+            and self.nm_relation is None
+            and self.get("items", {}).get("type") == "object"
+        )
+
+    @property
+    def is_through_table(self) -> bool:
+        """
+        Checks if field is a possible through table.
+        """
+        return (
+            self.get("type") == "array"
+            and self.nm_relation is not None
             and self.get("items", {}).get("type") == "object"
         )
 
