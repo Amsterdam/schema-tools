@@ -41,9 +41,14 @@ class FieldMaker:
             getattr(self, an) for an in dir(self) if an.startswith("handle_")
         ]
 
-    def _make_related_classname(self, relation_urn):
-        dataset_name, table_name = relation_urn.split(":")
-        return f"{dataset_name}.{to_snake_case(table_name)}"
+    def _make_related_classname(self, dataset_id, relation_urn):
+        _, table_name = relation_urn.split(":")
+        return f"{dataset_id}.{to_snake_case(table_name)}"
+
+    def _make_through_classname(self, dataset_id, left_table_id, relation_urn):
+        _, right_table_id = relation_urn.split(":")
+        through_table_id = f"{left_table_id}_{right_table_id}"
+        return f"{dataset_id}.{to_snake_case(through_table_id)}"
 
     def handle_basic(
         self,
@@ -90,12 +95,16 @@ class FieldMaker:
         if relation is not None or nm_relation is not None:
             assert not (relation and nm_relation)
             field_cls = models.ManyToManyField if nm_relation else models.ForeignKey
-            args = [self._make_related_classname(relation or nm_relation)]
+            args = [self._make_related_classname(dataset.id, relation or nm_relation)]
             if relation:
                 args.append(models.CASCADE if field.required else models.SET_NULL)
 
             if nm_relation is not None:
                 kwargs["related_name"] = field._parent_table.id
+                # kwargs["db_constraint"] = True
+                kwargs["through"] = self._make_through_classname(
+                    dataset.id, field._parent_table.id, nm_relation
+                )
             elif field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
             else:
@@ -121,7 +130,7 @@ class FieldMaker:
             # In schema foreign keys should be specified without _id,
             # but the db_column should be with _id
             kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
-            kwargs["db_constraint"] = False  # relation is not mandatory
+            # kwargs["db_constraint"] = False  # relation is not mandatory
         return field_cls, args, kwargs
 
     def handle_date(
@@ -158,7 +167,7 @@ def schema_models_factory(
     """Generate Django models from the data of the schema."""
     return [
         model_factory(table=table, base_app_name=base_app_name)
-        for table in dataset.get_tables(include_nested=True)
+        for table in dataset.get_tables(include_nested=True, include_through=True)
         if tables is None or table.id in tables
     ]
 

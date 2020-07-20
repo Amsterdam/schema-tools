@@ -75,3 +75,19 @@ def test_model_factory_sub_objects(parkeervakken_schema):
     fields_dict = {f.name: f for f in model_dict["parkeervakken_regimes"]._meta.fields}
     assert "parent" in fields_dict
     assert isinstance(fields_dict["parent"], models.ForeignKey)
+
+
+def test_model_factory_temporary_1_n_relation(ggwgebieden_schema):
+    """Prove that extra temporary fields are added to temporary relation"""
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            ggwgebieden_schema, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    related_temporary_fields = {"stadsdelen_identifier", "stadsdelen_volgnummer"}
+    assert (
+        set(f.name for f in model_dict["ggwgebieden"]._meta.fields)
+        > related_temporary_fields
+    )
+    breakpoint()

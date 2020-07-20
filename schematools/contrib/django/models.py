@@ -55,6 +55,7 @@ JSON_TYPE_TO_DJANGO = {
     "number": (models.FloatField, None),
     "boolean": (models.BooleanField, None),
     "array": (ArrayField, None),
+    "object": (object, None),
     "/definitions/id": (models.IntegerField, None),
     "/definitions/schema": (UnlimitedCharField, None),
     "https://geojson.org/schema/Geometry.json": (

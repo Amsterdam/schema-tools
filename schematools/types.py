@@ -76,11 +76,15 @@ class DatasetSchema(SchemaType):
         """Access the tables within the file"""
         return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
 
-    def get_tables(self, include_nested=False) -> typing.List[DatasetTableSchema]:
+    def get_tables(
+        self, include_nested=False, include_through=False,
+    ) -> typing.List[DatasetTableSchema]:
         """List tables, including nested"""
         tables = self.tables
         if include_nested:
             tables += self.nested_tables
+        if include_through:
+            tables += self.through_tables
         return tables
 
     def get_table_by_id(self, table_id: str) -> DatasetTableSchema:
@@ -104,6 +108,16 @@ class DatasetSchema(SchemaType):
                     tables.append(self.build_nested_table(table=table, field=field))
         return tables
 
+    @property
+    def through_tables(self) -> typing.List[DatasetTableSchema]:
+        """Access list of through_tables (for n-m relations) """
+        tables = []
+        for table in self.tables:
+            for field in table.fields:
+                if field.is_through_table:
+                    tables.append(self.build_through_table(table=table, field=field))
+        return tables
+
     def build_nested_table(self, table, field):
         # Map Arrays into tables.
         sub_table_schema = dict(
@@ -120,6 +134,35 @@ class DatasetSchema(SchemaType):
                     "id": {"type": "integer/autoincrement", "description": ""},
                     "schema": {"$ref": f"/definitions/schema"},
                     "parent": {"type": "integer", "relation": f"{self.id}:{table.id}"},
+                    **field["items"]["properties"],
+                },
+            },
+        )
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self)
+
+    def build_through_table(self, table, field):
+        # Build the through_table for n-m relation
+        left_dataset = self.id
+        left_table = table.id
+        right_dataset, right_table = field.nm_relation.split(":")
+        sub_table_schema = dict(
+            id=f"{left_table}_{right_table}",
+            type="table",
+            schema={
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["schema"],
+                "properties": {
+                    "schema": {"$ref": f"/definitions/schema"},
+                    left_table: {
+                        "type": "integer",
+                        "relation": f"{left_dataset}:{left_table}",
+                    },
+                    right_table: {
+                        "type": "integer",
+                        "relation": f"{right_dataset}:{right_table}",
+                    },
                     **field["items"]["properties"],
                 },
             },
@@ -169,9 +212,14 @@ class DatasetTableSchema(SchemaType):
     def fields(self):
         required = set(self["schema"]["required"])
         for name, spec in self["schema"]["properties"].items():
-            yield DatasetFieldSchema(
+            field_schema = DatasetFieldSchema(
                 _name=name, _parent_table=self, _required=(name in required), **spec
             )
+            # Add extra field for relations of type object
+            if field_schema.relation is not None and field_schema.is_object:
+                for subfield_schema in field_schema.sub_fields:
+                    yield subfield_schema
+            yield field_schema
 
     @property
     def display_field(self):
@@ -334,7 +382,23 @@ class DatasetFieldSchema(DatasetType):
                 for name, spec in self.items["properties"].items()
             ]
 
+<<<<<<< HEAD
         return []
+=======
+        field_name_prefix = ""
+        if self.relation is not None:
+            field_name_prefix = self.relation.split(":")[1] + "_"
+        required = set(self.get("required", []))
+        for name, spec in self["properties"].items():
+            field_name = f"{field_name_prefix}{name}"
+            yield DatasetFieldSchema(
+                _name=field_name,
+                _parent_table=self._parent_table,
+                _parent_field=self,
+                _required=(name in required),
+                **spec,
+            )
+>>>>>>> WIP on relations without string concat DS-363
 
     @property
     def is_nested_table(self) -> bool:
@@ -343,6 +407,18 @@ class DatasetFieldSchema(DatasetType):
         """
         return (
             self.get("type") == "array"
+            and self.nm_relation is None
+            and self.get("items", {}).get("type") == "object"
+        )
+
+    @property
+    def is_through_table(self) -> bool:
+        """
+        Checks if field is a possible through table.
+        """
+        return (
+            self.get("type") == "array"
+            and self.nm_relation is not None
             and self.get("items", {}).get("type") == "object"
         )
 

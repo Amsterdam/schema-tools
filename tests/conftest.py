@@ -98,3 +98,8 @@ def meetbouten_schema(schema_json) -> DatasetSchema:
 @pytest.fixture()
 def parkeervakken_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("parkeervakken.json"))
+
+
+@pytest.fixture()
+def ggwgebieden_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("ggwgebieden.json"))
