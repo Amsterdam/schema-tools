@@ -169,11 +169,11 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
     app_label = dataset.id
     base_app_name = base_app_name or "dso_api.dynamic_api"
     module_name = f"{base_app_name}.{app_label}.models"
-    model_name = f"{to_snake_case(table.id)}"
+    model_name = to_snake_case(table.id)
+    display_field = to_snake_case(table.display_field) if table.display_field else None
 
     # Generate fields
     fields = {}
-    display_field = None
     for field in table.fields:
         type_ = field.type
         # skip schema field for now
@@ -201,9 +201,6 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
         model_field.name = field_name
         fields[field_name] = model_field
 
-        if not display_field and is_possible_display_field(field):
-            display_field = field.name
-
     # Generate Meta part
     meta_cls = type(
         "Meta",
@@ -225,7 +222,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
             **fields,
             "_dataset_schema": dataset,
             "_table_schema": table,
-            "_display_field": table.display_field,
+            "_display_field": display_field,
             "__module__": module_name,
             "Meta": meta_cls,
         },
