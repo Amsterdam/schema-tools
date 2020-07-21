@@ -15,7 +15,7 @@ def read(filename):
 
 setup(
     name="amsterdam-schema-tools",
-    version="0.9.7",
+    version="0.9.8",
     url="https://github.com/amsterdam/schema-tools",
     license="Mozilla Public 2.0",
     author="Jan Murre",
@@ -36,7 +36,7 @@ setup(
         "requests",
         "jinja2",
         "mappyfile",
-        "cachetools"
+        "cachetools",
     ],
     extras_require={
         "tests": [

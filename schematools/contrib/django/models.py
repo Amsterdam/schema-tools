@@ -119,7 +119,7 @@ class DynamicModel(models.Model):
 
     def __str__(self):
         if self._display_field:
-            return str(getattr(self, to_snake_case(self._display_field)))
+            return str(getattr(self, self._display_field))
         else:
             # this will not be shown in the dso-api view and will be omitted when display field is empty or not present
             return f"(no title: {self._meta.object_name} #{self.pk})"
@@ -152,6 +152,11 @@ class DynamicModel(models.Model):
     def has_display_field(cls):
         """Tell whether a display field is configured."""
         return cls._display_field is not None
+
+    @classmethod
+    def get_display_field(cls):
+        """Return the name of the display field, for usage by Django models."""
+        return cls._display_field
 
 
 class Dataset(models.Model):
@@ -328,12 +333,12 @@ class DatasetTable(models.Model):
 
     @classmethod
     def _get_field_values(cls, table):
-        ret = {}
+        ret = {
+            "display_field": table.display_field,
+            "geometry_field": None,
+            "geometry_field_type": None,
+        }
 
-        # XXX For now, be OK with missing "display", is mandatory in aschema v1.1.1
-        ret["display_field"] = table["schema"].get("display")
-        ret["geometry_field"] = None
-        ret["geometry_field_type"] = None
         for field in table.fields:
             # Take the first geojson field as geometry field
             if not ret["geometry_field"] and field.type.startswith(GEOJSON_PREFIX):
@@ -341,13 +346,6 @@ class DatasetTable(models.Model):
                 match = re.search(r"schema\/(?P<schema>\w+)\.json", field.type)
                 if match is not None:
                     ret["geometry_field_type"] = match.group("schema")
-                break
-
-            # Take the first string field as display name.
-            if not ret["display_field"] and is_possible_display_field(field):
-                ret["display_field"] = field.name
-
-            if ret["display_field"] and ret["geometry_field"]:
                 break
         return ret
 
@@ -368,6 +366,9 @@ class DatasetTable(models.Model):
         self.name = to_snake_case(table.id)
         self.db_table = get_db_table_name(table)
         self.auth = _serialize_claims(table)
+        self.display_field = (
+            to_snake_case(table.display_field) if table.display_field else None
+        )
         self.enable_geosearch = (
             table.dataset.id
             not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
