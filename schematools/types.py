@@ -387,7 +387,7 @@ class DatasetFieldSchema(DatasetType):
 =======
         field_name_prefix = ""
         if self.relation is not None:
-            field_name_prefix = self.relation.split(":")[1] + "_"
+            field_name_prefix = self.relation.split(":")[1] + "__"
         required = set(self.get("required", []))
         for name, spec in self["properties"].items():
             field_name = f"{field_name_prefix}{name}"

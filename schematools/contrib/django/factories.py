@@ -214,7 +214,10 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
         model_field = kls(*args, **kwargs)
 
         # Generate name, fix if needed.
-        field_name = to_snake_case(field.name)
+        # Special __ names need to be handled
+        # those are inserted for object-based relations
+        field_name_parts = field.name.split("__")
+        field_name = "__".join(to_snake_case(part) for part in field_name_parts)
         model_field.name = field_name
         fields[field_name] = model_field
 
