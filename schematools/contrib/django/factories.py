@@ -11,7 +11,6 @@ from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,
-    is_possible_display_field,
     get_db_table_name,
 )
 from schematools.utils import to_snake_case

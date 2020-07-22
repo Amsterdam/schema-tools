@@ -20,6 +20,7 @@ from . import get_table_name
 
 JSON_TYPE_TO_PG = {
     "string": String,
+    "object": String,
     "boolean": Boolean,
     "integer": Integer,
     "number": Float,
@@ -187,6 +188,7 @@ def table_factory(
 
         # XXX still need to throw in some snakifying here and there
         try:
+
             nm_relation = field.nm_relation
             if nm_relation is not None:
                 # We need a 'through' table for the n-m relation
@@ -195,6 +197,19 @@ def table_factory(
                     Column(f"{dataset_table.id}_id", String,),
                     Column(f"{related_table}_id", String,),
                 ]
+                # Through table means that in schema definition there is
+                # an object with one or more fields defining the relation
+                if field.is_through_table:
+                    for through_field_name, through_field_type_info in field["items"][
+                        "properties"
+                    ].items():
+                        through_columns.append(
+                            Column(
+                                through_field_name,
+                                JSON_TYPE_TO_PG[through_field_type_info["type"]],
+                            )
+                        )
+
                 through_table_id = f"{db_table_name}_{field.name}"
                 through_tables[through_table_id] = Table(
                     through_table_id, metadata, *through_columns,
