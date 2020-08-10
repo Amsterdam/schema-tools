@@ -57,7 +57,18 @@ class DatasetSchema(SchemaType):
         return cls(obj)
 
     @property
+    def title(self):
+        """Title of the dataset (if set)"""
+        return self.get("title")
+
+    @property
+    def description(self):
+        """Description of the dataset (if set)"""
+        return self.get("description")
+
+    @property
     def identifier(self):
+        """Which fields acts as identifier. (default is Django "pk" field)"""
         return self.get("identifier", "pk")
 
     @property
@@ -240,6 +251,10 @@ class DatasetFieldSchema(DatasetType):
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def description(self) -> typing.Optional[str]:
+        return self.get("description")
 
     @property
     def required(self) -> bool:
