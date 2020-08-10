@@ -29,10 +29,11 @@ logger = logging.getLogger(__name__)
 
 GEOJSON_PREFIX = "https://geojson.org/schema/"
 
-DATE_MODELS_LOOKUP = {
+FORMAT_MODELS_LOOKUP = {
     "date": models.DateField,
     "time": models.TimeField,
     "date-time": models.DateTimeField,
+    "uri": models.URLField
 }
 
 RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
