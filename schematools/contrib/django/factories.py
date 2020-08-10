@@ -185,7 +185,15 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
         # reduce amsterdam schema refs to their fragment
         if type_.startswith(settings.SCHEMA_DEFS_URL):
             type_ = urlparse(type_).fragment
-        base_class, init_kwargs = JSON_TYPE_TO_DJANGO[type_]
+
+        try:
+            base_class, init_kwargs = JSON_TYPE_TO_DJANGO[type_]
+        except KeyError as e:
+            raise RuntimeError(
+                f"Unable to parse {table.id}: field '{field.name}'"
+                f" has unsupported type: {type_}."
+            ) from e
+
         if init_kwargs is None:
             init_kwargs = {}
 
