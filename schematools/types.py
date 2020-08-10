@@ -275,25 +275,51 @@ class DatasetFieldSchema(DatasetType):
         return self.get("format")
 
     @property
+    def is_array(self) -> bool:
+        """Tell whether the field references an array."""
+        return self.get("type") == "array"
+
+    @property
     def is_object(self) -> bool:
         """Tell whether the field references an object."""
         return self.get("type") == "object"
 
     @property
+    def items(self) -> typing.Optional[dict]:
+        """Return the item definition for an array type."""
+        return self.get("items", {}) if self.is_array else None
+
+    @property
     def sub_fields(self) -> typing.List[DatasetFieldSchema]:
         """Return the fields for a nested object."""
-        if not self.is_object:
-            return
+        if self.is_object:
+            # Field has direct sub fields (type=object)
+            required = set(self["required"])
+            return [
+                DatasetFieldSchema(
+                    _name=name,
+                    _parent_table=self._parent_table,
+                    _parent_field=self,
+                    _required=(name in required),
+                    **spec,
+                )
+                for name, spec in self["properties"].items()
+            ]
+        elif self.is_nested_table:
+            # Field has an array of objects (type=array)
+            required = self.items.get("required") or ()
+            return [
+                DatasetFieldSchema(
+                    _name=name,
+                    _parent_table=self._parent_table,
+                    _parent_field=self,
+                    _required=(name in required),
+                    **spec,
+                )
+                for name, spec in self.items["properties"].items()
+            ]
 
-        required = set(self["required"])
-        for name, spec in self["properties"].items():
-            yield DatasetFieldSchema(
-                _name=name,
-                _parent_table=self._parent_table,
-                _parent_field=self,
-                _required=(name in required),
-                **spec,
-            )
+        return []
 
     @property
     def is_nested_table(self) -> bool:
