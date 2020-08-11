@@ -16,7 +16,7 @@ from schematools.types import (
 )
 from schematools.utils import to_snake_case
 from .models import (
-    DATE_MODELS_LOOKUP,
+    FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
     DynamicModel,
 )
@@ -134,7 +134,7 @@ class FieldMaker:
     ) -> TypeAndSignature:
         format_ = field.format
         if format_ is not None:
-            field_cls = DATE_MODELS_LOOKUP[format_]
+            field_cls = FORMAT_MODELS_LOOKUP[format_]
         return field_cls, args, kwargs
 
     def __call__(
