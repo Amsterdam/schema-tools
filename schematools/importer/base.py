@@ -4,6 +4,7 @@ import operator
 from typing import Optional, Dict
 
 from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.utils import to_snake_case
 from geoalchemy2 import Geometry
 from sqlalchemy import (
     Boolean,
@@ -13,10 +14,18 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
+    Date,
+    Time,
+    DateTime
 )
 
 from . import get_table_name
 
+FORMAT_MODELS_LOOKUP = {
+    "date": Date,
+    "time": Time,
+    "date-time": DateTime,
+}
 
 JSON_TYPE_TO_PG = {
     "string": String,
@@ -55,6 +64,13 @@ JSON_TYPE_TO_PG = {
 }
 
 
+def fetch_col_type(field):
+    col_type = JSON_TYPE_TO_PG[field.type]
+    if (field_format := field.format) is not None:
+        return FORMAT_MODELS_LOOKUP[field_format]
+    return col_type
+
+
 def chunked(generator, size):
     """Read parts of the generator, pause each time after a chunk"""
     # Based on more-itertools. islice returns results until 'size',
@@ -77,6 +93,27 @@ class BaseImporter:
         dataset_table = self.dataset_schema.get_table_by_id(table_name)
         return get_table_name(dataset_table)
 
+    def fetch_fields_provenances(self, dataset_table):
+        """ Create mapping from provenance to camelcased fieldname """
+        fields_provenances = {}
+        for field in dataset_table.fields:
+            if (provenance := field.get("provenance")) is not None:
+                fields_provenances[provenance] = field.name
+        return fields_provenances
+
+    def fix_fieldnames(self, fields_provenances, table_records):
+        """ We need relational snakecased fieldnames in the records
+            And, we need to take provenance in the input records into account
+        """
+        fixed_records = []
+        for record in table_records:
+            fixed_record = {}
+            for field_name, field_value in record.items():
+                fixed_field_name = fields_provenances.get(field_name, field_name)
+                fixed_record[to_snake_case(fixed_field_name)] = field_value
+            fixed_records.append(fixed_record)
+        return fixed_records
+
     def load_file(
         self,
         file_name,
@@ -88,6 +125,8 @@ class BaseImporter:
     ):
         """Import a file into the database table"""
         dataset_table = self.dataset_schema.get_table_by_id(table_name)
+        # Collect provenance info for easy re-use
+        fields_provenances = self.fetch_fields_provenances(dataset_table)
         if db_table_name is None:
             db_table_name = get_table_name(dataset_table)
 
@@ -113,7 +152,10 @@ class BaseImporter:
                 table_records = reduce(
                     operator.add, [record.get(table_name, []) for record in records], []
                 )
-                self.engine.execute(insert_statement, table_records)
+                self.engine.execute(
+                    insert_statement,
+                    self.fix_fieldnames(fields_provenances, table_records),
+                )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
 
@@ -202,7 +244,8 @@ def table_factory(
 
                 continue
 
-            col_type = JSON_TYPE_TO_PG[field.type]
+            # col_type = JSON_TYPE_TO_PG[field.type]
+            col_type = fetch_col_type(field)
         except KeyError:
             raise NotImplementedError(
                 f'Import failed at "{field.name}": {dict(field)!r}\n'
@@ -215,6 +258,7 @@ def table_factory(
             col_kwargs["nullable"] = False
 
         id_postfix = "_id" if field.relation else ""
-        columns.append(Column(f"{field.name}{id_postfix}", col_type, **col_kwargs))
+        field_name = to_snake_case(field.name)
+        columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
 
     return {db_table_name: Table(db_table_name, metadata, *columns), **through_tables}
