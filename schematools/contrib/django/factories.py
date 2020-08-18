@@ -3,9 +3,12 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Tuple, Type
 from urllib.parse import urlparse
 
+from django.apps import apps
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 from schematools.types import (
     DatasetFieldSchema,
@@ -41,8 +44,8 @@ class FieldMaker:
         ]
 
     def _make_related_classname(self, dataset_id, relation_urn):
-        _, table_name = relation_urn.split(":")
-        return f"{dataset_id}.{to_snake_case(table_name)}"
+        base_dataset, table_name = relation_urn.split(":")
+        return f"{base_dataset}.{to_snake_case(table_name)}"
 
     def _make_through_classname(self, dataset_id, left_table_id, relation_urn):
         _, right_table_id = relation_urn.split(":")
@@ -94,16 +97,64 @@ class FieldMaker:
         if relation is not None or nm_relation is not None:
             assert not (relation and nm_relation)
             field_cls = models.ManyToManyField if nm_relation else models.ForeignKey
+
             args = [self._make_related_classname(dataset.id, relation or nm_relation)]
+
+            # In schema foreign keys should be specified without _id,
+            # but the db_column should be with _id
+            kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
             if relation:
                 args.append(models.CASCADE if field.required else models.SET_NULL)
+                if len(field.get("properties", [])):
+                    class ComplexRelationField(GenericForeignKey):
+                        def __init__(self, base_args, *args, **kwargs):
+                            self.related_model_name = base_args
+                            del kwargs["related_name"]
+                            del kwargs["db_constraint"]
+                            super().__init__(*[], **kwargs)
+
+                        def __get__(self, instance, cls=None):
+                            if instance is None:
+                                return self
+
+                            rel_obj = self.get_cached_value(instance, default=None)
+                            if rel_obj is not None:
+                                return rel_obj
+                            try:
+                                rel_obj = self.get_related_object(instance=instance, using=instance._state.db)
+                            except ObjectDoesNotExist:
+                                pass
+                            self.set_cached_value(instance, rel_obj)
+                            return rel_obj
+
+                        def get_related_object(self, instance, using):
+                            f = self.model._meta.get_field(self.ct_field)
+                            ct_id = getattr(instance, f.get_attname(), None)
+                            pk_val = getattr(instance, self.fk_field)
+
+                            app_label, model_name = self.related_model_name.split(".")
+                            related_model = apps.get_model(app_label=app_label, model_name=model_name)
+                            return related_model.objects.filter(**{self.ct_field: ct_id, self.fk_field: pk_val})
+                            # app_label, model_name = self.related_model_name.split('.')
+                            # relation_model = apps.get_model(
+                            #     app_label=app_label,
+                            #     model_name=model_name)
+                            # return relation_model.buurt.field.remote_field.model.objects.raw("SELECT b.* FROM bagh_buurt b INNER JOIN gebieden_ggwgebied_buurt rel ON (b.volgnummer = rel.volgnummer AND b.identificatie=rel.identifier) WHERE rel.ggwgebied_id = 1")
+                            return None
+
+                    field_cls = ComplexRelationField
+                    kwargs = dict(
+                        ct_field='identificatie',
+                        fk_field='volgnummer'
+                    )
 
             if nm_relation is not None:
                 kwargs["related_name"] = field._parent_table.id
-                # kwargs["db_constraint"] = True
+                kwargs["db_constraint"] = True
                 kwargs["through"] = self._make_through_classname(
                     dataset.id, field._parent_table.id, nm_relation
                 )
+                # kwargs["through_fields"] = list(field.items['properties'].keys())
             elif field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
             else:
@@ -125,11 +176,8 @@ class FieldMaker:
                     kwargs["related_name"] = related_name
                 else:
                     kwargs["related_name"] = "+"
-
-            # In schema foreign keys should be specified without _id,
-            # but the db_column should be with _id
-            kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
-            # kwargs["db_constraint"] = False  # relation is not mandatory
+            if "db_constraint" not in kwargs:
+                kwargs["db_constraint"] = False  # relation is not mandatory
         return field_cls, args, kwargs
 
     def handle_date(

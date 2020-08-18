@@ -80,11 +80,12 @@ class DatasetSchema(SchemaType):
         self, include_nested=False, include_through=False,
     ) -> typing.List[DatasetTableSchema]:
         """List tables, including nested"""
-        tables = self.tables
-        if include_nested:
-            tables += self.nested_tables
+        tables = []
         if include_through:
             tables += self.through_tables
+        tables += self.tables
+        if include_nested:
+            tables += self.nested_tables
         return tables
 
     def get_table_by_id(self, table_id: str) -> DatasetTableSchema:
@@ -348,6 +349,11 @@ class DatasetFieldSchema(DatasetType):
         return self.get("type") == "object"
 
     @property
+    def is_relation(self) -> bool:
+        """Tell whether the field references an object."""
+        return self.get("type") == "object" and "relation" in self
+
+    @property
     def items(self) -> typing.Optional[dict]:
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
@@ -355,7 +361,7 @@ class DatasetFieldSchema(DatasetType):
     @property
     def sub_fields(self) -> typing.List[DatasetFieldSchema]:
         """Return the fields for a nested object."""
-        if self.is_object:
+        if self.is_object and not self.is_relation:
             # Field has direct sub fields (type=object)
             required = set(self["required"])
             return [
@@ -382,12 +388,9 @@ class DatasetFieldSchema(DatasetType):
                 for name, spec in self.items["properties"].items()
             ]
 
-<<<<<<< HEAD
-        return []
-=======
         field_name_prefix = ""
         if self.relation is not None:
-            field_name_prefix = self.relation.split(":")[1] + "__"
+            field_name_prefix = self.relation.split(":")[1] + "_"
         required = set(self.get("required", []))
         for name, spec in self["properties"].items():
             field_name = f"{field_name_prefix}{name}"
@@ -398,7 +401,6 @@ class DatasetFieldSchema(DatasetType):
                 _required=(name in required),
                 **spec,
             )
->>>>>>> WIP on relations without string concat DS-363
 
     @property
     def is_nested_table(self) -> bool:
