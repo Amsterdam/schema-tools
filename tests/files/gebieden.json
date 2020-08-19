@@ -42,6 +42,12 @@
             "format": "date",
             "description": "De datum waarop het object is komen te vervallen.",
             "provenance": "eindgeldigheid"
+          },
+          "ligtInBuurt": {
+            "type": "string",
+            "relation": "gebieden:buurten",
+            "provenance": "ligtinbuurt",
+            "description": "De buurt waar het bouwblok in ligt."
           }
         }
       }

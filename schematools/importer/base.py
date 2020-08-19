@@ -83,6 +83,24 @@ def chunked(generator, size):
     return iter(make_chunk, [])
 
 
+class Row(dict):
+    def __init__(self, *args, **kwargs):
+        self.fields_provenances = {
+            name: prov_name
+            for prov_name, name in kwargs.pop("fields_provenances", {}).items()
+        }
+        super().__init__(*args, **kwargs)
+
+    def __getitem__(self, key):
+        return super().__getitem__(self._transform_key(key))
+
+    def __delitem__(self, key):
+        return super().__delitem__(self._transform_key(key))
+
+    def _transform_key(self, key):
+        return self.fields_provenances.get(key, key)
+
+
 class BaseImporter:
     """Base importer that holds common data."""
 
@@ -144,7 +162,10 @@ class BaseImporter:
         self.prepare_tables(tables, truncate=truncate)
 
         data_generator = self.parse_records(
-            file_name, dataset_table, db_table_name, **kwargs
+            file_name,
+            dataset_table,
+            db_table_name,
+            **{"fields_provenances": fields_provenances, **kwargs},
         )
         self.logger.log_start(file_name, size=batch_size)
         num_imported = 0

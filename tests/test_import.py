@@ -15,6 +15,7 @@ def test_camelcased_names_during_import(here, engine, gebieden_schema, dbsession
         "id",
         "begin_geldigheid",
         "eind_geldigheid",
+        "ligt_in_buurt_id",
     }
     assert records[0]["begin_geldigheid"] == date(2006, 1, 12)
     assert records[0]["eind_geldigheid"] == date(2008, 11, 14)

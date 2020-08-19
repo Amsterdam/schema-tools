@@ -1,6 +1,6 @@
 import ndjson
 from shapely.geometry import shape
-from .base import BaseImporter
+from .base import BaseImporter, Row
 
 from . import get_table_name
 
@@ -11,6 +11,7 @@ class NDJSONImporter(BaseImporter):
     def parse_records(self, file_name, dataset_table, db_table_name=None, **kwargs):
         """Provide an iterator the reads the NDJSON records"""
         main_geometry = dataset_table.main_geometry
+        fields_provenances = kwargs.pop("fields_provenances", {})
         identifier = dataset_table.identifier
         if db_table_name is None:
             db_table_name = get_table_name(dataset_table)
@@ -23,7 +24,8 @@ class NDJSONImporter(BaseImporter):
             if field.nm_relation is not None
         ]
         with open(file_name) as fh:
-            for row in ndjson.reader(fh):
+            for _row in ndjson.reader(fh):
+                row = Row(_row, fields_provenances=fields_provenances)
                 through_rows = {}
                 if main_geometry in row:
                     wkt = shape(row[main_geometry]).wkt
