@@ -388,12 +388,10 @@ class DatasetFieldSchema(DatasetType):
                 for name, spec in self.items["properties"].items()
             ]
 
-        field_name_prefix = ""
-        if self.relation is not None:
-            field_name_prefix = self.relation.split(":")[1] + "_"
+        field_name_prefix = self.name
         required = set(self.get("required", []))
         for name, spec in self["properties"].items():
-            field_name = f"{field_name_prefix}{name}"
+            field_name = f"{field_name_prefix}__{name}"
             yield DatasetFieldSchema(
                 _name=field_name,
                 _parent_table=self._parent_table,

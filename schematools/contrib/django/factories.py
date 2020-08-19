@@ -3,12 +3,10 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Tuple, Type
 from urllib.parse import urlparse
 
-from django.apps import apps
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
-from django.contrib.contenttypes.fields import GenericForeignKey
+
 
 from schematools.types import (
     DatasetFieldSchema,
@@ -17,6 +15,7 @@ from schematools.types import (
     get_db_table_name,
 )
 from schematools.utils import to_snake_case
+from .fields import CombinedForeignKey
 from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
@@ -106,46 +105,11 @@ class FieldMaker:
             if relation:
                 args.append(models.CASCADE if field.required else models.SET_NULL)
                 if len(field.get("properties", [])):
-                    class ComplexRelationField(GenericForeignKey):
-                        def __init__(self, base_args, *args, **kwargs):
-                            self.related_model_name = base_args
-                            del kwargs["related_name"]
-                            del kwargs["db_constraint"]
-                            super().__init__(*[], **kwargs)
-
-                        def __get__(self, instance, cls=None):
-                            if instance is None:
-                                return self
-
-                            rel_obj = self.get_cached_value(instance, default=None)
-                            if rel_obj is not None:
-                                return rel_obj
-                            try:
-                                rel_obj = self.get_related_object(instance=instance, using=instance._state.db)
-                            except ObjectDoesNotExist:
-                                pass
-                            self.set_cached_value(instance, rel_obj)
-                            return rel_obj
-
-                        def get_related_object(self, instance, using):
-                            f = self.model._meta.get_field(self.ct_field)
-                            ct_id = getattr(instance, f.get_attname(), None)
-                            pk_val = getattr(instance, self.fk_field)
-
-                            app_label, model_name = self.related_model_name.split(".")
-                            related_model = apps.get_model(app_label=app_label, model_name=model_name)
-                            return related_model.objects.filter(**{self.ct_field: ct_id, self.fk_field: pk_val})
-                            # app_label, model_name = self.related_model_name.split('.')
-                            # relation_model = apps.get_model(
-                            #     app_label=app_label,
-                            #     model_name=model_name)
-                            # return relation_model.buurt.field.remote_field.model.objects.raw("SELECT b.* FROM bagh_buurt b INNER JOIN gebieden_ggwgebied_buurt rel ON (b.volgnummer = rel.volgnummer AND b.identificatie=rel.identifier) WHERE rel.ggwgebied_id = 1")
-                            return None
-
-                    field_cls = ComplexRelationField
+                    field_cls = CombinedForeignKey
+                    ct_field, pk_field = field["properties"].keys()
                     kwargs = dict(
-                        ct_field='identificatie',
-                        fk_field='volgnummer'
+                        ct_field=to_snake_case(ct_field),
+                        fk_field=to_snake_case(pk_field)
                     )
 
             if nm_relation is not None:
