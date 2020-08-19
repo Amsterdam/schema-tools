@@ -16,7 +16,7 @@ from sqlalchemy import (
     Table,
     Date,
     Time,
-    DateTime
+    DateTime,
 )
 
 from . import get_table_name
@@ -66,7 +66,10 @@ JSON_TYPE_TO_PG = {
 
 def fetch_col_type(field):
     col_type = JSON_TYPE_TO_PG[field.type]
-    if (field_format := field.format) is not None:
+    # XXX no walrus until we can go to python 3.8 (airflow needs 3.7)
+    # if (field_format := field.format) is not None:
+    field_format = field.format
+    if field_format is not None:
         return FORMAT_MODELS_LOOKUP[field_format]
     return col_type
 
@@ -97,7 +100,10 @@ class BaseImporter:
         """ Create mapping from provenance to camelcased fieldname """
         fields_provenances = {}
         for field in dataset_table.fields:
-            if (provenance := field.get("provenance")) is not None:
+            # XXX no walrus until we can go to python 3.8 (airflow needs 3.7)
+            # if (provenance := field.get("provenance")) is not None:
+            provenance = field.get("provenance")
+            if provenance is not None:
                 fields_provenances[provenance] = field.name
         return fields_provenances
 
