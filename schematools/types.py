@@ -492,17 +492,6 @@ class ProfileSchema(SchemaType):
         return cls(obj)
 
 
-def is_possible_display_field(field: DatasetFieldSchema) -> bool:
-    """See whether the field is a possible candidate as display field"""
-    # TODO: the schema needs to provide a display field!
-    return (
-        field.type == "string"
-        and "$ref" not in field
-        and " " not in field.name
-        and not field.name.endswith("_id")
-    )
-
-
 def get_db_table_name(table: DatasetTableSchema) -> str:
     """Generate the table name for a database schema."""
     from schematools.utils import to_snake_case
