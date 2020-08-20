@@ -24,9 +24,22 @@ class CombinedForeignKey(GenericForeignKey):
         self.set_cached_value(instance, rel_obj)
         return rel_obj
 
+    def __set__(self, instance, value):
+        ct = None
+        fk = None
+        if value is not None:
+            ct = getattr(value, self.ct_field)
+            fk = getattr(value, self.fk_field)
+
+        local_ct_id = f"{self.name}__{self.ct_field}"
+        local_fk_val = f"{self.name}__{self.fk_field}"
+
+        setattr(instance, local_ct_id, ct)
+        setattr(instance, local_fk_val, fk)
+
     def contribute_to_class(self, cls, name, **kwargs):
         super().contribute_to_class(cls, name, **kwargs)
-        self.attname = name
+        self.attname = f"{name}_id"
 
     def get_related_model(self):
         app_label, model_name = self.related_model_name.split(".")
@@ -38,8 +51,13 @@ class CombinedForeignKey(GenericForeignKey):
         ct_id = getattr(instance, local_ct_id, None)
         fk_val = getattr(instance, local_fk_val)
 
-        return self.get_related_model().objects.using(using).filter(**{self.ct_field: ct_id, self.fk_field: fk_val}).first
+        return self.get_related_model().objects.using(using).get(
+            **{self.ct_field: ct_id, self.fk_field: fk_val}
+        )
 
+
+class CombinedRelatedField(GenericForeignKey):
+    pass
 
         # app_label, model_name = self.related_model_name.split('.')
         # relation_model = apps.get_model(
