@@ -40,9 +40,6 @@ class FieldMaker:
         self.field_cls = field_cls
         self.value_getter = value_getter
         self.kwargs = kwargs
-        self.modifiers = [
-            getattr(self, an) for an in dir(self) if an.startswith("handle_")
-        ]
 
     def _make_related_classname(self, relation_urn):
         related_dataset, related_table = [
@@ -180,7 +177,12 @@ class FieldMaker:
         kwargs = self.kwargs
         args = []
 
-        for modifier in self.modifiers:
+        for modifier in (
+            self.handle_basic,
+            self.handle_date,
+            self.handle_array,
+            self.handle_relation,
+        ):
             field_cls, args, kwargs = modifier(
                 dataset, field, field_cls, *args, **kwargs
             )
