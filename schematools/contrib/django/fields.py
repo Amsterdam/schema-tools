@@ -34,11 +34,11 @@ class CombinedForeignKey(GenericForeignKey):
 
     def get_related_object(self, instance, using):
         local_ct_id = f"{self.name}__{self.ct_field}"
-        local_pk_val = f"{self.name}__{self.pk_field}"
+        local_fk_val = f"{self.name}__{self.fk_field}"
         ct_id = getattr(instance, local_ct_id, None)
-        pk_val = getattr(instance, local_pk_val)
+        fk_val = getattr(instance, local_fk_val)
 
-        return self.get_related_model().objects.filter(**{self.ct_field: ct_id, self.fk_field: pk_val})
+        return self.get_related_model().objects.using(using).filter(**{self.ct_field: ct_id, self.fk_field: fk_val}).first
 
 
         # app_label, model_name = self.related_model_name.split('.')
