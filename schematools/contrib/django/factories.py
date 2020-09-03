@@ -18,6 +18,7 @@ from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
     DynamicModel,
+    ObjectMarker
 )
 
 
@@ -84,6 +85,7 @@ class FieldMaker:
             ]
             kwargs["base_field"] = base_field()
         return field_cls, args, kwargs
+
 
     def handle_relation(
         self,
@@ -214,9 +216,10 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
 
         # Generate field object
         kls, args, kwargs = FieldMaker(base_class, **init_kwargs)(field, dataset)
-        if kls is None:
+        if kls is None or kls is ObjectMarker:
             # Some fields are not mapped into classes
             continue
+
         model_field = kls(*args, **kwargs)
 
         # Generate name, fix if needed.
