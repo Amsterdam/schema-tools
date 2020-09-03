@@ -41,6 +41,16 @@ RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 
 
+class ObjectMarker:
+    """ Class to signal that field type object has been found in the aschema definition.
+        For FK and NM relations, this class will be replaced by another field class,
+        during processing (in the FieldMaker).
+        For non-model fields (e.g. BRP), this class marks the fact that no
+        model field needs to be generated.
+    """
+    pass
+
+
 def fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> Dict[str, Any]:
     return {"srid": CRS.from_string(dataset.data["crs"]).srid}
 
@@ -55,7 +65,7 @@ JSON_TYPE_TO_DJANGO = {
     "number": (models.FloatField, None),
     "boolean": (models.BooleanField, None),
     "array": (ArrayField, None),
-    "object": (object, None),
+    "object": (ObjectMarker, None),
     "/definitions/id": (models.IntegerField, None),
     "/definitions/schema": (UnlimitedCharField, None),
     "https://geojson.org/schema/Geometry.json": (
