@@ -231,7 +231,7 @@ class BaseImporter:
                     )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
-            last_record = records[-1]
+            last_record = records[self.db_table_name][-1]
 
         self.logger.log_done(num_imported)
         return last_record
