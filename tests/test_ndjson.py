@@ -15,7 +15,7 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, dbsession):
     records = [
         dict(r)
         for r in engine.execute(
-            "SELECT * from meetbouten_metingen_meetbouten_referentiepunten"
+            "SELECT * from meetbouten_metingen_refereertaanreferentiepunten"
         )
     ]
     # Should have a field 'identificatie' in the n-m table
@@ -45,7 +45,7 @@ def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsess
     assert records[0]["id"] == "03630950000000.1"
     records = [
         dict(r)
-        for r in engine.execute("SELECT * from gebieden_ggwgebieden_gebieden_buurten")
+        for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
     ]
     assert len(records) == 3
     assert records[0].keys() == {

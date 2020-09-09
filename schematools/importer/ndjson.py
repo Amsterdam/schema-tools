@@ -37,12 +37,10 @@ class NDJSONImporter(BaseImporter):
             if field_provenance is not None and field_provenance.startswith("$"):
                 jsonpath_provenance_info.append(field.name)
             if field.nm_relation is not None:
-                related_dataset_name, related_table_name = [
+                _, related_table_name = [
                     to_snake_case(part) for part in field.nm_relation.split(":")
                 ]
-                nm_relation_field_info.append(
-                    (field.name, related_dataset_name, related_table_name, field)
-                )
+                nm_relation_field_info.append((field.name, related_table_name, field))
 
         with open(file_name) as fh:
             for _row in ndjson.reader(fh):
@@ -83,7 +81,6 @@ class NDJSONImporter(BaseImporter):
                     del row[relation_field_name]
                 for (
                     nm_relation_field_name,
-                    related_dataset_name,
                     related_table_name,
                     field,
                 ) in nm_relation_field_info:
@@ -114,7 +111,8 @@ class NDJSONImporter(BaseImporter):
                             through_row_record[f"{related_table_name}_id"] = to_fk
                             through_row_records.append(through_row_record)
 
-                        through_table_id = f"{db_table_name}_{related_dataset_name}_{related_table_name}"
+                        field_name = to_snake_case(field.name)
+                        through_table_id = f"{db_table_name}_{field_name}"
                         through_rows[through_table_id] = through_row_records
 
                     del row[nm_relation_field_name]

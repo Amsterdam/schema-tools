@@ -176,9 +176,7 @@ class BaseImporter:
             fixed_records.append(fixed_record)
         return fixed_records
 
-    def generate_tables(
-        self, table_name, db_table_name=None, truncate=False
-    ):
+    def generate_tables(self, table_name, db_table_name=None, truncate=False):
         """ Generate the tablemodels and tables
         """
 
@@ -305,8 +303,9 @@ def table_factory(
         try:
             nm_relation = field.nm_relation
             if nm_relation is not None:
+                field_name = to_snake_case(field.name)
                 # We need a 'through' table for the n-m relation
-                related_dataset, related_table = [
+                _, related_table = [
                     to_snake_case(part) for part in nm_relation.split(":")
                 ]
                 through_columns = [
@@ -326,7 +325,7 @@ def table_factory(
                             )
                         )
 
-                through_table_id = f"{db_table_name}_{related_dataset}_{related_table}"
+                through_table_id = f"{db_table_name}_{field_name}"
                 through_tables[through_table_id] = Table(
                     through_table_id, metadata, *through_columns,
                 )
