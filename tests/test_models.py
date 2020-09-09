@@ -86,8 +86,8 @@ def test_model_factory_temporary_1_n_relation(ggwgebieden_schema):
         )
     }
     related_temporary_fields = {
-        "stadsdelen_identificatie",
-        "stadsdelen_volgnummer",
+        "ligtinstadsdeel_identificatie",
+        "ligtinstadsdeel_volgnummer",
     }
     assert (
         set(f.name for f in model_dict["ggwgebieden"]._meta.fields)
