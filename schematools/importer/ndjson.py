@@ -4,7 +4,7 @@ from .base import BaseImporter, Row
 from schematools.utils import to_snake_case
 
 from . import get_table_name
-from schematools import RELATION_INDICATOR
+from schematools import RELATION_INDICATOR, MAX_TABLE_LENGTH
 
 
 class NDJSONImporter(BaseImporter):
@@ -112,7 +112,9 @@ class NDJSONImporter(BaseImporter):
                             through_row_records.append(through_row_record)
 
                         field_name = to_snake_case(field.name)
-                        through_table_id = f"{db_table_name}_{field_name}"
+                        through_table_id = f"{db_table_name}_{field_name}"[
+                            :MAX_TABLE_LENGTH
+                        ]
                         through_rows[through_table_id] = through_row_records
 
                     del row[nm_relation_field_name]

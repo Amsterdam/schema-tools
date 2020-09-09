@@ -13,6 +13,7 @@ from schematools.types import (
     DatasetTableSchema,
     get_db_table_name,
 )
+from schematools import MAX_TABLE_LENGTH
 from schematools.utils import to_snake_case
 from .models import (
     FORMAT_MODELS_LOOKUP,
@@ -51,7 +52,7 @@ class FieldMaker:
         left_table = to_snake_case(left_table_id)
         snakecased_fieldname = to_snake_case(field_name)
         through_table_id = f"{left_table}_{snakecased_fieldname}"
-        return f"{dataset_id}.{through_table_id}"
+        return f"{dataset_id}.{through_table_id}"[:MAX_TABLE_LENGTH]
 
     def handle_basic(
         self,
