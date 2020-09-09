@@ -201,7 +201,7 @@ class BaseImporter:
     def load_file(
         self, file_name, batch_size=100, **kwargs,
     ):
-        """Import a file into the database table"""
+        """Import a file into the database table, returns the last record, if available """
 
         if self.dataset_table is None:
             raise ValueError("Import needs to be initialized with table info")
@@ -217,6 +217,7 @@ class BaseImporter:
             table_name: table.insert() for table_name, table in self.tables.items()
         }
 
+        last_record = None
         for records in chunked(data_generator, size=batch_size):
             # every record is keyed on tablename + inside there is a list
             for table_name, insert_statement in insert_statements.items():
@@ -230,8 +231,10 @@ class BaseImporter:
                     )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
+            last_record = records[-1]
 
         self.logger.log_done(num_imported)
+        return last_record
 
     def parse_records(self, filename, dataset_table, db_table_name=None, **kwargs):
         """Yield all records from the filename"""
