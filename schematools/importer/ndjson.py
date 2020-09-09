@@ -24,6 +24,7 @@ class NDJSONImporter(BaseImporter):
         nm_relation_field_info = []
         inactive_relation_info = []
         jsonpath_provenance_info = []
+        geo_fields = []
         for field in dataset_table.fields:
             # XXX maybe this is too much of a dirty hack and it would be better
             # to have an external configuration that determines which fields should
@@ -36,6 +37,8 @@ class NDJSONImporter(BaseImporter):
             field_provenance = field.provenance
             if field_provenance is not None and field_provenance.startswith("$"):
                 jsonpath_provenance_info.append(field.name)
+            if field.is_geo:
+                geo_fields.append(field.name)
             if field.nm_relation is not None:
                 _, related_table_name = [
                     to_snake_case(part) for part in field.nm_relation.split(":")
@@ -50,11 +53,16 @@ class NDJSONImporter(BaseImporter):
                 for field_name in jsonpath_provenance_info:
                     row[field_name] = row[field_name]  # uses Row to get from object
                 through_rows = {}
-                if main_geometry in row:
-                    main_geometry_value = row[main_geometry]
-                    if main_geometry_value is not None:
-                        wkt = shape(main_geometry_value).wkt
-                        row[main_geometry] = f"SRID={self.srid};{wkt}"
+                for field_name in geo_fields:
+                    geo_value = row[field_name]
+                    if geo_value is not None:
+                        wkt = shape(geo_value).wkt
+                        row[field_name] = f"SRID={self.srid};{wkt}"
+                # if main_geometry in row:
+                #     main_geometry_value = row[main_geometry]
+                #     if main_geometry_value is not None:
+                #         wkt = shape(main_geometry_value).wkt
+                #         row[main_geometry] = f"SRID={self.srid};{wkt}"
                 id_value = ".".join(str(row[fn]) for fn in identifier)
                 if has_compound_key:
                     row["id"] = id_value
