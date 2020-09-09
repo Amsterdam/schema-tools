@@ -18,7 +18,7 @@ from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
     DynamicModel,
-    ObjectMarker
+    ObjectMarker,
 )
 
 
@@ -47,12 +47,10 @@ class FieldMaker:
         ]
         return f"{related_dataset}.{related_table}"
 
-    def _make_through_classname(self, dataset_id, left_table_id, relation_urn):
-        right_dataset, right_table = [
-            to_snake_case(part) for part in relation_urn.split(":")
-        ]
+    def _make_through_classname(self, dataset_id, left_table_id, field_name):
         left_table = to_snake_case(left_table_id)
-        through_table_id = f"{left_table}_{right_dataset}_{right_table}"
+        snakecased_fieldname = to_snake_case(field_name)
+        through_table_id = f"{left_table}_{snakecased_fieldname}"
         return f"{dataset_id}.{through_table_id}"
 
     def handle_basic(
@@ -86,7 +84,6 @@ class FieldMaker:
             kwargs["base_field"] = base_field()
         return field_cls, args, kwargs
 
-
     def handle_relation(
         self,
         dataset: DatasetSchema,
@@ -109,7 +106,7 @@ class FieldMaker:
                 kwargs["related_name"] = field._parent_table.id
                 # kwargs["db_constraint"] = True
                 kwargs["through"] = self._make_through_classname(
-                    dataset.id, field._parent_table.id, nm_relation
+                    dataset.id, field._parent_table.id, field.name
                 )
             elif field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
