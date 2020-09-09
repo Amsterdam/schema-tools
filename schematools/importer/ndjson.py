@@ -23,6 +23,7 @@ class NDJSONImporter(BaseImporter):
         relation_field_info = []
         nm_relation_field_info = []
         inactive_relation_info = []
+        jsonpath_provenance_info = []
         for field in dataset_table.fields:
             # XXX maybe this is too much of a dirty hack and it would be better
             # to have an external configuration that determines which fields should
@@ -32,6 +33,9 @@ class NDJSONImporter(BaseImporter):
                 inactive_relation_info.append(field.name)
             if field.relation is not None:
                 relation_field_info.append((field.name, field))
+            field_provenance = field.provenance
+            if field_provenance is not None and field_provenance.startswith("$"):
+                jsonpath_provenance_info.append(field.name)
             if field.nm_relation is not None:
                 related_dataset_name, related_table_name = [
                     to_snake_case(part) for part in field.nm_relation.split(":")
@@ -45,6 +49,8 @@ class NDJSONImporter(BaseImporter):
                 row = Row(_row, fields_provenances=fields_provenances)
                 for field_name in inactive_relation_info:
                     row[field_name] = str(row[field_name])
+                for field_name in jsonpath_provenance_info:
+                    row[field_name] = row[field_name]  # uses Row to get from object
                 through_rows = {}
                 if main_geometry in row:
                     main_geometry_value = row[main_geometry]

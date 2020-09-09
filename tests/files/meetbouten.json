@@ -35,6 +35,16 @@
             },
             "description": "De buurt waarbinnen de meetbout ligt"
           },
+          "merkCode": {
+            "type": "string",
+            "description": "Merk code",
+            "provenance": "$.merk.code"
+          },
+          "merkOmschrijving": {
+            "type": "string",
+            "description": "Merk omschrijving",
+            "provenance": "$.merk.omschrijving"
+          },
           "geometrie": {
             "$ref": "https://geojson.org/schema/Point.json",
             "description": "Geometrie"

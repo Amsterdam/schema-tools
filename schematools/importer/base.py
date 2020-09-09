@@ -1,7 +1,9 @@
+from collections import UserDict
 from functools import reduce
 from itertools import islice
 import operator
 from typing import Optional, Dict
+from jsonpath_rw import parse
 
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
@@ -85,7 +87,15 @@ def chunked(generator, size):
     return iter(make_chunk, [])
 
 
-class Row(dict):
+class JsonPathException(Exception):
+    pass
+
+
+class Row(UserDict):
+
+    # class-level cache for jsonpath expressions
+    _expr_cache = {}
+
     def __init__(self, *args, **kwargs):
         self.fields_provenances = {
             name: prov_name
@@ -94,13 +104,35 @@ class Row(dict):
         super().__init__(*args, **kwargs)
 
     def __getitem__(self, key):
-        return super().__getitem__(self._transform_key(key))
+        try:
+            value = super().__getitem__(self._transform_key(key))
+        except JsonPathException:
+            value = self._fetch_value_for_jsonpath(key)
+        return value
 
     def __delitem__(self, key):
         return super().__delitem__(self._transform_key(key))
 
     def _transform_key(self, key):
-        return self.fields_provenances.get(key, key)
+        if key in self.data:
+            return key
+        prov_key = self.fields_provenances.get(key)
+        if prov_key is None:
+            return key
+        if prov_key.startswith("$"):
+            raise JsonPathException()
+        return prov_key
+
+    def _fetch_value_for_jsonpath(self, key):
+        prov_key = self.fields_provenances.get(key)
+        top_element_name = prov_key.split(".")[1]
+        expr = self._expr_cache.setdefault(prov_key, parse(prov_key))
+        matches = expr.find({top_element_name: self.data[top_element_name]})
+        if not matches:
+            raise ValueError(f"No content for {prov_key}")
+        value = matches[0].value
+        self.data[key] = value
+        return value
 
 
 class BaseImporter:
@@ -140,13 +172,18 @@ class BaseImporter:
             fixed_record = {}
             for field_name, field_value in record.items():
                 fixed_field_name = fields_provenances.get(field_name, field_name)
+                # if fixed_field_name.startswith("$"):
+                #     breakpoint()
                 fixed_record[to_snake_case(fixed_field_name)] = field_value
             fixed_records.append(fixed_record)
         return fixed_records
 
-    def generate_tables(self, table_name, db_table_name=None, truncate=False):
+    def generate_tables(
+        self, table_name, db_table_name=None, truncate=False
+    ):
         """ Generate the tablemodels and tables
         """
+
         self.dataset_table = self.dataset_schema.get_table_by_id(table_name)
         # Collect provenance info for easy re-use
         self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
@@ -162,10 +199,7 @@ class BaseImporter:
         self.prepare_tables(self.tables, truncate=truncate)
 
     def load_file(
-        self,
-        file_name,
-        batch_size=100,
-        **kwargs,
+        self, file_name, batch_size=100, **kwargs,
     ):
         """Import a file into the database table"""
 
@@ -266,9 +300,7 @@ def table_factory(
             continue
         field_name = to_snake_case(field.name)
 
-        # XXX still need to throw in some snakifying here and there
         try:
-
             nm_relation = field.nm_relation
             if nm_relation is not None:
                 # We need a 'through' table for the n-m relation

@@ -227,7 +227,7 @@ class DatasetTableSchema(SchemaType):
             yield field_schema
 
         # If compound key, add PK field
-        # XXX we should we check for an existing "id" field, avoid collisions
+        # XXX we should check for an existing "id" field, avoid collisions
         if self.has_compound_key:
             yield DatasetFieldSchema(
                 _name="id", _parent_table=self, _required=True, type="string"
@@ -381,6 +381,11 @@ class DatasetFieldSchema(DatasetType):
         return self.get("type") == "object"
 
     @property
+    def provenance(self) -> typing.Optional[str]:
+        """ Get the provenance info, if available, or None"""
+        return self.get("provenance")
+
+    @property
     def items(self) -> typing.Optional[dict]:
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
@@ -399,7 +404,8 @@ class DatasetFieldSchema(DatasetType):
             properties = self.items["properties"]
 
         if self.relation is not None:
-            field_name_prefix = self.relation.split(":")[1] + RELATION_INDICATOR
+            field_name_prefix = self.name + RELATION_INDICATOR
+            # field_name_prefix = self.relation.split(":")[1] + RELATION_INDICATOR
         required = set(self.get("required", []))
         for name, spec in properties.items():
             field_name = f"{field_name_prefix}{name}"

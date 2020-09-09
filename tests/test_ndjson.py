@@ -22,6 +22,17 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, dbsession):
     assert "identificatie" in records[0]
 
 
+def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbsession):
+    ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
+    importer = NDJSONImporter(meetbouten_schema, engine)
+    importer.generate_tables("meetbouten", truncate=True)
+    importer.load_file(ndjson_path)
+    records = [dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten")]
+    assert len(records) == 1
+    assert records[0]["merk_code"] == "12"
+    assert records[0]["merk_omschrijving"] == "De meetbout"
+
+
 def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "ggwgebieden.ndjson"
     importer = NDJSONImporter(ggwgebieden_schema, engine)
@@ -56,8 +67,8 @@ def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
     assert "ligtinbuurt_id" in records[0]
     # And should have the concatenated value
     assert records[0]["ligtinbuurt_id"] == "10180001.1"
-    # Should have a dunder-field identificatie
-    assert "buurten_identificatie" in records[0]
+    # Should have a field identificatie
+    assert "ligtinbuurt_identificatie" in records[0]
 
 
 def test_inactive_relation_that_are_commented_out(

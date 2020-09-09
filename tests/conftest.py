@@ -50,6 +50,7 @@ def dbsession(engine, dbsession, sqlalchemy_keep_db) -> Session:
     try:
         yield dbsession
     finally:
+        metadata.clear()
         dbsession.close()
 
         # Drop all test tables after the tests completed

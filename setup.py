@@ -38,6 +38,7 @@ setup(
         "jinja2",
         "mappyfile",
         "cachetools",
+        "jsonpath-rw",
     ],
     extras_require={
         "tests": [
