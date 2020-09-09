@@ -5,6 +5,7 @@ import operator
 from typing import Optional, Dict
 from jsonpath_rw import parse
 
+from schematools import MAX_TABLE_LENGTH
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
 from geoalchemy2 import Geometry
@@ -325,7 +326,7 @@ def table_factory(
                             )
                         )
 
-                through_table_id = f"{db_table_name}_{field_name}"
+                through_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
                 through_tables[through_table_id] = Table(
                     through_table_id, metadata, *through_columns,
                 )
