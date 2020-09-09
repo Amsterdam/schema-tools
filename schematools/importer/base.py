@@ -172,8 +172,6 @@ class BaseImporter:
             fixed_record = {}
             for field_name, field_value in record.items():
                 fixed_field_name = fields_provenances.get(field_name, field_name)
-                # if fixed_field_name.startswith("$"):
-                #     breakpoint()
                 fixed_record[to_snake_case(fixed_field_name)] = field_value
             fixed_records.append(fixed_record)
         return fixed_records
