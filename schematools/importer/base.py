@@ -231,7 +231,8 @@ class BaseImporter:
                     )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
-            last_record = records[-1][self.db_table_name]
+            # main table is keys on tablename and only has one row
+            last_record = records[-1][self.db_table_name][0]
 
         self.logger.log_done(num_imported)
         return last_record
