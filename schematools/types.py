@@ -381,6 +381,11 @@ class DatasetFieldSchema(DatasetType):
         return self.get("type") == "object"
 
     @property
+    def is_geo(self) -> bool:
+        """Tell whether the field references a geo object."""
+        return "geojson.org" in self.get("$ref", "")
+
+    @property
     def provenance(self) -> typing.Optional[str]:
         """ Get the provenance info, if available, or None"""
         return self.get("provenance")
