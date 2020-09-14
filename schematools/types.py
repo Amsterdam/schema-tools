@@ -150,8 +150,9 @@ class DatasetSchema(SchemaType):
         right_dataset, right_table = [
             to_snake_case(part) for part in field.nm_relation.split(":")
         ]
+        snakecased_fieldname = to_snake_case(field.name)
         sub_table_schema = dict(
-            id=f"{left_table}_{right_dataset}_{right_table}",
+            id=f"{left_table}_{snakecased_fieldname}",
             type="table",
             schema={
                 "$schema": "http://json-schema.org/draft-07/schema#",
