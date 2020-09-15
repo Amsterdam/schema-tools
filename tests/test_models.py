@@ -104,7 +104,7 @@ def test_model_factory_temporary_n_m_relation(ggwgebieden_schema):
         )
     }
     # The through table is created
-    through_table_name = "ggwgebieden_gebieden_buurten"
+    through_table_name = "ggwgebieden_bestaatuitbuurten"
     assert through_table_name in model_dict
 
     # Through table has refs to both 'sides' and extra fields for the relation

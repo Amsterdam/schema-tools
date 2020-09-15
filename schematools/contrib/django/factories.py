@@ -104,7 +104,9 @@ class FieldMaker:
                 args.append(models.CASCADE if field.required else models.SET_NULL)
 
             if nm_relation is not None:
-                kwargs["related_name"] = field._parent_table.id
+                snakecased_fieldname = to_snake_case(field.name)
+                parent_table = to_snake_case(field._parent_table.id)
+                kwargs["related_name"] = f"{snakecased_fieldname}_{parent_table}"
                 # kwargs["db_constraint"] = True
                 kwargs["through"] = self._make_through_classname(
                     dataset.id, field._parent_table.id, field.name
