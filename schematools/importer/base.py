@@ -20,8 +20,8 @@ from sqlalchemy import (
     Date,
     Time,
     DateTime,
+    inspect,
 )
-
 from . import get_table_name
 
 FORMAT_MODELS_LOOKUP = {
@@ -147,6 +147,8 @@ class BaseImporter:
         self.fields_provenances = None
         self.db_table_name = None
         self.tables = []
+        self.pk_values_lookup = {}
+        self.pk_colname_lookup = {}
         self.logger = LogfileLogger(logger) if logger else CliLogger()
 
     def get_db_table_name(self, table_name):
@@ -177,6 +179,38 @@ class BaseImporter:
             fixed_records.append(fixed_record)
         return fixed_records
 
+    def deduplicate(self, table_name, table_records):
+        this_batch_pk_values = set()
+        pk_name = self.pk_colname_lookup.get(table_name)
+        values_lookup = self.pk_values_lookup.get(table_name)
+        for record in table_records:
+            if pk_name is None:
+                yield record
+                continue
+            value = record[pk_name]
+            if value not in values_lookup and value not in this_batch_pk_values:
+                yield record
+            else:
+                self.logger.log_error(
+                    "Duplicate record for %s, with %s = %s", table_name, pk_name, value
+                )
+            this_batch_pk_values.add(value)
+
+    def create_pk_lookup(self, tables):
+        """ Generate a lookup to avoid primary_key clashes """
+        for table_name, table in tables.items():
+            pk_columns = inspect(table).primary_key.columns
+            # nm tables do not have a PK
+            if not pk_columns:
+                return
+            # We assume a single PK (because of Django)
+            pk_name = pk_columns.values()[0].name
+            self.pk_colname_lookup[table_name] = pk_name
+            pks = set(
+                [getattr(r, pk_name) for r in self.engine.execute(table.select())]
+            )
+            self.pk_values_lookup[table_name] = pks
+
     def generate_tables(self, table_name, db_table_name=None, truncate=False):
         """ Generate the tablemodels and tables
         """
@@ -194,6 +228,7 @@ class BaseImporter:
             self.dataset_table, metadata=metadata, db_table_name=self.db_table_name
         )
         self.prepare_tables(self.tables, truncate=truncate)
+        self.create_pk_lookup(self.tables)
 
     def load_file(
         self, file_name, batch_size=100, **kwargs,
@@ -221,10 +256,13 @@ class BaseImporter:
                 table_records = reduce(
                     operator.add, [record.get(table_name, []) for record in records], []
                 )
+                table_records = self.fix_fieldnames(
+                    self.fields_provenances,
+                    self.deduplicate(table_name, table_records),
+                )
                 if table_records:
                     self.engine.execute(
-                        insert_statement,
-                        self.fix_fieldnames(self.fields_provenances, table_records),
+                        insert_statement, table_records,
                     )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
@@ -258,6 +296,9 @@ class CliLogger:
     def log_progress(self, num_imported):
         print(".", end="", flush=True)
 
+    def log_error(self, msg, *args):
+        print(msg % args)
+
     def log_done(self, num_imported):
         print(f" Done importing {num_imported} records", flush=True)
 
@@ -271,6 +312,9 @@ class LogfileLogger(CliLogger):
 
     def log_progress(self, num_imported):
         self.logger.info("- imported %d records", num_imported)
+
+    def log_error(self, msg, *args):
+        self.logger.error(msg, *args)
 
     def log_done(self, num_imported):
         self.logger.info("Done")
