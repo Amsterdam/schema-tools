@@ -20,3 +20,26 @@ def test_camelcased_names_during_import(here, engine, gebieden_schema, dbsession
     }
     assert records[0]["begin_geldigheid"] == date(2006, 1, 12)
     assert records[0]["eind_geldigheid"] == date(2008, 11, 14)
+
+
+def test_skip_duplicate_keys_in_batch_during_import(
+    here, engine, gebieden_schema, dbsession
+):
+    """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
+    ndjson_path = here / "files" / "data" / "gebieden-duplicate-id.ndjson"
+    importer = NDJSONImporter(gebieden_schema, engine)
+    importer.generate_tables("bouwblokken", truncate=True)
+    importer.load_file(ndjson_path)
+
+
+def test_skip_duplicate_keys_in_db_during_import(
+    here, engine, gebieden_schema, dbsession
+):
+    """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
+    ndjson_path = here / "files" / "data" / "gebieden.ndjson"
+    # XXX Something weird with test-setup, at start of test, we have leftovers of previous tests
+    engine.execute("TRUNCATE TABLE gebieden_bouwblokken")
+    engine.execute("INSERT INTO gebieden_bouwblokken (id) VALUES (1)")
+    importer = NDJSONImporter(gebieden_schema, engine)
+    importer.generate_tables("bouwblokken", truncate=True)
+    importer.load_file(ndjson_path)
