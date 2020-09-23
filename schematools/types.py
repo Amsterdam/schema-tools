@@ -6,6 +6,7 @@ import typing
 from collections import UserDict
 import jsonschema
 from . import RELATION_INDICATOR
+from schematools import MAX_TABLE_LENGTH, TMP_TABLE_POSTFIX
 
 
 class SchemaType(UserDict):
@@ -404,14 +405,13 @@ class DatasetFieldSchema(DatasetType):
             # Field has direct sub fields (type=object)
             required = set(self.get("required", []))
             properties = self["properties"]
-        elif self.is_nested_table:
+        elif self.is_array:
             # Field has an array of objects (type=array)
             required = set(self.items.get("required") or ())
             properties = self.items["properties"]
 
         if self.relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
-            # field_name_prefix = self.relation.split(":")[1] + RELATION_INDICATOR
         required = set(self.get("required", []))
         for name, spec in properties.items():
             field_name = f"{field_name_prefix}{name}"
@@ -424,26 +424,28 @@ class DatasetFieldSchema(DatasetType):
             )
 
     @property
+    def is_array(self) -> bool:
+        """
+        Checks if field is an array field
+        """
+        return (
+            self.get("type") == "array"
+            and self.get("items", {}).get("type") == "object"
+        )
+
+    @property
     def is_nested_table(self) -> bool:
         """
         Checks if field is a possible nested table.
         """
-        return (
-            self.get("type") == "array"
-            and self.nm_relation is None
-            and self.get("items", {}).get("type") == "object"
-        )
+        return self.is_array and self.nm_relation is None
 
     @property
     def is_through_table(self) -> bool:
         """
         Checks if field is a possible through table.
         """
-        return (
-            self.get("type") == "array"
-            and self.nm_relation is not None
-            and self.get("items", {}).get("type") == "object"
-        )
+        return self.is_array and self.nm_relation is not None
 
 
 class DatasetRow(DatasetType):
@@ -472,4 +474,6 @@ def get_db_table_name(table: DatasetTableSchema) -> str:
     dataset = table._parent_schema
     app_label = dataset.id
     table_id = table.id
-    return to_snake_case(f"{app_label}_{table_id}")
+    return to_snake_case(f"{app_label}_{table_id}")[
+        : MAX_TABLE_LENGTH - len(TMP_TABLE_POSTFIX)
+    ]

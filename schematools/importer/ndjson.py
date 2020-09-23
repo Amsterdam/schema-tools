@@ -12,7 +12,6 @@ class NDJSONImporter(BaseImporter):
 
     def parse_records(self, file_name, dataset_table, db_table_name=None, **kwargs):
         """Provide an iterator the reads the NDJSON records"""
-        main_geometry = dataset_table.main_geometry
         fields_provenances = kwargs.pop("fields_provenances", {})
         identifier = dataset_table.identifier
         has_compound_key = dataset_table.has_compound_key
@@ -22,6 +21,7 @@ class NDJSONImporter(BaseImporter):
         # Set up info for the special-case fields
         relation_field_info = []
         nm_relation_field_info = []
+        nested_field_info = []
         inactive_relation_info = []
         jsonpath_provenance_info = []
         geo_fields = []
@@ -39,11 +39,13 @@ class NDJSONImporter(BaseImporter):
                 jsonpath_provenance_info.append(field.name)
             if field.is_geo:
                 geo_fields.append(field.name)
-            if field.nm_relation is not None:
+            if field.is_through_table:
                 _, related_table_name = [
                     to_snake_case(part) for part in field.nm_relation.split(":")
                 ]
                 nm_relation_field_info.append((field.name, related_table_name, field))
+            if field.is_nested_table:
+                nested_field_info.append(field)
 
         with open(file_name) as fh:
             for _row in ndjson.reader(fh):
@@ -52,20 +54,16 @@ class NDJSONImporter(BaseImporter):
                     row[field_name] = str(row[field_name])
                 for field_name in jsonpath_provenance_info:
                     row[field_name] = row[field_name]  # uses Row to get from object
-                through_rows = {}
+                sub_rows = {}
                 for field_name in geo_fields:
                     geo_value = row[field_name]
                     if geo_value is not None:
                         wkt = shape(geo_value).wkt
                         row[field_name] = f"SRID={self.srid};{wkt}"
-                # if main_geometry in row:
-                #     main_geometry_value = row[main_geometry]
-                #     if main_geometry_value is not None:
-                #         wkt = shape(main_geometry_value).wkt
-                #         row[main_geometry] = f"SRID={self.srid};{wkt}"
                 id_value = ".".join(str(row[fn]) for fn in identifier)
                 if has_compound_key:
                     row["id"] = id_value
+
                 for relation_field_name, field in relation_field_info:
                     relation_field_value = row[relation_field_name]
                     if field.is_object:
@@ -87,6 +85,28 @@ class NDJSONImporter(BaseImporter):
                         )
                     row[f"{relation_field_name}_id"] = relation_field_value
                     del row[relation_field_name]
+
+                for field in nested_field_info:
+                    field_name = to_snake_case(field.name)
+                    nested_row_records = []
+
+                    if not row[field.name]:
+                        continue
+                    for nested_row in row[field.name]:
+                        # XXX we assume an id field in the parent
+                        # Maybe not always true? Add method to types.py?
+                        nested_row_record = {}
+                        nested_row_record["parent_id"] = row["id"]
+                        for sub_field in field.sub_fields:
+                            sub_field_name = to_snake_case(sub_field.name)
+                            nested_row_record[sub_field_name] = nested_row[
+                                sub_field.name
+                            ]
+                        nested_row_records.append(nested_row_record)
+
+                    sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
+                    sub_rows[sub_table_id] = nested_row_records
+
                 for (
                     nm_relation_field_name,
                     related_table_name,
@@ -120,10 +140,10 @@ class NDJSONImporter(BaseImporter):
                             through_row_records.append(through_row_record)
 
                         field_name = to_snake_case(field.name)
-                        through_table_id = f"{db_table_name}_{field_name}"[
+                        sub_table_id = f"{db_table_name}_{field_name}"[
                             :MAX_TABLE_LENGTH
                         ]
-                        through_rows[through_table_id] = through_row_records
+                        sub_rows[sub_table_id] = through_row_records
 
                     del row[nm_relation_field_name]
-                yield {db_table_name: [row], **through_rows}
+                yield {db_table_name: [row], **sub_rows}

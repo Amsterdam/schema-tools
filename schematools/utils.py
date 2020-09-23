@@ -4,7 +4,7 @@ import json
 import re
 from typing import Dict
 
-from cachetools.func import ttl_cache
+from cachetools.func import ttl_cache, lru_cache
 import requests
 from string_utils import slugify
 
@@ -83,6 +83,7 @@ def toCamelCase(name):
     return "".join(w.lower() if i == 0 else w.title() for i, w in enumerate(words))
 
 
+@lru_cache(maxsize=256)
 def to_snake_case(name):
     """
     Convert field/column/dataset name from Space separated/Snake Case/Camel case

@@ -56,6 +56,18 @@ def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsess
     }
 
 
+def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbsession):
+    ndjson_path = here / "files" / "data" / "verblijfsobjecten.ndjson"
+    importer = NDJSONImporter(verblijfsobjecten_schema, engine)
+    importer.generate_tables("verblijfsobjecten", truncate=True)
+    importer.load_file(ndjson_path)
+    records = [
+        dict(r)
+        for r in engine.execute("SELECT * from baggob_verblijfsobjecten_gebruiksdoel")
+    ]
+    assert len(records) == 2
+
+
 def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
     ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
     importer = NDJSONImporter(meetbouten_schema, engine)
