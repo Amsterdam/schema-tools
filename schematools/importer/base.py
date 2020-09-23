@@ -205,7 +205,10 @@ class BaseImporter:
             if not pk_columns:
                 return
             # We assume a single PK (because of Django)
-            pk_name = pk_columns.values()[0].name
+            pk_col = pk_columns.values()[0]
+            pk_name = pk_col.name
+            if pk_col.autoincrement == "auto":
+                continue
             self.pk_colname_lookup[table_name] = pk_name
             pks = set(
                 [getattr(r, pk_name) for r in self.engine.execute(table.select())]
