@@ -20,6 +20,7 @@ from sqlalchemy import (
     Date,
     Time,
     DateTime,
+    ForeignKey,
     inspect,
 )
 from . import get_table_name
@@ -338,46 +339,44 @@ def table_factory(
         db_table_name = get_table_name(dataset_table)
 
     metadata = metadata or MetaData()
-    through_tables = {}
+    sub_tables = {}
     columns = []
     for field in dataset_table.fields:
         if field.type.endswith("#/definitions/schema"):
             continue
         field_name = to_snake_case(field.name)
+        sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
 
         try:
-            nm_relation = field.nm_relation
-            if nm_relation is not None:
-                field_name = to_snake_case(field.name)
-                # We need a 'through' table for the n-m relation
-                _, related_table = [
-                    to_snake_case(part) for part in nm_relation.split(":")
-                ]
-                through_columns = [
-                    Column(f"{dataset_table.id}_id", String,),
-                    Column(f"{related_table}_id", String,),
-                ]
-                # Through table means that in schema definition there is
-                # an object with one or more fields defining the relation
-                if field.is_through_table:
-                    for through_field_name, through_field_type_info in field["items"][
-                        "properties"
-                    ].items():
-                        through_columns.append(
-                            Column(
-                                through_field_name,
-                                JSON_TYPE_TO_PG[through_field_type_info["type"]],
-                            )
-                        )
+            if field.is_array:
 
-                through_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
-                through_tables[through_table_id] = Table(
-                    through_table_id, metadata, *through_columns,
-                )
+                if field.is_nested_table:
+                    # We assume parent has an id field, Django needs it
+                    fk_column = f"{db_table_name}.id"
+                    sub_columns = [
+                        Column("id", Integer, primary_key=True),
+                        Column("parent_id", ForeignKey(fk_column, ondelete="CASCADE")),
+                    ]
+
+                elif field.is_through_table:
+                    # We need a 'through' table for the n-m relation
+                    _, related_table = [
+                        to_snake_case(part) for part in field.nm_relation.split(":")
+                    ]
+                    sub_columns = [
+                        Column(f"{dataset_table.id}_id", String,),
+                        Column(f"{related_table}_id", String,),
+                    ]
+
+                for sub_field in field.sub_fields:
+                    sub_columns.append(
+                        Column(sub_field.name, fetch_col_type(sub_field))
+                    )
+
+                sub_tables[sub_table_id] = Table(sub_table_id, metadata, *sub_columns,)
 
                 continue
 
-            # col_type = JSON_TYPE_TO_PG[field.type]
             col_type = fetch_col_type(field)
         except KeyError:
             raise NotImplementedError(
@@ -393,4 +392,4 @@ def table_factory(
         id_postfix = "_id" if field.relation else ""
         columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
 
-    return {db_table_name: Table(db_table_name, metadata, *columns), **through_tables}
+    return {db_table_name: Table(db_table_name, metadata, *columns), **sub_tables}

@@ -113,3 +113,8 @@ def ggwgebieden_schema(schema_json) -> DatasetSchema:
 @pytest.fixture()
 def stadsdelen_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("stadsdelen.json"))
+
+
+@pytest.fixture()
+def verblijfsobjecten_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("verblijfsobjecten.json"))
