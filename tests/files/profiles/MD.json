@@ -1,0 +1,17 @@
+{
+    "name": "medewerker",
+    "scopes": ["FP/MD"],
+    "datasets": {
+        "parkeervakken": {
+            "permisssions": "read"
+        },
+        "gebieden": {
+            "tables": {
+                "bouwblokken": {
+                    "ligtInBuurt": "encoded",
+                    "beginGeldigheid": "random+-15",
+                }
+            }
+        }
+    }
+}

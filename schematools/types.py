@@ -456,6 +456,10 @@ class DatasetRow(DatasetType):
         table.validate(self.data)
 
 
+class ProfileSchema(SchemaType):
+    pass
+
+
 def is_possible_display_field(field: DatasetFieldSchema) -> bool:
     """See whether the field is a possible candidate as display field"""
     # TODO: the schema needs to provide a display field!
