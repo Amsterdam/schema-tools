@@ -196,6 +196,7 @@ class BaseImporter:
                     "Duplicate record for %s, with %s = %s", table_name, pk_name, value
                 )
             this_batch_pk_values.add(value)
+            values_lookup.add(value)
 
     def create_pk_lookup(self, tables):
         """ Generate a lookup to avoid primary_key clashes """
