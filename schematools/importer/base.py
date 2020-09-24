@@ -391,6 +391,7 @@ def table_factory(
         if field.is_primary:
             col_kwargs["primary_key"] = True
             col_kwargs["nullable"] = False
+            col_kwargs["autoincrement"] = False
 
         id_postfix = "_id" if field.relation else ""
         columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
