@@ -20,24 +20,28 @@ class ProfileAuthorizationBackend(BaseBackend):
     def get_profiles_for_request(self, request):
         """Get all profiles that match scopes of request.
          """
-        profiles = []
-        for profile in Profile.objects.all():
-            scopes = profile.get_scopes()
-            if len(scopes) == 0:
-                profiles.append(profile)
-            else:
-                if hasattr(request, "is_authorized_for"):
-                    if request.is_authorized_for(scopes):
-                        profiles.append(profile)
-        return set(profiles)
+        if not hasattr(request, "auth_profiles"):
+            profiles = []
+            for profile in Profile.objects.all():
+                scopes = profile.get_scopes()
+                if len(scopes) == 0:
+                    profiles.append(profile)
+                else:
+                    if hasattr(request, "is_authorized_for"):
+                        if request.is_authorized_for(scopes):
+                            profiles.append(profile)
+            request.auth_profiles = set(profiles)
+        return request.auth_profiles
 
     def get_all_permissions(self, request):
         """Get all permissions for given request."""
-        permissions = dict()
-        for profile in self.get_profiles_for_request(request):
-            profile_permissions = profile.get_permissions()
-            permissions = merge_permissions(permissions, profile_permissions)
-        return permissions
+        if not hasattr(request, "auth_permissions"):
+            permissions = dict()
+            for profile in self.get_profiles_for_request(request):
+                profile_permissions = profile.get_permissions()
+                permissions = merge_permissions(permissions, profile_permissions)
+            request.auth_permissions = permissions
+        return request.auth_permissions
 
     def has_perm(self, user_obj, perm, obj=None):
         """Check if user has permission.
