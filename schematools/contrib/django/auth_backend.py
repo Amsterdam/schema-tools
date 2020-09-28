@@ -28,7 +28,7 @@ class ProfileAuthorizationBackend(BaseBackend):
                     profiles.append(profile)
                 else:
                     if hasattr(request, "is_authorized_for"):
-                        if request.is_authorized_for(scopes):
+                        if request.is_authorized_for(*scopes):
                             profiles.append(profile)
             request.auth_profiles = set(profiles)
         return request.auth_profiles

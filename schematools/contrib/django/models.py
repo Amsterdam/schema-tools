@@ -523,7 +523,7 @@ def _serialize_claims(schema_object) -> Optional[str]:
 
 
 def generate_permission_key(*args):
-    return ":".join(args)
+    return ":".join([to_snake_case(key) for key in args])
 
 
 def split_permission_key(key):
