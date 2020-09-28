@@ -1,5 +1,6 @@
 import pytest
 from unittest import mock
+from django.test import RequestFactory
 from schematools.contrib.django.auth_backend import ProfileAuthorizationBackend
 from schematools.contrib.django.models import Profile
 
@@ -22,7 +23,9 @@ def profile_brk_read():
                                           "brk": {
                                               "tables": {
                                                   "geheim": {
-                                                      "id": "encoded",
+                                                      "fields": {
+                                                          "id": "encoded"
+                                                      }
                                                   }
                                               }
                                           }
@@ -39,8 +42,10 @@ def profile_brk_readall():
                                           "brk": {
                                               "tables": {
                                                   "geheim": {
-                                                      "id": "read",
-                                                      "bsn": "read"
+                                                      "fields": {
+                                                          "id": "read",
+                                                          "bsn": "read"
+                                                      }
                                                   }
                                               }
                                           }
@@ -52,7 +57,7 @@ def profile_brk_readall():
 def test_get_profiles_for_request(profile_medewerker, profile_brk_read):
     """Check that correct Profiles returned for request.
     """
-    request = mock.MagicMock()
+    request = RequestFactory().get('/')
     request.is_authorized_for = lambda scopes: "FP/MD" in scopes
 
     backend = ProfileAuthorizationBackend()
@@ -64,8 +69,8 @@ def test_get_profiles_for_request(profile_medewerker, profile_brk_read):
 def test_has_perm_dataset(profile_medewerker, profile_brk_read):
     """Check that BRK user can access data, while regular medeweker not.
     """
-    request = mock.MagicMock()
-    request.is_auhtorized_for = lambda scopes: True  # Both Profiles used
+    request = RequestFactory().get('/')
+    request.is_authorized_for = lambda scopes: True  # Both Profiles used
 
     backend = ProfileAuthorizationBackend()
 
@@ -78,8 +83,8 @@ def test_has_perm_dataset(profile_medewerker, profile_brk_read):
 def test_has_perm_dataset_table(profile_medewerker, profile_brk_read):
     """Check that BRK user can access data, while regular medeweker not.
     """
-    request = mock.MagicMock()
-    request.is_auhtorized_for = lambda scopes: True  # Both Profiles used
+    request = RequestFactory().get('/')
+    request.is_authorized_for = lambda scopes: True  # Both Profiles used
 
     backend = ProfileAuthorizationBackend()
 
@@ -92,8 +97,8 @@ def test_has_perm_dataset_table(profile_medewerker, profile_brk_read):
 def test_has_perm_dataset_field(profile_medewerker, profile_brk_read):
     """Check that BRK user can access data, while regular medeweker not.
     """
-    request = mock.MagicMock()
-    request.is_auhtorized_for = lambda scopes: True  # Both Profiles used
+    request = RequestFactory().get('/')
+    request.is_authorized_for = lambda scopes: True  # Both Profiles used
 
     backend = ProfileAuthorizationBackend()
 
@@ -108,8 +113,8 @@ def test_has_perm_dataset_field(profile_medewerker, profile_brk_read):
 def test_has_perm_dataset_field_readall(profile_brk_readall):
     """Check that BRK user can access data, while regular medeweker not.
     """
-    request = mock.MagicMock()
-    request.is_auhtorized_for = lambda scopes: True  # Both Profiles used
+    request = RequestFactory().get('/')
+    request.is_authorized_for = lambda scopes: True  # Both Profiles used
 
     backend = ProfileAuthorizationBackend()
 

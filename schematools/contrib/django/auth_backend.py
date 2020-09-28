@@ -56,12 +56,7 @@ class ProfileAuthorizationBackend(BaseBackend):
         """Get permission to read/encode data from profiles."""
         permissions = self.get_all_permissions(request)
 
-        permission_parts = split_permission_key(perm)
-        for index in range(1, len(permission_parts) + 1):
-            key = generate_permission_key(*permission_parts[0:index])
-            if key in permissions:
-                return permissions[key]
-        return None
+        return permissions.get(perm, None)
 
 
 def merge_permissions(base_permissions, profile_permissions):
