@@ -136,7 +136,12 @@ class Row(UserDict):
         prov_key = self.fields_provenances.get(key)
         top_element_name = prov_key.split(".")[1]
         expr = self._fetch_expr(prov_key)
-        matches = expr.find({top_element_name: self.data[top_element_name]})
+        # Sometimes the data is not an object, but simply None
+        top_level_data = self.data[top_element_name]
+        if top_level_data is None:
+            self.data[key] = None
+            return None
+        matches = expr.find({top_element_name: top_level_data})
         if not matches:
             raise ValueError(f"No content for {prov_key}")
         value = matches[0].value
