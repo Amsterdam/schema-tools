@@ -125,10 +125,17 @@ class Row(UserDict):
             raise JsonPathException()
         return prov_key
 
+    def _fetch_expr(self, prov_key):
+        if prov_key in self._expr_cache:
+            return self._expr_cache[prov_key]
+        expr = parse(prov_key)
+        self._expr_cache[prov_key] = expr
+        return expr
+
     def _fetch_value_for_jsonpath(self, key):
         prov_key = self.fields_provenances.get(key)
         top_element_name = prov_key.split(".")[1]
-        expr = self._expr_cache.setdefault(prov_key, parse(prov_key))
+        expr = self._fetch_expr(prov_key)
         matches = expr.find({top_element_name: self.data[top_element_name]})
         if not matches:
             raise ValueError(f"No content for {prov_key}")
