@@ -204,7 +204,7 @@ class BaseImporter:
             if value not in values_lookup and value not in this_batch_pk_values:
                 yield record
             else:
-                self.logger.log_error(
+                self.logger.log_warning(
                     "Duplicate record for %s, with %s = %s", table_name, pk_name, value
                 )
             this_batch_pk_values.add(value)
@@ -316,6 +316,9 @@ class CliLogger:
     def log_error(self, msg, *args):
         print(msg % args)
 
+    def log_warning(self, msg, *args):
+        print(msg % args)
+
     def log_done(self, num_imported):
         print(f" Done importing {num_imported} records", flush=True)
 
@@ -332,6 +335,9 @@ class LogfileLogger(CliLogger):
 
     def log_error(self, msg, *args):
         self.logger.error(msg, *args)
+
+    def log_warning(self, msg, *args):
+        self.logger.warning(msg, *args)
 
     def log_done(self, num_imported):
         self.logger.info("Done")
