@@ -457,7 +457,17 @@ class DatasetRow(DatasetType):
 
 
 class ProfileSchema(SchemaType):
-    pass
+
+    @classmethod
+    def from_file(cls, filename: str):
+        """Open an Amsterdam schema from a file."""
+        with open(filename) as fh:
+            return cls.from_dict(json.load(fh))
+
+    @classmethod
+    def from_dict(cls, obj: dict):
+        """ Parses given dict and validates the given schema """
+        return cls(obj)
 
 
 def is_possible_display_field(field: DatasetFieldSchema) -> bool:
