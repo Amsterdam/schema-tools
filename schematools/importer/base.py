@@ -382,17 +382,29 @@ def table_factory(
 
                 elif field.is_through_table:
                     # We need a 'through' table for the n-m relation
-                    _, related_table = [
-                        to_snake_case(part) for part in field.nm_relation.split(":")
-                    ]
                     sub_columns = [
                         Column(f"{dataset_table.id}_id", String,),
-                        Column(f"{related_table}_id", String,),
+                        Column(f"{field_name}_id", String,),
                     ]
+                    # And the field(s) for the left side of the relation
+                    # if this left table has a compound key
+                    if dataset_table.has_compound_key:
+                        for id_field in dataset_table.get_fields_by_id(
+                            dataset_table.identifier
+                        ):
+                            sub_columns.append(
+                                Column(
+                                    f"{dataset_table.id}_{to_snake_case(id_field.name)}",
+                                    fetch_col_type(id_field),
+                                )
+                            )
 
                 for sub_field in field.sub_fields:
                     sub_columns.append(
-                        Column(sub_field.name, fetch_col_type(sub_field))
+                        Column(
+                            f"{field_name}_{to_snake_case(sub_field.name)}",
+                            fetch_col_type(sub_field),
+                        )
                     )
 
                 sub_tables[sub_table_id] = Table(sub_table_id, metadata, *sub_columns,)

@@ -40,10 +40,7 @@ class NDJSONImporter(BaseImporter):
             if field.is_geo:
                 geo_fields.append(field.name)
             if field.is_through_table:
-                _, related_table_name = [
-                    to_snake_case(part) for part in field.nm_relation.split(":")
-                ]
-                nm_relation_field_info.append((field.name, related_table_name, field))
+                nm_relation_field_info.append((field.name, field))
             if field.is_nested_table:
                 nested_field_info.append(field)
 
@@ -107,22 +104,27 @@ class NDJSONImporter(BaseImporter):
                     sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
                     sub_rows[sub_table_id] = nested_row_records
 
-                for (
-                    nm_relation_field_name,
-                    related_table_name,
-                    field,
-                ) in nm_relation_field_info:
+                for (nm_relation_field_name, field,) in nm_relation_field_info:
                     values = row[nm_relation_field_name]
                     if values is not None:
                         if not isinstance(values, list):
                             values = [values]
 
+                        field_name = to_snake_case(field.name)
                         through_row_records = []
                         for value in values:
                             from_fk = id_value
                             through_row_record = {
                                 f"{dataset_table.id}_id": from_fk,
                             }
+
+                            if dataset_table.has_compound_key:
+                                for id_field in dataset_table.get_fields_by_id(
+                                    dataset_table.identifier
+                                ):
+                                    through_row_record[
+                                        f"{dataset_table.id}_{to_snake_case(id_field.name)}"
+                                    ] = row[id_field.name]
                             # check is_through_table, add rows if needed
                             to_fk = value
                             if field.is_through_table:
@@ -136,10 +138,9 @@ class NDJSONImporter(BaseImporter):
                                     through_row_record[through_field_name] = value[
                                         through_field_name
                                     ]
-                            through_row_record[f"{related_table_name}_id"] = to_fk
+                            through_row_record[f"{field_name}_id"] = to_fk
                             through_row_records.append(through_row_record)
 
-                        field_name = to_snake_case(field.name)
                         sub_table_id = f"{db_table_name}_{field_name}"[
                             :MAX_TABLE_LENGTH
                         ]
