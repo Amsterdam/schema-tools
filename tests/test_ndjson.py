@@ -49,11 +49,44 @@ def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsess
     ]
     assert len(records) == 3
     assert records[0].keys() == {
-        "buurten_id",
         "ggwgebieden_id",
-        "identificatie",
-        "volgnummer",
+        "bestaatuitbuurten_id",
+        "ggwgebieden_volgnummer",
+        "ggwgebieden_identificatie",
+        "bestaatuitbuurten_identificatie",
+        "bestaatuitbuurten_volgnummer",
     }
+
+
+def test_ndjson_import_nm_compound_selfreferencing_keys(
+    here, engine, kadastraleobjecten_schema, dbsession
+):
+    ndjson_path = here / "files" / "data" / "kadastraleobjecten.ndjson"
+    importer = NDJSONImporter(kadastraleobjecten_schema, engine)
+    importer.generate_tables("kadastraleobjecten", truncate=True)
+    importer.load_file(ndjson_path)
+    records = [dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten")]
+    assert len(records) == 2
+    # An "id" should have been generated, concat of the compound key fields
+    assert "id" in records[0]
+    assert records[0]["id"] == "KAD.001.1"
+    records = [
+        dict(r)
+        for r in engine.execute(
+            "SELECT * from brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject"
+        )
+    ]
+    assert len(records) == 1
+    assert sorted([(n, v) for n, v in records[0].items()]) == (
+        [
+            ("is_ontstaan_uit_kadastraalobject_id", "KAD.002.1"),
+            ("is_ontstaan_uit_kadastraalobject_identificatie", None),
+            ("is_ontstaan_uit_kadastraalobject_volgnummer", None),
+            ("kadastraleobjecten_id", "KAD.001.1"),
+            ("kadastraleobjecten_identificatie", "KAD.001"),
+            ("kadastraleobjecten_volgnummer", 1),
+        ]
+    )
 
 
 def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbsession):

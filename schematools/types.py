@@ -235,6 +235,11 @@ class DatasetTableSchema(SchemaType):
                 _name="id", _parent_table=self, _required=True, type="string"
             )
 
+    def get_fields_by_id(self, field_names) -> typing.List[DatasetFieldSchema]:
+        for field in self.fields:
+            if field.name in set(field_names):
+                yield field
+
     @property
     def display_field(self):
         """Tell which fields can be used as display field."""
@@ -371,11 +376,6 @@ class DatasetFieldSchema(DatasetType):
     @property
     def format(self) -> typing.Optional[str]:
         return self.get("format")
-
-    @property
-    def is_array(self) -> bool:
-        """Tell whether the field references an array."""
-        return self.get("type") == "array"
 
     @property
     def is_object(self) -> bool:
