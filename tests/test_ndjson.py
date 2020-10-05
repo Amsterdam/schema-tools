@@ -77,7 +77,7 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
         )
     ]
     assert len(records) == 1
-    assert sorted([(n, v) for n, v in records[0].items()]) == (
+    assert sorted((n, v) for n, v in records[0].items()) == (
         [
             ("is_ontstaan_uit_kadastraalobject_id", "KAD.002.1"),
             ("is_ontstaan_uit_kadastraalobject_identificatie", "KAD.002"),
@@ -96,9 +96,14 @@ def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbs
     importer.load_file(ndjson_path)
     records = [
         dict(r)
-        for r in engine.execute("SELECT * from baggob_verblijfsobjecten_gebruiksdoel")
+        for r in engine.execute(
+            "SELECT code, omschrijving, parent_id FROM baggob_verblijfsobjecten_gebruiksdoel"
+        )
     ]
     assert len(records) == 2
+    assert sorted((n, v) for n, v in records[0].items()) == (
+        [("code", "1"), ("omschrijving", "doel 1"), ("parent_id", "VB.1"),]
+    )
 
 
 def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
