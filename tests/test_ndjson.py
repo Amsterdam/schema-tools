@@ -19,7 +19,7 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, dbsession):
         )
     ]
     # Should have a field 'identificatie' in the n-m table
-    assert "identificatie" in records[0]
+    assert "refereertaanreferentiepunten_identificatie" in records[0]
 
 
 def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbsession):
@@ -80,8 +80,8 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
     assert sorted([(n, v) for n, v in records[0].items()]) == (
         [
             ("is_ontstaan_uit_kadastraalobject_id", "KAD.002.1"),
-            ("is_ontstaan_uit_kadastraalobject_identificatie", None),
-            ("is_ontstaan_uit_kadastraalobject_volgnummer", None),
+            ("is_ontstaan_uit_kadastraalobject_identificatie", "KAD.002"),
+            ("is_ontstaan_uit_kadastraalobject_volgnummer", "1"),
             ("kadastraleobjecten_id", "KAD.001.1"),
             ("kadastraleobjecten_identificatie", "KAD.001"),
             ("kadastraleobjecten_volgnummer", 1),

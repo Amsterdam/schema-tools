@@ -128,14 +128,15 @@ class NDJSONImporter(BaseImporter):
                             # check is_through_table, add rows if needed
                             to_fk = value
                             if field.is_through_table:
-                                through_field_names = field["items"][
-                                    "properties"
-                                ].keys()
+                                through_field_names = [f.name for f in field.sub_fields]
                                 to_fk = ".".join(
                                     str(value[fn]) for fn in through_field_names
                                 )
                                 for through_field_name in through_field_names:
-                                    through_row_record[through_field_name] = value[
+                                    full_through_field_name = to_snake_case(
+                                        f"{field.name}_{through_field_name}"
+                                    )
+                                    through_row_record[full_through_field_name] = value[
                                         through_field_name
                                     ]
                             through_row_record[f"{field_name}_id"] = to_fk
