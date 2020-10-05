@@ -55,7 +55,6 @@ class ProfileAuthorizationBackend(BaseBackend):
     def get_read_permission(self, request, perm, obj=None):
         """Get permission to read/encode data from profiles."""
         permissions = self.get_all_permissions(request)
-
         return permissions.get(perm, None)
 
 
@@ -79,6 +78,6 @@ def highest_permission(permission1, permission2):
         return sorted(
             [permission1, permission2],
             key=lambda key: PERMISSION_MATRIX.index(key)
-        )
-    except ValueError as e:
+        )[0]
+    except (ValueError, IndexError) as e:
         raise ValueError("Permission {}".format(e.args[0]))

@@ -458,6 +458,17 @@ class DatasetRow(DatasetType):
 
 class ProfileSchema(SchemaType):
 
+    @property
+    def name(self):
+        """Name of Profile (if set)"""
+        return self.get("name")
+
+    @property
+    def scopes(self):
+        """Scopes of Profile (if set)"""
+        return self.get("scopes")
+
+
     @classmethod
     def from_file(cls, filename: str):
         """Open an Amsterdam schema from a file."""

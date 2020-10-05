@@ -37,7 +37,7 @@ def schema_def_from_url(schemas_url, schema_name):
 
 
 @ttl_cache(ttl=16)
-def profiles_defs_from_url(profiles_url) -> Dict[str, types.ProfileSchema]:
+def profile_defs_from_url(profiles_url) -> Dict[str, types.ProfileSchema]:
     """Fetch all profile definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """

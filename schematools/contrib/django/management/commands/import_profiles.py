@@ -52,7 +52,7 @@ class Command(BaseCommand):
 
     def import_schema(self, name: str, schema: ProfileSchema) -> Optional[Profile]:
         try:
-            profile = Profile.objects.get(name=to_snake_case(schema.name))
+            profile = Profile.objects.get(name=schema.name)
         except Profile.DoesNotExist:
             profile = Profile.create_for_schema(schema)
             self.stdout.write(f"   Created {name}")

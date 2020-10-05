@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple, Type
@@ -491,7 +492,10 @@ class Profile(models.Model):
         return permissions
 
     def get_scopes(self):
-        return self.scopes.split(",")
+        try:
+            return json.loads(self.scopes.replace("'", '"'))
+        except ValueError:
+            return []
 
     @classmethod
     def create_for_schema(cls, profile_schema: ProfileSchema) -> Profile:
@@ -505,6 +509,7 @@ class Profile(models.Model):
         self.name = profile_schema.name
         self.scopes = profile_schema.scopes
         self.schema_data = profile_schema.json_data()
+        self.save()
         return self
 
     def __str__(self):
