@@ -235,7 +235,7 @@ class DatasetTableSchema(SchemaType):
                 _name="id", _parent_table=self, _required=True, type="string"
             )
 
-    def get_fields_by_id(self, field_names) -> typing.List[DatasetFieldSchema]:
+    def get_fields_by_id(self, field_names) -> typing.Generator[DatasetFieldSchema, None, None]:
         for field in self.fields:
             if field.name in set(field_names):
                 yield field
