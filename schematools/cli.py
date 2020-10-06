@@ -6,6 +6,8 @@ import requests
 import jsonschema
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
+from pg_grant import query
+from .permissions import create_acl_from_profiles
 
 from .db import (
     create_meta_table_data,
@@ -86,6 +88,51 @@ def import_():
 def show():
     """Show existing metadata"""
     pass
+
+
+@schema.group()
+def permissions():
+    """Show existing metadata"""
+    pass
+
+
+@permissions.command("introspect")
+@option_db_url
+def permissions_introspect(db_url):
+    """Retrieve ACLs from a database."""
+    engine = _get_engine(db_url)
+    acl_data = query.get_all_table_acls(engine, schema='public')
+    for acl in acl_data:
+        click.echo(acl)
+
+@permissions.command("create")
+@option_db_url
+def permissions_create(db_url):
+    """Create ACL list from Profile."""
+    engine = _get_engine(db_url)
+    # temp, for testing:
+    test_profile = {
+        "name": "test",
+        "scopes": ["FP/MD", ],
+        "schema_data": {
+            "datasets": {
+                "parkeervakken": {
+                    "permissions": "read"
+                },
+                "gebieden": {
+                    "tables": {
+                        "bouwblokken": {
+                            "fields": {
+                                "ligtInBuurt": "encoded"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    profile_list = [test_profile]
+    create_acl_from_profiles(engine, schema='public', profile_list=profile_list)
 
 
 @schema.group()
