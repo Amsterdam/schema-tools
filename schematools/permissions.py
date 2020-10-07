@@ -19,8 +19,5 @@ def create_acl_from_profiles(engine, schema, profile_list):
                     priviliges = ["SELECT", ]
                     for grantee in scopes:
                         grant_statement = grant(priviliges, PgObjectType.TABLE, item.name, grantee, grant_option=False, schema=schema)
-                        grant_statements.append(str(grant_statement))
-    return grant_statements
-
-
+                        engine.execute(grant_statement)
 

@@ -2,9 +2,11 @@ from schematools.importer.ndjson import NDJSONImporter
 from pg_grant import query
 from schematools.permissions import create_acl_from_profiles
 from sqlalchemy.exc import ProgrammingError
+
+
 def test_permissions_setting(here, engine, gebieden_schema, dbsession):
     test_profile = {
-        "name": "test",
+        "name": "gebieden_test",
         "scopes": ["FP/MD", ],
         "schema_data": {
             "datasets": {
@@ -35,11 +37,9 @@ def test_permissions_setting(here, engine, gebieden_schema, dbsession):
         if entry.name.startswith("gebieden_"):
             assert entry.acl is None
 
-    # compile and execute GRANT statements
+    # transform profiles into database level ACL
     profile_list = [test_profile]
-    grant_statements = create_acl_from_profiles(engine, schema='public', profile_list=profile_list)
-    for grant_statement in grant_statements:
-        engine.execute(grant_statement)
+    create_acl_from_profiles(engine, schema='public', profile_list=profile_list)
 
     # check if new ACL is set correctly
     new_acl_data = query.get_all_table_acls(engine, schema='public')
@@ -47,6 +47,9 @@ def test_permissions_setting(here, engine, gebieden_schema, dbsession):
     for entry in new_acl_data:
         if entry.name.startswith("gebieden_"):
             print(entry.acl)
-            assert '"FP/MD"=r/dataservices' in entry.acl  # role FP/MD has read permission
+            assert '"FP/MD"=r/dataservices' in entry.acl  # role FP/MD has read permission, given by dataservices
             assert 'dataservices=arwdDxt/dataservices' in entry.acl  # the default is now explicitly set
             assert len(entry.acl) == 2  # and there is nothing more
+
+
+

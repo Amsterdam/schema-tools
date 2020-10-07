@@ -106,32 +106,26 @@ def permissions_introspect(db_url):
         click.echo(acl)
 
 @permissions.command("create")
+@click.argument("profile_location")
 @option_db_url
-def permissions_create(db_url):
+def permissions_create(profile_location, db_url):
     """Create ACL list from Profile."""
+
+    def _fetch_json(location):
+        if not location.startswith("http"):
+            with open(location) as f:
+                json_obj = json.load(f)
+        else:
+            response = requests.get(location)
+            response.raise_for_status()
+            json_obj = response.json()
+        return json_obj
+
+    profile = _fetch_json(profile_location)
+
+
     engine = _get_engine(db_url)
-    # temp, for testing:
-    test_profile = {
-        "name": "test",
-        "scopes": ["FP/MD", ],
-        "schema_data": {
-            "datasets": {
-                "parkeervakken": {
-                    "permissions": "read"
-                },
-                "gebieden": {
-                    "tables": {
-                        "bouwblokken": {
-                            "fields": {
-                                "ligtInBuurt": "encoded"
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    profile_list = [test_profile]
+    profile_list = [profile]
     create_acl_from_profiles(engine, schema='public', profile_list=profile_list)
 
 

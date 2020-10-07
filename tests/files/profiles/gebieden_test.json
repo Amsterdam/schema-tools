@@ -1,0 +1,14 @@
+{
+  "name": "gebieden_test",
+  "scopes": [
+    "FP/MD"
+    ],
+  "schema_data": {
+    "datasets": {
+      "gebieden": {
+        "permissions": "read"
+      }
+    }
+  }
+}
+
