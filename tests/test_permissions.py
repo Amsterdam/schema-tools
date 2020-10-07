@@ -50,6 +50,3 @@ def test_permissions_setting(here, engine, gebieden_schema, dbsession):
             assert '"FP/MD"=r/dataservices' in entry.acl  # role FP/MD has read permission, given by dataservices
             assert 'dataservices=arwdDxt/dataservices' in entry.acl  # the default is now explicitly set
             assert len(entry.acl) == 2  # and there is nothing more
-
-
-
