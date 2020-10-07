@@ -10,8 +10,6 @@ def create_acl_from_profiles(engine, schema, profile_list):
     for profile in profile_list:
         scopes = profile["scopes"]
         for dataset, details in profile["schema_data"]["datasets"].items():
-            print(dataset)
-            print(details)
             for item in acl_list:
                 #  print(item)
                 #  print(item.name)
