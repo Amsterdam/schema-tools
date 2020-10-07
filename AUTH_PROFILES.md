@@ -107,7 +107,7 @@ Each field can define representation level to be presented to user.
       "scopes": ["FP/MD"],
       "datasets": {
         "parkeervakken": {
-          "permisssions": "read"
+          "permissions": "read"
         },
         "klantbeeld": {
           "tables": {
@@ -132,7 +132,7 @@ This means if there are 2 profiles, one of which allows access to one field only
 Representations will be merged in favour of highest as well. Given 2 profiles with `encoded` and `read` permissions, user will see `read` representation.
 
 
-## Example of compined configuration
+## Example of combined configuration
 
     # dataset configuration
     {
@@ -207,7 +207,7 @@ Requests with `BPR/R` scope will see following fields in API output:
 This is because field `bsn` requires additional permission `BRP/RS` to be seen.
 
 Profile definition for `BRP/RS` controls how `bsn` field is seen, namely encodes field for this profile.
-Requests wuth `BRP/RS` scope will see following fields in API output. NOTE: `BRP/R` scope is not required to be present in request.
+Requests with `BRP/RS` scope will see following fields in API output. NOTE: `BRP/R` scope is not required to be present in request.
 
     {
       "id": 1,

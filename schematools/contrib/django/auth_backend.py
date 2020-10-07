@@ -5,10 +5,11 @@ from schematools.contrib.django.models import (
     split_permission_key
 )
 
-PERMISSION_MATRIX = [
+PERMISSION_LIST = [
     "read",
     "encoded",
     "random",
+    "letter",
 ]
 
 
@@ -89,7 +90,7 @@ def highest_permission(permission1, permission2):
     try:
         return sorted(
             [permission1, permission2],
-            key=lambda key: PERMISSION_MATRIX.index(key)
+            key=lambda key: PERMISSION_LIST.index(key.split(":")[0])
         )[0]
     except (ValueError, IndexError) as e:
         raise ValueError("Permission {}".format(e.args[0]))
