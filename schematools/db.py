@@ -153,3 +153,5 @@ def _serialize(obj, camelize=True):
 
 def _extract_names(properties):
     return {toCamelCase(prop.pop("name")): prop for prop in properties}
+
+
