@@ -29,5 +29,5 @@ def test_profile_permissions_loaded_correctly():
     permissions = profile.get_permissions()
 
     assert permissions["parkeervakken"] == "read", repr(permissions)
-    assert permissions["gebieden:bouwblokken:ligtInBuurt"] == "encoded"
+    assert permissions["gebieden:bouwblokken:ligt_in_buurt"] == "encoded", repr(permissions)
 

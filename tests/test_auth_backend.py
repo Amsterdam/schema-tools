@@ -1,14 +1,17 @@
 import pytest
 from unittest import mock
 from django.test import RequestFactory
-from schematools.contrib.django.auth_backend import ProfileAuthorizationBackend
+from schematools.contrib.django.auth_backend import (
+    ProfileAuthorizationBackend,
+    RequestProfile
+)
 from schematools.contrib.django.models import Profile
 
 
 @pytest.fixture
 def profile_medewerker():
     return Profile.objects.create(name="medewerker",
-                                  scopes="FP/MD",
+                                  scopes="['FP/MD']",
                                   schema_data={
                                       "datasets": {}
                                   })
@@ -17,7 +20,7 @@ def profile_medewerker():
 @pytest.fixture
 def profile_brk_read():
     return Profile.objects.create(name="brk_read",
-                                  scopes="BRK/RO",
+                                  scopes="['BRK/RO']",
                                   schema_data={
                                       "datasets": {
                                           "brk": {
@@ -36,7 +39,7 @@ def profile_brk_read():
 @pytest.fixture
 def profile_brk_readall():
     return Profile.objects.create(name="brk_readall",
-                                  scopes="BRK/RO,BRK/RSN",
+                                  scopes="['BRK/RO','BRK/RSN']",
                                   schema_data={
                                       "datasets": {
                                           "brk": {
@@ -60,9 +63,9 @@ def test_get_profiles_for_request(profile_medewerker, profile_brk_read):
     request = RequestFactory().get('/')
     request.is_authorized_for = lambda scopes: "FP/MD" in scopes
 
-    backend = ProfileAuthorizationBackend()
+    request_profile = RequestProfile(request)
 
-    assert backend.get_profiles_for_request(request) == {profile_medewerker}
+    assert request_profile.get_profiles() == {profile_medewerker}
 
 
 @pytest.mark.django_db
@@ -79,6 +82,7 @@ def test_has_perm_dataset(profile_medewerker, profile_brk_read):
 
     assert backend.has_perm(user_1, "brk") is True
 
+
 @pytest.mark.django_db
 def test_has_perm_dataset_table(profile_medewerker, profile_brk_read):
     """Check that BRK user can access data, while regular medeweker not.
@@ -92,6 +96,7 @@ def test_has_perm_dataset_table(profile_medewerker, profile_brk_read):
     user_1.request = request
 
     assert backend.has_perm(user_1, "brk:geheim") is True
+
 
 @pytest.mark.django_db
 def test_has_perm_dataset_field(profile_medewerker, profile_brk_read):
@@ -114,7 +119,7 @@ def test_has_perm_dataset_field_readall(profile_brk_readall):
     """Check that BRK user can access data, while regular medeweker not.
     """
     request = RequestFactory().get('/')
-    request.is_authorized_for = lambda scopes: True  # Both Profiles used
+    request.is_authorized_for = lambda *scopes: True  # Both Profiles used
 
     backend = ProfileAuthorizationBackend()
 

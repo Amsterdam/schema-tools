@@ -12,50 +12,62 @@ PERMISSION_MATRIX = [
 ]
 
 
-class ProfileAuthorizationBackend(BaseBackend):
-    """
-    Handle dataset/table/field/object authorization via single API.
-    """
+class RequestProfile(object):
+    def __init__(self, request):
+        self.request = request
+        self.auth_profiles = None
+        self.auth_permissions = None
 
-    def get_profiles_for_request(self, request):
+    def get_profiles(self):
         """Get all profiles that match scopes of request.
          """
-        if not hasattr(request, "auth_profiles"):
+        if self.auth_profiles is None:
             profiles = []
             for profile in Profile.objects.all():
                 scopes = profile.get_scopes()
                 if len(scopes) == 0:
                     profiles.append(profile)
                 else:
-                    if hasattr(request, "is_authorized_for"):
-                        if request.is_authorized_for(*scopes):
+                    if hasattr(self.request, "is_authorized_for"):
+                        if self.request.is_authorized_for(*scopes):
                             profiles.append(profile)
-            request.auth_profiles = set(profiles)
-        return request.auth_profiles
+            self.auth_profiles = set(profiles)
+        return self.auth_profiles
 
-    def get_all_permissions(self, request):
+    def get_all_permissions(self):
         """Get all permissions for given request."""
-        if not hasattr(request, "auth_permissions"):
+        if self.auth_permissions is None:
             permissions = dict()
-            for profile in self.get_profiles_for_request(request):
+            for profile in self.get_profiles():
                 profile_permissions = profile.get_permissions()
                 permissions = merge_permissions(permissions, profile_permissions)
-            request.auth_permissions = permissions
-        return request.auth_permissions
+            self.auth_permissions = permissions
+        return self.auth_permissions
+
+    def get_read_permission(self, perm, obj=None):
+        """Get permission to read/encode data from profiles."""
+        permissions = self.get_all_permissions()
+        return permissions.get(perm, None)
+
+
+class ProfileAuthorizationBackend(BaseBackend):
+    """
+    Handle dataset/table/field/object authorization via single API.
+    """
 
     def has_perm(self, user_obj, perm, obj=None):
         """Check if user has permission.
          """
-        return self.get_read_permission(
-            request=user_obj.request,
+        request = user_obj.request
+
+        if not hasattr(request, "auth_profile"):
+            request.auth_profile = RequestProfile(request)
+
+        return request.auth_profile.get_read_permission(
             perm=perm,
             obj=obj
         ) is not None
 
-    def get_read_permission(self, request, perm, obj=None):
-        """Get permission to read/encode data from profiles."""
-        permissions = self.get_all_permissions(request)
-        return permissions.get(perm, None)
 
 
 def merge_permissions(base_permissions, profile_permissions):
