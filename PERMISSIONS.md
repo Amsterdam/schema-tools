@@ -32,7 +32,6 @@ of Dataset Level Authorization, and if present, will check if the scope matches,
 will give read permission to myrole for all tables associated with the dataset.
 
 
-
 ### Setting permissions with a Profile
 ```
 schema permissions create tests/files/profiles/gebieden_test.json

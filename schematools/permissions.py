@@ -2,6 +2,7 @@ from pg_grant import query
 from pg_grant.sql import grant
 from pg_grant import PgObjectType
 
+
 def create_acl_from_profiles(engine, schema, profile_list):
     acl_list = query.get_all_table_acls(engine, schema='public')
     for profile in profile_list:
@@ -13,6 +14,7 @@ def create_acl_from_profiles(engine, schema, profile_list):
                     for grantee in scopes:
                         grant_statement = grant(priviliges, PgObjectType.TABLE, item.name, grantee, grant_option=False, schema=schema)
                         engine.execute(grant_statement)
+
 
 def create_acl_from_schema(engine, ams_schema, role, scopes):
     #  In progress: Only Dataset Level Authorization
@@ -27,4 +29,5 @@ def create_acl_from_schema(engine, ams_schema, role, scopes):
                     if item.name.startswith(ams_schema.id + "_"):
                         grant_statement = grant(priviliges, PgObjectType.TABLE, item.name, grantee, grant_option=False, schema='public')
                         engine.execute(grant_statement)
-                        print(grant_statement)
+
+
