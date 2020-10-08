@@ -74,6 +74,11 @@ class DatasetSchema(SchemaType):
         return self.get("identifier", "pk")
 
     @property
+    def auth(self):
+        """Auth of the dataset (if set)"""
+        return self.get("auth")
+
+    @property
     def tables(self) -> typing.List[DatasetTableSchema]:
         """Access the tables within the file"""
         return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]

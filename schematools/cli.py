@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from pg_grant import query
 from .permissions import create_acl_from_profiles
+from .permissions import create_acl_from_schema
 
 from .db import (
     create_meta_table_data,
@@ -46,10 +47,13 @@ argument_schema_location = click.argument(
     "schema_location", metavar="(DATASET-ID | DATASET-FILENAME)",
 )
 
-argument_username = click.argument(
-    "username",
+argument_role = click.argument(
+    "role",
 )
 
+argument_scopes = click.argument(
+    "scopes",
+)
 
 def _get_engine(db_url, pg_schemas=None):
     """Initialize the SQLAlchemy engine, and report click errors"""
@@ -136,14 +140,13 @@ def permissions_create(profile_location, db_url):
 @option_db_url
 @option_schema_url
 @argument_schema_location
-@argument_username
-def permissions_from_schema(db_url, schema_url, schema_location, username):
+@argument_role
+@argument_scopes
+def permissions_from_schema(db_url, schema_url, schema_location, role, scopes):
     """Set permissions in DB for user based on schema definition"""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_url, schema_location)
-    print(username)
-    print(dataset_schema.tables)
-
+    create_acl_from_schema(engine, dataset_schema, role, scopes)
 @schema.group()
 def introspect():
     """Subcommand to generate a schema."""
