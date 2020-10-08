@@ -46,6 +46,10 @@ argument_schema_location = click.argument(
     "schema_location", metavar="(DATASET-ID | DATASET-FILENAME)",
 )
 
+argument_username = click.argument(
+    "username",
+)
+
 
 def _get_engine(db_url, pg_schemas=None):
     """Initialize the SQLAlchemy engine, and report click errors"""
@@ -128,6 +132,17 @@ def permissions_create(profile_location, db_url):
     profile_list = [profile]
     create_acl_from_profiles(engine, schema='public', profile_list=profile_list)
 
+@permissions.command("from_schema")
+@option_db_url
+@option_schema_url
+@argument_schema_location
+@argument_username
+def permissions_from_schema(db_url, schema_url, schema_location, username):
+    """Set permissions in DB for user based on schema definition"""
+    engine = _get_engine(db_url)
+    dataset_schema = _get_dataset_schema(schema_url, schema_location)
+    print(username)
+    print(dataset_schema.tables)
 
 @schema.group()
 def introspect():
