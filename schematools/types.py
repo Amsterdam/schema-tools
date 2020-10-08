@@ -456,6 +456,31 @@ class DatasetRow(DatasetType):
         table.validate(self.data)
 
 
+class ProfileSchema(SchemaType):
+
+    @property
+    def name(self):
+        """Name of Profile (if set)"""
+        return self.get("name")
+
+    @property
+    def scopes(self):
+        """Scopes of Profile (if set)"""
+        return self.get("scopes")
+
+
+    @classmethod
+    def from_file(cls, filename: str):
+        """Open an Amsterdam schema from a file."""
+        with open(filename) as fh:
+            return cls.from_dict(json.load(fh))
+
+    @classmethod
+    def from_dict(cls, obj: dict):
+        """ Parses given dict and validates the given schema """
+        return cls(obj)
+
+
 def is_possible_display_field(field: DatasetFieldSchema) -> bool:
     """See whether the field is a possible candidate as display field"""
     # TODO: the schema needs to provide a display field!

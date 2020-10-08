@@ -22,23 +22,7 @@ def schema_defs_from_url(schemas_url) -> Dict[str, types.DatasetSchema]:
     """Fetch all schema definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup = {}
-    if not schemas_url.endswith("/"):
-        schemas_url = f"{schemas_url}/"
-
-    with requests.Session() as connection:
-        response = connection.get(f"{schemas_url}index.json")
-        response.raise_for_status()
-        response_data = response.json()
-
-        for dataset_name, dataset_path in response_data.items():
-            response = connection.get(f"{schemas_url}{dataset_path}")
-            response.raise_for_status()
-            response_data = response.json()
-
-            schema_lookup[dataset_name] = types.DatasetSchema.from_dict(response.json())
-
-    return schema_lookup
+    return defs_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
 
 
 def schema_def_from_url(schemas_url, schema_name):
@@ -50,6 +34,37 @@ def schema_def_from_url(schemas_url, schema_name):
         raise ValueError(
             f"Schema f{schema_name} does not exist at {schemas_url}. Available are: {avail}"
         )
+
+
+@ttl_cache(ttl=16)
+def profile_defs_from_url(profiles_url) -> Dict[str, types.ProfileSchema]:
+    """Fetch all profile definitions from a remote file.
+    The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
+    """
+    return defs_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
+
+
+def defs_from_url(base_url, data_type):
+    """Fetch all schema definitions from a remote file.
+    The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
+    """
+    schema_lookup = {}
+    if not base_url.endswith("/"):
+        base_url = f"{base_url}/"
+
+    with requests.Session() as connection:
+        response = connection.get(f"{base_url}index.json")
+        response.raise_for_status()
+        response_data = response.json()
+
+        for dataset_name, dataset_path in response_data.items():
+            response = connection.get(f"{base_url}{dataset_path}")
+            response.raise_for_status()
+            response_data = response.json()
+
+            schema_lookup[dataset_name] = data_type.from_dict(response.json())
+
+    return schema_lookup
 
 
 def schema_def_from_file(filename) -> Dict[str, types.DatasetSchema]:

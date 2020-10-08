@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple, Type
@@ -17,6 +18,7 @@ from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,
+    ProfileSchema,
     get_db_table_name,
     is_possible_display_field,
 )
@@ -457,6 +459,63 @@ class DatasetField(models.Model):
         self.save()
 
 
+class Profile(models.Model):
+    """User Profile.
+    """
+    name = models.CharField(max_length=100)
+    scopes = models.CharField(max_length=255)
+    schema_data = JSONField(_("Amsterdam Schema Contents"))
+
+    def get_permissions(self) -> dict:
+        """
+         Get Flattened permissions per profile in form:
+         {dataset} = "permission"
+         {dataset}:{table} = "permission"
+         {dataset}:{table}:{field} = "permission"
+         """
+        permissions = dict()
+        for dataset_id, dataset_settings in self.schema_data.get("datasets", dict()).items():
+            dataset_key = generate_permission_key(dataset_id)
+            if "permissions" in dataset_settings:
+                permissions[dataset_key] = dataset_settings["permissions"]
+            for table_id, table_settings in dataset_settings.get("tables", dict()).items():
+                dataset_table_key = generate_permission_key(dataset_id, table_id)
+                if dataset_key not in permissions:
+                    permissions[dataset_key] = "read"
+                if "permissions" in table_settings:
+                    permissions[dataset_table_key] = table_settings["permissions"]
+                for field_id, field_permission in table_settings.get("fields", dict()).items():
+                    if dataset_table_key not in permissions:
+                        permissions[dataset_table_key] = "read"
+                    permissions[generate_permission_key(dataset_id, table_id, field_id)] = field_permission
+
+        return permissions
+
+    def get_scopes(self):
+        try:
+            return json.loads(self.scopes.replace("'", '"'))
+        except ValueError:
+            return []
+
+    @classmethod
+    def create_for_schema(cls, profile_schema: ProfileSchema) -> Profile:
+        """Create Profile object based on the Amsterdam Schema profile spec.
+        """
+        instance = cls()
+        instance.save_for_schema(profile_schema)
+        return instance
+
+    def save_for_schema(self, profile_schema: ProfileSchema) -> Profile:
+        self.name = profile_schema.name
+        self.scopes = profile_schema.scopes
+        self.schema_data = profile_schema.json_data()
+        self.save()
+        return self
+
+    def __str__(self):
+        return self.name
+
+
 def _serialize_claims(schema_object) -> Optional[str]:
     """Convert the schema/table/field auth claims to a string format"""
     claims = schema_object.get("auth")
@@ -466,3 +525,11 @@ def _serialize_claims(schema_object) -> Optional[str]:
         return claims
     else:
         return " ".join(claims)
+
+
+def generate_permission_key(*args):
+    return ":".join([to_snake_case(key) for key in args])
+
+
+def split_permission_key(key):
+    return key.split(":")
