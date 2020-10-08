@@ -113,6 +113,7 @@ def permissions_introspect(db_url):
     for acl in acl_data:
         click.echo(acl)
 
+
 @permissions.command("create")
 @click.argument("profile_location")
 @option_db_url
