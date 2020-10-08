@@ -11,6 +11,28 @@ This document describes how the CLI can be used to set permissions at the databa
 ## CLI
 
 Examples of CLI usage:
+
+### Setting permissions using Dataset Level Authorization in Amsterdam Schema
+
+```
+schema permissions from_schema tests/files/gebieden.json myrole BRP/R
+```
+Here, tests/files/gebieden.json is a local file containing an example Amsterdam Schema. 
+Dataset Level Authorization is used to restrict acccess to scope "BRP/R": 
+```json
+{
+  "type": "dataset",
+  "id": "gebieden",
+  "title": "gebieden",
+  "auth": "BRP/R",
+    ...
+```
+Postgres role `myrole` is required to exist. The command reads the Amsterdam Schema file, checks for the presence
+of Dataset Level Authorization, and if present, will check if the scope matches, and if so, 
+will give read permission to myrole for all tables associated with the dataset.
+
+
+
 ### Setting permissions with a Profile
 ```
 schema permissions create tests/files/profiles/gebieden_test.json
