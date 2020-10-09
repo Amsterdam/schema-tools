@@ -34,8 +34,9 @@ will give read permission to myrole for all tables associated with the dataset.
 
 ### Setting permissions with a Profile
 ```
-schema permissions from_profile tests/files/profiles/gebieden_test.json
+schema permissions from_profile tests/files/profiles/gebieden_test.json myrole FP/MD
 ```
+
 Here, `tests/files/profiles/gebieden_test.json` is a local file containing an example Profile:
 ```json
 {
