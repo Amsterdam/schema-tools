@@ -117,7 +117,9 @@ def permissions_introspect(db_url):
 @permissions.command("from_profile")
 @click.argument("profile_location")
 @option_db_url
-def permissions_from_profile(profile_location, db_url):
+@argument_role
+@argument_scopes
+def permissions_from_profile(profile_location, db_url, role, scopes):
     """Create ACL list from Profile."""
 
     def _fetch_json(location):
@@ -135,7 +137,7 @@ def permissions_from_profile(profile_location, db_url):
 
     engine = _get_engine(db_url)
     profile_list = [profile]
-    create_acl_from_profiles(engine, schema='public', profile_list=profile_list)
+    create_acl_from_profiles(engine, schema='public', profile_list=profile_list, role=role, scopes=scopes)
 
 @permissions.command("from_schema")
 @option_db_url
