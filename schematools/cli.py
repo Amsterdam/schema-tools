@@ -114,10 +114,10 @@ def permissions_introspect(db_url):
     for acl in acl_data:
         click.echo(acl)
 
-@permissions.command("create")
+@permissions.command("from_profile")
 @click.argument("profile_location")
 @option_db_url
-def permissions_create(profile_location, db_url):
+def permissions_from_profile(profile_location, db_url):
     """Create ACL list from Profile."""
 
     def _fetch_json(location):
