@@ -19,51 +19,31 @@ def create_acl_from_profiles(engine, schema, profile_list, role, scopes):
                         engine.execute(grant_statement)
 
 
-
-
-def create_acl_from_schema(engine, ams_schema, role, scopes):
+def create_acl_from_schema(engine, ams_schema, role, permitted_scopes):
     #  In progress: Only Dataset Level Authorization
     acl_list = query.get_all_table_acls(engine, schema='public')
     #  If schema.auth matches a scope, role will get read permission on associated tables
     priviliges = ["SELECT", ]
     grantee = role
-    analyze_schema(ams_schema)
-    if ams_schema.auth:
-        for scope in scopes.split(","):
-            if ams_schema.auth == scope:
-                for item in acl_list:
-                    if item.name.startswith(ams_schema.id + "_"):
-                        grant_statement = grant(priviliges, PgObjectType.TABLE, item.name, grantee, grant_option=False, schema='public')
-                        print(grant_statement)
-                        engine.execute(grant_statement)
+    dataset_scope = ams_schema.auth if ams_schema.auth else 'PUBLIC'
+    if dataset_scope != 'PUBLIC':
+        print('Found dataset read permission for "{}" to scope "{}"'.format(ams_schema.id, dataset_scope))
+    for table in ams_schema.get_tables(include_nested=True, include_through=True):
+        table_name = "{}_{}".format(table.dataset.id, to_snake_case(table.id))  # een aantal table.id's zijn camelcase
+        table_scope = table.auth if table.auth else dataset_scope
+        if table.auth:
+            print('Found table read permission for "{}" to scope "{}"'.format(table_name, table_scope))
+        if dataset_scope != 'PUBLIC' and dataset_scope != table_scope:
+            print('"{}" overrules "{}" for read permission of "{}"'.format(table_scope, dataset_scope, table_name))
+        if table_scope and table_scope in permitted_scopes.split(","):
+            grant_statement = grant(priviliges, PgObjectType.TABLE, table_name, grantee, grant_option=False, schema='public')
+            print("--> {}".format(grant_statement))
+            engine.execute(grant_statement)
 
 
 def create_acl_from_schemas(engine, schemas, role, scopes):
-    print("hallo")
-    acl_list = query.get_all_table_acls(engine, schema='public')
-    acl_table_list = [item.name for item in acl_list]
-    table_names = list()
+    #  acl_list = query.get_all_table_acls(engine, schema='public')
+    #  acl_table_list = [item.name for item in acl_list]
+    #  table_names = list()
     for dataset_name, dataset_schema in schemas.items():
-        table_names = table_names + analyze_schema(dataset_schema)
-        #print(dataset_name)
-        if dataset_schema.auth:
-            print("auth {}".format(dataset_schema.auth))
-        if dataset_name=="gebieden":
-            analyze_schema(dataset_schema)
-    print(len(table_names), len(acl_table_list))
-    print("tables wel in postgres, niet uit schema gehaald")
-    print(set(acl_table_list) - set(table_names))
-    print("tables uit schema die niet in postgres zitten")
-    print(set(table_names) - set(acl_table_list))
-
-def analyze_schema(dataset_schema):
-    #print("analyze_schema {}".format(dataset_schema.id))
-    table_names = list()
-    for table in dataset_schema.get_tables(include_nested=True, include_through=True):
-        if True: #table.auth:
-            table_name = "{}_{}".format(table.dataset.id, to_snake_case(table.id))  # een aantal table.id's zijn camelcase
-            table_names.append(table_name)
-        if any(x.isupper() for x in table_name):  # gaat iets fout met naamgeving, mag geen capitals
-            print("ALERT: {} should be {}".format(table_name, to_snake_case(table_name)))
-            print(table.identifier)
-    return table_names
+        create_acl_from_schema(engine, dataset_schema, role, scopes)
