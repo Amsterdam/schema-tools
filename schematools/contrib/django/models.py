@@ -36,6 +36,7 @@ FORMAT_MODELS_LOOKUP = {
     "time": models.TimeField,
     "date-time": models.DateTimeField,
     "uri": models.URLField,
+    "email": models.EmailField,
 }
 
 RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
