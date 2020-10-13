@@ -308,6 +308,10 @@ class DatasetTableSchema(SchemaType):
         """
         return self["schema"].get("additionalRelations", {})
 
+    @property
+    def auth(self):
+        """Auth of the table (if set)"""
+        return self.get("auth")
 
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """

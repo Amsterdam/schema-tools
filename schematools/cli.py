@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from pg_grant import query
 from .permissions import create_acl_from_profiles
-from .permissions import create_acl_from_schema
+from .permissions import create_acl_from_schema, create_acl_from_schemas
 
 
 from .db import (
@@ -24,7 +24,7 @@ from .importer.geojson import GeoJSONImporter
 from .importer.ndjson import NDJSONImporter
 from .maps import create_mapfile
 from .types import DatasetSchema
-from .utils import schema_def_from_url, schema_fetch_url_file
+from .utils import schema_def_from_url, schema_fetch_url_file, schema_defs_from_url
 from .provenance.create import ProvenaceIteration
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
@@ -150,6 +150,22 @@ def permissions_from_schema(db_url, schema_url, schema_location, role, scopes):
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_url, schema_location)
     create_acl_from_schema(engine, dataset_schema, role, scopes)
+
+
+@permissions.command("from_schema_url")
+@option_db_url
+@option_schema_url
+@argument_role
+@argument_scopes
+def permissions_from_schema_url(db_url, schema_url, role, scopes):
+    """Set permissions in DB for user based on schema definition"""
+    engine = _get_engine(db_url)
+    ams_schema = schema_defs_from_url(schemas_url=schema_url)
+    create_acl_from_schemas(engine, ams_schema, role, scopes)
+
+
+
+
 
 
 @schema.group()
