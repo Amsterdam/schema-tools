@@ -1,9 +1,18 @@
-from pg_grant import query
+from pg_grant import query, parse_acl_item
 from pg_grant.sql import grant
 from pg_grant import PgObjectType
 from .utils import to_snake_case
 from .importer import get_table_name
 
+def introspect_permissions(engine, role):
+    schema_relation_infolist = query.get_all_table_acls(engine, schema='public')
+    for schema_relation_info in schema_relation_infolist:
+        if schema_relation_info.acl:
+            acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
+            for acl in acl_list:
+                if acl.grantee == role:
+                    print('role "{}" has priviliges {} on table "{}"'.format(role, ','.join(acl.privs), schema_relation_info.name))
+            #print('"{}": {}'.format(schema_relation_info.name, acl_list))
 
 def create_acl_from_profiles(engine, schema, profile_list, role, scopes):
     acl_list = query.get_all_table_acls(engine, schema='public')

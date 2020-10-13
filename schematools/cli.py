@@ -7,7 +7,7 @@ import jsonschema
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from pg_grant import query
-from .permissions import create_acl_from_profiles
+from .permissions import create_acl_from_profiles, introspect_permissions
 from .permissions import create_acl_from_schema, create_acl_from_schemas
 
 
@@ -107,12 +107,12 @@ def permissions():
 
 @permissions.command("introspect")
 @option_db_url
-def permissions_introspect(db_url):
+@argument_role
+def permissions_introspect(db_url, role):
     """Retrieve ACLs from a database."""
     engine = _get_engine(db_url)
-    acl_data = query.get_all_table_acls(engine, schema='public')
-    for acl in acl_data:
-        click.echo(acl)
+    introspect_permissions(engine, role)
+
 
 @permissions.command("from_profile")
 @click.argument("profile_location")
