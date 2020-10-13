@@ -20,9 +20,6 @@ def create_acl_from_profiles(engine, schema, profile_list, role, scopes):
 
 
 def create_acl_from_schema(engine, ams_schema, role, permitted_scopes):
-    #  In progress: Only Dataset Level Authorization
-    acl_list = query.get_all_table_acls(engine, schema='public')
-    #  If schema.auth matches a scope, role will get read permission on associated tables
     priviliges = ["SELECT", ]
     grantee = role
     dataset_scope = ams_schema.auth if ams_schema.auth else 'PUBLIC'
