@@ -166,7 +166,7 @@ class DatasetSchema(SchemaType):
                         "type": "integer",
                         "relation": f"{left_dataset}:{left_table}",
                     },
-                    right_table: {
+                    snakecased_fieldname: {
                         "type": "integer",
                         "relation": f"{right_dataset}:{right_table}",
                     },

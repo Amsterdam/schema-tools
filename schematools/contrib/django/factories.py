@@ -111,6 +111,7 @@ class FieldMaker:
                 kwargs["through"] = self._make_through_classname(
                     dataset.id, field._parent_table.id, field.name
                 )
+                kwargs["through_fields"] = (parent_table, snakecased_fieldname)
             elif field._parent_table.has_parent_table:
                 kwargs["related_name"] = field._parent_table["originalID"]
             else:

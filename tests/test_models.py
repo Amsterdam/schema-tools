@@ -110,12 +110,12 @@ def test_model_factory_temporary_n_m_relation(ggwgebieden_schema):
     # Through table has refs to both 'sides' and extra fields for the relation
     through_table_field_names = {
         "ggwgebieden",
-        "buurten",
+        "bestaatuitbuurten",
         "identificatie",
         "volgnummer",
     }
     fields_dict = {f.name: f for f in model_dict[through_table_name]._meta.fields}
 
     assert set(fields_dict.keys()) > through_table_field_names
-    for field_name in ("ggwgebieden", "buurten"):
+    for field_name in ("ggwgebieden", "bestaatuitbuurten"):
         assert isinstance(fields_dict[field_name], models.ForeignKey)
