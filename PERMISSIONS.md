@@ -67,9 +67,9 @@ Current limitations:
 ### Introspection of permissions
 
 ```shell script
-schema permissions introspect
+schema permissions introspect myrole
 ```
-Lists all ACLs from database (`pg_grant` format)
+Lists all table permissions for myrole
 
 ### Setting permissions with Amsterdam Schema Authorization
 TODO
