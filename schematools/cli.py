@@ -7,7 +7,7 @@ import jsonschema
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from pg_grant import query
-from .permissions import create_acl_from_profiles, introspect_permissions
+from .permissions import create_acl_from_profiles, introspect_permissions, revoke_permissions
 from .permissions import create_acl_from_schema, create_acl_from_schemas
 
 
@@ -112,6 +112,17 @@ def permissions_introspect(db_url, role):
     """Retrieve ACLs from a database."""
     engine = _get_engine(db_url)
     introspect_permissions(engine, role)
+
+
+@permissions.command("revoke")
+@option_db_url
+@argument_role
+def permissions_revoke(db_url, role):
+    """Revoke all table select priviliges for role."""
+    engine = _get_engine(db_url)
+    revoke_permissions(engine, role)
+
+
 
 
 @permissions.command("from_profile")

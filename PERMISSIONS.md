@@ -12,10 +12,10 @@ This document describes how the CLI can be used to set permissions at the databa
 
 Examples of CLI usage:
 
-### Setting permissions using Dataset Level Authorization in Amsterdam Schema
+### Schema Authorization in Amsterdam Schema - single dataset schema
 
 ```
-schema permissions from_schema tests/files/gebieden.json myrole BRP/R
+schema permissions from_schema tests/files/gebieden.json brp_r BRP/R
 ```
 Here, tests/files/gebieden.json is a local file containing an example Amsterdam Schema. 
 Dataset Level Authorization is used to restrict acccess to scope "BRP/R": 
@@ -27,12 +27,20 @@ Dataset Level Authorization is used to restrict acccess to scope "BRP/R":
   "auth": "BRP/R",
     ...
 ```
-Postgres role `myrole` is required to exist. The command reads the Amsterdam Schema file, checks for the presence
-of Dataset Level Authorization, and if present, will check if the scope matches, and if so, 
-will give read permission to myrole for all tables associated with the dataset.
+Postgres role `brp_r` is required to exist for this example (`CREATE ROLE brp_r` first if necessary). 
+The command reads the Amsterdam Schema file, checks for the presence
+of Dataset Level Authorization or Table Level Authorization, and if present, will check if the scope matches, and if so, 
+will give read permission to myrole for all associated tables.
 
+### Schema Authorization in Amsterdam Schema - complete schema
 
-### Setting permissions with a Profile
+```
+schema permissions from_schema_url brp_r BRP/R
+```
+Here, the environment variable `SCHEMA_URL` is used to download a complete schema collection, 
+and grants read permission to brp_r for all tables with auth scope `BRP/R`.
+
+### Profile Authorization
 ```
 schema permissions from_profile tests/files/profiles/gebieden_test.json myrole FP/MD
 ```
@@ -58,7 +66,8 @@ Within postgres, these are all tables starting with `gebieden_`.
 
 Instead of a local file path you may also specify the location of the profile with a web accessible URL
 
-The `permissions create` command will read the Profile, iterate over all scopes and datasets, and set the appropriate permissions in all tables belonging to those datasets.
+The `permissions from_profile` command will read the Profile, iterate over all scopes and datasets, 
+and set the appropriate permissions in all tables belonging to those datasets.
 
 Current limitations:
 - only `read` permissions
@@ -67,13 +76,15 @@ Current limitations:
 ### Introspection of permissions
 
 ```shell script
-schema permissions introspect myrole
+schema permissions introspect brp_r
 ```
-Lists all table permissions for myrole
+Lists all table permissions for postgres role brp_r
 
-### Setting permissions with Amsterdam Schema Authorization
-TODO
-
+### Revoking permissions
+```
+schema permissions revoke brp_r
+```
+Revokes all table permissions for postgres role brp_r
 
 ## Tests
 

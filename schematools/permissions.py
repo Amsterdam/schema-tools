@@ -1,8 +1,10 @@
 from pg_grant import query, parse_acl_item
-from pg_grant.sql import grant
+from pg_grant.sql import grant, revoke
 from pg_grant import PgObjectType
 from .utils import to_snake_case
 from .importer import get_table_name
+from sqlalchemy.exc import SQLAlchemyError
+
 
 def introspect_permissions(engine, role):
     schema_relation_infolist = query.get_all_table_acls(engine, schema='public')
@@ -12,7 +14,20 @@ def introspect_permissions(engine, role):
             for acl in acl_list:
                 if acl.grantee == role:
                     print('role "{}" has priviliges {} on table "{}"'.format(role, ','.join(acl.privs), schema_relation_info.name))
-            #print('"{}": {}'.format(schema_relation_info.name, acl_list))
+
+
+def revoke_permissions(engine, role):
+    grantee =role
+    schema_relation_infolist = query.get_all_table_acls(engine, schema='public')
+    for schema_relation_info in schema_relation_infolist:
+        if schema_relation_info.acl:
+            acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
+            for acl in acl_list:
+                if acl.grantee == role:
+                    print('revoking ALL priviliges of role "{}" on table "{}"'.format(role, schema_relation_info.name))
+                    revoke_statement = revoke("ALL", PgObjectType.TABLE, schema_relation_info.name, grantee)
+                    engine.execute(revoke_statement)
+
 
 def create_acl_from_profiles(engine, schema, profile_list, role, scopes):
     acl_list = query.get_all_table_acls(engine, schema='public')
@@ -44,8 +59,10 @@ def create_acl_from_schema(engine, ams_schema, role, permitted_scopes):
         if table_scope and table_scope in permitted_scopes.split(","):
             grant_statement = grant(priviliges, PgObjectType.TABLE, table_name, grantee, grant_option=False, schema='public')
             print("--> {}".format(grant_statement))
-            engine.execute(grant_statement)
-
+            try:
+                engine.execute(grant_statement)
+            except SQLAlchemyError as err:
+                print(err)
 
 def create_acl_from_schemas(engine, schemas, role, scopes):
     #  acl_list = query.get_all_table_acls(engine, schema='public')
