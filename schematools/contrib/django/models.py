@@ -51,6 +51,7 @@ class ObjectMarker:
         For non-model fields (e.g. BRP), this class marks the fact that no
         model field needs to be generated.
     """
+
     pass
 
 
@@ -463,6 +464,7 @@ class DatasetField(models.Model):
 class Profile(models.Model):
     """User Profile.
     """
+
     name = models.CharField(max_length=100)
     scopes = models.CharField(max_length=255)
     schema_data = JSONField(_("Amsterdam Schema Contents"))
@@ -475,20 +477,28 @@ class Profile(models.Model):
          {dataset}:{table}:{field} = "permission"
          """
         permissions = dict()
-        for dataset_id, dataset_settings in self.schema_data.get("datasets", dict()).items():
+        for dataset_id, dataset_settings in self.schema_data.get(
+            "datasets", dict()
+        ).items():
             dataset_key = generate_permission_key(dataset_id)
             if "permissions" in dataset_settings:
                 permissions[dataset_key] = dataset_settings["permissions"]
-            for table_id, table_settings in dataset_settings.get("tables", dict()).items():
+            for table_id, table_settings in dataset_settings.get(
+                "tables", dict()
+            ).items():
                 dataset_table_key = generate_permission_key(dataset_id, table_id)
                 if dataset_key not in permissions:
                     permissions[dataset_key] = "read"
                 if "permissions" in table_settings:
                     permissions[dataset_table_key] = table_settings["permissions"]
-                for field_id, field_permission in table_settings.get("fields", dict()).items():
+                for field_id, field_permission in table_settings.get(
+                    "fields", dict()
+                ).items():
                     if dataset_table_key not in permissions:
                         permissions[dataset_table_key] = "read"
-                    permissions[generate_permission_key(dataset_id, table_id, field_id)] = field_permission
+                    permissions[
+                        generate_permission_key(dataset_id, table_id, field_id)
+                    ] = field_permission
 
         return permissions
 

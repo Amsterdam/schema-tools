@@ -7,17 +7,30 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('datasets', '0007_datasettable_is_temporal'),
+        ("datasets", "0007_datasettable_is_temporal"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Profile',
+            name="Profile",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('scopes', models.CharField(max_length=255)),
-                ('schema_data', django.contrib.postgres.fields.jsonb.JSONField(verbose_name='Amsterdam Schema Contents')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                ("scopes", models.CharField(max_length=255)),
+                (
+                    "schema_data",
+                    django.contrib.postgres.fields.jsonb.JSONField(
+                        verbose_name="Amsterdam Schema Contents"
+                    ),
+                ),
             ],
         ),
     ]

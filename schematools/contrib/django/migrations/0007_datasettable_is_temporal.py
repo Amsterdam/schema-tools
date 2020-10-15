@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('datasets', '0006_remote_datasets'),
+        ("datasets", "0006_remote_datasets"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='datasettable',
-            name='is_temporal',
+            model_name="datasettable",
+            name="is_temporal",
             field=models.BooleanField(default=False),
         ),
     ]

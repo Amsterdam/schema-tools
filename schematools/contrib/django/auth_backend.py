@@ -2,7 +2,7 @@ from django.contrib.auth.backends import BaseBackend
 from schematools.contrib.django.models import (
     Profile,
     generate_permission_key,
-    split_permission_key
+    split_permission_key,
 )
 
 PERMISSION_LIST = [
@@ -64,11 +64,7 @@ class ProfileAuthorizationBackend(BaseBackend):
         if not hasattr(request, "auth_profile"):
             request.auth_profile = RequestProfile(request)
 
-        return request.auth_profile.get_read_permission(
-            perm=perm,
-            obj=obj
-        ) is not None
-
+        return request.auth_profile.get_read_permission(perm=perm, obj=obj) is not None
 
 
 def merge_permissions(base_permissions, profile_permissions):
@@ -90,7 +86,7 @@ def highest_permission(permission1, permission2):
     try:
         return sorted(
             [permission1, permission2],
-            key=lambda key: PERMISSION_LIST.index(key.split(":")[0])
+            key=lambda key: PERMISSION_LIST.index(key.split(":")[0]),
         )[0]
     except (ValueError, IndexError) as e:
         raise ValueError("Permission {}".format(e.args[0]))
