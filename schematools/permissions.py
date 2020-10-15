@@ -28,6 +28,9 @@ def revoke_permissions(engine, role):
                     revoke_statement = revoke("ALL", PgObjectType.TABLE, schema_relation_info.name, grantee)
                     engine.execute(revoke_statement)
 
+def apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, permitted_scopes):
+    pass
+
 
 def create_acl_from_profiles(engine, schema, profile_list, role, scopes):
     acl_list = query.get_all_table_acls(engine, schema='public')

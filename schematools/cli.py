@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from pg_grant import query
 from .permissions import create_acl_from_profiles, introspect_permissions, revoke_permissions
-from .permissions import create_acl_from_schema, create_acl_from_schemas
+from .permissions import create_acl_from_schema, create_acl_from_schemas, apply_schema_and_profile_permissions
 
 
 from .db import (
@@ -24,10 +24,12 @@ from .importer.geojson import GeoJSONImporter
 from .importer.ndjson import NDJSONImporter
 from .maps import create_mapfile
 from .types import DatasetSchema
-from .utils import schema_def_from_url, schema_fetch_url_file, schema_defs_from_url
+from .utils import schema_def_from_url, profile_defs_from_url, schema_fetch_url_file, schema_defs_from_url
 from .provenance.create import ProvenaceIteration
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
+DEFAULT_PROFILE_URL = "https://schemas.data.amsterdam.nl/profiles/"
+
 
 option_db_url = click.option(
     "--db-url",
@@ -44,9 +46,25 @@ option_schema_url = click.option(
     help="Url where valid amsterdam schema files are found. "
     "SCHEMA_URL can also be provided as environment variable.",
 )
+
 argument_schema_location = click.argument(
     "schema_location", metavar="(DATASET-ID | DATASET-FILENAME)",
 )
+
+option_profile_url = click.option(
+    "--profile-url",
+    envvar="PROFILE_URL",
+    default=DEFAULT_PROFILE_URL,
+    show_default=True,
+    required=True,
+    help="Url where valid amsterdam profile files are found. "
+    "PROFILE_URL can also be provided as environment variable.",
+)
+
+argument_profile_location = click.argument(
+    "profile_location", metavar="(DATASET-ID | DATASET-FILENAME)",
+)
+
 
 argument_role = click.argument(
     "role",
@@ -175,8 +193,38 @@ def permissions_from_schema_url(db_url, schema_url, role, scopes):
     create_acl_from_schemas(engine, ams_schema, role, scopes)
 
 
+@permissions.command("apply")
+@option_db_url
+@option_schema_url
+@option_profile_url
+@argument_schema_location
+@argument_profile_location
+@argument_role
+@argument_scopes
+def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, role, scopes):
+    """Set permissions in DB for user based on schema definition"""
+    def _fetch_json(location):
+        if not location.startswith("http"):
+            with open(location) as f:
+                json_obj = json.load(f)
+        else:
+            response = requests.get(location)
+            response.raise_for_status()
+            json_obj = response.json()
+        return json_obj
 
-
+    engine = _get_engine(db_url)
+    if schema_location == 'ALL':
+        ams_schema = schema_defs_from_url(schemas_url=schema_url)
+    else:
+        dataset_schema = _get_dataset_schema(schema_url, schema_location)
+        ams_schema = {dataset_schema.id: dataset_schema}
+    if profile_location == 'ALL':
+        profiles = profile_defs_from_url(schemas_url=profile_url)
+    else:
+        profile = _fetch_json(profile_location)
+        profiles = {profile["name"]: profile}
+    apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scopes)
 
 
 @schema.group()
@@ -335,7 +383,6 @@ def import_schema(db_url, schema_url, schema_location):
     create_meta_tables(engine)
     create_meta_table_data(engine, dataset_schema)
 
-
 def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
@@ -348,3 +395,4 @@ def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
             return schema_def_from_url(schema_url, schema_location)
         except KeyError:
             raise click.BadParameter(f"Schema {schema_location} not found.")
+
