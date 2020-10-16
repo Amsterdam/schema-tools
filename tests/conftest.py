@@ -124,3 +124,4 @@ def verblijfsobjecten_schema(schema_json) -> DatasetSchema:
 @pytest.fixture()
 def kadastraleobjecten_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("kadastraleobjecten.json"))
+

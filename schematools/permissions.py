@@ -28,16 +28,17 @@ def revoke_permissions(engine, role):
                     revoke_statement = revoke("ALL", PgObjectType.TABLE, schema_relation_info.name, grantee)
                     engine.execute(revoke_statement)
 
-def apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, permitted_scopes):
-    pass
+def apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope):
+    create_acl_from_schemas(engine, ams_schema, role, scope)
+    profile_list = profiles.values()
+    create_acl_from_profiles(engine, 'public', profile_list, role, scope)
 
-
-def create_acl_from_profiles(engine, schema, profile_list, role, scopes):
+def create_acl_from_profiles(engine, schema, profile_list, role, scope):
     acl_list = query.get_all_table_acls(engine, schema='public')
     priviliges = ["SELECT", ]
     grantee = role
     for profile in profile_list:
-        if set(scopes.split(",")).intersection(set(profile["scopes"])):
+        if scope in profile["scopes"]:
             for dataset, details in profile["schema_data"]["datasets"].items():
                 for item in acl_list:
                     if item.name.startswith(dataset+"_"):
@@ -46,7 +47,7 @@ def create_acl_from_profiles(engine, schema, profile_list, role, scopes):
                         engine.execute(grant_statement)
 
 
-def create_acl_from_schema(engine, ams_schema, role, permitted_scopes):
+def create_acl_from_schema(engine, ams_schema, role, scope):
     priviliges = ["SELECT", ]
     grantee = role
     dataset_scope = ams_schema.auth if ams_schema.auth else 'PUBLIC'
@@ -59,7 +60,7 @@ def create_acl_from_schema(engine, ams_schema, role, permitted_scopes):
             print('Found table read permission for "{}" to scope "{}"'.format(table_name, table_scope))
         if dataset_scope != 'PUBLIC' and dataset_scope != table_scope:
             print('"{}" overrules "{}" for read permission of "{}"'.format(table_scope, dataset_scope, table_name))
-        if table_scope and table_scope in permitted_scopes.split(","):
+        if table_scope and table_scope == scope:
             grant_statement = grant(priviliges, PgObjectType.TABLE, table_name, grantee, grant_option=False, schema='public')
             print("--> {}".format(grant_statement))
             try:
