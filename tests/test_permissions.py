@@ -54,8 +54,10 @@ def test_permissions_apply(here, engine, gebieden_schema, dbsession):
 
     # Check if the read priviliges are correct
     check_table_permission_denied(engine, "level_a", "gebieden_bouwblokken")
-    check_table_permission_granted(engine, "level_b", "gebieden_bouwblokken")
-    check_table_permission_denied(engine, "level_c", "gebieden_bouwblokken")
+    check_table_permission_granted(engine, "level_b", "gebieden_bouwblokken", "id, eind_geldigheid")
+    check_table_permission_denied(engine, "level_b", "gebieden_bouwblokken", "begin_geldigheid")
+    check_table_permission_denied(engine, "level_c", "gebieden_bouwblokken", "id, eind_geldigheid")
+    check_table_permission_granted(engine, "level_c", "gebieden_bouwblokken", "begin_geldigheid")
     check_table_permission_granted(engine, "level_a", "gebieden_buurten")
     check_table_permission_denied(engine, "level_b", "gebieden_buurten")
     check_table_permission_denied(engine, "level_c", "gebieden_buurten")
@@ -71,21 +73,20 @@ def create_role(engine, role):
     return role
 
 
-def check_table_permission_denied(engine, role, table):
+def check_table_permission_denied(engine, role, table, column='*'):
     """Check if role has no SELECT permission on table. Fail if role or table does not exist."""
     with pytest.raises(Exception) as e_info:
         with engine.begin() as connection:
             connection.execute("SET ROLE {}".format(role))
-            connection.execute("SELECT * FROM {}".format(table))
+            connection.execute("SELECT {} FROM {}".format(column, table))
             connection.execute("RESET ROLE")
     assert "permission denied for table {}".format(table) in str(e_info)
 
 
-def check_table_permission_granted(engine, role, table):
+def check_table_permission_granted(engine, role, table, column='*'):
     "Check if role has SELECT permission on table. Fail if role or table does not exist."
     with engine.begin() as connection:
         connection.execute("SET ROLE {}".format(role))
-        result = connection.execute("SELECT * FROM {}".format(table))
+        result = connection.execute("SELECT {} FROM {}".format(column, table))
         connection.execute("RESET ROLE")
     assert result
-

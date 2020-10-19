@@ -60,7 +60,8 @@ def create_acl_from_schema(engine, ams_schema, role, scope):
         if dataset_scope != 'OPENBAAR' and dataset_scope != table_scope:
             print('"{}" overrules "{}" for read permission of "{}"'.format(table_scope, dataset_scope, table_name))
         contains_field_grants = False
-        for field in table.fields:
+        fields = [field for field in table.fields if '$ref' not in field]
+        for field in fields:
             if field.auth:
                 field_scope = field.auth
 
@@ -76,7 +77,7 @@ def create_acl_from_schema(engine, ams_schema, role, scope):
         if table_scope and table_scope == scope:
             if contains_field_grants:
                 #  only grant those fields which have no or correct scope
-                for field in table.fields:
+                for field in fields:
                     if not field.auth or field.auth == scope:
                         column_name = to_snake_case(field.name)
                         column_priviliges = ["SELECT ({})".format(column_name), ]  # the space after SELECT is very important
