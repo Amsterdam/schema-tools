@@ -456,6 +456,11 @@ class DatasetFieldSchema(DatasetType):
         """
         return self.is_array and self.nm_relation is not None
 
+    @property
+    def auth(self) -> typing.Optional[str]:
+        """Auth of the field, if available, or None"""
+        return self.get("auth")
+
 
 class DatasetRow(DatasetType):
     """ An actual instance of data """
