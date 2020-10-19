@@ -5,6 +5,7 @@ from .utils import to_snake_case
 from .importer import get_table_name
 from sqlalchemy.exc import SQLAlchemyError
 
+PUBLIC_SCOPE = "OPENBAAR"
 
 def introspect_permissions(engine, role):
     schema_relation_infolist = query.get_all_table_acls(engine, schema='public')
@@ -49,36 +50,36 @@ def create_acl_from_profiles(engine, schema, profile_list, role, scope):
 
 def create_acl_from_schema(engine, ams_schema, role, scope):
     grantee = role
-    dataset_scope = ams_schema.auth if ams_schema.auth else 'OPENBAAR'
-    if dataset_scope != 'OPENBAAR':
-        print('Found dataset read permission for "{}" to scope "{}"'.format(ams_schema.id, dataset_scope))
+    dataset_scope = ams_schema.auth if ams_schema.auth else {PUBLIC_SCOPE, }
+    dataset_scope_set = {dataset_scope} if isinstance(dataset_scope, str) else set(dataset_scope)
+
+    if len(dataset_scope_set) > 1 or PUBLIC_SCOPE not in dataset_scope:
+        print('Found dataset read permission for "{}" to scopes "{}"'.format(ams_schema.id, dataset_scope_set))
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = "{}_{}".format(table.dataset.id, to_snake_case(table.id))  # een aantal table.id's zijn camelcase
         table_scope = table.auth if table.auth else dataset_scope
+        table_scope_set = {table_scope} if isinstance(table_scope, str) else set(table_scope)
         if table.auth:
-            print('Found table read permission for "{}" to scope "{}"'.format(table_name, table_scope))
-        if dataset_scope != 'OPENBAAR' and dataset_scope != table_scope:
-            print('"{}" overrules "{}" for read permission of "{}"'.format(table_scope, dataset_scope, table_name))
+            print('Found table read permission for "{}" to scopes "{}"'.format(table_name, table_scope_set))
+            print('"{}" overrules "{}" for read permission of "{}"'.format(table_scope_set, dataset_scope_set, table_name))
         contains_field_grants = False
         fields = [field for field in table.fields if '$ref' not in field]
         for field in fields:
             if field.auth:
                 field_scope = field.auth
-
-                print('Found field read permission for "{}" in table "{}" for scope {}'.format(field.name, table_name, field_scope))
-                if table_scope != field_scope:
-                    contains_field_grants = True
-                    if table_scope != 'OPENBAAR':
-                        print('"{}" overrules "{}" for read permission of field {} in table {}"'.format(field_scope, table_scope, field.name, table_name))
-                if field_scope == scope:
+                field_scope_set = {field_scope} if isinstance(field_scope, str) else set(field_scope)
+                print('Found field read permission for "{}" in table "{}" for scopes {}'.format(field.name, table_name, field_scope_set))
+                contains_field_grants = True
+                print('"{}" overrules "{}" for read permission of field {} in table {}"'.format(field_scope_set, table_scope_set, field.name, table_name))
+                if scope in field_scope_set:
                     column_name = to_snake_case(field.name)
                     column_priviliges = ["SELECT ({})".format(column_name), ]  # the space after SELECT is very important
                     _execute_grant(engine, grant(column_priviliges, PgObjectType.TABLE, table_name, grantee, grant_option=False, schema='public'))
-        if table_scope and table_scope == scope:
+        if scope in table_scope_set:
             if contains_field_grants:
-                #  only grant those fields which have no or correct scope
+                #  only grant those fields which have no scope
                 for field in fields:
-                    if not field.auth or field.auth == scope:
+                    if not field.auth:
                         column_name = to_snake_case(field.name)
                         column_priviliges = ["SELECT ({})".format(column_name), ]  # the space after SELECT is very important
                         _execute_grant(engine, grant(column_priviliges, PgObjectType.TABLE, table_name, grantee, grant_option=False, schema='public'))
