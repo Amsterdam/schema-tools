@@ -62,7 +62,7 @@ option_profile_url = click.option(
 )
 
 argument_profile_location = click.argument(
-    "profile_location", metavar="(DATASET-ID | DATASET-FILENAME)",
+    "profile_location", metavar="(PROFILE-FILENAME | NONE)",
 )
 
 
@@ -70,8 +70,8 @@ argument_role = click.argument(
     "role",
 )
 
-argument_scopes = click.argument(
-    "scopes",
+argument_scope = click.argument(
+    "scope",
 )
 
 def _get_engine(db_url, pg_schemas=None):
@@ -141,58 +141,6 @@ def permissions_revoke(db_url, role):
     revoke_permissions(engine, role)
 
 
-
-
-@permissions.command("from_profile")
-@click.argument("profile_location")
-@option_db_url
-@argument_role
-@argument_scopes
-def permissions_from_profile(profile_location, db_url, role, scopes):
-    """Create ACL list from Profile."""
-
-    def _fetch_json(location):
-        if not location.startswith("http"):
-            with open(location) as f:
-                json_obj = json.load(f)
-        else:
-            response = requests.get(location)
-            response.raise_for_status()
-            json_obj = response.json()
-        return json_obj
-
-    profile = _fetch_json(profile_location)
-
-
-    engine = _get_engine(db_url)
-    profile_list = [profile]
-    create_acl_from_profiles(engine, schema='public', profile_list=profile_list, role=role, scopes=scopes)
-
-@permissions.command("from_schema")
-@option_db_url
-@option_schema_url
-@argument_schema_location
-@argument_role
-@argument_scopes
-def permissions_from_schema(db_url, schema_url, schema_location, role, scopes):
-    """Set permissions in DB for user based on schema definition"""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_url, schema_location)
-    create_acl_from_schema(engine, dataset_schema, role, scopes)
-
-
-@permissions.command("from_schema_url")
-@option_db_url
-@option_schema_url
-@argument_role
-@argument_scopes
-def permissions_from_schema_url(db_url, schema_url, role, scopes):
-    """Set permissions in DB for user based on schema definition"""
-    engine = _get_engine(db_url)
-    ams_schema = schema_defs_from_url(schemas_url=schema_url)
-    create_acl_from_schemas(engine, ams_schema, role, scopes)
-
-
 @permissions.command("apply")
 @option_db_url
 @option_schema_url
@@ -200,9 +148,9 @@ def permissions_from_schema_url(db_url, schema_url, role, scopes):
 @argument_schema_location
 @argument_profile_location
 @argument_role
-@argument_scopes
-def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, role, scopes):
-    """Set permissions in DB for user based on schema definition"""
+@argument_scope
+def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, role, scope):
+    """Set permissions for a postgres role associated with a scope from Amsterdam Schema or Profiles."""
     def _fetch_json(location):
         if not location.startswith("http"):
             with open(location) as f:
@@ -214,17 +162,21 @@ def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_
         return json_obj
 
     engine = _get_engine(db_url)
-    if schema_location == 'ALL':
+    if schema_location in {"None", "NONE"}:
+        ams_schema = None
+    elif schema_location == 'ALL':
         ams_schema = schema_defs_from_url(schemas_url=schema_url)
     else:
         dataset_schema = _get_dataset_schema(schema_url, schema_location)
         ams_schema = {dataset_schema.id: dataset_schema}
-    if profile_location == 'ALL':
+    if profile_location in {"None", "NONE"}:
+        profiles = None
+    elif profile_location == 'ALL':
         profiles = profile_defs_from_url(schemas_url=profile_url)
     else:
         profile = _fetch_json(profile_location)
         profiles = {profile["name"]: profile}
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scopes)
+    apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope)
 
 
 @schema.group()

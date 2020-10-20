@@ -30,9 +30,11 @@ def revoke_permissions(engine, role):
                     engine.execute(revoke_statement)
 
 def apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope):
-    create_acl_from_schemas(engine, ams_schema, role, scope)
-    profile_list = profiles.values()
-    create_acl_from_profiles(engine, 'public', profile_list, role, scope)
+    if ams_schema:
+        create_acl_from_schemas(engine, ams_schema, role, scope)
+    if profiles:
+        profile_list = profiles.values()
+        create_acl_from_profiles(engine, 'public', profile_list, role, scope)
 
 def create_acl_from_profiles(engine, schema, profile_list, role, scope):
     acl_list = query.get_all_table_acls(engine, schema='public')
