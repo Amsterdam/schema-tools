@@ -6,6 +6,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from django.conf import settings
+from django.apps import apps
 from django.contrib.gis.db import models as gis_models
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
@@ -20,7 +21,6 @@ from schematools.types import (
     DatasetTableSchema,
     ProfileSchema,
     get_db_table_name,
-    is_possible_display_field,
 )
 from schematools.utils import to_snake_case
 
@@ -147,6 +147,11 @@ class DynamicModel(models.Model):
     def get_dataset(cls) -> DatasetSchema:
         """Give access to the original dataset that this model is a part of."""
         return cls._table_schema._parent_schema
+
+    @classmethod
+    def table_schema(cls) -> DatasetTableSchema:
+        """Give access to the original table_schema that this model implements."""
+        return cls._table_schema
 
     @classmethod
     def get_dataset_id(cls) -> str:
@@ -544,3 +549,23 @@ def generate_permission_key(*args):
 
 def split_permission_key(key):
     return key.split(":")
+
+
+class LooseRelationField(models.CharField):
+
+    def __init__(self, *args, **kwargs):
+        self.relation = kwargs.pop("relation")
+        kwargs.setdefault('max_length', 254)
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        del kwargs["max_length"]
+        kwargs["relation"] = self.relation
+        return name, path, args, kwargs
+
+    @property
+    def related_model(self):
+        dataset_name, table_name, column_name = [to_snake_case(part)
+                                                 for part in self.relation.split(":")]
+        return apps.all_models[dataset_name][table_name]
