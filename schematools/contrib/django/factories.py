@@ -20,6 +20,7 @@ from .models import (
     JSON_TYPE_TO_DJANGO,
     DynamicModel,
     ObjectMarker,
+    LooseRelationField
 )
 
 
@@ -96,6 +97,17 @@ class FieldMaker:
         relation = field.relation
         nm_relation = field.nm_relation
 
+        # Short circuit for loose relations, if column is explicitly
+        # defined in the relation, this means the value is used as-is to
+        # construct a url (no checking on relations)
+        if relation:
+            relation_parts = relation.split(":")
+            _, related_table_name = relation_parts[:2]
+            if len(relation_parts) > 2:
+                kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
+                kwargs["relation"] = relation
+                return LooseRelationField, args, kwargs
+
         if relation is not None or nm_relation is not None:
             assert not (relation and nm_relation)
             field_cls = models.ManyToManyField if nm_relation else models.ForeignKey
@@ -116,7 +128,6 @@ class FieldMaker:
                 kwargs["related_name"] = field._parent_table["originalID"]
             else:
                 related_name = None
-                _, related_table_name = relation.split(":")
                 try:
                     table = dataset.get_table_by_id(related_table_name)
                     for name, relation in table.relations.items():
