@@ -498,7 +498,15 @@ class Profile(models.Model):
     scopes = models.CharField(max_length=255)
     schema_data = JSONField(_("Amsterdam Schema Contents"))
 
-    def get_permissions(self) -> dict:
+    @cached_property
+    def schema(self) -> ProfileSchema:
+        """Provide access to the schema data"""
+        if not self.schema_data:
+            raise RuntimeError("Profile.schema_data is empty")
+
+        return ProfileSchema.from_dict(self.schema_data)
+
+    def get_permissions(self) -> Dict[str, str]:
         """
         Get Flattened permissions per profile in form:
         {dataset} = "permission"
@@ -506,23 +514,19 @@ class Profile(models.Model):
         {dataset}:{table}:{field} = "permission"
         """
         permissions = dict()
-        for dataset_id, dataset_settings in self.schema_data.get(
-            "datasets", dict()
-        ).items():
+        for dataset_id, dataset_settings in self.schema.datasets.items():
             dataset_key = generate_permission_key(dataset_id)
-            if "permissions" in dataset_settings:
-                permissions[dataset_key] = dataset_settings["permissions"]
-            for table_id, table_settings in dataset_settings.get(
-                "tables", dict()
-            ).items():
+            if dataset_settings.permissions:
+                permissions[dataset_key] = dataset_settings.permissions
+
+            for table_id, table_settings in dataset_settings.tables.items():
                 dataset_table_key = generate_permission_key(dataset_id, table_id)
                 if dataset_key not in permissions:
                     permissions[dataset_key] = "read"
-                if "permissions" in table_settings:
-                    permissions[dataset_table_key] = table_settings["permissions"]
-                for field_id, field_permission in table_settings.get(
-                    "fields", dict()
-                ).items():
+                if table_settings.permissions:
+                    permissions[dataset_table_key] = table_settings.permissions
+
+                for field_id, field_permission in table_settings.fields.items():
                     if dataset_table_key not in permissions:
                         permissions[dataset_table_key] = "read"
                     permissions[
