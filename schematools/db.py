@@ -103,7 +103,6 @@ def fetch_schema_from_relational_schema(engine, dataset_id) -> dict:
 
     aschema = _serialize(dataset)
     contact_point = aschema["contactPoint"]
-    print(contact_point)
     aschema["contactPoint"] = json.loads(contact_point)
     aschema["tables"] = [_serialize(t) for t in aschema["tables"]]
     for table_dict in aschema["tables"]:
