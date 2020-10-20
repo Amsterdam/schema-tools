@@ -37,9 +37,6 @@ def test_skip_duplicate_keys_in_db_during_import_with_existing_value(
 ):
     """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
-    # XXX Something weird with test-setup, at start of test, we have leftovers of previous tests
-    # engine.execute("TRUNCATE TABLE gebieden_bouwblokken")
-    # engine.execute("INSERT INTO gebieden_bouwblokken (id) VALUES (1)")
     importer = NDJSONImporter(gebieden_schema, engine)
     importer.generate_tables("bouwblokken", truncate=True)
     importer.load_file(ndjson_path)
@@ -50,8 +47,6 @@ def test_skip_duplicate_keys_in_db_during_import_with_duplicate_in_next_batch(
 ):
     """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
-    # XXX Something weird with test-setup, at start of test, we have leftovers of previous tests
-    # engine.execute("TRUNCATE TABLE gebieden_bouwblokken")
     importer = NDJSONImporter(gebieden_schema, engine)
     importer.generate_tables("bouwblokken", truncate=True)
     importer.load_file(ndjson_path)
