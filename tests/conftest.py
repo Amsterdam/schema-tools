@@ -72,7 +72,8 @@ def schemas_mock(requests_mock: Mocker, schema_url):
     )
     with open(afvalwegingen_json, "rb") as fh:
         requests_mock.get(
-            f"{schema_url}afvalwegingen/afvalwegingen", content=fh.read(),
+            f"{schema_url}afvalwegingen/afvalwegingen",
+            content=fh.read(),
         )
     yield requests_mock
 
@@ -133,3 +134,6 @@ def verblijfsobjecten_schema(schema_json) -> DatasetSchema:
 def kadastraleobjecten_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("kadastraleobjecten.json"))
 
+@pytest.fixture()
+def meldingen_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("meldingen.json"))

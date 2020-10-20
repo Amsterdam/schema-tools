@@ -1,6 +1,7 @@
 from django.contrib.gis.db import models
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from schematools.contrib.django.factories import model_factory, schema_models_factory
+from schematools.contrib.django.models import LooseRelationField
 
 
 def test_model_factory_fields(afval_schema):
@@ -119,3 +120,18 @@ def test_model_factory_temporary_n_m_relation(ggwgebieden_schema):
     assert set(fields_dict.keys()) > through_table_field_names
     for field_name in ("ggwgebieden", "bestaatuitbuurten"):
         assert isinstance(fields_dict[field_name], models.ForeignKey)
+
+
+def test_model_factory_loose_relations(meldingen_schema):
+    """Prove that a loose relation is created when column
+    is part of relation definition (<dataset>:<table>:column)
+    """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            meldingen_schema, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    model_cls = model_dict["statistieken"]
+    meta = model_cls._meta
+    assert isinstance(meta.get_field("buurt"), LooseRelationField)
