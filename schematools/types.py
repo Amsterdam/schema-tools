@@ -471,15 +471,7 @@ class DatasetRow(DatasetType):
 
 
 class ProfileSchema(SchemaType):
-    @property
-    def name(self):
-        """Name of Profile (if set)"""
-        return self.get("name")
-
-    @property
-    def scopes(self):
-        """Scopes of Profile (if set)"""
-        return self.get("scopes")
+    """The complete profile object"""
 
     @classmethod
     def from_file(cls, filename: str):
@@ -491,6 +483,81 @@ class ProfileSchema(SchemaType):
     def from_dict(cls, obj: dict):
         """ Parses given dict and validates the given schema """
         return cls(obj)
+
+    @property
+    def name(self):
+        """Name of Profile (if set)"""
+        return self.get("name")
+
+    @property
+    def scopes(self):
+        """Scopes of Profile (if set)"""
+        return self.get("scopes")
+
+    @property
+    def datasets(self) -> typing.Dict[str, ProfileDatasetSchema]:
+        return {
+            id: ProfileDatasetSchema(id, self, data)
+            for id, data in self.get("datasets", {}).items()
+        }
+
+
+class ProfileDatasetSchema(DatasetType):
+    """A schema inside the profile dataset"""
+
+    def __init__(self, _id, _parent_schema=None, data: typing.Optional[dict] = None):
+        super().__init__(data)
+        self._id = _id
+        self._parent_schema = _parent_schema
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def profile(self) -> typing.Optional[ProfileSchema]:
+        """The profile that this definition is part of."""
+        return self._parent_schema
+
+    @property
+    def permissions(self) -> typing.Optional[str]:
+        """Global permissions for the dataset"""
+        return self.get("permissions")
+
+    @property
+    def tables(self) -> typing.Dict[str, ProfileTableSchema]:
+        return {
+            id: ProfileTableSchema(id, self, data)
+            for id, data in self.get("tables", {}).items()
+        }
+
+
+class ProfileTableSchema(DatasetType):
+    """A single table in the profile"""
+
+    def __init__(self, _id, _parent_schema=None, data: typing.Optional[dict] = None):
+        super().__init__(data)
+        self._id = _id
+        self._parent_schema = _parent_schema
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def dataset(self) -> typing.Optional[ProfileDatasetSchema]:
+        """The profile that this definition is part of."""
+        return self._parent_schema
+
+    @property
+    def permissions(self) -> typing.Optional[str]:
+        """Global permissions for the table"""
+        return self.get("permissions")
+
+    @property
+    def fields(self) -> typing.Dict[str, str]:
+        """The fields with their permission keys"""
+        return self.get("fields", {})
 
 
 def get_db_table_name(table: DatasetTableSchema) -> str:
