@@ -171,7 +171,7 @@ class DatasetSchema(SchemaType):
                         "type": "integer",
                         "relation": f"{left_dataset}:{left_table}",
                     },
-                    right_table: {
+                    snakecased_fieldname: {
                         "type": "integer",
                         "relation": f"{right_dataset}:{right_table}",
                     },
@@ -240,7 +240,9 @@ class DatasetTableSchema(SchemaType):
                 _name="id", _parent_table=self, _required=True, type="string"
             )
 
-    def get_fields_by_id(self, field_names) -> typing.Generator[DatasetFieldSchema, None, None]:
+    def get_fields_by_id(
+        self, field_names
+    ) -> typing.Generator[DatasetFieldSchema, None, None]:
         for field in self.fields:
             if field.name in set(field_names):
                 yield field
@@ -471,7 +473,6 @@ class DatasetRow(DatasetType):
 
 
 class ProfileSchema(SchemaType):
-
     @property
     def name(self):
         """Name of Profile (if set)"""
@@ -481,7 +482,6 @@ class ProfileSchema(SchemaType):
     def scopes(self):
         """Scopes of Profile (if set)"""
         return self.get("scopes")
-
 
     @classmethod
     def from_file(cls, filename: str):
