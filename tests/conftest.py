@@ -107,6 +107,11 @@ def gebieden_schema(schema_json) -> DatasetSchema:
 
 
 @pytest.fixture()
+def gebieden_schema_auth_list(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("gebieden_auth_list.json"))
+
+
+@pytest.fixture()
 def ggwgebieden_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("ggwgebieden.json"))
 
