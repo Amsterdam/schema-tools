@@ -39,7 +39,7 @@ def test_openbaar_permissions(here, engine, afval_schema, dbsession):
     _check_permission_granted(engine, "bag_r", "afvalwegingen_clusters")
 
 
-def test_interacting_permissions(here, engine, gebieden_schema, dbsession):
+def test_interacting_permissions(here, engine, gebieden_schema_auth, dbsession):
     """
     Prove that dataset, table, and field permissions are set according to the "OF-OF" Exclusief principle:
     Een user met scope LEVEL/A mag alles uit de dataset gebieden zien, behalve tabel bouwblokken.
@@ -48,13 +48,13 @@ def test_interacting_permissions(here, engine, gebieden_schema, dbsession):
     """
 
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
-    importer = NDJSONImporter(gebieden_schema, engine)
+    importer = NDJSONImporter(gebieden_schema_auth, engine)
     importer.generate_tables("bouwblokken", truncate=True)
     importer.load_file(ndjson_path)
     importer.generate_tables("buurten", truncate=True)
 
     # Setup schema and profile
-    ams_schema = {gebieden_schema.id: gebieden_schema}
+    ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
     profile_path = here / "files" / "profiles" / "gebieden_test.json"
     with open(profile_path) as f:
         profile = json.load(f)

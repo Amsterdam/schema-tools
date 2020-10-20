@@ -105,6 +105,9 @@ def parkeervakken_schema(schema_json) -> DatasetSchema:
 def gebieden_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("gebieden.json"))
 
+@pytest.fixture()
+def gebieden_schema_auth(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("gebieden_auth.json"))
 
 @pytest.fixture()
 def gebieden_schema_auth_list(schema_json) -> DatasetSchema:
