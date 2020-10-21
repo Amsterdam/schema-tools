@@ -120,6 +120,7 @@ JSON_TYPE_TO_DJANGO = {
             value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
         ),
     ),
+    "blob": (UnlimitedCharField, None),
 }
 
 
