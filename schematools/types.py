@@ -411,7 +411,7 @@ class DatasetFieldSchema(DatasetType):
         return self.get("items", {}) if self.is_array else None
 
     @property
-    def sub_fields(self) -> typing.List[DatasetFieldSchema]:
+    def sub_fields(self) -> typing.Generator[DatasetFieldSchema, None, None]:
         """Return the fields for a nested object."""
         field_name_prefix = ""
         if self.is_object:
@@ -422,10 +422,11 @@ class DatasetFieldSchema(DatasetType):
             # Field has an array of objects (type=array)
             required = set(self.items.get("required") or ())
             properties = self.items["properties"]
+        else:
+            return
 
         if self.relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
-        required = set(self.get("required", []))
         for name, spec in properties.items():
             field_name = f"{field_name_prefix}{name}"
             yield DatasetFieldSchema(
