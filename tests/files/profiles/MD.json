@@ -8,8 +8,10 @@
         "gebieden": {
             "tables": {
                 "bouwblokken": {
-                    "ligtInBuurt": "encoded",
-                    "beginGeldigheid": "random+-15",
+                    "fields": {
+                        "ligtInBuurt": "encoded",
+                        "beginGeldigheid": "random+-15"
+                    }
                 }
             }
         }
