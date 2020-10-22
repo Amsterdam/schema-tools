@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 PUBLIC_SCOPE = "OPENBAAR"
 
+
 def introspect_permissions(engine, role):
     schema_relation_infolist = query.get_all_table_acls(engine, schema='public')
     for schema_relation_info in schema_relation_infolist:
@@ -29,12 +30,14 @@ def revoke_permissions(engine, role):
                     revoke_statement = revoke("ALL", PgObjectType.TABLE, schema_relation_info.name, grantee)
                     engine.execute(revoke_statement)
 
+
 def apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope, dry_run=False):
     if ams_schema:
         create_acl_from_schemas(engine, ams_schema, role, scope, dry_run)
     if profiles:
         profile_list = profiles.values()
         create_acl_from_profiles(engine, 'public', profile_list, role, scope)
+
 
 def create_acl_from_profiles(engine, schema, profile_list, role, scope):
     acl_list = query.get_all_table_acls(engine, schema='public')
@@ -55,7 +58,7 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run):
     dataset_scope = ams_schema.auth if ams_schema.auth else {PUBLIC_SCOPE, }
     dataset_scope_set = {dataset_scope} if isinstance(dataset_scope, str) else set(dataset_scope)
 
-    if len(dataset_scope_set) > 1 or PUBLIC_SCOPE not in dataset_scope:
+    if dataset_scope_set - {PUBLIC_SCOPE}:
         print('Found dataset read permission for "{}" to scopes "{}"'.format(ams_schema.id, dataset_scope_set))
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = "{}_{}".format(table.dataset.id, to_snake_case(table.id))  # een aantal table.id's zijn camelcase
