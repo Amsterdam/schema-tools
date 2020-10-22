@@ -680,6 +680,20 @@ class ProfileTableSchema(DatasetType):
         """The fields with their permission keys"""
         return self.get("fields", {})
 
+    @property
+    def mandatory_queries(self) -> typing.List[dict]:
+        """Tell whether the listing can only be requested with certain inputs.
+        E.g. an API user may only list data when they supply the lastname + birthdate.
+
+        Example value::
+
+            [
+              {"bsn": "full", "lastname": "letters:3"},
+              {"postcode": "full", "lastname":  "letters:5"}
+            ]
+        """
+        return self.get("mandatoryQueries", [])
+
 
 def get_db_table_name(table: DatasetTableSchema) -> str:
     """Generate the table name for a database schema."""
