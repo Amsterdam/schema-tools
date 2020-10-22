@@ -229,7 +229,9 @@ class DatasetTableSchema(SchemaType):
             field_schema = DatasetFieldSchema(
                 _name=name, _parent_table=self, _required=(name in required), **spec
             )
-            # Add extra field for relations of type object
+            # Add extra fields for relations of type object
+            # These fields are added to identify the different
+            # components of a compound FK to a another table
             if field_schema.relation is not None and field_schema.is_object:
                 for subfield_schema in field_schema.sub_fields:
                     yield subfield_schema
@@ -242,10 +244,6 @@ class DatasetTableSchema(SchemaType):
                 _name="id", _parent_table=self, _required=True, type="string"
             )
 
-    def iter_fields(self) -> typing.Generator[DatasetFieldSchema, None, None]:
-        for field_schema in self.fields:
-            yield field_schema
-
     def get_fields_by_id(
         self, field_names
     ) -> typing.Generator[DatasetFieldSchema, None, None]:
@@ -254,7 +252,7 @@ class DatasetTableSchema(SchemaType):
                 yield field
 
     def get_field_by_id(self, field_name) -> DatasetFieldSchema:
-        for field_schema in self.iter_fields():
+        for field_schema in self.fields:
             if field_schema.name == field_name:
                 return field_schema
 
@@ -421,7 +419,11 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def sub_fields(self) -> typing.List[DatasetFieldSchema]:
-        """Return the fields for a nested object."""
+        """Returns the sub fields for a nested structure. For a
+        nested object, fields are based on its properties,
+        for an array, fields are based on the properties of
+        the "items" field.
+        """
         field_name_prefix = ""
         if self.is_object:
             # Field has direct sub fields (type=object)
@@ -431,10 +433,13 @@ class DatasetFieldSchema(DatasetType):
             # Field has an array of objects (type=array)
             required = set(self.items.get("required") or ())
             properties = self.items["properties"]
+        else:
+            raise ValueError(
+                "Subfields are only possible for 'object' or 'array' fields."
+            )
 
         if self.relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
-        required = set(self.get("required", []))
         for name, spec in properties.items():
             field_name = f"{field_name_prefix}{name}"
             yield DatasetFieldSchema(
