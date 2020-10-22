@@ -37,6 +37,7 @@ FORMAT_MODELS_LOOKUP = {
     "date-time": models.DateTimeField,
     "uri": models.URLField,
     "email": models.EmailField,
+    "blob-azure": UnlimitedCharField,
 }
 
 RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
