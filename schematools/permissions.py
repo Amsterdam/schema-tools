@@ -68,7 +68,7 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run):
             print('Found table read permission for "{}" to scopes "{}"'.format(table_name, table_scope_set))
             print('"{}" overrules "{}" for read permission of "{}"'.format(table_scope_set, dataset_scope_set, table_name))
         contains_field_grants = False
-        fields = [field for field in table.fields if '$ref' not in field]
+        fields = [field for field in table.fields if field.name != "schema"]
         for field in fields:
             if field.auth:
                 field_scope = field.auth

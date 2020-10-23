@@ -3,6 +3,7 @@ from schematools.importer.ndjson import NDJSONImporter
 from pg_grant import query
 from schematools.permissions import create_acl_from_profiles, apply_schema_and_profile_permissions
 from sqlalchemy.exc import ProgrammingError
+from psycopg2.errors import DuplicateObject
 import pytest
 from schematools.types import DatasetSchema
 
@@ -153,9 +154,9 @@ def _create_role(engine, role):
     #  If role already exists just fail and ignore. This may happen if a previous pytest did not terminate correctly.
     try:
         engine.execute('CREATE ROLE "{}"'.format(role))
-    except ProgrammingError:
-        #  psycopg2.errors.DuplicateObject
-        pass
+    except ProgrammingError as e:
+        if not isinstance(e.orig, DuplicateObject):
+            raise
 
 
 def _check_permission_denied(engine, role, table, column='*'):
