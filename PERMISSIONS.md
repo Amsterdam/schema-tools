@@ -20,6 +20,9 @@ Here, `tests/files/gebieden_auth.json` is a local file containing an example Ams
 `tests/files/profiles/gebieden_test.json` is a local file containing an example profile.
 `level_b_user` is an existing postgres role, which will be granted read priviliges in accordance with scope `LEVEL/B`.
 
+For a dry run without actually executing the GRANT statements, add the option `--dry-run`. 
+The GRANT statements will be printed to console for inspection.
+
 Profile authorization is still under development, and may be left out by specifying `NONE` instead of a filename.
 
 To grant permissions according to a complete Amsterdam Schema at `SCHEMA_URL`, specify `ALL` instead of a filename:
