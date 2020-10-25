@@ -13,6 +13,9 @@ from schematools.importer.base import metadata
 
 HERE = Path(__file__).parent
 
+# fixtures engine and dbengine provided by pytest-sqlalchemy, automatically discoverd by pytest via setuptools entry-points.
+# https://github.com/toirl/pytest-sqlalchemy/blob/master/pytest_sqlalchemy.py
+
 
 @pytest.fixture(scope="session")
 def here():
