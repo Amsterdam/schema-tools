@@ -39,6 +39,7 @@ setup(
         "mappyfile",
         "cachetools",
         "jsonpath-rw",
+        "pg-grant",
     ],
     extras_require={
         "tests": [

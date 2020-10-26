@@ -13,6 +13,9 @@ from schematools.importer.base import metadata
 
 HERE = Path(__file__).parent
 
+# fixtures engine and dbengine provided by pytest-sqlalchemy, automatically discoverd by pytest via setuptools entry-points.
+# https://github.com/toirl/pytest-sqlalchemy/blob/master/pytest_sqlalchemy.py
+
 
 @pytest.fixture(scope="session")
 def here():
@@ -50,12 +53,13 @@ def dbsession(engine, dbsession, sqlalchemy_keep_db) -> Session:
     try:
         yield dbsession
     finally:
-        metadata.clear()
-        dbsession.close()
-
         # Drop all test tables after the tests completed
         if not sqlalchemy_keep_db:
             metadata.drop_all(bind=engine)
+        metadata.clear()
+        dbsession.close()
+
+
 
 
 @pytest.fixture()
@@ -105,6 +109,14 @@ def parkeervakken_schema(schema_json) -> DatasetSchema:
 def gebieden_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("gebieden.json"))
 
+@pytest.fixture()
+def gebieden_schema_auth(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("gebieden_auth.json"))
+
+@pytest.fixture()
+def gebieden_schema_auth_list(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("gebieden_auth_list.json"))
+
 
 @pytest.fixture()
 def ggwgebieden_schema(schema_json) -> DatasetSchema:
@@ -124,7 +136,6 @@ def verblijfsobjecten_schema(schema_json) -> DatasetSchema:
 @pytest.fixture()
 def kadastraleobjecten_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("kadastraleobjecten.json"))
-
 
 @pytest.fixture()
 def meldingen_schema(schema_json) -> DatasetSchema:

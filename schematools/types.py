@@ -74,6 +74,11 @@ class DatasetSchema(SchemaType):
         return self.get("identifier", "pk")
 
     @property
+    def auth(self):
+        """Auth of the dataset (if set)"""
+        return self.get("auth")
+
+    @property
     def tables(self) -> typing.List[DatasetTableSchema]:
         """Access the tables within the file"""
         return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
@@ -316,6 +321,10 @@ class DatasetTableSchema(SchemaType):
         """
         return self["schema"].get("additionalRelations", {})
 
+    @property
+    def auth(self):
+        """Auth of the table (if set)"""
+        return self.get("auth")
 
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """
@@ -459,6 +468,11 @@ class DatasetFieldSchema(DatasetType):
         Checks if field is a possible through table.
         """
         return self.is_array and self.nm_relation is not None
+
+    @property
+    def auth(self) -> typing.Optional[str]:
+        """Auth of the field, if available, or None"""
+        return self.get("auth")
 
 
 class DatasetRow(DatasetType):
