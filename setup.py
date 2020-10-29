@@ -28,6 +28,7 @@ setup(
     install_requires=[
         "geoalchemy2",
         "psycopg2",
+        "pg-grant",
         "click",
         "jsonschema",
         "ndjson>=0.3.0",
