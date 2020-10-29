@@ -4,80 +4,14 @@ from itertools import islice
 import operator
 from typing import Optional, Dict
 from jsonpath_rw import parse
+from sqlalchemy import MetaData, inspect, Table, Column, ForeignKey, Integer, String
 
 from schematools import MAX_TABLE_LENGTH
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
-from geoalchemy2 import Geometry
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Float,
-    Integer,
-    MetaData,
-    String,
-    Table,
-    Date,
-    Time,
-    DateTime,
-    ForeignKey,
-    inspect,
-)
-from . import get_table_name
+from . import get_table_name, fetch_col_type
 
-FORMAT_MODELS_LOOKUP = {
-    "date": Date,
-    "time": Time,
-    "date-time": DateTime,
-}
 metadata = MetaData()
-
-JSON_TYPE_TO_PG = {
-    "string": String,
-    "object": String,
-    "boolean": Boolean,
-    "integer": Integer,
-    "number": Float,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/class": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/dataset": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/id": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/class": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/dataset": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema": String,
-    "https://geojson.org/schema/Geometry.json": Geometry(
-        geometry_type="GEOMETRY", srid=28992
-    ),
-    "https://geojson.org/schema/Point.json": Geometry(
-        geometry_type="POINT", srid=28992
-    ),
-    "https://geojson.org/schema/Polygon.json": Geometry(
-        geometry_type="POLYGON", srid=28992
-    ),
-    "https://geojson.org/schema/MultiPolygon.json": Geometry(
-        geometry_type="MULTIPOLYGON", srid=28992
-    ),
-    "https://geojson.org/schema/MultiPoint.json": Geometry(
-        geometry_type="MULTIPOINT", srid=28992
-    ),
-    "https://geojson.org/schema/LineString.json": Geometry(
-        geometry_type="LINESTRING", srid=28992
-    ),
-    "https://geojson.org/schema/MultiLineString.json": Geometry(
-        geometry_type="MULTILINESTRING", srid=28992
-    ),
-}
-
-
-def fetch_col_type(field):
-    col_type = JSON_TYPE_TO_PG[field.type]
-    # XXX no walrus until we can go to python 3.8 (airflow needs 3.7)
-    # if (field_format := field.format) is not None:
-    field_format = field.format
-    if field_format is not None:
-        return FORMAT_MODELS_LOOKUP[field_format]
-    return col_type
 
 
 def chunked(generator, size):
@@ -180,8 +114,8 @@ class BaseImporter:
         return fields_provenances
 
     def fix_fieldnames(self, fields_provenances, table_records):
-        """ We need relational snakecased fieldnames in the records
-            And, we need to take provenance in the input records into account
+        """We need relational snakecased fieldnames in the records
+        And, we need to take provenance in the input records into account
         """
         fixed_records = []
         for record in table_records:
@@ -229,8 +163,7 @@ class BaseImporter:
             self.pk_values_lookup[table_name] = pks
 
     def generate_tables(self, table_name, db_table_name=None, truncate=False):
-        """ Generate the tablemodels and tables
-        """
+        """Generate the tablemodels and tables"""
 
         self.dataset_table = self.dataset_schema.get_table_by_id(table_name)
         # Collect provenance info for easy re-use
@@ -248,7 +181,10 @@ class BaseImporter:
         self.create_pk_lookup(self.tables)
 
     def load_file(
-        self, file_name, batch_size=100, **kwargs,
+        self,
+        file_name,
+        batch_size=100,
+        **kwargs,
     ):
         """Import a file into the database table, returns the last record, if available """
 
@@ -279,7 +215,8 @@ class BaseImporter:
                 )
                 if table_records:
                     self.engine.execute(
-                        insert_statement, table_records,
+                        insert_statement,
+                        table_records,
                     )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
@@ -299,7 +236,6 @@ class BaseImporter:
             if not table.exists():
                 table.create()
             elif truncate:
-                print(table.delete())
                 self.engine.execute(table.delete())
 
 
@@ -383,8 +319,14 @@ def table_factory(
                 elif field.is_through_table:
                     # We need a 'through' table for the n-m relation
                     sub_columns = [
-                        Column(f"{dataset_table.id}_id", String,),
-                        Column(f"{field_name}_id", String,),
+                        Column(
+                            f"{dataset_table.id}_id",
+                            String,
+                        ),
+                        Column(
+                            f"{field_name}_id",
+                            String,
+                        ),
                     ]
                     # And the field(s) for the left side of the relation
                     # if this left table has a compound key
@@ -408,7 +350,11 @@ def table_factory(
                         )
                     )
 
-                sub_tables[sub_table_id] = Table(sub_table_id, metadata, *sub_columns,)
+                sub_tables[sub_table_id] = Table(
+                    sub_table_id,
+                    metadata,
+                    *sub_columns,
+                )
 
                 continue
 
