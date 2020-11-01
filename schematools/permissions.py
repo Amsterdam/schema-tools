@@ -9,6 +9,7 @@ PUBLIC_SCOPE = "OPENBAAR"
 
 existing_roles = set()
 
+
 def introspect_permissions(engine, role):
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
     for schema_relation_info in schema_relation_infolist:
@@ -76,7 +77,7 @@ def create_acl_from_profiles(engine, schema, profile_list, role, scope):
 
 
 def create_acl_from_schema(engine, ams_schema, role, scope, dry_run, create_roles):
-    grantee = role if role != 'AUTO' else None
+    grantee = role if role != "AUTO" else None
     if create_roles and grantee:
         _create_role_if_not_exists(engine, grantee)
     dataset_scope = (
@@ -134,7 +135,13 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run, create_role
                         field_scope_set, table_scope_set, field.name, table_name
                     )
                 )
-                grantees = [scope_to_role(scope) for scope in field_scope_set] if role == 'AUTO' else [role] if scope in field_scope_set else []
+                grantees = (
+                    [scope_to_role(scope) for scope in field_scope_set]
+                    if role == "AUTO"
+                    else [role]
+                    if scope in field_scope_set
+                    else []
+                )
                 for grantee in grantees:
                     if create_roles:
                         _create_role_if_not_exists(engine, grantee, dry_run=dry_run)
@@ -156,8 +163,13 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run, create_role
                     )
         if contains_field_grants:
             #  only grant those fields without their own scope. The other field have already been granted above
-            grantees = [scope_to_role(scope) for scope in table_scope_set] if role == 'AUTO' else [
-                role] if scope in table_scope_set else []
+            grantees = (
+                [scope_to_role(scope) for scope in table_scope_set]
+                if role == "AUTO"
+                else [role]
+                if scope in table_scope_set
+                else []
+            )
             for grantee in grantees:
                 if create_roles:
                     _create_role_if_not_exists(engine, grantee, dry_run=dry_run)
@@ -181,8 +193,13 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run, create_role
                         )
         else:
             # we can grant the whole table instead of field by field
-            grantees = [scope_to_role(scope) for scope in table_scope_set] if role == 'AUTO' else [
-                role] if scope in table_scope_set else []
+            grantees = (
+                [scope_to_role(scope) for scope in table_scope_set]
+                if role == "AUTO"
+                else [role]
+                if scope in table_scope_set
+                else []
+            )
             for grantee in grantees:
                 if create_roles:
                     _create_role_if_not_exists(engine, grantee, dry_run=dry_run)
@@ -208,7 +225,9 @@ def create_acl_from_schemas(engine, schemas, role, scopes, dry_run, create_roles
     #  acl_table_list = [item.name for item in acl_list]
     #  table_names = list()
     for dataset_name, dataset_schema in schemas.items():
-        create_acl_from_schema(engine, dataset_schema, role, scopes, dry_run, create_roles)
+        create_acl_from_schema(
+            engine, dataset_schema, role, scopes, dry_run, create_roles
+        )
 
 
 def _execute_grant(engine, grant_statement, echo=True, dry_run=False):
@@ -231,7 +250,8 @@ def _create_role_if_not_exists(engine, role, echo=True, dry_run=False):
             f"CREATE ROLE {role}; "
             "EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
             "END "
-            "$$")
+            "$$"
+        )
         if echo:
             print(f"{status_msg} --> {sql_statement}")
         engine.execute(text(sql_statement).execution_options(autocommit=True))
@@ -240,4 +260,3 @@ def _create_role_if_not_exists(engine, role, echo=True, dry_run=False):
 
 def scope_to_role(scope):
     return f"scope_{scope.lower().replace('/','_')}"
-
