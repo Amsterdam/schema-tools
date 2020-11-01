@@ -67,11 +67,11 @@ argument_profile_location = click.argument(
 
 
 argument_role = click.argument(
-    "role",
+    "role", metavar="(POSTGRES-ROLE | AUTO)"
 )
 
 argument_scope = click.argument(
-    "scope",
+    "scope", metavar="(SCOPE-NAME | ALL)"
 )
 
 def _get_engine(db_url, pg_schemas=None):
@@ -150,7 +150,8 @@ def permissions_revoke(db_url, role):
 @argument_role
 @argument_scope
 @click.option("--dry-run", is_flag=True, default=False, help="Don't execute the GRANT statements")
-def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, role, scope, dry_run):
+@click.option("--create-roles", is_flag=True, default=False, help="Create missing postgres roles")
+def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, role, scope, dry_run, create_roles):
     """Set permissions for a postgres role associated with a scope from Amsterdam Schema or Profiles."""
     def _fetch_json(location):
         if not location.startswith("http"):
@@ -177,7 +178,7 @@ def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_
     else:
         profile = _fetch_json(profile_location)
         profiles = {profile["name"]: profile}
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope, dry_run)
+    apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope, dry_run, create_roles)
 
 
 @schema.group()

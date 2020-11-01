@@ -1,11 +1,13 @@
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 
 from .utils import to_snake_case
 
 PUBLIC_SCOPE = "OPENBAAR"
 
+existing_roles = set()
 
 def introspect_permissions(engine, role):
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
@@ -41,10 +43,10 @@ def revoke_permissions(engine, role):
 
 
 def apply_schema_and_profile_permissions(
-    engine, ams_schema, profiles, role, scope, dry_run=False
+    engine, ams_schema, profiles, role, scope, dry_run=False, create_roles=False
 ):
     if ams_schema:
-        create_acl_from_schemas(engine, ams_schema, role, scope, dry_run)
+        create_acl_from_schemas(engine, ams_schema, role, scope, dry_run, create_roles)
     if profiles:
         profile_list = profiles.values()
         create_acl_from_profiles(engine, "public", profile_list, role, scope)
@@ -73,8 +75,10 @@ def create_acl_from_profiles(engine, schema, profile_list, role, scope):
                         engine.execute(grant_statement)
 
 
-def create_acl_from_schema(engine, ams_schema, role, scope, dry_run):
-    grantee = role
+def create_acl_from_schema(engine, ams_schema, role, scope, dry_run, create_roles):
+    grantee = role if role != 'AUTO' else None
+    if create_roles and grantee:
+        _create_role_if_not_exists(engine, grantee)
     dataset_scope = (
         ams_schema.auth
         if ams_schema.auth
@@ -130,7 +134,10 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run):
                         field_scope_set, table_scope_set, field.name, table_name
                     )
                 )
-                if scope in field_scope_set:
+                grantees = [scope_to_role(scope) for scope in field_scope_set] if role == 'AUTO' else [role] if scope in field_scope_set else []
+                for grantee in grantees:
+                    if create_roles:
+                        _create_role_if_not_exists(engine, grantee, dry_run=dry_run)
                     column_name = to_snake_case(field.name)
                     column_priviliges = [
                         "SELECT ({})".format(column_name),
@@ -147,9 +154,13 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run):
                         ),
                         dry_run=dry_run,
                     )
-        if scope in table_scope_set:
-            if contains_field_grants:
-                #  only grant those fields which have no scope
+        if contains_field_grants:
+            #  only grant those fields without their own scope. The other field have already been granted above
+            grantees = [scope_to_role(scope) for scope in table_scope_set] if role == 'AUTO' else [
+                role] if scope in table_scope_set else []
+            for grantee in grantees:
+                if create_roles:
+                    _create_role_if_not_exists(engine, grantee, dry_run=dry_run)
                 for field in fields:
                     if not field.auth:
                         column_name = to_snake_case(field.name)
@@ -168,7 +179,13 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run):
                             ),
                             dry_run=dry_run,
                         )
-            else:
+        else:
+            # we can grant the whole table instead of field by field
+            grantees = [scope_to_role(scope) for scope in table_scope_set] if role == 'AUTO' else [
+                role] if scope in table_scope_set else []
+            for grantee in grantees:
+                if create_roles:
+                    _create_role_if_not_exists(engine, grantee, dry_run=dry_run)
                 table_priviliges = [
                     "SELECT",
                 ]
@@ -186,12 +203,12 @@ def create_acl_from_schema(engine, ams_schema, role, scope, dry_run):
                 )
 
 
-def create_acl_from_schemas(engine, schemas, role, scopes, dry_run):
+def create_acl_from_schemas(engine, schemas, role, scopes, dry_run, create_roles):
     #  acl_list = query.get_all_table_acls(engine, schema='public')
     #  acl_table_list = [item.name for item in acl_list]
     #  table_names = list()
     for dataset_name, dataset_schema in schemas.items():
-        create_acl_from_schema(engine, dataset_schema, role, scopes, dry_run)
+        create_acl_from_schema(engine, dataset_schema, role, scopes, dry_run, create_roles)
 
 
 def _execute_grant(engine, grant_statement, echo=True, dry_run=False):
@@ -203,3 +220,24 @@ def _execute_grant(engine, grant_statement, echo=True, dry_run=False):
             engine.execute(grant_statement)
         except SQLAlchemyError as err:
             print(err)
+
+
+def _create_role_if_not_exists(engine, role, echo=True, dry_run=False):
+    status_msg = "Skipped" if dry_run else "Executed"
+    if role not in existing_roles:
+        sql_statement = (
+            "DO $$ "
+            "BEGIN "
+            f"CREATE ROLE {role}; "
+            "EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
+            "END "
+            "$$")
+        if echo:
+            print(f"{status_msg} --> {sql_statement}")
+        engine.execute(text(sql_statement).execution_options(autocommit=True))
+        existing_roles.add(role)
+
+
+def scope_to_role(scope):
+    return f"scope_{scope.lower().replace('/','_')}"
+

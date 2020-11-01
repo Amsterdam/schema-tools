@@ -150,6 +150,49 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
     _check_permission_granted(engine, "level_c2", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "level_c2", "gebieden_buurten")
 
+def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
+    """
+    Prove that dataset, table, and field permissions are set according to the "OF-OF" Exclusief principle:
+    Een user met scope LEVEL/A mag alles uit de dataset gebieden zien, behalve tabel bouwblokken.
+    Een user met scope LEVEL/B mag alle velden van tabel bouwblokken zien, behalve beginGeldigheid.
+    Een user met scope LEVEL/C mag veld beginGeldigheid zien.
+    Drie corresponderende users worden automatisch aangemaakt: 'scope_level_a', 'scope_level_b', en 'scope_level_c;
+    """
+
+    ndjson_path = here / "files" / "data" / "gebieden.ndjson"
+    importer = NDJSONImporter(gebieden_schema_auth, engine)
+    importer.generate_tables("bouwblokken", truncate=True)
+    importer.load_file(ndjson_path)
+    importer.generate_tables("buurten", truncate=True)
+
+    # Setup schema and profile
+    ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
+    profile_path = here / "files" / "profiles" / "gebieden_test.json"
+    with open(profile_path) as f:
+        profile = json.load(f)
+    profiles = {profile["name"]: profile}
+
+    # These tests commented out due to: Error when trying to teardown test databases
+    # Roles may still exist from previous test run. Uncomment when fixed:
+    # _check_role_does_not_exist(engine, "scope_level_a")
+    # _check_role_does_not_exist(engine, "scope_level_b")
+    # _check_role_does_not_exist(engine, "scope_level_c")
+
+    # Apply the permissions from Schema and Profiles.
+    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "AUTO", "ALL", create_roles=True)
+    # Check if roles exist and the read priviliges are correct
+    _check_permission_denied(engine, "scope_level_a", "gebieden_bouwblokken")
+    _check_permission_granted(engine, "scope_level_a", "gebieden_buurten")
+
+    _check_permission_granted(engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_denied(engine, "scope_level_b", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_denied(engine, "scope_level_b", "gebieden_buurten")
+
+    _check_permission_denied(engine, "scope_level_c", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_granted(engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_denied(engine, "scope_level_c", "gebieden_buurten")
+
+
 def _create_role(engine, role):
     #  If role already exists just fail and ignore. This may happen if a previous pytest did not terminate correctly.
     try:
@@ -157,6 +200,14 @@ def _create_role(engine, role):
     except ProgrammingError as e:
         if not isinstance(e.orig, DuplicateObject):
             raise
+
+
+def _check_role_does_not_exist(engine, role):
+    """Check if role does not exist"""
+    with engine.begin() as connection:
+        result = connection.execute(f"SELECT rolname FROM pg_roles WHERE rolname='{role}'")
+        rows = [row for row in result]
+        assert len(rows) == 0
 
 
 def _check_permission_denied(engine, role, table, column='*'):
