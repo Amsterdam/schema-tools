@@ -261,23 +261,14 @@ def _revoke_all_priviliges_from_scope_roles(session, echo=True, dry_run=False):
             )  # .execution_options(autocommit=True))
 
 
-def _execute_grant_obsolete(session, grant_statement, echo=True, dry_run=False):
-    status_msg = "Skipped" if dry_run else "Executed"
-    if echo:
-        print(f"{status_msg} --> {grant_statement}")
-    if not dry_run:
-        try:
-            session.execute(grant_statement)
-        except SQLAlchemyError as err:
-            print(err)
-
-
 def _execute_grant(session, grant_statement, echo=True, dry_run=False):
+    #  wrap the grant statement in an anonymous code block to catch reasonable exceptions
+    #  we don't want to break out the session just because a table or column doesn't exist yet or anymore.
     status_msg = "Skipped" if dry_run else "Executed"
     sql_statement = (
         "DO $$ "
         "BEGIN "
-        f"{grant_statement};"
+        f"{grant_statement}; "
         "EXCEPTION WHEN undefined_table OR undefined_column THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
         "END "
         "$$"
@@ -289,20 +280,23 @@ def _execute_grant(session, grant_statement, echo=True, dry_run=False):
 
 
 def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
+    # wrap the create role statement in an anonymous code block to be able to catch exception
+    # we don't want to break out of the session just because the role already exists
     status_msg = "Skipped" if dry_run else "Executed"
+    create_role_statement = f"CREATE ROLE {role}"
     if role not in existing_roles:
         sql_statement = (
             "DO $$ "
             "BEGIN "
-            f"CREATE ROLE {role}; "
+            f"{create_role_statement}; "
             "EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
             "END "
             "$$"
         )
         if echo:
-            print(f"{status_msg} --> {sql_statement}")
+            print(f"{status_msg} --> {create_role_statement}")
         if not dry_run:
-            session.execute(text(sql_statement))  # .execution_options(autocommit=True))
+            session.execute(text(sql_statement))
         existing_roles.add(role)
 
 
