@@ -50,7 +50,9 @@ def apply_schema_and_profile_permissions(
     session = Session()
     try:
         if ams_schema:
-            create_acl_from_schemas(session, ams_schema, role, scope, dry_run, create_roles)
+            create_acl_from_schemas(
+                session, ams_schema, role, scope, dry_run, create_roles
+            )
         if profiles:
             profile_list = profiles.values()
             create_acl_from_profiles(engine, "public", profile_list, role, scope)
@@ -60,6 +62,7 @@ def apply_schema_and_profile_permissions(
         raise
     finally:
         session.close()
+
 
 def create_acl_from_profiles(engine, schema, profile_list, role, scope):
     acl_list = query.get_all_table_acls(engine, schema="public")
@@ -239,16 +242,23 @@ def create_acl_from_schemas(session, schemas, role, scopes, dry_run, create_role
             session, dataset_schema, role, scopes, dry_run, create_roles
         )
 
+
 def _revoke_all_priviliges_from_scope_roles(session, echo=True, dry_run=False):
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
-    result = session.execute(text(f"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'"))
+    result = session.execute(
+        text(f"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'")
+    )
     for rolname in result:
-        revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {rolname[0]};"
+        revoke_statement = (
+            f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {rolname[0]};"
+        )
         if echo:
             print(f"{status_msg} --> {revoke_statement}")
         if not dry_run:
-            session.execute(text(revoke_statement)) #.execution_options(autocommit=True))
+            session.execute(
+                text(revoke_statement)
+            )  # .execution_options(autocommit=True))
 
 
 def _execute_grant_obsolete(session, grant_statement, echo=True, dry_run=False):
@@ -261,16 +271,17 @@ def _execute_grant_obsolete(session, grant_statement, echo=True, dry_run=False):
         except SQLAlchemyError as err:
             print(err)
 
+
 def _execute_grant(session, grant_statement, echo=True, dry_run=False):
     status_msg = "Skipped" if dry_run else "Executed"
     sql_statement = (
-            "DO $$ "
-            "BEGIN "
-            f"{grant_statement};"
-            "EXCEPTION WHEN undefined_table OR undefined_column THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
-            "END "
-            "$$"
-        )
+        "DO $$ "
+        "BEGIN "
+        f"{grant_statement};"
+        "EXCEPTION WHEN undefined_table OR undefined_column THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
+        "END "
+        "$$"
+    )
     if echo:
         print(f"{status_msg} --> {grant_statement}")
     if not dry_run:
