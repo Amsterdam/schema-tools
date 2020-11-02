@@ -22,7 +22,7 @@ from .db import (
     fetch_schema_from_relational_schema,
 )
 from .exceptions import ParserError
-from .events import EventsImporter
+from .events import EventsProcessor
 from .introspect.db import introspect_db_schema
 from .introspect.geojson import introspect_geojson_files
 from .importer.geojson import GeoJSONImporter
@@ -411,8 +411,10 @@ def import_events(db_url, schema_url, schema_location, table_name, events_path):
     dataset_schema = _get_dataset_schema(schema_url, schema_location)
     srid = dataset_schema["crs"].split(":")[-1]
     dataset_table = dataset_schema.get_table_by_id(table_name)
-    importer = EventsImporter(dataset_table, srid, engine)
-    importer.load_events_from_file(events_path)
+    # Run as a transaction
+    with engine.begin() as connection:
+        importer = EventsProcessor(dataset_table, srid, connection)
+        importer.load_events_from_file(events_path)
 
 
 @import_.command("schema")

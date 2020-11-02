@@ -5,7 +5,6 @@ Validaties wschl. eerder in het proces (bij de ingest)
 
 """
 import json
-from shapely.geometry import shape
 from typing import Optional
 from sqlalchemy import MetaData, Table, Column
 from schematools.types import DatasetTableSchema
@@ -15,13 +14,46 @@ from schematools.importer import fetch_col_type, get_table_name
 metadata = MetaData()
 
 
-class EventsImporter:
-    def __init__(self, dataset_table: DatasetTableSchema, srid, engine):
+def fetch_insert_data(event_data):
+    return event_data["entity"]
+
+
+def fetch_update_data(event_data):
+    update_data = {}
+    for modification in event_data["modifications"]:
+        # XXX skip geometrie for now, has geojson format (no wkt)
+        if modification["key"] == "geometrie":
+            continue
+        update_data[modification["key"]] = modification["new_value"]
+    return update_data
+
+
+EVENT_TYPE_MAPPING = {
+    "ADD": ("insert", False, fetch_insert_data),
+    "MODIFY": ("update", True, fetch_update_data),
+    "DELETE": ("delete", True, None),
+}
+
+
+class EventsProcessor:
+    def __init__(
+        self,
+        dataset_table: DatasetTableSchema,
+        srid,
+        connection,
+        local_metadata=False,
+        truncate=False,
+    ):
         self.dataset_table = dataset_table
         self.srid = srid
-        self.engine = engine
-        self.table = table_factory(self.dataset_table, metadata)
-        # self.table.create()
+        self.conn = connection
+        _metadata = MetaData() if local_metadata else metadata  # mainly for testing
+        _metadata.bind = connection.engine
+        self.table = table_factory(self.dataset_table, _metadata)
+        if not self.table.exists():
+            self.table.create()
+        elif truncate:
+            self.conn.execute(self.table.delete())
         self.identifier = dataset_table.identifier
         self.has_compound_key = dataset_table.has_compound_key
         self.geo_fields = geo_fields = []
@@ -29,29 +61,38 @@ class EventsImporter:
             if field.is_geo:
                 geo_fields.append(field.name)
 
-    def load_event(self, event_data):
-        """ Do inserts/updates """
-        row = event_data["entity"]
-        for field_name in self.geo_fields:
-            geo_value = row[field_name]
-            if geo_value is not None:
-                row[field_name] = f"SRID={self.srid};{geo_value}"
-        # Add id field
-        id_value = ".".join(str(row[fn]) for fn in self.identifier)
-        if self.has_compound_key:
-            row["id"] = id_value
+    def process_event(self, identification, event_data):
+        """ Do inserts/updates/deletes """
 
-        self.engine.execute(self.table.insert(), event_data["entity"])
+        db_operation_name, needs_select, data_fetcher = EVENT_TYPE_MAPPING[
+            event_data["_event_type"]
+        ]
+        row = None
+        if data_fetcher is not None:
+            row = data_fetcher(event_data)
+            for field_name in self.geo_fields:
+                geo_value = row.get(field_name)
+                if geo_value is not None:
+                    row[field_name] = f"SRID={self.srid};{geo_value}"
+            # Add id field
+            # id_value = ".".join(str(row[fn]) for fn in self.identifier)
+            if self.has_compound_key:
+                row["id"] = identification
+
+        db_operation = getattr(self.table, db_operation_name)()
+        if needs_select:
+            db_operation = db_operation.where(self.table.c.id == identification)
+        self.conn.execute(db_operation, row if row is not None else {})
 
     def load_events_from_file(self, events_path):
         """ Helper method, primarily used for testing """
 
         with open(events_path) as ef:
             for line in ef:
-                id_, data_str = line.split("|", maxsplit=1)
-                event_data = json.loads(data_str)
-                self.load_event(event_data)
-                break
+                if line.strip():
+                    identification, data_str = line.split("|", maxsplit=1)
+                    event_data = json.loads(data_str)
+                    self.process_event(identification, event_data)
 
 
 def table_factory(

@@ -60,6 +60,17 @@ def dbsession(engine, dbsession, sqlalchemy_keep_db) -> Session:
         dbsession.close()
 
 
+@pytest.fixture()
+def tconn(engine):
+    """Will start a transaction on the connection. The connection will
+    be rolled back after it leaves its scope."""
+
+    with engine.connect() as conn:
+        transaction = conn.begin()
+        try:
+            yield conn
+        finally:
+            transaction.rollback()
 
 
 @pytest.fixture()
@@ -109,9 +120,16 @@ def parkeervakken_schema(schema_json) -> DatasetSchema:
 def gebieden_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("gebieden.json"))
 
+
+@pytest.fixture()
+def bouwblokken_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("bouwblokken.json"))
+
+
 @pytest.fixture()
 def gebieden_schema_auth(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("gebieden_auth.json"))
+
 
 @pytest.fixture()
 def gebieden_schema_auth_list(schema_json) -> DatasetSchema:
@@ -136,6 +154,7 @@ def verblijfsobjecten_schema(schema_json) -> DatasetSchema:
 @pytest.fixture()
 def kadastraleobjecten_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("kadastraleobjecten.json"))
+
 
 @pytest.fixture()
 def meldingen_schema(schema_json) -> DatasetSchema:
