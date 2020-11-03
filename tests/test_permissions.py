@@ -7,6 +7,32 @@ from psycopg2.errors import DuplicateObject
 import pytest
 from schematools.types import DatasetSchema
 
+def test_auto_permissions(here, engine, gebieden_schema_auth, dbsession):
+    """
+    Prove that roles are automatically created for each scope in the schema
+    LEVEL/A --> scope_level_a
+    LEVEL/B --> scope_level_b
+    LEVEL/C --> scope_level_c
+    """
+    ndjson_path = here / "files" / "data" / "gebieden.ndjson"
+    importer = NDJSONImporter(gebieden_schema_auth, engine)
+    importer.generate_tables("bouwblokken", truncate=True)
+    importer.load_file(ndjson_path)
+    importer.generate_tables("buurten", truncate=True)
+
+    # Setup schema and profile
+    ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
+    profile_path = here / "files" / "profiles" / "gebieden_test.json"
+    with open(profile_path) as f:
+        profile = json.load(f)
+    profiles = {profile["name"]: profile}
+
+    # Apply the permissions from Schema and Profiles.
+    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "AUTO", "ALL", create_roles=True)
+    _check_permission_granted(engine, "scope_level_a", "gebieden_buurten")
+    _check_permission_granted(engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_granted(engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid")
+
 
 def test_openbaar_permissions(here, engine, afval_schema, dbsession):
     """
