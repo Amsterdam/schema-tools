@@ -66,14 +66,6 @@ argument_profile_location = click.argument(
 )
 
 
-argument_role = click.argument(
-    "role", metavar="(POSTGRES-ROLE | AUTO)"
-)
-
-argument_scope = click.argument(
-    "scope", metavar="(SCOPE-NAME | ALL)"
-)
-
 def _get_engine(db_url, pg_schemas=None):
     """Initialize the SQLAlchemy engine, and report click errors"""
     kwargs = {}
@@ -147,14 +139,12 @@ def permissions_revoke(db_url, role):
 @option_profile_url
 @argument_schema_location
 @argument_profile_location
-#@argument_role
-#@argument_scope
 @click.option("--auto", is_flag=True, default=False, help="Grant each scope X to their associated db role scope_x.")
 @click.option("--role", is_flag=False, default="", help="Role to receive grants. Ignored when --auto=True")
 @click.option("--scope", is_flag=False, default="", help="Scope to be granted. Ignored when --auto=True")
 @click.option("--execute/--dry-run", default=False, help="Execute SQL statements or dry-run [default]")
 @click.option("--create-roles", is_flag=True, default=False, help="Create missing postgres roles")
-@click.option("--revoke", is_flag=True, default=False, help="Revoke all previous table and column permissions")
+@click.option("--revoke", is_flag=True, default=False, help="Before granting new permissions, revoke first all previous table and column permissions")
 
 def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, auto, role, scope, execute, create_roles, revoke):
     """Set permissions for a postgres role associated with a scope from Amsterdam Schema or Profiles."""

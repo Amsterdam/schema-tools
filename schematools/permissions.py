@@ -44,7 +44,14 @@ def revoke_permissions(engine, role):
 
 
 def apply_schema_and_profile_permissions(
-    engine, ams_schema, profiles, role, scope, dry_run=False, create_roles=False, revoke=False
+    engine,
+    ams_schema,
+    profiles,
+    role,
+    scope,
+    dry_run=False,
+    create_roles=False,
+    revoke=False,
 ):
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -232,7 +239,9 @@ def create_acl_from_schema(session, ams_schema, role, scope, dry_run, create_rol
                 )
 
 
-def create_acl_from_schemas(session, schemas, role, scopes, dry_run, create_roles, revoke):
+def create_acl_from_schemas(
+    session, schemas, role, scopes, dry_run, create_roles, revoke
+):
     #  acl_list = query.get_all_table_acls(engine, schema='public')
     #  acl_table_list = [item.name for item in acl_list]
     #  table_names = list()
@@ -249,7 +258,9 @@ def create_acl_from_schemas(session, schemas, role, scopes, dry_run, create_role
 
 def _revoke_all_priviliges_from_role(session, role, echo=True, dry_run=False):
     status_msg = "Skipped" if dry_run else "Executed"
-    revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {role}"
+    revoke_statement = (
+        f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {role}"
+    )
     sql_statement = (
         "DO $$ "
         "BEGIN "
@@ -280,7 +291,6 @@ def _revoke_all_priviliges_from_scope_roles(session, echo=True, dry_run=False):
             session.execute(
                 text(revoke_statement)
             )  # .execution_options(autocommit=True))
-
 
 
 def _execute_grant(session, grant_statement, echo=True, dry_run=False):
