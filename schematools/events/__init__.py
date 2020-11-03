@@ -4,10 +4,12 @@ Direct de tabel bijwerken, of via een tussenstap (met validaties)
 Validaties wschl. eerder in het proces (bij de ingest)
 
 """
+from collections import defaultdict
 import json
-from typing import Optional
-from sqlalchemy import MetaData, Table, Column
-from schematools.types import DatasetTableSchema
+from typing import Optional, Dict
+from sqlalchemy import MetaData, Table, Column, ForeignKey, Integer, String
+from schematools import MAX_TABLE_LENGTH
+from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
 from schematools.importer import fetch_col_type, get_table_name
 
@@ -38,30 +40,30 @@ EVENT_TYPE_MAPPING = {
 class EventsProcessor:
     def __init__(
         self,
-        dataset_table: DatasetTableSchema,
+        dataset: DatasetSchema,
         srid,
         connection,
         local_metadata=False,
         truncate=False,
     ):
-        self.dataset_table = dataset_table
+        self.dataset = dataset
         self.srid = srid
         self.conn = connection
         _metadata = MetaData() if local_metadata else metadata  # mainly for testing
         _metadata.bind = connection.engine
-        self.table = table_factory(self.dataset_table, _metadata)
-        if not self.table.exists():
-            self.table.create()
-        elif truncate:
-            self.conn.execute(self.table.delete())
-        self.identifier = dataset_table.identifier
-        self.has_compound_key = dataset_table.has_compound_key
-        self.geo_fields = geo_fields = []
-        for field in dataset_table.fields:
-            if field.is_geo:
-                geo_fields.append(field.name)
+        self.tables = tables_factory(self.dataset, _metadata)
+        for table_id, table in self.tables.items():
+            if not table.exists():
+                table.create()
+            elif truncate:
+                self.conn.execute(table.delete())
+            # self.has_compound_key = dataset_table.has_compound_key
+            self.geo_fields = geo_fields = defaultdict(list)
+            for field in dataset.get_table_by_id(table_id).fields:
+                if field.is_geo:
+                    geo_fields[table_id].append(field.name)
 
-    def process_event(self, identification, event_data):
+    def process_event(self, dataset_id, table_id, identification, event_data):
         """ Do inserts/updates/deletes """
 
         db_operation_name, needs_select, data_fetcher = EVENT_TYPE_MAPPING[
@@ -70,21 +72,23 @@ class EventsProcessor:
         row = None
         if data_fetcher is not None:
             row = data_fetcher(event_data)
-            for field_name in self.geo_fields:
+            for field_name in self.geo_fields[table_id]:
                 geo_value = row.get(field_name)
                 if geo_value is not None:
                     row[field_name] = f"SRID={self.srid};{geo_value}"
             # Add id field
             # id_value = ".".join(str(row[fn]) for fn in self.identifier)
-            if self.has_compound_key:
-                row["id"] = identification
+            # if self.has_compound_key:
+            # XXX for now we assume that identification is the PK
+            row["id"] = identification
 
-        db_operation = getattr(self.table, db_operation_name)()
+        table = self.tables[table_id]
+        db_operation = getattr(table, db_operation_name)()
         if needs_select:
-            db_operation = db_operation.where(self.table.c.id == identification)
+            db_operation = db_operation.where(table.c.id == identification)
         self.conn.execute(db_operation, row if row is not None else {})
 
-    def load_events_from_file(self, events_path):
+    def load_events_from_file(self, events_path, dataset_id, table_id):
         """ Helper method, primarily used for testing """
 
         with open(events_path) as ef:
@@ -92,49 +96,116 @@ class EventsProcessor:
                 if line.strip():
                     identification, data_str = line.split("|", maxsplit=1)
                     event_data = json.loads(data_str)
-                    self.process_event(identification, event_data)
+                    self.process_event(dataset_id, table_id, identification, event_data)
 
 
-def table_factory(
-    dataset_table: DatasetTableSchema,
+def tables_factory(
+    dataset: DatasetSchema,
     metadata: Optional[MetaData] = None,
-) -> Table:
-    """Generate thie SQLAlchemy Table object to work with the JSON Schema
+) -> Dict[str, Table]:
+    """Generate thie SQLAlchemy Table objects to work with the JSON Schema
 
-    :param dataset_table: The Amsterdam Schema definition of the table
+    :param dataset: The Amsterdam Schema definition of the dataset
     :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
 
-    The returned tables are keyed on the name of the table. The same goes for the incoming data,
-    so during creation or records, the data can be associated with the correct table.
+    The returned tables are keyed on the name of the dataset and table.
+    The same goes for the incoming data, so during creation or records,
+    the data can be associated with the correct table.
     """
-    db_table_name = get_table_name(dataset_table)
 
+    tables = defaultdict(dict)
     metadata = metadata or MetaData()
-    columns = []
-    for field in dataset_table.fields:
-        if (
-            field.type.endswith("#/definitions/schema")
-            or field.relation
-            or field.nm_relation
-        ):
-            continue
-        field_name = to_snake_case(field.name)
 
-        try:
-            col_type = fetch_col_type(field)
-        except KeyError:
-            raise NotImplementedError(
-                f'Import failed at "{field.name}": {dict(field)!r}\n'
-                f"Field type '{field.type}' is not implemented."
-            ) from None
+    for dataset_table in dataset.tables:
+        db_table_name = get_table_name(dataset_table)
+        table_id = dataset_table.id
+        columns = []
+        sub_tables = {}
+        for field in dataset_table.fields:
+            if (
+                field.type.endswith("#/definitions/schema")
+                or field.relation
+                or field.nm_relation
+            ):
+                continue
+            field_name = to_snake_case(field.name)
+            sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
 
-        col_kwargs = {"nullable": not field.required}
-        if field.is_primary:
-            col_kwargs["primary_key"] = True
-            col_kwargs["nullable"] = False
-            col_kwargs["autoincrement"] = False
+            try:
 
-        id_postfix = "_id" if field.relation else ""
-        columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
+                if field.is_array:
 
-    return Table(db_table_name, metadata, *columns)
+                    if field.is_nested_table:
+                        # We assume parent has an id field, Django needs it
+                        fk_column = f"{db_table_name}.id"
+                        sub_columns = [
+                            Column("id", Integer, primary_key=True),
+                            Column(
+                                "parent_id", ForeignKey(fk_column, ondelete="CASCADE")
+                            ),
+                        ]
+
+                    elif field.is_through_table:
+                        # We need a 'through' table for the n-m relation
+                        sub_columns = [
+                            Column(
+                                f"{dataset_table.id}_id",
+                                String,
+                            ),
+                            Column(
+                                f"{field_name}_id",
+                                String,
+                            ),
+                        ]
+                        # And the field(s) for the left side of the relation
+                        # if this left table has a compound key
+                        if dataset_table.has_compound_key:
+                            for id_field in dataset_table.get_fields_by_id(
+                                dataset_table.identifier
+                            ):
+                                sub_columns.append(
+                                    Column(
+                                        f"{dataset_table.id}_{to_snake_case(id_field.name)}",
+                                        fetch_col_type(id_field),
+                                    )
+                                )
+
+                    for sub_field in field.sub_fields:
+                        colname_prefix = (
+                            f"{field_name}_" if field.is_through_table else ""
+                        )
+                        sub_columns.append(
+                            Column(
+                                f"{colname_prefix}{to_snake_case(sub_field.name)}",
+                                fetch_col_type(sub_field),
+                            )
+                        )
+
+                    sub_tables[sub_table_id] = Table(
+                        sub_table_id,
+                        metadata,
+                        *sub_columns,
+                    )
+
+                    continue
+
+                col_type = fetch_col_type(field)
+            except KeyError:
+                raise NotImplementedError(
+                    f'Import failed at "{field.name}": {dict(field)!r}\n'
+                    f"Field type '{field.type}' is not implemented."
+                ) from None
+
+            col_kwargs = {"nullable": not field.required}
+            if field.is_primary:
+                col_kwargs["primary_key"] = True
+                col_kwargs["nullable"] = False
+                col_kwargs["autoincrement"] = False
+
+            id_postfix = "_id" if field.relation else ""
+            columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
+
+        tables[table_id] = Table(db_table_name, metadata, *columns)
+        tables.update(**sub_tables)
+
+    return tables
