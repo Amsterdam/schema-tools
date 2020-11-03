@@ -149,14 +149,16 @@ def permissions_revoke(db_url, role):
 @argument_profile_location
 #@argument_role
 #@argument_scope
-@click.option("--auto", is_flag=True, default=False, help="Grant each scope X to their associated db role scope_x")
+@click.option("--auto", is_flag=True, default=False, help="Grant each scope X to their associated db role scope_x.")
 @click.option("--role", is_flag=False, default="", help="Role to receive grants. Ignored when --auto=True")
 @click.option("--scope", is_flag=False, default="", help="Scope to be granted. Ignored when --auto=True")
-@click.option("--dry-run", is_flag=True, default=False, help="Don't execute the GRANT statements")
+@click.option("--execute/--dry-run", default=False, help="Execute SQL statements or dry-run [default]")
 @click.option("--create-roles", is_flag=True, default=False, help="Create missing postgres roles")
+@click.option("--revoke", is_flag=True, default=False, help="Revoke all previous table and column permissions")
 
-def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, auto, role, scope, dry_run, create_roles):
+def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, auto, role, scope, execute, create_roles, revoke):
     """Set permissions for a postgres role associated with a scope from Amsterdam Schema or Profiles."""
+    dry_run = not execute
     if auto:
         role = "AUTO"
         scope = "ALL"
@@ -187,7 +189,7 @@ def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_
         profile = _fetch_json(profile_location)
         profiles = {profile["name"]: profile}
     if auto or (role and scope):
-        apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope, dry_run, create_roles)
+        apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope, dry_run, create_roles, revoke)
     else:
         print("Choose --auto or specify both a --role and a --scope to be able to grant permissions")
 

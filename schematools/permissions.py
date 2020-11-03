@@ -44,14 +44,14 @@ def revoke_permissions(engine, role):
 
 
 def apply_schema_and_profile_permissions(
-    engine, ams_schema, profiles, role, scope, dry_run=False, create_roles=False
+    engine, ams_schema, profiles, role, scope, dry_run=False, create_roles=False, revoke=False
 ):
     Session = sessionmaker(bind=engine)
     session = Session()
     try:
         if ams_schema:
             create_acl_from_schemas(
-                session, ams_schema, role, scope, dry_run, create_roles
+                session, ams_schema, role, scope, dry_run, create_roles, revoke
             )
         if profiles:
             profile_list = profiles.values()
@@ -59,6 +59,7 @@ def apply_schema_and_profile_permissions(
         session.commit()
     except:
         session.rollback()
+        print("warning: session rolled back")
         raise
     finally:
         session.close()
@@ -231,16 +232,36 @@ def create_acl_from_schema(session, ams_schema, role, scope, dry_run, create_rol
                 )
 
 
-def create_acl_from_schemas(session, schemas, role, scopes, dry_run, create_roles):
+def create_acl_from_schemas(session, schemas, role, scopes, dry_run, create_roles, revoke):
     #  acl_list = query.get_all_table_acls(engine, schema='public')
     #  acl_table_list = [item.name for item in acl_list]
     #  table_names = list()
-
-    _revoke_all_priviliges_from_scope_roles(session, dry_run=dry_run)
+    if revoke:
+        if role == "AUTO":
+            _revoke_all_priviliges_from_scope_roles(session, dry_run=dry_run)
+        else:
+            _revoke_all_priviliges_from_role(session, role, dry_run=dry_run)
     for dataset_name, dataset_schema in schemas.items():
         create_acl_from_schema(
             session, dataset_schema, role, scopes, dry_run, create_roles
         )
+
+
+def _revoke_all_priviliges_from_role(session, role, echo=True, dry_run=False):
+    status_msg = "Skipped" if dry_run else "Executed"
+    revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {role}"
+    sql_statement = (
+        "DO $$ "
+        "BEGIN "
+        f"{revoke_statement}; "
+        "EXCEPTION WHEN undefined_object THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
+        "END "
+        "$$"
+    )
+    if echo:
+        print(f"{status_msg} --> {revoke_statement}")
+    if not dry_run:
+        session.execute(sql_statement)
 
 
 def _revoke_all_priviliges_from_scope_roles(session, echo=True, dry_run=False):
@@ -259,6 +280,7 @@ def _revoke_all_priviliges_from_scope_roles(session, echo=True, dry_run=False):
             session.execute(
                 text(revoke_statement)
             )  # .execution_options(autocommit=True))
+
 
 
 def _execute_grant(session, grant_statement, echo=True, dry_run=False):
