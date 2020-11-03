@@ -45,6 +45,7 @@ def revoke_permissions(engine, role):
 
 def apply_schema_and_profile_permissions(
     engine,
+    pg_schema,
     ams_schema,
     profiles,
     role,
@@ -58,11 +59,11 @@ def apply_schema_and_profile_permissions(
     try:
         if ams_schema:
             create_acl_from_schemas(
-                session, ams_schema, role, scope, dry_run, create_roles, revoke
+                session, pg_schema, ams_schema, role, scope, dry_run, create_roles, revoke
             )
         if profiles:
             profile_list = profiles.values()
-            create_acl_from_profiles(engine, "public", profile_list, role, scope)
+            create_acl_from_profiles(engine, pg_schema, profile_list, role, scope)
         session.commit()
     except:
         session.rollback()
@@ -72,8 +73,9 @@ def apply_schema_and_profile_permissions(
         session.close()
 
 
-def create_acl_from_profiles(engine, schema, profile_list, role, scope):
-    acl_list = query.get_all_table_acls(engine, schema="public")
+def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
+    # NOTE: Rudimentary, not ready for production.
+    acl_list = query.get_all_table_acls(engine, schema=pg_schema)
     priviliges = [
         "SELECT",
     ]
@@ -89,13 +91,13 @@ def create_acl_from_profiles(engine, schema, profile_list, role, scope):
                             item.name,
                             grantee,
                             grant_option=False,
-                            schema=schema,
+                            schema=pg_schema,
                         )
                         print(grant_statement)
                         engine.execute(grant_statement)
 
 
-def create_acl_from_schema(session, ams_schema, role, scope, dry_run, create_roles):
+def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run, create_roles):
     grantee = role if role != "AUTO" else None
     if create_roles and grantee:
         _create_role_if_not_exists(session, grantee)
@@ -176,7 +178,7 @@ def create_acl_from_schema(session, ams_schema, role, scope, dry_run, create_rol
                             table_name,
                             grantee,
                             grant_option=False,
-                            schema="public",
+                            schema=pg_schema,
                         ),
                         dry_run=dry_run,
                     )
@@ -206,7 +208,7 @@ def create_acl_from_schema(session, ams_schema, role, scope, dry_run, create_rol
                                 table_name,
                                 grantee,
                                 grant_option=False,
-                                schema="public",
+                                schema=pg_schema,
                             ),
                             dry_run=dry_run,
                         )
@@ -233,33 +235,33 @@ def create_acl_from_schema(session, ams_schema, role, scope, dry_run, create_rol
                         table_name,
                         grantee,
                         grant_option=False,
-                        schema="public",
+                        schema=pg_schema,
                     ),
                     dry_run=dry_run,
                 )
 
 
 def create_acl_from_schemas(
-    session, schemas, role, scopes, dry_run, create_roles, revoke
+    session, pg_schema, schemas, role, scopes, dry_run, create_roles, revoke
 ):
     #  acl_list = query.get_all_table_acls(engine, schema='public')
     #  acl_table_list = [item.name for item in acl_list]
     #  table_names = list()
     if revoke:
         if role == "AUTO":
-            _revoke_all_priviliges_from_scope_roles(session, dry_run=dry_run)
+            _revoke_all_priviliges_from_scope_roles(session, pg_schema, dry_run=dry_run)
         else:
-            _revoke_all_priviliges_from_role(session, role, dry_run=dry_run)
+            _revoke_all_priviliges_from_role(session, pg_schema, role, dry_run=dry_run)
     for dataset_name, dataset_schema in schemas.items():
         create_acl_from_schema(
-            session, dataset_schema, role, scopes, dry_run, create_roles
+            session, pg_schema, dataset_schema, role, scopes, dry_run, create_roles
         )
 
 
-def _revoke_all_priviliges_from_role(session, role, echo=True, dry_run=False):
+def _revoke_all_priviliges_from_role(session, pg_schema, role, echo=True, dry_run=False):
     status_msg = "Skipped" if dry_run else "Executed"
     revoke_statement = (
-        f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {role}"
+        f"REVOKE ALL PRIVILEGES ON ALL TABLES IN {pg_schema} FROM {role}"
     )
     sql_statement = (
         "DO $$ "
@@ -275,7 +277,7 @@ def _revoke_all_priviliges_from_role(session, role, echo=True, dry_run=False):
         session.execute(sql_statement)
 
 
-def _revoke_all_priviliges_from_scope_roles(session, echo=True, dry_run=False):
+def _revoke_all_priviliges_from_scope_roles(session, pg_schema, echo=True, dry_run=False):
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
     result = session.execute(
@@ -283,7 +285,7 @@ def _revoke_all_priviliges_from_scope_roles(session, echo=True, dry_run=False):
     )
     for rolname in result:
         revoke_statement = (
-            f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {rolname[0]};"
+            f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]};"
         )
         if echo:
             print(f"{status_msg} --> {revoke_statement}")
