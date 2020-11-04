@@ -59,7 +59,14 @@ def apply_schema_and_profile_permissions(
     try:
         if ams_schema:
             create_acl_from_schemas(
-                session, pg_schema, ams_schema, role, scope, dry_run, create_roles, revoke
+                session,
+                pg_schema,
+                ams_schema,
+                role,
+                scope,
+                dry_run,
+                create_roles,
+                revoke,
             )
         if profiles:
             profile_list = profiles.values()
@@ -97,7 +104,9 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
                         engine.execute(grant_statement)
 
 
-def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run, create_roles):
+def create_acl_from_schema(
+    session, pg_schema, ams_schema, role, scope, dry_run, create_roles
+):
     grantee = role if role != "AUTO" else None
     if create_roles and grantee:
         _create_role_if_not_exists(session, grantee)
@@ -258,11 +267,11 @@ def create_acl_from_schemas(
         )
 
 
-def _revoke_all_priviliges_from_role(session, pg_schema, role, echo=True, dry_run=False):
+def _revoke_all_priviliges_from_role(
+    session, pg_schema, role, echo=True, dry_run=False
+):
     status_msg = "Skipped" if dry_run else "Executed"
-    revoke_statement = (
-        f"REVOKE ALL PRIVILEGES ON ALL TABLES IN {pg_schema} FROM {role}"
-    )
+    revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN {pg_schema} FROM {role}"
     sql_statement = (
         "DO $$ "
         "BEGIN "
@@ -277,16 +286,16 @@ def _revoke_all_priviliges_from_role(session, pg_schema, role, echo=True, dry_ru
         session.execute(sql_statement)
 
 
-def _revoke_all_priviliges_from_scope_roles(session, pg_schema, echo=True, dry_run=False):
+def _revoke_all_priviliges_from_scope_roles(
+    session, pg_schema, echo=True, dry_run=False
+):
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
     result = session.execute(
         text(f"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'")
     )
     for rolname in result:
-        revoke_statement = (
-            f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]};"
-        )
+        revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]};"
         if echo:
             print(f"{status_msg} --> {revoke_statement}")
         if not dry_run:
