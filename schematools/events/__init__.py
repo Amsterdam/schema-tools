@@ -6,7 +6,8 @@ Validaties wschl. eerder in het proces (bij de ingest)
 """
 from collections import defaultdict
 import json
-from typing import Optional, Dict
+import logging
+from typing import Optional, Dict, List
 from sqlalchemy import MetaData, Table, Column, ForeignKey, Integer, String
 from schematools import MAX_TABLE_LENGTH
 from schematools.types import DatasetSchema
@@ -14,6 +15,9 @@ from schematools.utils import to_snake_case
 from schematools.importer import fetch_col_type, get_table_name
 
 metadata = MetaData()
+
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_insert_data(event_data):
@@ -36,67 +40,132 @@ EVENT_TYPE_MAPPING = {
     "DELETE": ("delete", True, None),
 }
 
+COLLECTION_TO_TABLE = {
+    "gbd_bbk_gbd_brt_ligt_in_buurt": ("gebieden", "bouwblokken", "ligt_in_buurt")
+}
+
 
 class EventsProcessor:
     def __init__(
         self,
-        dataset: DatasetSchema,
+        datasets: List[DatasetSchema],
         srid,
         connection,
         local_metadata=False,
         truncate=False,
     ):
-        self.dataset = dataset
+        logger.info("blaat")
+        self.datasets: Dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
         self.srid = srid
         self.conn = connection
         _metadata = MetaData() if local_metadata else metadata  # mainly for testing
         _metadata.bind = connection.engine
-        self.tables = tables_factory(self.dataset, _metadata)
-        for table_id, table in self.tables.items():
-            if not table.exists():
-                table.create()
-            elif truncate:
-                self.conn.execute(table.delete())
-            # self.has_compound_key = dataset_table.has_compound_key
-            self.geo_fields = geo_fields = defaultdict(list)
-            for field in dataset.get_table_by_id(table_id).fields:
-                if field.is_geo:
-                    geo_fields[table_id].append(field.name)
+        self.tables = {}
+        for dataset_id, dataset in self.datasets.items():
+            base_tables_ids = set(dataset_table.id for dataset_table in dataset.tables)
+            self.tables[dataset_id] = tfac = tables_factory(dataset, _metadata)
+            self.geo_fields = defaultdict(lambda: defaultdict(list))
+            for table_id, table in tfac.items():
+                if not table.exists():
+                    table.create()
+                elif truncate:
+                    self.conn.execute(table.delete())
+                # self.has_compound_key = dataset_table.has_compound_key
+                # skip the generated nm tables
+                if table_id not in base_tables_ids:
+                    continue
+                for field in dataset.get_table_by_id(table_id).fields:
+                    if field.is_geo:
+                        self.geo_fields[dataset_id][table_id].append(field.name)
 
-    def process_event(self, dataset_id, table_id, identification, event_data):
-        """ Do inserts/updates/deletes """
+    def process_relation(self, source_id, event_data):
 
-        db_operation_name, needs_select, data_fetcher = EVENT_TYPE_MAPPING[
-            event_data["_event_type"]
-        ]
-        row = None
+        event_type = event_data["_event_type"]
+        _, _, data_fetcher = EVENT_TYPE_MAPPING[event_type]
+        collection = event_data["_collection"]
+
+        # Determing if nm or 1n relation
+        dataset_id, table_id, relation_fieldname = COLLECTION_TO_TABLE[collection]
+        field = (
+            self.datasets[dataset_id]
+            .get_table_by_id(table_id)
+            .get_field_by_id(relation_fieldname)
+        )
+
         if data_fetcher is not None:
             row = data_fetcher(event_data)
-            for field_name in self.geo_fields[table_id]:
+            src_id = row["src_id"]
+            src_volgnummer = row["src_volgnummer"]
+            dst_id = row["dst_id"]
+            dst_volgnummer = row["dst_volgnummer"]
+
+            table = self.tables[dataset_id][table_id]
+            # XXX add the 2 extra fields
+            updates = {f"{relation_fieldname}_id": f"{dst_id}.{dst_volgnummer}"}
+
+            result = self.conn.execute(
+                table.update()
+                .where(table.c.id == f"{src_id}.{src_volgnummer}")
+                .returning(table.c.id),
+                updates,
+            )
+            if not result.fetchall():
+                logger.warn(
+                    "Nothing to update for %s-%s: %s.%s",
+                    dataset_id,
+                    table_id,
+                    src_id,
+                    src_volgnummer,
+                )
+
+    def process_row(self, source_id, event_data):
+
+        event_type = event_data["_event_type"]
+        db_operation_name, needs_select, data_fetcher = EVENT_TYPE_MAPPING[event_type]
+        row = {}
+        dataset_id = event_data["_catalog"]
+        table_id = event_data["_collection"]
+        identifier = self.datasets[dataset_id].get_table_by_id(table_id).identifier
+        if data_fetcher is not None:
+            row = data_fetcher(event_data)
+            for field_name in self.geo_fields[dataset_id][table_id]:
                 geo_value = row.get(field_name)
                 if geo_value is not None:
                     row[field_name] = f"SRID={self.srid};{geo_value}"
-            # Add id field
-            # id_value = ".".join(str(row[fn]) for fn in self.identifier)
-            # if self.has_compound_key:
-            # XXX for now we assume that identification is the PK
-            row["id"] = identification
 
-        table = self.tables[table_id]
+            # Only for ADD we need to generate the PK
+            if event_type == "ADD":
+                id_value = ".".join(str(row[fn]) for fn in identifier)
+                row["id"] = id_value
+            row["source_id"] = source_id
+
+        table = self.tables[dataset_id][table_id]
         db_operation = getattr(table, db_operation_name)()
         if needs_select:
-            db_operation = db_operation.where(table.c.id == identification)
-        self.conn.execute(db_operation, row if row is not None else {})
+            db_operation = db_operation.where(table.c.source_id == source_id)
+        self.conn.execute(db_operation, row)
 
-    def load_events_from_file(self, events_path, dataset_id, table_id):
+    def process_event(self, source_id, event_data, is_relation=False):
+        """ Do inserts/updates/deletes """
+
+        if is_relation:
+            self.process_relation(source_id, event_data)
+        else:
+            self.process_row(source_id, event_data)
+
+    def load_events_from_file(self, events_path, is_relation=False):
         """ Helper method, primarily used for testing """
 
         with open(events_path) as ef:
             for line in ef:
                 if line.strip():
-                    identification, data_str = line.split("|", maxsplit=1)
+                    source_id, data_str = line.split("|", maxsplit=1)
                     event_data = json.loads(data_str)
-                    self.process_event(dataset_id, table_id, identification, event_data)
+                    self.process_event(
+                        source_id,
+                        event_data,
+                        is_relation,
+                    )
 
 
 def tables_factory(
@@ -119,14 +188,13 @@ def tables_factory(
     for dataset_table in dataset.tables:
         db_table_name = get_table_name(dataset_table)
         table_id = dataset_table.id
-        columns = []
+        # Always add source_id
+        columns = [
+            Column("source_id", String, index=True, unique=True),
+        ]
         sub_tables = {}
         for field in dataset_table.fields:
-            if (
-                field.type.endswith("#/definitions/schema")
-                or field.relation
-                or field.nm_relation
-            ):
+            if field.type.endswith("#/definitions/schema"):
                 continue
             field_name = to_snake_case(field.name)
             sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
