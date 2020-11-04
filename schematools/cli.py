@@ -158,16 +158,6 @@ def permissions_apply(db_url, schema_url, profile_url, schema_filename, profile_
         role = "AUTO"
         scope = "ALL"
 
-    def _fetch_json(location):
-        if not location.startswith("http"):
-            with open(location) as f:
-                json_obj = json.load(f)
-        else:
-            response = requests.get(location)
-            response.raise_for_status()
-            json_obj = response.json()
-        return json_obj
-
     engine = _get_engine(db_url)
 
     if schema_filename:
@@ -177,7 +167,7 @@ def permissions_apply(db_url, schema_url, profile_url, schema_filename, profile_
         ams_schema = schema_defs_from_url(schemas_url=schema_url)
 
     if profile_filename:
-        profile = _fetch_json(profile_filename)
+        profile = schema_fetch_url_file(profile_filename)
         profiles = {profile["name"]: profile}
     else:
         # Profiles not live yet, temporarilly commented out
