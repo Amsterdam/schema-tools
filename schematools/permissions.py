@@ -88,7 +88,7 @@ def create_acl_from_profiles(engine, schema, profile_list, role, scope):
 
 
 def create_acl_from_schema(session, ams_schema, role, scope, dry_run, create_roles):
-    grantee = role if role != "AUTO" else None
+    grantee = None if role == "AUTO" else role
     if create_roles and grantee:
         _create_role_if_not_exists(session, grantee)
     dataset_scope = (
