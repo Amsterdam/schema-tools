@@ -28,7 +28,7 @@ def test_auto_permissions(here, engine, gebieden_schema_auth, dbsession):
     profiles = {profile["name"]: profile}
 
     # Apply the permissions from Schema and Profiles.
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "AUTO", "ALL", create_roles=True)
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True)
     _check_permission_granted(engine, "scope_level_a", "gebieden_buurten")
     _check_permission_granted(engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid")
     _check_permission_granted(engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid")
@@ -57,8 +57,8 @@ def test_openbaar_permissions(here, engine, afval_schema, dbsession):
     _check_permission_denied(engine, "openbaar", "afvalwegingen_containers")
     _check_permission_denied(engine, "bag_r", "afvalwegingen_clusters")
 
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "openbaar", "OPENBAAR")
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "bag_r", "BAG/R")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "openbaar", "OPENBAAR")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "bag_r", "BAG/R")
 
     _check_permission_granted(engine, "openbaar", "afvalwegingen_containers")
     _check_permission_denied(engine, "openbaar", "afvalwegingen_clusters")
@@ -98,9 +98,9 @@ def test_interacting_permissions(here, engine, gebieden_schema_auth, dbsession):
             _check_permission_denied(engine, test_role, table)
 
     # Apply the permissions from Schema and Profiles.
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_a", "LEVEL/A")
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_b", "LEVEL/B")
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_c", "LEVEL/C")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_a", "LEVEL/A")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_b", "LEVEL/B")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_c", "LEVEL/C")
 
     # Check if the read priviliges are correct
     _check_permission_denied(engine, "level_a", "gebieden_bouwblokken")
@@ -148,12 +148,12 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
             _check_permission_denied(engine, test_role, table)
 
     # Apply the permissions from Schema and Profiles.
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_a1", "LEVEL/A1")
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_b1", "LEVEL/B1")
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_c1", "LEVEL/C1")
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_a2", "LEVEL/A2")
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_b2", "LEVEL/B2")
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "level_c2", "LEVEL/C2")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_a1", "LEVEL/A1")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_b1", "LEVEL/B1")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_c1", "LEVEL/C1")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_a2", "LEVEL/A2")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_b2", "LEVEL/B2")
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_c2", "LEVEL/C2")
 
     # Check if the read priviliges are correct
     _check_permission_denied(engine, "level_a1", "gebieden_bouwblokken")
@@ -205,7 +205,7 @@ def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
     # _check_role_does_not_exist(engine, "scope_level_c")
 
     # Apply the permissions from Schema and Profiles.
-    apply_schema_and_profile_permissions(engine, ams_schema, profiles, "AUTO", "ALL", create_roles=True)
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True)
     # Check if roles exist and the read priviliges are correct
     _check_permission_denied(engine, "scope_level_a", "gebieden_bouwblokken")
     _check_permission_granted(engine, "scope_level_a", "gebieden_buurten")
