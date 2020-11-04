@@ -188,15 +188,14 @@ def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run,
                         ),
                         dry_run=dry_run,
                     )
+        if role == 'AUTO':
+            grantees = [scope_to_role(scope) for scope in table_scope_set]
+        elif scope in table_scope_set:
+            grantees = [role]
+        else:
+            grantees = []
         if contains_field_grants:
             #  only grant those fields without their own scope. The other field have already been granted above
-            grantees = (
-                [scope_to_role(scope) for scope in table_scope_set]
-                if role == "AUTO"
-                else [role]
-                if scope in table_scope_set
-                else []
-            )
             for grantee in grantees:
                 if create_roles:
                     _create_role_if_not_exists(session, grantee, dry_run=dry_run)
@@ -220,13 +219,6 @@ def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run,
                         )
         else:
             # we can grant the whole table instead of field by field
-            grantees = (
-                [scope_to_role(scope) for scope in table_scope_set]
-                if role == "AUTO"
-                else [role]
-                if scope in table_scope_set
-                else []
-            )
             for grantee in grantees:
                 if create_roles:
                     _create_role_if_not_exists(session, grantee, dry_run=dry_run)
