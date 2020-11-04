@@ -324,6 +324,7 @@ class DatasetTableSchema(SchemaType):
         """Auth of the table (if set)"""
         return self.get("auth")
 
+
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """
 

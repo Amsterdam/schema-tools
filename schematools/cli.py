@@ -410,10 +410,9 @@ def import_events(db_url, schema_url, schema_location, table_name, events_path):
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_url, schema_location)
     srid = dataset_schema["crs"].split(":")[-1]
-    dataset_table = dataset_schema.get_table_by_id(table_name)
     # Run as a transaction
     with engine.begin() as connection:
-        importer = EventsProcessor(dataset_table, srid, connection)
+        importer = EventsProcessor([dataset_schema], srid, connection, truncate=True)
         importer.load_events_from_file(events_path)
 
 

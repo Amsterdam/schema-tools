@@ -5,9 +5,9 @@ from schematools.events import EventsProcessor
 def test_event_process_insert(here, tconn, bouwblokken_schema):
     events_path = here / "files" / "data" / "bouwblokken.gobevents"
     importer = EventsProcessor(
-        bouwblokken_schema, 28992, tconn, local_metadata=True, truncate=True
+        [bouwblokken_schema], 28992, tconn, local_metadata=True, truncate=True
     )
-    importer.load_events_from_file(events_path, "gebieden", "bouwblokken")
+    importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
     assert len(records) == 2
     assert records[0]["code"] == "AA01"
@@ -19,9 +19,9 @@ def test_event_process_insert(here, tconn, bouwblokken_schema):
 def test_event_process_update(here, tconn, transaction, bouwblokken_schema):
     events_path = here / "files" / "data" / "bouwblokken_update.gobevents"
     importer = EventsProcessor(
-        bouwblokken_schema, 28992, tconn, local_metadata=True, truncate=True
+        [bouwblokken_schema], 28992, tconn, local_metadata=True, truncate=True
     )
-    importer.load_events_from_file(events_path, "gebieden", "bouwblokken")
+    importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
     assert len(records) == 1
     assert records[0]["code"] == "AA01"
@@ -32,9 +32,24 @@ def test_event_process_update(here, tconn, transaction, bouwblokken_schema):
 def test_event_process_delete(here, tconn, transaction, bouwblokken_schema):
     events_path = here / "files" / "data" / "bouwblokken_delete.gobevents"
     importer = EventsProcessor(
-        bouwblokken_schema, 28992, tconn, local_metadata=True, truncate=True
+        [bouwblokken_schema], 28992, tconn, local_metadata=True, truncate=True
     )
-    importer.load_events_from_file(events_path, "gebieden", "bouwblokken")
+    importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
     assert len(records) == 1
     assert records[0]["code"] == "AA01"
+
+
+def test_event_process_1n_relation(here, tconn, transaction, bouwblokken_schema):
+    events_bb_path = here / "files" / "data" / "bouwblokken.gobevents"
+    events_rel_path = (
+        here / "files" / "data" / "gebieden_bouwblokken_ligt_in_buurt.gobevents"
+    )
+    importer = EventsProcessor(
+        [bouwblokken_schema], 28992, tconn, local_metadata=True, truncate=True
+    )
+    importer.load_events_from_file(events_bb_path)
+    importer.load_events_from_file(events_rel_path, is_relation=True)
+    records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
+    assert len(records) == 2
+    assert records[1]["ligt_in_buurt_id"] == "03630000000707.2"
