@@ -104,7 +104,9 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
                         engine.execute(grant_statement)
 
 
-def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run, create_roles):
+def create_acl_from_schema(
+    session, pg_schema, ams_schema, role, scope, dry_run, create_roles
+):
     grantee = None if role == "AUTO" else role
     if create_roles and grantee:
         _create_role_if_not_exists(session, grantee)
@@ -163,7 +165,7 @@ def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run,
                         field_scope_set, table_scope_set, field.name, table_name
                     )
                 )
-                if role == 'AUTO':
+                if role == "AUTO":
                     grantees = [scope_to_role(scope) for scope in field_scope_set]
                 elif scope in field_scope_set:
                     grantees = [role]
@@ -188,7 +190,7 @@ def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run,
                         ),
                         dry_run=dry_run,
                     )
-        if role == 'AUTO':
+        if role == "AUTO":
             grantees = [scope_to_role(scope) for scope in table_scope_set]
         elif scope in table_scope_set:
             grantees = [role]
