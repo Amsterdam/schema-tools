@@ -8,6 +8,7 @@ from schematools.contrib.django.auth_backend import (
 from schematools.contrib.django.models import Profile
 
 
+
 @pytest.fixture
 def profile_medewerker():
     return Profile.objects.create(
@@ -41,8 +42,7 @@ def profile_brk_readall():
 
 @pytest.mark.django_db
 def test_get_profiles_for_request(profile_medewerker, profile_brk_read):
-    """Check that correct Profiles returned for request.
-    """
+    """Check that correct Profiles returned for request."""
     request = RequestFactory().get("/")
     request.is_authorized_for = lambda scopes: "FP/MD" in scopes
 
@@ -53,8 +53,7 @@ def test_get_profiles_for_request(profile_medewerker, profile_brk_read):
 
 @pytest.mark.django_db
 def test_has_perm_dataset(profile_medewerker, profile_brk_read):
-    """Check that BRK user can access data, while regular medeweker not.
-    """
+    """Check that BRK user can access data, while regular medeweker not."""
     request = RequestFactory().get("/")
     request.is_authorized_for = lambda scopes: True  # Both Profiles used
 
@@ -68,8 +67,7 @@ def test_has_perm_dataset(profile_medewerker, profile_brk_read):
 
 @pytest.mark.django_db
 def test_has_perm_dataset_table(profile_medewerker, profile_brk_read):
-    """Check that BRK user can access data, while regular medeweker not.
-    """
+    """Check that BRK user can access data, while regular medeweker not."""
     request = RequestFactory().get("/")
     request.is_authorized_for = lambda scopes: True  # Both Profiles used
 
@@ -83,8 +81,7 @@ def test_has_perm_dataset_table(profile_medewerker, profile_brk_read):
 
 @pytest.mark.django_db
 def test_has_perm_dataset_field(profile_medewerker, profile_brk_read):
-    """Check that BRK user can access data, while regular medeweker not.
-    """
+    """Check that BRK user can access data, while regular medeweker not."""
     request = RequestFactory().get("/")
     request.is_authorized_for = lambda scopes: True  # Both Profiles used
 
@@ -99,8 +96,7 @@ def test_has_perm_dataset_field(profile_medewerker, profile_brk_read):
 
 @pytest.mark.django_db
 def test_has_perm_dataset_field_readall(profile_brk_readall):
-    """Check that BRK user can access data, while regular medeweker not.
-    """
+    """Check that BRK user can access data, while regular medeweker not."""
     request = RequestFactory().get("/")
     request.is_authorized_for = lambda *scopes: True  # Both Profiles used
 

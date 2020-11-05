@@ -1,25 +1,22 @@
 import os
-import json
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlparse, ParseResult
 
 import pytest
 from requests_mock import Mocker
 from sqlalchemy.orm import Session
+from sqlalchemy import MetaData
+import sqlalchemy_utils
+from geoalchemy2 import Geometry  # NoQA, needed to make postgis work
 
-from schematools.types import DatasetSchema
 from schematools.importer.base import metadata
 
 HERE = Path(__file__).parent
 
+pytest_plugins = ["tests.fixtures"]
+
 # fixtures engine and dbengine provided by pytest-sqlalchemy, automatically discoverd by pytest via setuptools entry-points.
 # https://github.com/toirl/pytest-sqlalchemy/blob/master/pytest_sqlalchemy.py
-
-
-@pytest.fixture(scope="session")
-def here():
-    return HERE
 
 
 @pytest.fixture(scope="session")
@@ -42,6 +39,19 @@ def sqlalchemy_connect_url(request, db_url):
     return request.config.getoption("--sqlalchemy-connect-url") or db_url
 
 
+@pytest.fixture(scope="session", autouse=True)
+def db_schema(engine, sqlalchemy_keep_db):
+    db_exists = sqlalchemy_utils.functions.database_exists(engine.url)
+    if db_exists and not sqlalchemy_keep_db:
+        raise RuntimeError("DB exists, remove it before proceeding")
+
+    if not db_exists:
+        sqlalchemy_utils.functions.create_database(engine.url)
+        engine.execute("CREATE EXTENSION postgis")
+    yield
+    sqlalchemy_utils.functions.drop_database(engine.url)
+
+
 @pytest.fixture()
 def schema_url():
     return os.environ.get("SCHEMA_URL", "https://schemas.data.amsterdam.nl/datasets/")
@@ -61,9 +71,10 @@ def dbsession(engine, dbsession, sqlalchemy_keep_db) -> Session:
 
 
 @pytest.fixture()
-def tconn(engine):
+def tconn(engine, local_metadata):
     """Will start a transaction on the connection. The connection will
-    be rolled back after it leaves its scope."""
+    be rolled back after it leaves its scope.
+    """
 
     with engine.connect() as conn:
         transaction = conn.begin()
@@ -71,6 +82,19 @@ def tconn(engine):
             yield conn
         finally:
             transaction.rollback()
+
+
+@pytest.fixture(scope="module")
+def local_metadata(engine):
+    """A module scoped metadata. This can be used to collect table structures
+    during tests that are part of a particular module. At the module boundary, these tables
+    are dropped. When Table models are constructed serveral times in these tests,
+    the 'extend_existing' constructor arg. can be used, to avoid errors.
+    Tables are just replaced in the same metadata object.
+    """
+    _meta = MetaData()
+    yield _meta
+    _meta.drop_all(bind=engine)
 
 
 @pytest.fixture()
@@ -90,72 +114,3 @@ def schemas_mock(requests_mock: Mocker, schema_url):
             content=fh.read(),
         )
     yield requests_mock
-
-
-@pytest.fixture()
-def schema_json() -> Callable[[str], dict]:
-    def _json_fetcher(filename) -> dict:
-        path = HERE / "files" / filename
-        return json.loads(path.read_text())
-
-    return _json_fetcher
-
-
-@pytest.fixture()
-def afval_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("afval.json"))
-
-
-@pytest.fixture()
-def meetbouten_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("meetbouten.json"))
-
-
-@pytest.fixture()
-def parkeervakken_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("parkeervakken.json"))
-
-
-@pytest.fixture()
-def gebieden_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("gebieden.json"))
-
-
-@pytest.fixture()
-def bouwblokken_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("bouwblokken.json"))
-
-
-@pytest.fixture()
-def gebieden_schema_auth(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("gebieden_auth.json"))
-
-
-@pytest.fixture()
-def gebieden_schema_auth_list(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("gebieden_auth_list.json"))
-
-
-@pytest.fixture()
-def ggwgebieden_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("ggwgebieden.json"))
-
-
-@pytest.fixture()
-def stadsdelen_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("stadsdelen.json"))
-
-
-@pytest.fixture()
-def verblijfsobjecten_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("verblijfsobjecten.json"))
-
-
-@pytest.fixture()
-def kadastraleobjecten_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("kadastraleobjecten.json"))
-
-
-@pytest.fixture()
-def meldingen_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("meldingen.json"))

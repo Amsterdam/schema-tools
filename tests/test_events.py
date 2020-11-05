@@ -1,11 +1,13 @@
 from datetime import datetime, date
 from schematools.events import EventsProcessor
 
+# pytestmark = pytest.mark.skip("all tests disabled")
 
-def test_event_process_insert(here, tconn, bouwblokken_schema):
+
+def test_event_process_insert(here, tconn, local_metadata, bouwblokken_schema):
     events_path = here / "files" / "data" / "bouwblokken.gobevents"
     importer = EventsProcessor(
-        [bouwblokken_schema], 28992, tconn, local_metadata=True, truncate=True
+        [bouwblokken_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
@@ -16,10 +18,12 @@ def test_event_process_insert(here, tconn, bouwblokken_schema):
     assert records[0]["begin_geldigheid"] == date(2006, 6, 12)
 
 
-def test_event_process_update(here, tconn, transaction, bouwblokken_schema):
+def test_event_process_update(
+    here, tconn, local_metadata, transaction, bouwblokken_schema
+):
     events_path = here / "files" / "data" / "bouwblokken_update.gobevents"
     importer = EventsProcessor(
-        [bouwblokken_schema], 28992, tconn, local_metadata=True, truncate=True
+        [bouwblokken_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
@@ -29,10 +33,12 @@ def test_event_process_update(here, tconn, transaction, bouwblokken_schema):
     assert records[0]["registratiedatum"] == datetime(2020, 2, 5, 15, 6, 43)
 
 
-def test_event_process_delete(here, tconn, transaction, bouwblokken_schema):
+def test_event_process_delete(
+    here, tconn, local_metadata, transaction, bouwblokken_schema
+):
     events_path = here / "files" / "data" / "bouwblokken_delete.gobevents"
     importer = EventsProcessor(
-        [bouwblokken_schema], 28992, tconn, local_metadata=True, truncate=True
+        [bouwblokken_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
@@ -40,13 +46,15 @@ def test_event_process_delete(here, tconn, transaction, bouwblokken_schema):
     assert records[0]["code"] == "AA01"
 
 
-def test_event_process_1n_relation(here, tconn, transaction, bouwblokken_schema):
+def test_event_process_1n_relation(
+    here, tconn, local_metadata, transaction, bouwblokken_schema
+):
     events_bb_path = here / "files" / "data" / "bouwblokken.gobevents"
     events_rel_path = (
         here / "files" / "data" / "gebieden_bouwblokken_ligt_in_buurt.gobevents"
     )
     importer = EventsProcessor(
-        [bouwblokken_schema], 28992, tconn, local_metadata=True, truncate=True
+        [bouwblokken_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_bb_path)
     importer.load_events_from_file(events_rel_path, is_relation=True)
