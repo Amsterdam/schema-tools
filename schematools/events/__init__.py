@@ -40,8 +40,13 @@ EVENT_TYPE_MAPPING = {
     "DELETE": ("delete", True, None),
 }
 
-COLLECTION_TO_TABLE = {
-    "gbd_bbk_gbd_brt_ligt_in_buurt": ("gebieden", "bouwblokken", "ligt_in_buurt")
+COLLECTION_TO_SCHEMA = {
+    "gbd_bbk_gbd_brt_ligt_in_buurt": ("gebieden", "bouwblokken", "ligtInBuurt"),
+    "gbd_ggp_gbd_brt_bestaat_uit_buurten": (
+        "gebieden",
+        "gebieden_ggwgebieden_bestaat_uit_buurten",
+        None,
+    ),
 }
 
 
@@ -51,14 +56,13 @@ class EventsProcessor:
         datasets: List[DatasetSchema],
         srid,
         connection,
-        local_metadata=False,
+        local_metadata=None,
         truncate=False,
     ):
-        logger.info("blaat")
         self.datasets: Dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
         self.srid = srid
         self.conn = connection
-        _metadata = MetaData() if local_metadata else metadata  # mainly for testing
+        _metadata = local_metadata or metadata  # mainly for testing
         _metadata.bind = connection.engine
         self.tables = {}
         for dataset_id, dataset in self.datasets.items():
@@ -78,19 +82,24 @@ class EventsProcessor:
                     if field.is_geo:
                         self.geo_fields[dataset_id][table_id].append(field.name)
 
+    def _fetch_relation_fieldnames(self, dataset_id, table_id, relation_fieldname):
+        """We need the names of the fields in the relation.
+        This is getting quite hairy.
+        """
+        field = (
+            self.datasets[dataset_id]
+            .get_table_by_id(table_id)
+            .get_field_by_id(relation_fieldname)
+        )
+        return sorted([to_snake_case(sf.name) for sf in field.sub_fields])
+
     def process_relation(self, source_id, event_data):
 
         event_type = event_data["_event_type"]
         _, _, data_fetcher = EVENT_TYPE_MAPPING[event_type]
         collection = event_data["_collection"]
 
-        # Determing if nm or 1n relation
-        dataset_id, table_id, relation_fieldname = COLLECTION_TO_TABLE[collection]
-        field = (
-            self.datasets[dataset_id]
-            .get_table_by_id(table_id)
-            .get_field_by_id(relation_fieldname)
-        )
+        dataset_id, table_id, relation_fieldname = COLLECTION_TO_SCHEMA[collection]
 
         if data_fetcher is not None:
             row = data_fetcher(event_data)
@@ -100,8 +109,21 @@ class EventsProcessor:
             dst_volgnummer = row["dst_volgnummer"]
 
             table = self.tables[dataset_id][table_id]
-            # XXX add the 2 extra fields
-            updates = {f"{relation_fieldname}_id": f"{dst_id}.{dst_volgnummer}"}
+            id_fieldname, volgnummer_fieldname = self._fetch_relation_fieldnames(
+                dataset_id, table_id, relation_fieldname
+            )
+            updates = {
+                to_snake_case(f"{relation_fieldname}_id"): f"{dst_id}.{dst_volgnummer}",
+                id_fieldname: dst_id,
+                volgnummer_fieldname: dst_volgnummer,
+            }
+
+            # ggwgebieden_id
+            # bestaat_uit_buurten_id
+            # ggwgebieden_identificatie
+            # ggwgebieden_volgnummer
+            # bestaat_uit_buurten_identificatie
+            # bestaat_uit_buurten_volgnummer
 
             result = self.conn.execute(
                 table.update()
@@ -273,7 +295,9 @@ def tables_factory(
             id_postfix = "_id" if field.relation else ""
             columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
 
-        tables[table_id] = Table(db_table_name, metadata, *columns)
+        tables[table_id] = Table(
+            db_table_name, metadata, *columns, extend_existing=True
+        )
         tables.update(**sub_tables)
 
     return tables

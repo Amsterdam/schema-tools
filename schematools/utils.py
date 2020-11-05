@@ -73,6 +73,7 @@ def schema_def_from_file(filename) -> Dict[str, types.DatasetSchema]:
         schema_info = json.load(file_handler)
         return {schema_info["id"]: types.DatasetSchema.from_dict(schema_info)}
 
+
 def profile_def_from_file(filename) -> Dict[str, types.ProfileSchemaSchema]:
     """Read a profile from a file on local drive."""
     with open(filename, "r") as file_handler:
