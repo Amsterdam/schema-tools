@@ -570,3 +570,17 @@ class LooseRelationField(models.CharField):
         dataset_name, table_name, column_name = [to_snake_case(part)
                                                  for part in self.relation.split(":")]
         return apps.all_models[dataset_name][table_name]
+
+
+ACTIVE_PROFILES = None
+
+
+def get_active_profiles():
+    if ACTIVE_PROFILES is not None:
+        return ACTIVE_PROFILES
+
+    return Profile.objects.all()
+
+
+if hasattr(settings, "CACHE_AUTH_PROFILES_ON_START") and settings.CACHE_AUTH_PROFILES_ON_START:
+    ACTIVE_PROFILES = Profile.objects.all()
