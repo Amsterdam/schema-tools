@@ -583,4 +583,4 @@ def get_active_profiles():
 
 
 if hasattr(settings, "CACHE_AUTH_PROFILES_ON_START") and settings.CACHE_AUTH_PROFILES_ON_START:
-    ACTIVE_PROFILES = Profile.objects.all()
+    ACTIVE_PROFILES = [profiles for profile in Profile.objects.all()]
