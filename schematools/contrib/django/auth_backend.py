@@ -14,9 +14,9 @@ PERMISSION_LIST = [
 
 
 class RequestProfile(object):
-    def __init__(self, request, auth_profiles=None):
+    def __init__(self, request):
         self.request = request
-        self.auth_profiles = auth_profiles
+        self.auth_profiles = None
         self.auth_permissions = None
 
     def get_profiles(self):
