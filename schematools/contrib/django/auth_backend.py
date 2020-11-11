@@ -1,8 +1,6 @@
 from django.contrib.auth.backends import BaseBackend
 from schematools.contrib.django.models import (
     get_active_profiles,
-    generate_permission_key,
-    split_permission_key,
 )
 
 PERMISSION_LIST = [
