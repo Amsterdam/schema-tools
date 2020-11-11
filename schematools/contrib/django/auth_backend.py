@@ -45,6 +45,36 @@ class RequestProfile(object):
         permissions = self.get_all_permissions()
         return permissions.get(perm, None)
 
+    def get_relevant_profiles(self, dataset_id, table_id):
+        profiles = []
+        for profile in self.get_profiles():
+            relevant_dataset_schema = profile.schema.datasets.get(dataset_id, None)
+            if relevant_dataset_schema:
+                relevant_table_schema = relevant_dataset_schema.tables.get(
+                    table_id, None
+                )
+                if relevant_table_schema:
+                    profiles.append(profile)
+        return profiles
+
+    def get_mandatory_filtersets(self, dataset_id, table_id):
+        mandatory_filtersets = []
+        for profile in self.get_profiles():
+            profile_relevant_to_this_dataset = profile.schema.datasets.get(
+                dataset_id, None
+            )
+            if profile_relevant_to_this_dataset:
+                table_configuration = profile_relevant_to_this_dataset.tables.get(
+                    table_id, None
+                )
+                if table_configuration:
+                    mandatory_filters = table_configuration.get(
+                        "mandatoryFilterSets", None
+                    )
+                    if mandatory_filters:
+                        mandatory_filtersets += mandatory_filters
+        return mandatory_filtersets
+
 
 class ProfileAuthorizationBackend(BaseBackend):
     """
