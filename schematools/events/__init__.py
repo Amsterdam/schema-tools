@@ -45,7 +45,7 @@ COLLECTION_TO_SCHEMA = {
     "gbd_ggp_gbd_brt_bestaat_uit_buurten": (
         "gebieden",
         "gebieden_ggwgebieden_bestaat_uit_buurten",
-        None,
+        "bestaat_uit_buurten",
     ),
 }
 
@@ -86,6 +86,7 @@ class EventsProcessor:
         """We need the names of the fields in the relation.
         This is getting quite hairy.
         """
+        # can also get this from identifier/temporal.identifier
         field = (
             self.datasets[dataset_id]
             .get_table_by_id(table_id)
@@ -118,13 +119,22 @@ class EventsProcessor:
                 volgnummer_fieldname: dst_volgnummer,
             }
 
-            # ggwgebieden_id
+            # 1-n
+            # ligt_in_wijk_id
+            # ligt_in_wijk_identificatie
+            # ligt_in_wijk_volgnummer
+
+            # n-m
+            # source_id
             # bestaat_uit_buurten_id
-            # ggwgebieden_identificatie
-            # ggwgebieden_volgnummer
             # bestaat_uit_buurten_identificatie
             # bestaat_uit_buurten_volgnummer
+            # ggwgebieden_id -> src_id.src_volgnummer
+            # ggwgebieden_identificatie -> src_id
+            # ggwgebieden_volgnummer -> src_volgnummer
 
+            breakpoint()
+            # andere where clause voor n-m (obv. de source_id)
             result = self.conn.execute(
                 table.update()
                 .where(table.c.id == f"{src_id}.{src_volgnummer}")
@@ -237,7 +247,9 @@ def tables_factory(
 
                     elif field.is_through_table:
                         # We need a 'through' table for the n-m relation
+                        # these tables have a source_id as PK
                         sub_columns = [
+                            Column("source_id", String, primary_key=True),
                             Column(
                                 f"{dataset_table.id}_id",
                                 String,
