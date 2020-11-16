@@ -681,18 +681,18 @@ class ProfileTableSchema(DatasetType):
         return self.get("fields", {})
 
     @property
-    def mandatory_queries(self) -> typing.List[dict]:
+    def mandatory_filtersets(self) -> typing.List[dict]:
         """Tell whether the listing can only be requested with certain inputs.
         E.g. an API user may only list data when they supply the lastname + birthdate.
 
         Example value::
 
             [
-              {"bsn": "full", "lastname": "letters:3"},
-              {"postcode": "full", "lastname":  "letters:5"}
+              ["bsn", "lastname"],
+              ["postcode", "regimes.aantal[gte]"]
             ]
         """
-        return self.get("mandatoryQueries", [])
+        return self.get("mandatoryFilterSets", [])
 
 
 def get_db_table_name(table: DatasetTableSchema) -> str:
