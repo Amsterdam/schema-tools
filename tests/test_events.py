@@ -60,4 +60,5 @@ def test_event_process_1n_relation(
     importer.load_events_from_file(events_rel_path, is_relation=True)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
     assert len(records) == 2
+    breakpoint()
     assert records[1]["ligt_in_buurt_id"] == "03630000000707.2"

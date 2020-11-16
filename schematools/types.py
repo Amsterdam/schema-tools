@@ -123,6 +123,8 @@ class DatasetSchema(SchemaType):
         tables = []
         for table in self.tables:
             for field in table.fields:
+                # if table.id == 'woningbouwplan' and field.name == 'buurten':
+                #     breakpoint()
                 if field.is_through_table:
                     tables.append(self.build_through_table(table=table, field=field))
         return tables
