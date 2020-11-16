@@ -68,9 +68,7 @@ class RequestProfile(object):
                     table_id, None
                 )
                 if table_configuration:
-                    mandatory_filters = table_configuration.get(
-                        "mandatoryFilterSets", None
-                    )
+                    mandatory_filters = table_configuration.mandatory_filtersets
                     if mandatory_filters:
                         mandatory_filtersets += mandatory_filters
         return mandatory_filtersets
