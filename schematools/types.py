@@ -694,6 +694,24 @@ class ProfileTableSchema(DatasetType):
         """
         return self.get("mandatoryFilterSets", [])
 
+    def _mandatory_filterset_was_queried(self, mandatory_filterset, query_params):
+        return all(
+            mandatory_filter in query_params for mandatory_filter in mandatory_filterset
+        )
+
+    def mandatory_filterset_obligation_fulfilled(self, request):
+        if not self.mandatory_filtersets:
+            return True
+        valid_query_params = [
+            param for param, value in request.query_params.items() if value
+        ]
+        return any(
+            self._mandatory_filterset_was_queried(
+                mandatory_filterset, valid_query_params
+            )
+            for mandatory_filterset in self.mandatory_filtersets
+        )
+
 
 def get_db_table_name(table: DatasetTableSchema) -> str:
     """Generate the table name for a database schema."""

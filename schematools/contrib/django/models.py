@@ -521,14 +521,10 @@ class Profile(models.Model):
 
             for table_id, table_settings in dataset_settings.tables.items():
                 dataset_table_key = generate_permission_key(dataset_id, table_id)
-                if dataset_key not in permissions:
-                    permissions[dataset_key] = "read"
                 if table_settings.permissions:
                     permissions[dataset_table_key] = table_settings.permissions
 
                 for field_id, field_permission in table_settings.fields.items():
-                    if dataset_table_key not in permissions:
-                        permissions[dataset_table_key] = "read"
                     permissions[
                         generate_permission_key(dataset_id, table_id, field_id)
                     ] = field_permission

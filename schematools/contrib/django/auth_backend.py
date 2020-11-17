@@ -1,11 +1,17 @@
 from django.contrib.auth.backends import BaseBackend
-from schematools.contrib.django.models import get_active_profiles
+from schematools.contrib.django.models import (
+    Dataset,
+    DatasetTable,
+    get_active_profiles,
+    generate_permission_key,
+)
 
+# In order of importance, first one overrules the lower one
 PERMISSION_LIST = [
     "read",
     "encoded",
     "random",
-    "letter",
+    "letters",
 ]
 
 
@@ -30,11 +36,29 @@ class RequestProfile(object):
             self.auth_profiles = set(profiles)
         return self.auth_profiles
 
-    def get_all_permissions(self):
+    def get_all_permissions(self, perm):
         """Get all permissions for given request."""
         if self.auth_permissions is None:
             permissions = dict()
-            for profile in self.get_profiles():
+            dataset_id, table_id, field_id = perm.split(":")
+            dataset = Dataset.objects.get(name=dataset_id)
+            has_dataset_scope = self.request.is_authorized_for(dataset.auth)
+            table = DatasetTable.objects.get(dataset=dataset, name=table_id)
+            for field in table.fields.all():
+                permission_key = generate_permission_key(
+                    dataset_id, table_id, field.name
+                )
+                if has_dataset_scope:
+                    permissions[permission_key] = PERMISSION_LIST[
+                        0
+                    ]  # get the top permission
+                else:
+                    has_table_scope = self.request.is_authorized_for(table.auth)
+                    if has_table_scope:
+                        permissions[permission_key] = PERMISSION_LIST[
+                            0
+                        ]  # get the top permission
+            for profile in self.get_active_profiles(dataset_id, table_id):
                 profile_permissions = profile.get_permissions()
                 permissions = merge_permissions(permissions, profile_permissions)
             self.auth_permissions = permissions
@@ -42,10 +66,12 @@ class RequestProfile(object):
 
     def get_read_permission(self, perm, obj=None):
         """Get permission to read/encode data from profiles."""
-        permissions = self.get_all_permissions()
+        permissions = self.get_all_permissions(perm)
         return permissions.get(perm, None)
 
-    def get_relevant_profiles(self, dataset_id, table_id):
+    def get_active_profiles(self, dataset_id, table_id):
+        """Returns the profiles that 1) are relevant to the table
+        and 2) have met their filterset obligations"""
         profiles = []
         for profile in self.get_profiles():
             relevant_dataset_schema = profile.schema.datasets.get(dataset_id, None)
@@ -54,24 +80,11 @@ class RequestProfile(object):
                     table_id, None
                 )
                 if relevant_table_schema:
-                    profiles.append(profile)
+                    if relevant_table_schema.mandatory_filterset_obligation_fulfilled(
+                        self.request
+                    ):
+                        profiles.append(profile)
         return profiles
-
-    def get_mandatory_filtersets(self, dataset_id, table_id):
-        mandatory_filtersets = []
-        for profile in self.get_profiles():
-            profile_relevant_to_this_dataset = profile.schema.datasets.get(
-                dataset_id, None
-            )
-            if profile_relevant_to_this_dataset:
-                table_configuration = profile_relevant_to_this_dataset.tables.get(
-                    table_id, None
-                )
-                if table_configuration:
-                    mandatory_filters = table_configuration.mandatory_filtersets
-                    if mandatory_filters:
-                        mandatory_filtersets += mandatory_filters
-        return mandatory_filtersets
 
 
 class ProfileAuthorizationBackend(BaseBackend):
