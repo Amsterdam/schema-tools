@@ -133,7 +133,6 @@ class EventsProcessor:
             # ggwgebieden_identificatie -> src_id
             # ggwgebieden_volgnummer -> src_volgnummer
 
-            breakpoint()
             # andere where clause voor n-m (obv. de source_id)
             result = self.conn.execute(
                 table.update()
