@@ -5,7 +5,6 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple, Type
 
-from django.conf import settings
 from django.apps import apps
 from django.core.cache import cache
 from django.contrib.gis.db import models as gis_models
@@ -581,5 +580,4 @@ def get_active_profiles():
         cache.set(PROFILES_CACHE_KEY, profiles)
     return profiles
 
-if hasattr(settings, "CACHE_AUTH_PROFILES_ON_START") and settings.CACHE_AUTH_PROFILES_ON_START:
-    get_active_profiles()
+get_active_profiles()
