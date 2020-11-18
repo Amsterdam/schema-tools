@@ -193,6 +193,7 @@ def schema_models_factory(
     dataset: DatasetSchema, tables=None, base_app_name=None
 ) -> List[Type[DynamicModel]]:
     """Generate Django models from the data of the schema."""
+    dataset.add_dataset_to_cache(dataset)
     return [
         model_factory(table=table, base_app_name=base_app_name)
         for table in dataset.get_tables(include_nested=True, include_through=True)

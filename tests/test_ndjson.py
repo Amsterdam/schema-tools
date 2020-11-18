@@ -48,6 +48,7 @@ def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsess
         for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
     ]
     assert len(records) == 3
+    # Also the temporal fields are present in the database
     assert records[0].keys() == {
         "ggwgebieden_id",
         "bestaatuitbuurten_id",
@@ -55,6 +56,8 @@ def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsess
         "ggwgebieden_identificatie",
         "bestaatuitbuurten_identificatie",
         "bestaatuitbuurten_volgnummer",
+        "begin_geldigheid",
+        "eind_geldigheid",
     }
 
 
