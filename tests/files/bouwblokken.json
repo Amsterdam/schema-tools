@@ -4,6 +4,7 @@
   "title": "gebieden",
   "status": "beschikbaar",
   "version": "0.0.1",
+  "crs": "EPSG:28992",
   "identifier": "identificatie",
   "temporal": {
     "identifier": "volgnummer",
@@ -11,40 +12,26 @@
       "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
     }
   },
-  "crs": "EPSG:28992",
   "tables": [
     {
       "id": "bouwblokken",
+      "mainGeometry": "geometrie",
       "type": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "additionalProperties": false,
-        "mainGeometry": "geometrie",
-        "identifier": ["identificatie", "volgnummer"],
-        "required": ["schema", "identificatie", "volgnummer"],
+        "identifier": ["id"],
+        "required": ["schema", "id"],
         "display": "id",
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "identificatie": {
+          "id": {
             "type": "string",
-            "description": "Unieke identificatie van het object."
-          },
-          "volgnummer": {
-            "type": "integer",
-            "description": "Uniek volgnummer van de toestand van het object."
-          },
-          "registratiedatum": {
-            "type": "string",
-            "format": "date-time",
-            "description": "De datum waarop de toestand is geregistreerd."
-          },
-          "code": {
-            "type": "string",
-            "description": "Officiële code van het object."
+            "description": "Unieke identificatie voor dit object, inclusief volgnummer"
           },
           "beginGeldigheid": {
             "type": "string",
@@ -54,24 +41,14 @@
           "eindGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is komen te vervallen."
+            "description": "De datum waarop het object is komen te vervallen.",
+            "provenance": "eindgeldigheid"
           },
           "ligtInBuurt": {
-            "type": "object",
-            "properties": {
-              "identificatie": {
-                "type": "string"
-              },
-              "volgnummer": {
-                "type": "integer"
-              }
-            },
+            "type": "string",
             "relation": "gebieden:buurten",
+            "provenance": "ligtinbuurt",
             "description": "De buurt waar het bouwblok in ligt."
-          },
-          "geometrie": {
-            "$ref": "https://geojson.org/schema/Geometry.json",
-            "description": "Geometrische beschrijving van een object."
           }
         }
       }

@@ -6,7 +6,7 @@ Install the package with: `pip install amsterdam-schema-tools`
 
 Currently, the following cli commands are available:
 
-- schema import schema
+- schema import events
 - schema import ndjson
 - schema show schema <dataset-id>
 - schema show tablenames
@@ -57,3 +57,13 @@ The following command can be used to inspect and import the GeoJSON files:
     edit schema.json  # fine-tune the table names
     schema import geojson schema.json <table1> file1.geojson
     schema import geojson schema.json <table2> file2.geojson
+
+## Importing GOB events
+
+The schematools library has a module that read GOB events into database tables that are
+defines by an Amsterdam schema. This module can be used to read GOB events from a Kafka stream.
+It is also possible to read GOB events from a batch file with line-separeted events using:
+
+    schema import events <path-to-dataset> <path-to-file-with-events>
+
+

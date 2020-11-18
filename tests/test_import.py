@@ -2,9 +2,9 @@ from datetime import date
 from schematools.importer.ndjson import NDJSONImporter
 
 
-def test_camelcased_names_during_import(here, engine, gebieden_schema, dbsession):
+def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsession):
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
-    importer = NDJSONImporter(gebieden_schema, engine)
+    importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [
@@ -23,31 +23,31 @@ def test_camelcased_names_during_import(here, engine, gebieden_schema, dbsession
 
 
 def test_skip_duplicate_keys_in_batch_during_import(
-    here, engine, gebieden_schema, dbsession
+    here, engine, bouwblokken_schema, dbsession
 ):
     """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
     ndjson_path = here / "files" / "data" / "gebieden-duplicate-id.ndjson"
-    importer = NDJSONImporter(gebieden_schema, engine)
+    importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
 
 
 def test_skip_duplicate_keys_in_db_during_import_with_existing_value(
-    here, engine, gebieden_schema, dbsession
+    here, engine, bouwblokken_schema, dbsession
 ):
     """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
-    importer = NDJSONImporter(gebieden_schema, engine)
+    importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
 
 
 def test_skip_duplicate_keys_in_db_during_import_with_duplicate_in_next_batch(
-    here, engine, gebieden_schema, dbsession
+    here, engine, bouwblokken_schema, dbsession
 ):
     """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
-    importer = NDJSONImporter(gebieden_schema, engine)
+    importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     importer.load_file(ndjson_path)

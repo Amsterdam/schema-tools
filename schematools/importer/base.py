@@ -429,11 +429,11 @@ def table_factory(
                                 )
                             )
 
+                # Fields for either the nested or the through table
                 for sub_field in field.sub_fields:
-                    colname_prefix = f"{field_name}_" if field.is_through_table else ""
                     sub_columns.append(
                         Column(
-                            f"{colname_prefix}{to_snake_case(sub_field.name)}",
+                            to_snake_case(sub_field.name),
                             fetch_col_type(sub_field),
                         )
                     )

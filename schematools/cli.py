@@ -411,16 +411,21 @@ def import_geojson(
 @option_db_url
 @option_schema_url
 @argument_schema_location
-@click.argument("table_name")
 @click.argument("events_path")
-def import_events(db_url, schema_url, schema_location, table_name, events_path):
+@click.option("-t", "--truncate-table", default=False, is_flag=True)
+def import_events(db_url, schema_url, schema_location, events_path, truncate_table):
     """Import an events file into a table."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_url, schema_location)
+    dataset_schema = _get_dataset_schema(
+        schema_url,
+        schema_location,
+    )
     srid = dataset_schema["crs"].split(":")[-1]
     # Run as a transaction
     with engine.begin() as connection:
-        importer = EventsProcessor([dataset_schema], srid, connection, truncate=True)
+        importer = EventsProcessor(
+            [dataset_schema], srid, connection, truncate=truncate_table
+        )
         importer.load_events_from_file(events_path)
 
 

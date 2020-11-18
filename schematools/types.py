@@ -44,6 +44,27 @@ class DatasetSchema(SchemaType):
     This is a collection of JSON Schema's within a single file.
     """
 
+    _datasets_cache = {}
+
+    def __init__(
+        self, *args, datasets_cache: typing.Dict[str, DatasetSchema] = None, **kwargs
+    ):
+        """When initializing a datasets, a cache of related datasets
+        can be added (at classlevel). Thus, we are able to get (temporal) info
+        about the related datasets
+        """
+        super().__init__(*args, **kwargs)
+        if datasets_cache is not None:
+            self._datasets_cache = datasets_cache
+
+    def add_datasets_cache(self, datasets_cache: typing.Dict[str, DatasetSchema]):
+        """ A bit hacky, we need some wrapping object for all datasets """
+        self._datasets_cache = datasets_cache
+
+    def add_dataset_to_cache(self, dataset: DatasetSchema):
+        """ A bit hacky, we need some wrapping object for all datasets """
+        self._datasets_cache[dataset.id] = dataset
+
     @classmethod
     def from_file(cls, filename: str):
         """Open an Amsterdam schema from a file."""
@@ -78,6 +99,9 @@ class DatasetSchema(SchemaType):
         """Auth of the dataset (if set)"""
         return self.get("auth")
 
+    def get_dataset_schema(self, dataset_id):
+        return self._datasets_cache.get(dataset_id)
+
     @property
     def tables(self) -> typing.List[DatasetTableSchema]:
         """Access the tables within the file"""
@@ -96,8 +120,10 @@ class DatasetSchema(SchemaType):
             tables += self.through_tables
         return tables
 
-    def get_table_by_id(self, table_id: str) -> DatasetTableSchema:
-        for table in self.get_tables(include_nested=True):
+    def get_table_by_id(
+        self, table_id: str, include_nested=True, include_through=True
+    ) -> DatasetTableSchema:
+        for table in self.get_tables(include_nested=include_nested):
             if table.id == table_id:
                 return table
 
@@ -123,8 +149,6 @@ class DatasetSchema(SchemaType):
         tables = []
         for table in self.tables:
             for field in table.fields:
-                # if table.id == 'woningbouwplan' and field.name == 'buurten':
-                #     breakpoint()
                 if field.is_through_table:
                     tables.append(self.build_through_table(table=table, field=field))
         return tables
@@ -187,9 +211,15 @@ class DatasetSchema(SchemaType):
             sub_table_schema, _parent_schema=self, through_table=True
         )
 
-    @property
-    def temporal(self):
+    def fetch_temporal(self, field_modifier=None):
+        """The original implementation of 'temporal' already does
+        a to_snake_case, however, we also need a version that
+        leaves the fields in camelcase.
+        """
         from schematools.utils import to_snake_case
+
+        if field_modifier is None:
+            field_modifier = to_snake_case
 
         temporal_configuration = self.get("temporal", None)
         if temporal_configuration is None:
@@ -199,11 +229,15 @@ class DatasetSchema(SchemaType):
             "dimensions", {}
         ).items():
             temporal_configuration["dimensions"][key] = [
-                to_snake_case(start_field),
-                to_snake_case(end_field),
+                field_modifier(start_field),
+                field_modifier(end_field),
             ]
 
         return temporal_configuration
+
+    @property
+    def temporal(self):
+        return self.fetch_temporal()
 
 
 class DatasetTableSchema(DatasetSchema):
@@ -274,12 +308,19 @@ class DatasetTableSchema(DatasetSchema):
         """Tell which fields can be used as display field."""
         return self["schema"].get("display", None)
 
+    def get_dataset_schema(self, dataset_id):
+        """Return another datasets """
+        return self._parent_schema.get_dataset_schema(dataset_id)
+
+    @property
+    def temporal(self):
+        """Return the temporal info from the dataset schema """
+        return self._parent_schema.fetch_temporal(field_modifier=lambda x: x)
+
     @property
     def is_temporal(self):
         """Indicates if this is a table with temporal charateristics """
-        return self["schema"].get(
-            "isTemporal", self._parent_schema.temporal is not None
-        )
+        return self["schema"].get("isTemporal", self.temporal is not None)
 
     @property
     def main_geometry(self):
@@ -353,6 +394,7 @@ class DatasetFieldSchema(DatasetType):
         _parent_table=None,
         _parent_field=None,
         _required=None,
+        _temporal=False,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -360,6 +402,7 @@ class DatasetFieldSchema(DatasetType):
         self._parent_table = _parent_table
         self._parent_field = _parent_field
         self._required = _required
+        self._temporal = _temporal
 
     @property
     def table(self) -> typing.Optional[DatasetTableSchema]:
@@ -422,6 +465,11 @@ class DatasetFieldSchema(DatasetType):
         return self.get("type") == "object"
 
     @property
+    def is_temporal(self) -> bool:
+        """Tell whether the field is added, because it has temporal charateristics """
+        return self._temporal
+
+    @property
     def is_geo(self) -> bool:
         """Tell whether the field references a geo object."""
         return "geojson.org" in self.get("$ref", "")
@@ -457,7 +505,9 @@ class DatasetFieldSchema(DatasetType):
                 "Subfields are only possible for 'object' or 'array' fields."
             )
 
-        if self.relation is not None:
+        relation = self.relation
+        nm_relation = self.nm_relation
+        if relation is not None or nm_relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
         for name, spec in properties.items():
             field_name = f"{field_name_prefix}{name}"
@@ -468,6 +518,39 @@ class DatasetFieldSchema(DatasetType):
                 _required=(name in required),
                 **spec,
             )
+
+        # Add temporal fields if the table is temporal
+        if relation is not None or nm_relation is not None:
+            dataset_id, table_id = (relation or nm_relation).split(
+                ":"
+            )  # XXX what about loose rels?
+            dataset_schema = self._parent_table.get_dataset_schema(dataset_id)
+            if dataset_schema is None:
+                return
+            try:
+                dataset_table = dataset_schema.get_table_by_id(
+                    table_id, include_nested=False, include_through=False
+                )
+            except ValueError:
+                # If we cannot get the table, we ignore the exception
+                # and we do not generate temporal fields
+                return
+            if nm_relation is not None:
+                field_name_prefix = ""
+            if dataset_table.is_temporal:
+                for dimension_fieldnames in dataset_table.temporal.get(
+                    "dimensions", {}
+                ).values():
+                    for dimension_fieldname in dimension_fieldnames:
+                        field_name = f"{field_name_prefix}{dimension_fieldname}"
+                        yield DatasetFieldSchema(
+                            _name=field_name,
+                            _parent_table=self._parent_table,
+                            _parent_field=self,
+                            _required=False,
+                            _temporal=True,
+                            **{"type": "string", "format": "date-time"},
+                        )
 
     @property
     def is_array(self) -> bool:
