@@ -702,9 +702,7 @@ class ProfileTableSchema(DatasetType):
     def mandatory_filterset_obligation_fulfilled(self, request):
         if not self.mandatory_filtersets:
             return True
-        valid_query_params = [
-            param for param, value in request.query_params.items() if value
-        ]
+        valid_query_params = [param for param, value in request.GET.items() if value]
         return any(
             self._mandatory_filterset_was_queried(
                 mandatory_filterset, valid_query_params
