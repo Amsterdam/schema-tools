@@ -1,8 +1,6 @@
 from django.contrib.auth.backends import BaseBackend
 from schematools.contrib.django.models import (
-    Profile,
-    generate_permission_key,
-    split_permission_key,
+    get_active_profiles,
 )
 
 PERMISSION_LIST = [
@@ -24,7 +22,7 @@ class RequestProfile(object):
          """
         if self.auth_profiles is None:
             profiles = []
-            for profile in Profile.objects.all():
+            for profile in get_active_profiles():
                 scopes = profile.get_scopes()
                 if len(scopes) == 0:
                     profiles.append(profile)

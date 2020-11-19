@@ -1,9 +1,10 @@
 from typing import List, Optional
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.management import BaseCommand
 
-from schematools.contrib.django.models import Profile
+from schematools.contrib.django.models import Profile, PROFILES_CACHE_KEY
 from schematools.types import ProfileSchema
 from schematools.utils import profile_defs_from_url, to_snake_case
 
@@ -23,6 +24,7 @@ class Command(BaseCommand):
             profiles = self.import_from_url(options["schema_url"])
 
         if profiles:
+            cache.delete(PROFILES_CACHE_KEY)
             self.stdout.write(f"Imported profiles: {len(profiles)}")
         else:
             self.stdout.write("No new profiles imported.")

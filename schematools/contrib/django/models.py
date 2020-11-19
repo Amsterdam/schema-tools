@@ -5,8 +5,8 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple, Type
 
-from django.conf import settings
 from django.apps import apps
+from django.core.cache import cache
 from django.contrib.gis.db import models as gis_models
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
@@ -30,6 +30,7 @@ from .validators import URLPathValidator
 logger = logging.getLogger(__name__)
 
 GEOJSON_PREFIX = "https://geojson.org/schema/"
+PROFILES_CACHE_KEY = "SCHEMATOOLS_AUTH_PROFILES"
 
 FORMAT_MODELS_LOOKUP = {
     "date": models.DateField,
@@ -570,3 +571,13 @@ class LooseRelationField(models.CharField):
         dataset_name, table_name, column_name = [to_snake_case(part)
                                                  for part in self.relation.split(":")]
         return apps.all_models[dataset_name][table_name]
+
+
+def get_active_profiles():
+    profiles = cache.get(PROFILES_CACHE_KEY)
+    if profiles is None:
+        profiles = [profile for profile in Profile.objects.all()]
+        cache.set(PROFILES_CACHE_KEY, profiles)
+    return profiles
+
+get_active_profiles()
