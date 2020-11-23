@@ -6,6 +6,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from django.apps import apps
+from django.conf import settings
 from django.core.cache import cache
 from django.contrib.gis.db import models as gis_models
 from django.contrib.postgres.fields import ArrayField, JSONField
