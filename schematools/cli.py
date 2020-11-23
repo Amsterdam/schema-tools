@@ -367,7 +367,7 @@ def create_identifier_index(schema_url, db_url):
     dataset_schema = DatasetSchema(parent_schema)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in data['tables']: 
+    for table in data['tables']:
         importer.generate_db_objects(table['id'], ind_tables=False)
 
 @create.command("tables")
@@ -381,7 +381,7 @@ def create_tables(schema_url, db_url):
     dataset_schema = DatasetSchema(parent_schema)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in data['tables']: 
+    for table in data['tables']:
         importer.generate_db_objects(table['id'], ind_identifier_index=False)
 
 @create.command("all")
@@ -395,5 +395,5 @@ def create_all_objects(schema_url, db_url):
     dataset_schema = DatasetSchema(parent_schema)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in data['tables']: 
+    for table in data['tables']:
         importer.generate_db_objects(table['id'])

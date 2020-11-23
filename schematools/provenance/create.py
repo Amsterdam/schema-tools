@@ -36,15 +36,15 @@ class ProvenaceIteration:
             self.final_dic["tables"] = []
 
             for item in dataschema:
-                if item == 'tables':       
+                if item == 'tables':
                     self.get_provenance_per_table(dataschema[item])
 
     def get_provenance_per_table(self, dictionary):
         """Calling the processing to extract the provenance data per table"""
-    
+
         # loop trough all existing tables and proces data for provenance on each and add them each to the final_dict outcome
         for n in range(0, self.number_of_tables):
-                    
+
             self.temp_dic_tables["table"] = dictionary[n]["id"]
             self.temp_dic_tables["provenance"] = (
                     dictionary[n]["provenance"]

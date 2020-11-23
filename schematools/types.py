@@ -204,7 +204,7 @@ class DatasetSchema(SchemaType):
         return temporal_configuration
 
 
-class DatasetTableSchema(SchemaType): 
+class DatasetTableSchema(SchemaType):
     """The table within a dataset.
     This table definition follows the JSON Schema spec.
     """
@@ -213,7 +213,7 @@ class DatasetTableSchema(SchemaType):
         super().__init__(*args, **kwargs)
         self._parent_schema = _parent_schema
 
-        if self.get("type") != "table":            
+        if self.get("type") != "table":
             raise ValueError("Invalid Amsterdam schema table data")
 
         if not self["schema"].get("$schema", "").startswith("http://json-schema.org/"):

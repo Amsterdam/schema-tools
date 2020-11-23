@@ -4,7 +4,7 @@ from itertools import islice
 import operator
 from typing import Optional, Dict
 from jsonpath_rw import parse
-from sqlalchemy import MetaData, inspect, Table, Column, ForeignKey, Integer, String, Index, exc #adjusted
+from sqlalchemy import MetaData, inspect, Table, Column, ForeignKey, Integer, String, Index, exc
 
 from schematools import MAX_TABLE_LENGTH
 from schematools.types import DatasetSchema, DatasetTableSchema
@@ -147,7 +147,7 @@ class BaseImporter:
     def create_pk_lookup(self, tables):
         """ Generate a lookup to avoid primary_key clashes """
         for table_name, table in tables.items():
-            if isinstance(table, Table): #adjusted
+            if isinstance(table, Table):
                 pk_columns = inspect(table).primary_key.columns
                 # nm tables do not have a PK
                 if not pk_columns:
@@ -169,7 +169,7 @@ class BaseImporter:
         """
 
         if ind_tables or ind_identifier_index:
-            self.dataset_table = self.dataset_schema.get_table_by_id(table_name)    
+            self.dataset_table = self.dataset_schema.get_table_by_id(table_name)
 
             # Collect provenance info for easy re-use
             self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
@@ -177,12 +177,12 @@ class BaseImporter:
             if db_table_name is None:
                 self.db_table_name = get_table_name(self.dataset_table)
             # Bind the metadata
-            metadata.bind = self.engine        
+            metadata.bind = self.engine
             # Get a table to import into
             self.tables = table_factory(
                 self.dataset_table, metadata=metadata, db_table_name=self.db_table_name
             )
-        
+
         if ind_tables:
             self.prepare_tables(self.tables, truncate=truncate)
             self.create_pk_lookup(self.tables)
@@ -190,13 +190,13 @@ class BaseImporter:
         if ind_identifier_index:
             # inspect on metadata.bind needed for index creation (prepare_identifier_index)
             try:
-                metadata_inspector = inspect(metadata.bind)       
+                metadata_inspector = inspect(metadata.bind)
             except exc.NoInspectionAvailable as e:
-                metadata_inspector = []        
-            self.prepare_identifier_index(self.tables, metadata_inspector, metadata.bind) 
-        
- 
-    
+                metadata_inspector = []
+            self.prepare_identifier_index(self.tables, metadata_inspector, metadata.bind)
+
+
+
     def load_file(
         self,
         file_name,
@@ -248,17 +248,17 @@ class BaseImporter:
         raise NotImplementedError()
 
     def prepare_tables(self, tables, truncate=False):
-        """Create the tables if needed""" 
+        """Create the tables if needed"""
 
         for table in tables.values():
-            if isinstance(table, Table): #adjusted
-                                           
+            if isinstance(table, Table):
+
                 if not table.exists():
                     table.create()
-                    
+
                 elif truncate:
                     self.engine.execute(table.delete())
-        
+
     def prepare_identifier_index(self, tables, inspector, engine):
         """ Create indexes if needed """
 
@@ -266,22 +266,22 @@ class BaseImporter:
         table_object = None
         ind_identifier_index = False
 
-        for object_name, object in tables.items():#adjusted  
+        for object_name, object in tables.items():
 
-            if isinstance(object, Table): 
+            if isinstance(object, Table):
                 # get the table name and Table instance
                 # the Table instance is assigned to the generic var name "table_object"
-                # which is referenced by the Index SQLalchemy class instantiation and 
-                # expects a Table instance as it's value  
+                # which is referenced by the Index SQLalchemy class instantiation and
+                # expects a Table instance as it's value
                 table_name = object_name
                 table_object = object
-            
+
             # check for presence of the _identifier_idx Index object
             if object_name == f'{table_name}_identifier_idx':
-       
-                try: 
+
+                try:
                     # fetch indexes based on specification in DB
-                    indexes = inspector.get_indexes(table_name, schema=None)                    
+                    indexes = inspector.get_indexes(table_name, schema=None)
                     for index in indexes:
                         if index.get('name', None) == object_name:
                             ind_identifier_index = True
@@ -289,12 +289,12 @@ class BaseImporter:
                     if not ind_identifier_index:
                         print("Identifier index not found...start creating", object)
                         # eval is used to execute string to code (which is used to make it dynamicly generated)
-                        eval(object).create(bind=engine)                            
+                        eval(object).create(bind=engine)
 
                 except AttributeError as e:
                     print(f"Error on identifier index for {object_name}:", e)
-                    continue            
-          
+                    continue
+
 
 class CliLogger:
     def __index__(self, batch_size):
@@ -357,7 +357,7 @@ def table_factory(
     sub_tables = {}
     columns = []
     identifier_index = {}
-    
+
     for field in dataset_table.fields:
         if field.type.endswith("#/definitions/schema"):
             continue
@@ -373,8 +373,8 @@ def table_factory(
                     sub_columns = [
                         Column("id", Integer, primary_key=True),
                         Column("parent_id", ForeignKey(fk_column, ondelete="CASCADE")),
-                    ]             
-                
+                    ]
+
 
                 elif field.is_through_table:
                     # We need a 'through' table for the n-m relation
@@ -420,10 +420,10 @@ def table_factory(
 
             col_type = fetch_col_type(field)
 
-            if dataset_table.identifier and field.name in dataset_table.identifier: #adjusted                
+            if dataset_table.identifier and field.name in dataset_table.identifier:
                 identifier_index = define_identifier_index(db_table_name, dataset_table)
 
-            
+
         except KeyError:
             raise NotImplementedError(
                 f'Import failed at "{field.name}": {dict(field)!r}\n'
@@ -435,42 +435,42 @@ def table_factory(
             col_kwargs["primary_key"] = True
             col_kwargs["nullable"] = False
             col_kwargs["autoincrement"] = False
-        
-        
+
+
         id_postfix = "_id" if field.relation else ""
-        columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))    
-    
-    
-    return {db_table_name: Table(db_table_name, metadata, *columns), **identifier_index, **sub_tables} 
+        columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
 
-    
 
-def define_identifier_index(db_table_name: str, dataset_table: DatasetTableSchema) -> Dict: #adjusted   
+    return {db_table_name: Table(db_table_name, metadata, *columns), **identifier_index, **sub_tables}
+
+
+
+def define_identifier_index(db_table_name: str, dataset_table: DatasetTableSchema) -> Dict:
     """Generate one or more SQLAlchemy Index objects to work with the JSON Schema
 
     :param db_table_name: The full table name: [name_dataset]_ [name_table]
     :param dataset_table: The Amsterdam Schema definition of the table
-    
+
     In the JSON Schema definition of the table, an identifier arry maybe definied.
     I.e. "identifier": ["identificatie", "volgnummer"]
-    
+
     The purpose is to set, besides the (single) PK, the (compound) Alternate Key to uniquely identify a table record.
     This is frequently used in temporal tables where versions of data are present (history).
 
     An index on these AK is needed in order to maximize performance when SQL joining to the vesionized record.
     """
     identifier_column_snaked = []
-    index = {} 
+    index = {}
 
-    if not identifier_column_snaked:   
-                
+    if not identifier_column_snaked:
+
         # precautionary measure: If camelCase, translate to snake_case, so column(s) can be found in table
         # table_object is a generic name which contains a instance of SQLalchemy Table class, which references to the DB table
-        # the letter 'c' between table_object and field of identifier, is a mandatory element of SQLalchemy to specifiy the 
+        # the letter 'c' between table_object and field of identifier, is a mandatory element of SQLalchemy to specifiy the
         # fields that will be part of the index creation.
-        for identifier_column in dataset_table.identifier:                   
-            identifier_column_snaked.append(f'table_object.c.{to_snake_case(identifier_column)}')             
+        for identifier_column in dataset_table.identifier:
+            identifier_column_snaked.append(f'table_object.c.{to_snake_case(identifier_column)}')
 
         index[f'{db_table_name}_identifier_idx'] = f"Index('{db_table_name}_identifier_idx', {','.join(identifier_column_snaked)})"
-    
+
     return index

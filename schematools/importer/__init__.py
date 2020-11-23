@@ -15,8 +15,8 @@ FORMAT_MODELS_LOOKUP = {
     "date": Date,
     "time": Time,
     "date-time": DateTime,
-    "uri": String, # aangepast,
-    "email": String, # aangepast,
+    "uri": String,
+    "email": String,
 }
 
 JSON_TYPE_TO_PG = {
@@ -24,7 +24,7 @@ JSON_TYPE_TO_PG = {
     "object": String,
     "boolean": Boolean,
     "integer": Integer,
-    "number": Float,    
+    "number": Float,
     "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id": String,
     "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/class": String,
     "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/dataset": String,
@@ -57,7 +57,7 @@ JSON_TYPE_TO_PG = {
 }
 
 
-def fetch_col_type(field): 
+def fetch_col_type(field):
     col_type = JSON_TYPE_TO_PG[field.type]
     # XXX no walrus until we can go to python 3.8 (airflow needs 3.7)
     # if (field_format := field.format) is not None:
@@ -69,5 +69,5 @@ def fetch_col_type(field):
 
 def get_table_name(dataset_table: DatasetTableSchema) -> str:
     """Generate the database identifier for the table."""
-    schema = dataset_table._parent_schema    
+    schema = dataset_table._parent_schema
     return f"{schema.id}_{dataset_table.id}".replace("-", "_")
