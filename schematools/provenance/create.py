@@ -36,31 +36,30 @@ class ProvenaceIteration:
             self.final_dic["tables"] = []
 
             for item in dataschema:
-
-                self.get_provenance_per_table(dataschema[item])
+                if item == 'tables': #adjusted        
+                    self.get_provenance_per_table(dataschema[item])
 
     def get_provenance_per_table(self, dictionary):
         """Calling the processing to extract the provenance data per table"""
-
-        if type(dictionary) is list:
-            # loop trough all existing tables and proces data for provenance on each and add them each to the final_dict outcome
-            for n in range(0, self.number_of_tables):
-
-                self.temp_dic_tables["table"] = dictionary[n]["id"]
-                self.temp_dic_tables["provenance"] = (
+    
+        # loop trough all existing tables and proces data for provenance on each and add them each to the final_dict outcome
+        for n in range(0, self.number_of_tables):
+                    
+            self.temp_dic_tables["table"] = dictionary[n]["id"]
+            self.temp_dic_tables["provenance"] = (
                     dictionary[n]["provenance"]
                     if "provenance" in dictionary[n]
                     else "na"  # not applicable
-                )
-                self.temp_dic_tables["properties"] = []
-                self.get_table_columns(dictionary[n]["schema"]["properties"])
-                # add table columns (within element properties) to table
-                self.temp_dic_tables["properties"].append(dict(self.temp_dic_columns))
-                # add table result (within element tables) in final result
-                self.final_dic["tables"].append(self.temp_dic_tables)
-                # clean up temp_dic* to enforce a new object for next table
-                self.temp_dic_tables = {}
-                self.temp_dic_columns = {}
+                    )
+            self.temp_dic_tables["properties"] = []
+            self.get_table_columns(dictionary[n]["schema"]["properties"])
+            # add table columns (within element properties) to table
+            self.temp_dic_tables["properties"].append(dict(self.temp_dic_columns))
+            # add table result (within element tables) in final result
+            self.final_dic["tables"].append(self.temp_dic_tables)
+            # clean up temp_dic* to enforce a new object for next table
+            self.temp_dic_tables = {}
+            self.temp_dic_columns = {}
 
     def get_table_columns(self, dictionary):
         """Extrating the columns and if provenance then adding its value, resulting in a dictionary of source name : column name"""

@@ -6,13 +6,9 @@ import requests
 import jsonschema
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from .permissions import (
-    introspect_permissions,
-    revoke_permissions,
-)
-from .permissions import (
-    apply_schema_and_profile_permissions,
-)
+from pg_grant import query
+from .permissions import create_acl_from_profiles, introspect_permissions, revoke_permissions
+from .permissions import create_acl_from_schema, create_acl_from_schemas, apply_schema_and_profile_permissions
 
 
 from .db import (
@@ -22,19 +18,14 @@ from .db import (
     fetch_schema_from_relational_schema,
 )
 from .exceptions import ParserError
-from .events import EventsProcessor
 from .introspect.db import introspect_db_schema
 from .introspect.geojson import introspect_geojson_files
 from .importer.geojson import GeoJSONImporter
 from .importer.ndjson import NDJSONImporter
+from .importer.base import BaseImporter
 from .maps import create_mapfile
-from .types import DatasetSchema
-from .utils import (
-    schema_def_from_url,
-    profile_defs_from_url,
-    schema_fetch_url_file,
-    schema_defs_from_url,
-)
+from .types import DatasetSchema, SchemaType
+from .utils import schema_def_from_url, profile_defs_from_url, schema_fetch_url_file, schema_defs_from_url
 from .provenance.create import ProvenaceIteration
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
@@ -58,8 +49,7 @@ option_schema_url = click.option(
 )
 
 argument_schema_location = click.argument(
-    "schema_location",
-    metavar="(DATASET-ID | DATASET-FILENAME)",
+    "schema_location", metavar="(DATASET-ID | DATASET-FILENAME)",
 )
 
 option_profile_url = click.option(
@@ -73,14 +63,17 @@ option_profile_url = click.option(
 )
 
 argument_profile_location = click.argument(
-    "profile_location",
-    metavar="(PROFILE-FILENAME | NONE)",
+    "profile_location", metavar="(PROFILE-FILENAME | NONE)",
 )
+
 
 argument_role = click.argument(
     "role",
 )
 
+argument_scope = click.argument(
+    "scope",
+)
 
 def _get_engine(db_url, pg_schemas=None):
     """Initialize the SQLAlchemy engine, and report click errors"""
@@ -153,107 +146,40 @@ def permissions_revoke(db_url, role):
 @option_db_url
 @option_schema_url
 @option_profile_url
-@click.option(
-    "--schema-filename",
-    is_flag=False,
-    help="Filename of local Amsterdam Schema (single dataset). If specified, it will be used instead of schema-url",
-)
-@click.option(
-    "--profile-filename",
-    is_flag=False,
-    help="Filename of local Profile. If specified, it will be used instead of profile-url",
-)
-@click.option(
-    "--pg_schema",
-    is_flag=False,
-    default="public",
-    show_default=True,
-    help="Postgres schema containing the data",
-)
-@click.option(
-    "--auto",
-    is_flag=True,
-    default=False,
-    help="Grant each scope X to their associated db role scope_x.",
-)
-@click.option(
-    "--role",
-    is_flag=False,
-    default="",
-    help="Role to receive grants. Ignored when --auto=True",
-)
-@click.option(
-    "--scope",
-    is_flag=False,
-    default="",
-    help="Scope to be granted. Ignored when --auto=True",
-)
-@click.option(
-    "--execute/--dry-run",
-    default=False,
-    help="Execute SQL statements or dry-run [default]",
-)
-@click.option(
-    "--create-roles", is_flag=True, default=False, help="Create missing postgres roles"
-)
-@click.option(
-    "--revoke",
-    is_flag=True,
-    default=False,
-    help="Before granting new permissions, revoke first all previous table and column permissions",
-)
-def permissions_apply(
-    db_url,
-    schema_url,
-    profile_url,
-    schema_filename,
-    profile_filename,
-    pg_schema,
-    auto,
-    role,
-    scope,
-    execute,
-    create_roles,
-    revoke,
-):
+@argument_schema_location
+@argument_profile_location
+@argument_role
+@argument_scope
+@click.option("--dry-run", is_flag=True, default=False, help="Don't execute the GRANT statements")
+def permissions_apply(db_url, schema_url, profile_url, schema_location, profile_location, role, scope, dry_run):
     """Set permissions for a postgres role associated with a scope from Amsterdam Schema or Profiles."""
-    dry_run = not execute
-    if auto:
-        role = "AUTO"
-        scope = "ALL"
+    def _fetch_json(location):
+        if not location.startswith("http"):
+            with open(location) as f:
+                json_obj = json.load(f)
+        else:
+            response = requests.get(location)
+            response.raise_for_status()
+            json_obj = response.json()
+        return json_obj
+
 
     engine = _get_engine(db_url)
-
-    if schema_filename:
-        dataset_schema = DatasetSchema.from_file(schema_filename)
-        ams_schema = {dataset_schema.id: dataset_schema}
-    else:
+    if schema_location in {"None", "NONE"}:
+        ams_schema = None
+    elif schema_location == 'ALL':
         ams_schema = schema_defs_from_url(schemas_url=schema_url)
-
-    if profile_filename:
-        profile = schema_fetch_url_file(profile_filename)
-        profiles = {profile["name"]: profile}
     else:
-        # Profiles not live yet, temporarilly commented out
-        # profiles = profile_defs_from_url(profiles_url=profile_url)
+        dataset_schema = _get_dataset_schema(schema_url, schema_location)
+        ams_schema = {dataset_schema.id: dataset_schema}
+    if profile_location in {"None", "NONE"}:
         profiles = None
-
-    if auto or (role and scope):
-        apply_schema_and_profile_permissions(
-            engine,
-            pg_schema,
-            ams_schema,
-            profiles,
-            role,
-            scope,
-            dry_run,
-            create_roles,
-            revoke,
-        )
+    elif profile_location == 'ALL':
+        profiles = profile_defs_from_url(schemas_url=profile_url)
     else:
-        print(
-            "Choose --auto or specify both a --role and a --scope to be able to grant permissions"
-        )
+        profile = _fetch_json(profile_location)
+        profiles = {profile["name"]: profile}
+    apply_schema_and_profile_permissions(engine, ams_schema, profiles, role, scope, dry_run)
 
 
 @schema.group()
@@ -261,12 +187,16 @@ def introspect():
     """Subcommand to generate a schema."""
     pass
 
+@schema.group()
+def create():
+    """Subcommand to create a DB object."""
+    pass
 
 @schema.command()
 @click.argument("meta_schema_url")
 @click.argument("schema_location")
 def validate(meta_schema_url, schema_location):
-    """Validate a JSON file against the amsterdam schema meta schema.
+    """ Validate a JSON file against the amsterdam schema meta schema.
     schema_location can be a url or a filesystem path.
     """
 
@@ -399,23 +329,6 @@ def import_geojson(
     importer.load_file(geojson_path, table_name, truncate=truncate_table)
 
 
-@import_.command("events")
-@option_db_url
-@option_schema_url
-@argument_schema_location
-@click.argument("table_name")
-@click.argument("events_path")
-def import_events(db_url, schema_url, schema_location, table_name, events_path):
-    """Import an events file into a table."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_url, schema_location)
-    srid = dataset_schema["crs"].split(":")[-1]
-    # Run as a transaction
-    with engine.begin() as connection:
-        importer = EventsProcessor([dataset_schema], srid, connection, truncate=True)
-        importer.load_events_from_file(events_path)
-
-
 @import_.command("schema")
 @option_db_url
 @option_schema_url
@@ -429,7 +342,6 @@ def import_schema(db_url, schema_url, schema_location):
     create_meta_tables(engine)
     create_meta_table_data(engine, dataset_schema)
 
-
 def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
@@ -442,3 +354,20 @@ def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
             return schema_def_from_url(schema_url, schema_location)
         except KeyError:
             raise click.BadParameter(f"Schema {schema_location} not found.")
+
+
+@create.command("identifierindex")
+@option_db_url
+@option_schema_url
+def create_identifier_index(schema_url, db_url):
+    """Generate SQLalchemy Index objects based on the JSON schema data defintion to create on DB"""
+    data = schema_fetch_url_file(schema_url)
+    engine = _get_engine(db_url)
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+    importer = BaseImporter(dataset_schema, engine)
+
+    for table in data['tables']: 
+        importer.generate_tables(table['id']) # the generate_tables accepts a table name as
+
+
