@@ -13,9 +13,9 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
-
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
+import psycopg2
 from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
@@ -577,8 +577,13 @@ class LooseRelationField(models.CharField):
 def get_active_profiles():
     profiles = cache.get(PROFILES_CACHE_KEY)
     if profiles is None:
-        profiles = [profile for profile in Profile.objects.all()]
-        cache.set(PROFILES_CACHE_KEY, profiles)
+        try:
+            profiles = [profile for profile in Profile.objects.all()]
+        except psycopg2.OperationalError:
+            # Return empty list and do not cache result.
+            profiles = []
+        else:
+            cache.set(PROFILES_CACHE_KEY, profiles)
     return profiles
 
 get_active_profiles()
