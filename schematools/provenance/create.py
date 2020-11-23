@@ -36,7 +36,7 @@ class ProvenaceIteration:
             self.final_dic["tables"] = []
 
             for item in dataschema:
-                if item == 'tables': #adjusted        
+                if item == 'tables':       
                     self.get_provenance_per_table(dataschema[item])
 
     def get_provenance_per_table(self, dictionary):

@@ -163,32 +163,40 @@ class BaseImporter:
                 )
                 self.pk_values_lookup[table_name] = pks
 
-    def generate_tables(self, table_name, db_table_name=None, truncate=False):
-        """Generate the tablemodels and tables"""
+    def generate_db_objects(self, table_name, db_table_name=None, truncate=False, ind_tables=True, ind_identifier_index=True):
+        """Generate the tablemodels and tables and / or index on identifier as specified in the JSON data schema.
+            As default both table and index creation are set to True.
+        """
 
-        self.dataset_table = self.dataset_schema.get_table_by_id(table_name)    
+        if ind_tables or ind_identifier_index:
+            self.dataset_table = self.dataset_schema.get_table_by_id(table_name)    
 
-        # Collect provenance info for easy re-use
-        self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
-        self.db_table_name = db_table_name
-        if db_table_name is None:
-            self.db_table_name = get_table_name(self.dataset_table)
-        # Bind the metadata
-        metadata.bind = self.engine        
-        # Get a table to import into
-        self.tables = table_factory(
-            self.dataset_table, metadata=metadata, db_table_name=self.db_table_name
-        )
+            # Collect provenance info for easy re-use
+            self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
+            self.db_table_name = db_table_name
+            if db_table_name is None:
+                self.db_table_name = get_table_name(self.dataset_table)
+            # Bind the metadata
+            metadata.bind = self.engine        
+            # Get a table to import into
+            self.tables = table_factory(
+                self.dataset_table, metadata=metadata, db_table_name=self.db_table_name
+            )
         
-        # inspect on metadata.bind needed for index creation (prepare_identifier_index)
-        try:#adjusted
-            metadata_inspector = inspect(metadata.bind)       
-        except exc.NoInspectionAvailable as e:
-            metadata_inspector = []
-        self.prepare_tables(self.tables, truncate=truncate)
-        self.prepare_identifier_index(self.tables, metadata_inspector, metadata.bind)#adjusted
-        self.create_pk_lookup(self.tables)
+        if ind_tables:
+            self.prepare_tables(self.tables, truncate=truncate)
+            self.create_pk_lookup(self.tables)
 
+        if ind_identifier_index:
+            # inspect on metadata.bind needed for index creation (prepare_identifier_index)
+            try:
+                metadata_inspector = inspect(metadata.bind)       
+            except exc.NoInspectionAvailable as e:
+                metadata_inspector = []        
+            self.prepare_identifier_index(self.tables, metadata_inspector, metadata.bind) 
+        
+ 
+    
     def load_file(
         self,
         file_name,

@@ -360,7 +360,7 @@ def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
 @option_db_url
 @option_schema_url
 def create_identifier_index(schema_url, db_url):
-    """Generate SQLalchemy Index objects based on the JSON schema data defintion to create on DB"""
+    """Execute SQLalchemy Index based on Identifier in the JSON schema data defintion"""
     data = schema_fetch_url_file(schema_url)
     engine = _get_engine(db_url)
     parent_schema = SchemaType(data)
@@ -368,6 +368,32 @@ def create_identifier_index(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data['tables']: 
-        importer.generate_tables(table['id']) # the generate_tables accepts a table name as
+        importer.generate_db_objects(table['id'], ind_tables=False)
 
+@create.command("tables")
+@option_db_url
+@option_schema_url
+def create_tables(schema_url, db_url):
+    """Execute SQLalchemy Table objects"""
+    data = schema_fetch_url_file(schema_url)
+    engine = _get_engine(db_url)
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+    importer = BaseImporter(dataset_schema, engine)
 
+    for table in data['tables']: 
+        importer.generate_db_objects(table['id'], ind_identifier_index=False)
+
+@create.command("all")
+@option_db_url
+@option_schema_url
+def create_all_objects(schema_url, db_url):
+    """Execute SQLalchemy Index (Identifier fields) and Table objects"""
+    data = schema_fetch_url_file(schema_url)
+    engine = _get_engine(db_url)
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+    importer = BaseImporter(dataset_schema, engine)
+
+    for table in data['tables']: 
+        importer.generate_db_objects(table['id'])
