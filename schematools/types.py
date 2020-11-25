@@ -694,36 +694,6 @@ class ProfileTableSchema(DatasetType):
         """
         return self.get("mandatoryFilterSets", [])
 
-    def _mandatory_filterset_was_queried(self, mandatory_filterset, query_params):
-        return all(
-            mandatory_filter in query_params for mandatory_filter in mandatory_filterset
-        )
-
-    def mandatory_filterset_obligation_fulfilled(self, request):
-        if not self.mandatory_filtersets:
-            return True
-
-        view_type = request.parser_context["view"].action_map["get"]
-        if view_type == "list":
-            # this is a list view
-            valid_query_params = [
-                param for param, value in request.GET.items() if value
-            ]
-        elif view_type == "retrieve":
-            # this is a detail view
-            valid_query_params = ["id"]  # querying the detailview equals a filter on id
-        else:
-            raise ValueError(
-                "View has invalid action map, cannot resolve it as a Detail or List view"
-            )
-
-        return any(
-            self._mandatory_filterset_was_queried(
-                mandatory_filterset, valid_query_params
-            )
-            for mandatory_filterset in self.mandatory_filtersets
-        )
-
 
 def get_db_table_name(table: DatasetTableSchema) -> str:
     """Generate the table name for a database schema."""

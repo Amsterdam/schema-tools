@@ -1,8 +1,7 @@
 from django.contrib.auth.backends import BaseBackend
 from schematools.contrib.django.models import (
     Dataset,
-    DatasetTable,
-    get_active_profiles,
+    Profile,
     generate_permission_key,
 )
 
@@ -20,12 +19,13 @@ class RequestProfile(object):
         self.request = request
         self.auth_profiles = None
         self.auth_permissions = None
+        self.valid_query_params = []
 
     def get_profiles(self):
         """Get all profiles that match scopes of request."""
         if self.auth_profiles is None:
             profiles = []
-            for profile in get_active_profiles():
+            for profile in Profile.objects.all():
                 scopes = profile.get_scopes()
                 if len(scopes) == 0:
                     profiles.append(profile)
@@ -43,21 +43,19 @@ class RequestProfile(object):
             dataset_id, table_id, field_id = perm.split(":")
             dataset = Dataset.objects.get(name=dataset_id)
             has_dataset_scope = self.request.is_authorized_for(dataset.auth)
-            table = DatasetTable.objects.get(dataset=dataset, name=table_id)
+            table = dataset.tables.get(name=table_id)
             for field in table.fields.all():
                 permission_key = generate_permission_key(
                     dataset_id, table_id, field.name
                 )
                 if has_dataset_scope:
-                    permissions[permission_key] = PERMISSION_LIST[
-                        0
-                    ]  # get the top permission
+                    # get the top permission
+                    permissions[permission_key] = PERMISSION_LIST[0]
                 else:
                     has_table_scope = self.request.is_authorized_for(table.auth)
                     if has_table_scope:
-                        permissions[permission_key] = PERMISSION_LIST[
-                            0
-                        ]  # get the top permission
+                        # get the top permission
+                        permissions[permission_key] = PERMISSION_LIST[0]
             for profile in self.get_active_profiles(dataset_id, table_id):
                 profile_permissions = profile.get_permissions()
                 permissions = merge_permissions(permissions, profile_permissions)
@@ -69,9 +67,34 @@ class RequestProfile(object):
         permissions = self.get_all_permissions(perm)
         return permissions.get(perm, None)
 
+    def _mandatory_filterset_was_queried(self, mandatory_filterset, query_params):
+        """checks if all of the mandatory parameters in a
+        manadatory filterset were queried"""
+        return all(
+            mandatory_filter in query_params for mandatory_filter in mandatory_filterset
+        )
+
+    def _mandatory_filterset_obligation_fulfilled(self, table_schema):
+        """checks if any of the mandatory filtersetd of a ProfileTableSchema
+        instance was queried"""
+        if not table_schema.mandatory_filtersets:
+            return True
+        if not self.valid_query_params:
+            self.valid_query_params = [
+                param for param, value in self.request.GET.items() if value
+            ]
+        return any(
+            self._mandatory_filterset_was_queried(
+                mandatory_filterset, self.valid_query_params
+            )
+            for mandatory_filterset in table_schema.mandatory_filtersets
+        )
+
     def get_active_profiles(self, dataset_id, table_id):
-        """Returns the profiles that 1) are relevant to the table
-        and 2) have met their filterset obligations"""
+        """Returns the profiles that
+        1) are relevant to the table and
+        2) have met their mandatory filterset obligations
+        """
         profiles = []
         for profile in self.get_profiles():
             relevant_dataset_schema = profile.schema.datasets.get(dataset_id, None)
@@ -80,8 +103,8 @@ class RequestProfile(object):
                     table_id, None
                 )
                 if relevant_table_schema:
-                    if relevant_table_schema.mandatory_filterset_obligation_fulfilled(
-                        self.request
+                    if self._mandatory_filterset_obligation_fulfilled(
+                        relevant_table_schema
                     ):
                         profiles.append(profile)
         return profiles
