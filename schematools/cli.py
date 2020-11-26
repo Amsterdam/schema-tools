@@ -10,9 +10,7 @@ from .permissions import (
     introspect_permissions,
     revoke_permissions,
 )
-from .permissions import (
-    apply_schema_and_profile_permissions,
-)
+from .permissions import apply_schema_and_profile_permissions
 
 
 from .db import (
@@ -28,7 +26,8 @@ from .introspect.geojson import introspect_geojson_files
 from .importer.geojson import GeoJSONImporter
 from .importer.ndjson import NDJSONImporter
 from .maps import create_mapfile
-from .types import DatasetSchema
+from .importer.base import BaseImporter
+from .types import DatasetSchema, SchemaType
 from .utils import (
     schema_def_from_url,
     profile_defs_from_url,
@@ -58,8 +57,7 @@ option_schema_url = click.option(
 )
 
 argument_schema_location = click.argument(
-    "schema_location",
-    metavar="(DATASET-ID | DATASET-FILENAME)",
+    "schema_location", metavar="(DATASET-ID | DATASET-FILENAME)",
 )
 
 option_profile_url = click.option(
@@ -73,13 +71,10 @@ option_profile_url = click.option(
 )
 
 argument_profile_location = click.argument(
-    "profile_location",
-    metavar="(PROFILE-FILENAME | NONE)",
+    "profile_location", metavar="(PROFILE-FILENAME | NONE)",
 )
 
-argument_role = click.argument(
-    "role",
-)
+argument_role = click.argument("role",)
 
 
 def _get_engine(db_url, pg_schemas=None):
@@ -259,6 +254,12 @@ def permissions_apply(
 @schema.group()
 def introspect():
     """Subcommand to generate a schema."""
+    pass
+
+
+@schema.group()
+def create():
+    """Subcommand to create a DB object."""
     pass
 
 
@@ -442,3 +443,48 @@ def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
             return schema_def_from_url(schema_url, schema_location)
         except KeyError:
             raise click.BadParameter(f"Schema {schema_location} not found.")
+
+
+@create.command("identifierindex")
+@option_db_url
+@option_schema_url
+def create_identifier_index(schema_url, db_url):
+    """Execute SQLalchemy Index based on Identifier in the JSON schema data defintion"""
+    data = schema_fetch_url_file(schema_url)
+    engine = _get_engine(db_url)
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+    importer = BaseImporter(dataset_schema, engine)
+
+    for table in data["tables"]:
+        importer.generate_db_objects(table["id"], ind_tables=False)
+
+
+@create.command("tables")
+@option_db_url
+@option_schema_url
+def create_tables(schema_url, db_url):
+    """Execute SQLalchemy Table objects"""
+    data = schema_fetch_url_file(schema_url)
+    engine = _get_engine(db_url)
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+    importer = BaseImporter(dataset_schema, engine)
+
+    for table in data["tables"]:
+        importer.generate_db_objects(table["id"], ind_identifier_index=False)
+
+
+@create.command("all")
+@option_db_url
+@option_schema_url
+def create_all_objects(schema_url, db_url):
+    """Execute SQLalchemy Index (Identifier fields) and Table objects"""
+    data = schema_fetch_url_file(schema_url)
+    engine = _get_engine(db_url)
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+    importer = BaseImporter(dataset_schema, engine)
+
+    for table in data["tables"]:
+        importer.generate_db_objects(table["id"])

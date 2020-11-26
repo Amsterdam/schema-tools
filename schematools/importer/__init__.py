@@ -10,11 +10,14 @@ from sqlalchemy import (
     Time,
     DateTime,
 )
+from sqlalchemy.types import ARRAY
 
 FORMAT_MODELS_LOOKUP = {
     "date": Date,
     "time": Time,
     "date-time": DateTime,
+    "uri": String,
+    "email": String,
 }
 
 JSON_TYPE_TO_PG = {
@@ -23,6 +26,7 @@ JSON_TYPE_TO_PG = {
     "boolean": Boolean,
     "integer": Integer,
     "number": Float,
+    "array": ARRAY(String),
     "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id": String,
     "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/class": String,
     "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/dataset": String,
