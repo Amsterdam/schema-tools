@@ -15,7 +15,5 @@ services:
       SECRET_KEY: insecure
       SCHEMA_URL: https://schemas.data.amsterdam.nl/datasets/
       DATABASE_URL: "postgres://dataservices:insecure@database/dataservices"
-    volumes:
-      - ../:/app
     command: >
       bash -c ".jenkins/test.sh"
