@@ -197,7 +197,7 @@ class BaseImporter:
             metadata.bind = self.engine
             # Get a table to import into
             self.tables = table_factory(
-                self.dataset_table, metadata=metadata, db_table_name=self.db_table_name
+                self.dataset_table, ind_tables, ind_identifier_index, metadata=metadata, db_table_name=self.db_table_name,
             )
 
         if ind_tables:
@@ -348,6 +348,8 @@ class LogfileLogger(CliLogger):
 
 def table_factory(
     dataset_table: DatasetTableSchema,
+    ind_tables: bool,
+    ind_identifier_index: bool,
     metadata: Optional[MetaData] = None,
     db_table_name=None,
 ) -> Dict[str, Table]:
@@ -419,7 +421,7 @@ def table_factory(
 
             col_type = fetch_col_type(field)
 
-            if dataset_table.identifier and field.name in dataset_table.identifier:
+            if dataset_table.identifier and field.name in dataset_table.identifier and ind_identifier_index:
                 identifier_index = define_identifier_index(db_table_name, dataset_table)
 
         except KeyError:
