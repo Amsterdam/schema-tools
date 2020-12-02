@@ -74,15 +74,16 @@ class RequestProfile(object):
             mandatory_filter in query_params for mandatory_filter in mandatory_filterset
         )
 
+    def get_valid_query_params(self):
+        return [param for param, value in self.request.GET.items() if value]
+
     def _mandatory_filterset_obligation_fulfilled(self, table_schema):
         """checks if any of the mandatory filtersetd of a ProfileTableSchema
         instance was queried"""
         if not table_schema.mandatory_filtersets:
             return True
         if not self.valid_query_params:
-            self.valid_query_params = [
-                param for param, value in self.request.GET.items() if value
-            ]
+            self.valid_query_params = self.get_valid_query_params()
         return any(
             self._mandatory_filterset_was_queried(
                 mandatory_filterset, self.valid_query_params
