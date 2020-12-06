@@ -445,7 +445,7 @@ def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
             raise click.BadParameter(f"Schema {schema_location} not found.")
 
 
-@create.command("identifierindex")
+@create.command("extra_index")
 @option_db_url
 @option_schema_url
 def create_identifier_index(schema_url, db_url):
@@ -457,7 +457,7 @@ def create_identifier_index(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data["tables"]:
-        importer.generate_db_objects(table["id"], ind_tables=False)
+        importer.generate_db_objects(table["id"], ind_tables=False, ind_extra_index=True)
 
 
 @create.command("tables")
@@ -472,7 +472,7 @@ def create_tables(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data["tables"]:
-        importer.generate_db_objects(table["id"], ind_identifier_index=False)
+        importer.generate_db_objects(table["id"], ind_extra_index=False, ind_tables=True)
 
 
 @create.command("all")

@@ -183,7 +183,7 @@ class DatasetSchema(SchemaType):
                 },
             },
         )
-        return DatasetTableSchema(sub_table_schema, _parent_schema=self)
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self, _is_through_table=True)
 
     @property
     def temporal(self):
@@ -204,14 +204,15 @@ class DatasetSchema(SchemaType):
         return temporal_configuration
 
 
-class DatasetTableSchema(SchemaType):
+class DatasetTableSchema(DatasetSchema):
     """The table within a dataset.
     This table definition follows the JSON Schema spec.
     """
 
-    def __init__(self, *args, _parent_schema=None, **kwargs):
+    def __init__(self, *args, _parent_schema=None, _is_through_table=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._parent_schema = _parent_schema
+        self._is_through_table = _is_through_table
 
         if self.get("type") != "table":
             raise ValueError("Invalid Amsterdam schema table data")
@@ -257,6 +258,14 @@ class DatasetTableSchema(SchemaType):
         for field_schema in self.fields:
             if field_schema.name == field_name:
                 return field_schema
+
+    def get_through_tables_by_id(self) -> typing.List[DatasetTableSchema]:
+        """Access list of through_tables (for n-m relations) for a single base table """
+        tables = []
+        for field in self.fields:
+                if field.is_through_table:
+                    tables.append(super().build_through_table(table=self, field=field))
+        return tables
 
     @property
     def display_field(self):
@@ -326,6 +335,10 @@ class DatasetTableSchema(SchemaType):
         """Auth of the table (if set)"""
         return self.get("auth")
 
+    @property
+    def is_through_table(self):
+        """Indicates if table is an intersection table (n:m relation table) or base table"""
+        return self._is_through_table
 
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """
