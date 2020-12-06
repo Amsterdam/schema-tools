@@ -4,7 +4,7 @@ from schematools.importer.ndjson import NDJSONImporter
 def test_ndjson_import_nm(here, engine, meetbouten_schema, dbsession):
     ndjson_path = here / "files" / "data" / "metingen.ndjson"
     importer = NDJSONImporter(meetbouten_schema, engine)
-    importer.generate_tables("metingen", truncate=True)
+    importer.generate_db_objects("metingen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from meetbouten_metingen")]
     assert len(records) == 4
@@ -25,7 +25,7 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, dbsession):
 def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbsession):
     ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
     importer = NDJSONImporter(meetbouten_schema, engine)
-    importer.generate_tables("meetbouten", truncate=True)
+    importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten")]
     assert len(records) == 1
@@ -36,7 +36,7 @@ def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbse
 def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "ggwgebieden.ndjson"
     importer = NDJSONImporter(ggwgebieden_schema, engine)
-    importer.generate_tables("ggwgebieden", truncate=True)
+    importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden")]
     assert len(records) == 1
@@ -63,7 +63,7 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
 ):
     ndjson_path = here / "files" / "data" / "kadastraleobjecten.ndjson"
     importer = NDJSONImporter(kadastraleobjecten_schema, engine)
-    importer.generate_tables("kadastraleobjecten", truncate=True)
+    importer.generate_db_objects("kadastraleobjecten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten")]
     assert len(records) == 2
@@ -92,7 +92,7 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
 def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbsession):
     ndjson_path = here / "files" / "data" / "verblijfsobjecten.ndjson"
     importer = NDJSONImporter(verblijfsobjecten_schema, engine)
-    importer.generate_tables("verblijfsobjecten", truncate=True)
+    importer.generate_db_objects("verblijfsobjecten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [
         dict(r)
@@ -109,7 +109,7 @@ def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbs
 def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
     ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
     importer = NDJSONImporter(meetbouten_schema, engine)
-    importer.generate_tables("meetbouten", truncate=True)
+    importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten")]
     assert len(records) == 1
@@ -127,5 +127,5 @@ def test_inactive_relation_that_are_commented_out(
     """ Prove that objects that are commented out are flattened to strings """
     ndjson_path = here / "files" / "data" / "stadsdelen.ndjson"
     importer = NDJSONImporter(stadsdelen_schema, engine)
-    importer.generate_tables("stadsdelen", truncate=True)
+    importer.generate_db_objects("stadsdelen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)

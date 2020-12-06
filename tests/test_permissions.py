@@ -16,9 +16,9 @@ def test_auto_permissions(here, engine, gebieden_schema_auth, dbsession):
     """
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
     importer = NDJSONImporter(gebieden_schema_auth, engine)
-    importer.generate_tables("bouwblokken", truncate=True)
+    importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    importer.generate_tables("buurten", truncate=True)
+    importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
 
     # Setup schema and profile
     ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
@@ -40,8 +40,8 @@ def test_openbaar_permissions(here, engine, afval_schema, dbsession):
     """
 
     importer = NDJSONImporter(afval_schema, engine)
-    importer.generate_tables("containers", truncate=True)
-    importer.generate_tables("clusters", truncate=True)
+    importer.generate_db_objects("containers", truncate=True, ind_extra_index=False)
+    importer.generate_db_objects("clusters", truncate=True, ind_extra_index=False)
 
     # Setup schema and profile
     ams_schema = {afval_schema.id: afval_schema}
@@ -76,9 +76,9 @@ def test_interacting_permissions(here, engine, gebieden_schema_auth, dbsession):
 
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
     importer = NDJSONImporter(gebieden_schema_auth, engine)
-    importer.generate_tables("bouwblokken", truncate=True)
+    importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    importer.generate_tables("buurten", truncate=True)
+    importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
 
     # Setup schema and profile
     ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
@@ -126,9 +126,9 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
 
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
     importer = NDJSONImporter(gebieden_schema_auth_list, engine)
-    importer.generate_tables("bouwblokken", truncate=True)
+    importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    importer.generate_tables("buurten", truncate=True)
+    importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
 
     # Setup schema and profile
     ams_schema = {gebieden_schema_auth_list.id: gebieden_schema_auth_list}
@@ -187,9 +187,9 @@ def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
 
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
     importer = NDJSONImporter(gebieden_schema_auth, engine)
-    importer.generate_tables("bouwblokken", truncate=True)
+    importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    importer.generate_tables("buurten", truncate=True)
+    importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
 
     # Setup schema and profile
     ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
