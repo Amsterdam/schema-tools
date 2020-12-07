@@ -14,7 +14,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--skip", dest="skip", nargs="*", help="Schemas that need to be skipped",
+            "--skip",
+            dest="skip",
+            nargs="*",
+            help="Schemas that need to be skipped",
         )
 
     def handle(self, *args, **options):

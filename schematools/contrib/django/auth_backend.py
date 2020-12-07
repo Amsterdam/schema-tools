@@ -1,7 +1,5 @@
 from django.contrib.auth.backends import BaseBackend
-from schematools.contrib.django.models import (
-    get_active_profiles,
-)
+from schematools.contrib.django.models import get_active_profiles
 
 PERMISSION_LIST = [
     "read",
@@ -18,8 +16,7 @@ class RequestProfile(object):
         self.auth_permissions = None
 
     def get_profiles(self):
-        """Get all profiles that match scopes of request.
-         """
+        """Get all profiles that match scopes of request."""
         if self.auth_profiles is None:
             profiles = []
             for profile in get_active_profiles():
@@ -55,8 +52,7 @@ class ProfileAuthorizationBackend(BaseBackend):
     """
 
     def has_perm(self, user_obj, perm, obj=None):
-        """Check if user has permission.
-         """
+        """Check if user has permission."""
         request = user_obj.request
 
         if not hasattr(request, "auth_profile"):
@@ -79,8 +75,7 @@ def merge_permissions(base_permissions, profile_permissions):
 
 
 def highest_permission(permission1, permission2):
-    """Find highest permission of two.
-    """
+    """Find highest permission of two."""
     try:
         return sorted(
             [permission1, permission2],

@@ -14,8 +14,7 @@ from schematools.utils import toCamelCase
 
 
 def fetch_table_names(engine):
-    """ Fetches all tablenames, to be used in other commands
-    """
+    """Fetches all tablenames, to be used in other commands"""
     insp = inspect(engine)
     return insp.get_table_names()
 
@@ -152,5 +151,3 @@ def _serialize(obj, camelize=True):
 
 def _extract_names(properties):
     return {toCamelCase(prop.pop("name")): prop for prop in properties}
-
-

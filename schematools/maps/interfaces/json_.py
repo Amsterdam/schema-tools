@@ -43,7 +43,11 @@ def load(
 @click.argument("document_path", type=click.types.Path(), required=True)
 def main(document_path):
     base_uri = "".join(
-        ["file://", os.path.dirname(os.path.realpath(document_path)), "/",]
+        [
+            "file://",
+            os.path.dirname(os.path.realpath(document_path)),
+            "/",
+        ]
     )
     with open(document_path, "r") as document:
         result = load(document, base_uri)

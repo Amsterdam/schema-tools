@@ -48,11 +48,11 @@ TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 
 
 class ObjectMarker:
-    """ Class to signal that field type object has been found in the aschema definition.
-        For FK and NM relations, this class will be replaced by another field class,
-        during processing (in the FieldMaker).
-        For non-model fields (e.g. BRP), this class marks the fact that no
-        model field needs to be generated.
+    """Class to signal that field type object has been found in the aschema definition.
+    For FK and NM relations, this class will be replaced by another field class,
+    during processing (in the FieldMaker).
+    For non-model fields (e.g. BRP), this class marks the fact that no
+    model field needs to be generated.
     """
 
     pass
@@ -78,49 +78,73 @@ JSON_TYPE_TO_DJANGO = {
     "https://geojson.org/schema/Geometry.json": (
         gis_models.GeometryField,
         dict(
-            value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
+            value_getter=fetch_srid,
+            srid=RD_NEW.srid,
+            geography=False,
+            db_index=True,
         ),
     ),
     "https://geojson.org/schema/Point.json": (
         gis_models.PointField,
         dict(
-            value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
+            value_getter=fetch_srid,
+            srid=RD_NEW.srid,
+            geography=False,
+            db_index=True,
         ),
     ),
     "https://geojson.org/schema/MultiPoint.json": (
         gis_models.MultiPointField,
         dict(
-            value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
+            value_getter=fetch_srid,
+            srid=RD_NEW.srid,
+            geography=False,
+            db_index=True,
         ),
     ),
     "https://geojson.org/schema/Polygon.json": (
         gis_models.PolygonField,
         dict(
-            value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
+            value_getter=fetch_srid,
+            srid=RD_NEW.srid,
+            geography=False,
+            db_index=True,
         ),
     ),
     "https://geojson.org/schema/MultiPolygon.json": (
         gis_models.MultiPolygonField,
         dict(
-            value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
+            value_getter=fetch_srid,
+            srid=RD_NEW.srid,
+            geography=False,
+            db_index=True,
         ),
     ),
     "https://geojson.org/schema/LineString.json": (
         gis_models.LineStringField,
         dict(
-            value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
+            value_getter=fetch_srid,
+            srid=RD_NEW.srid,
+            geography=False,
+            db_index=True,
         ),
     ),
     "https://geojson.org/schema/MultiLineString.json": (
         gis_models.MultiLineStringField,
         dict(
-            value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
+            value_getter=fetch_srid,
+            srid=RD_NEW.srid,
+            geography=False,
+            db_index=True,
         ),
     ),
     "https://geojson.org/schema/GeometryCollection.json": (
         gis_models.GeometryCollectionField,
         dict(
-            value_getter=fetch_srid, srid=RD_NEW.srid, geography=False, db_index=True,
+            value_getter=fetch_srid,
+            srid=RD_NEW.srid,
+            geography=False,
+            db_index=True,
         ),
     ),
 }
@@ -429,8 +453,7 @@ class DatasetTable(models.Model):
 
 
 class DatasetField(models.Model):
-    """Exposed metadata per field.
-    """
+    """Exposed metadata per field."""
 
     table = models.ForeignKey(
         DatasetTable, on_delete=models.CASCADE, related_name="fields"
@@ -455,9 +478,7 @@ class DatasetField(models.Model):
     def create_for_schema(
         cls, table: DatasetTable, field: DatasetFieldSchema
     ) -> DatasetField:
-        """Create a DatasetField object based on the Amsterdam Schema field spec.
-
-        """
+        """Create a DatasetField object based on the Amsterdam Schema field spec."""
         instance = cls(table=table)
         instance.save_for_schema(field)
         return instance
@@ -470,8 +491,7 @@ class DatasetField(models.Model):
 
 
 class Profile(models.Model):
-    """User Profile.
-    """
+    """User Profile."""
 
     name = models.CharField(max_length=100)
     scopes = models.CharField(max_length=255)
@@ -479,11 +499,11 @@ class Profile(models.Model):
 
     def get_permissions(self) -> dict:
         """
-         Get Flattened permissions per profile in form:
-         {dataset} = "permission"
-         {dataset}:{table} = "permission"
-         {dataset}:{table}:{field} = "permission"
-         """
+        Get Flattened permissions per profile in form:
+        {dataset} = "permission"
+        {dataset}:{table} = "permission"
+        {dataset}:{table}:{field} = "permission"
+        """
         permissions = dict()
         for dataset_id, dataset_settings in self.schema_data.get(
             "datasets", dict()
@@ -518,8 +538,7 @@ class Profile(models.Model):
 
     @classmethod
     def create_for_schema(cls, profile_schema: ProfileSchema) -> Profile:
-        """Create Profile object based on the Amsterdam Schema profile spec.
-        """
+        """Create Profile object based on the Amsterdam Schema profile spec."""
         instance = cls()
         instance.save_for_schema(profile_schema)
         return instance
@@ -555,10 +574,9 @@ def split_permission_key(key):
 
 
 class LooseRelationField(models.CharField):
-
     def __init__(self, *args, **kwargs):
         self.relation = kwargs.pop("relation")
-        kwargs.setdefault('max_length', 254)
+        kwargs.setdefault("max_length", 254)
         super().__init__(*args, **kwargs)
 
     def deconstruct(self):
@@ -569,8 +587,9 @@ class LooseRelationField(models.CharField):
 
     @property
     def related_model(self):
-        dataset_name, table_name, column_name = [to_snake_case(part)
-                                                 for part in self.relation.split(":")]
+        dataset_name, table_name, column_name = [
+            to_snake_case(part) for part in self.relation.split(":")
+        ]
         return apps.all_models[dataset_name][table_name]
 
 
@@ -585,5 +604,6 @@ def get_active_profiles():
         else:
             cache.set(PROFILES_CACHE_KEY, profiles)
     return profiles
+
 
 get_active_profiles()

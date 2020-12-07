@@ -63,7 +63,9 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
 ):
     ndjson_path = here / "files" / "data" / "kadastraleobjecten.ndjson"
     importer = NDJSONImporter(kadastraleobjecten_schema, engine)
-    importer.generate_db_objects("kadastraleobjecten", truncate=True, ind_extra_index=False)
+    importer.generate_db_objects(
+        "kadastraleobjecten", truncate=True, ind_extra_index=False
+    )
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten")]
     assert len(records) == 2
@@ -92,7 +94,9 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
 def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbsession):
     ndjson_path = here / "files" / "data" / "verblijfsobjecten.ndjson"
     importer = NDJSONImporter(verblijfsobjecten_schema, engine)
-    importer.generate_db_objects("verblijfsobjecten", truncate=True, ind_extra_index=False)
+    importer.generate_db_objects(
+        "verblijfsobjecten", truncate=True, ind_extra_index=False
+    )
     importer.load_file(ndjson_path)
     records = [
         dict(r)
@@ -102,7 +106,11 @@ def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbs
     ]
     assert len(records) == 2
     assert sorted((n, v) for n, v in records[0].items()) == (
-        [("code", "1"), ("omschrijving", "doel 1"), ("parent_id", "VB.1"),]
+        [
+            ("code", "1"),
+            ("omschrijving", "doel 1"),
+            ("parent_id", "VB.1"),
+        ]
     )
 
 

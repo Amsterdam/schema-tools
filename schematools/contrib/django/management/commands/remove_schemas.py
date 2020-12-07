@@ -8,7 +8,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "schemas", nargs="+", help="Schemas that need to be dropped",
+            "schemas",
+            nargs="+",
+            help="Schemas that need to be dropped",
         )
 
     def handle(self, *args, **options):

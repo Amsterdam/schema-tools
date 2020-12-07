@@ -183,7 +183,7 @@ class BaseImporter:
         ind_extra_index=True,
     ):
         """Generate the tablemodels and tables and / or index on identifier as specified in the JSON data schema.
-            As default both table and index creation are set to True.
+        As default both table and index creation are set to True.
         """
 
         if ind_tables or ind_extra_index:
@@ -198,7 +198,9 @@ class BaseImporter:
             metadata.bind = self.engine
             # Get a table to import into
             self.tables = table_factory(
-                self.dataset_table, metadata=metadata, db_table_name=self.db_table_name,
+                self.dataset_table,
+                metadata=metadata,
+                db_table_name=self.db_table_name,
             )
 
         if ind_tables:
@@ -209,16 +211,25 @@ class BaseImporter:
             try:
                 # Get indexes to create
                 self.indexes = index_factory(
-                self.dataset_table, ind_extra_index, metadata=metadata, db_table_name=self.db_table_name, logger=[]
+                    self.dataset_table,
+                    ind_extra_index,
+                    metadata=metadata,
+                    db_table_name=self.db_table_name,
+                    logger=[],
                 )
                 metadata_inspector = inspect(metadata.bind)
-                self.prepare_extra_index(self.indexes, metadata_inspector, metadata.bind, logger=[])
+                self.prepare_extra_index(
+                    self.indexes, metadata_inspector, metadata.bind, logger=[]
+                )
 
             except exc.NoInspectionAvailable as e:
                 metadata_inspector = []
 
     def load_file(
-        self, file_name, batch_size=100, **kwargs,
+        self,
+        file_name,
+        batch_size=100,
+        **kwargs,
     ):
         """Import a file into the database table, returns the last record, if available """
 
@@ -249,7 +260,8 @@ class BaseImporter:
                 )
                 if table_records:
                     self.engine.execute(
-                        insert_statement, table_records,
+                        insert_statement,
+                        table_records,
                     )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
@@ -273,21 +285,21 @@ class BaseImporter:
                     self.engine.execute(table.delete())
 
     def prepare_extra_index(self, indexes, inspector, engine, logger=None):
-        """ Create extra indexes on identifiers columns in base tables
-            and identifier columns in n:m tables, if not exists """
+        """Create extra indexes on identifiers columns in base tables
+        and identifier columns in n:m tables, if not exists"""
 
-        #setup logger
+        # setup logger
         logger = LogfileLogger(logger) if logger else CliLogger()
 
         # In the indexes dict, the table name of each index, is stored in the key
-        target_table_name = (list(indexes.keys()))
+        target_table_name = list(indexes.keys())
 
         # get current DB indexes on table
         current_db_indexes = set()
         for table in target_table_name:
             db_indexes = inspector.get_indexes(table, schema=None)
             for current_db_index in db_indexes:
-                current_db_indexes.add(current_db_index['name'])
+                current_db_indexes.add(current_db_index["name"])
 
         # get all found indexes generated out of Amsterdam schema
         schema_indexes = set()
@@ -298,7 +310,9 @@ class BaseImporter:
                 schema_indexes_objects[index_object.name] = index_object
 
         # get difference between DB indexes en indexes found Amsterdam schema
-        indexes_to_create = list((Counter(schema_indexes) - Counter(current_db_indexes)).elements())
+        indexes_to_create = list(
+            (Counter(schema_indexes) - Counter(current_db_indexes)).elements()
+        )
 
         # create indexes - that do not exists yet- in DB
         for index in indexes_to_create:
@@ -307,7 +321,9 @@ class BaseImporter:
                 schema_indexes_objects[index].create(bind=engine)
 
             except AttributeError as e:
-                logger.log_error(f"Error creating index '{index}' for '{target_table_name}', error: {e}")
+                logger.log_error(
+                    f"Error creating index '{index}' for '{target_table_name}', error: {e}"
+                )
                 continue
 
 
@@ -392,8 +408,14 @@ def table_factory(
                 elif field.is_through_table:
                     # We need a 'through' table for the n-m relation
                     sub_columns = [
-                        Column(f"{dataset_table.id}_id", String,),
-                        Column(f"{field_name}_id", String,),
+                        Column(
+                            f"{dataset_table.id}_id",
+                            String,
+                        ),
+                        Column(
+                            f"{field_name}_id",
+                            String,
+                        ),
                     ]
                     # And the field(s) for the left side of the relation
                     # if this left table has a compound key
@@ -417,7 +439,11 @@ def table_factory(
                         )
                     )
 
-                sub_tables[sub_table_id] = Table(sub_table_id, metadata, *sub_columns,)
+                sub_tables[sub_table_id] = Table(
+                    sub_table_id,
+                    metadata,
+                    *sub_columns,
+                )
 
                 continue
 
@@ -474,7 +500,6 @@ def index_factory(
     metadata = metadata or MetaData()
     logger = LogfileLogger(logger) if logger else CliLogger()
 
-
     def define_identifier_index():
         """ creates index based on the 'identifier' specification in the Amsterdam schema """
 
@@ -490,69 +515,77 @@ def index_factory(
                         # precautionary measure:
                         # If camelCase, translate to snake_case, so column(s) can be found in table.
                         table_object.c[to_snake_case(identifier_column)]
-                        )
+                    )
                 except KeyError as e:
-                    logger.log_error(f"{e.__str__} on {dataset_table.id}.{identifier_column}")
+                    logger.log_error(
+                        f"{e.__str__} on {dataset_table.id}.{identifier_column}"
+                    )
                     continue
 
-        indexes_to_create.append(Index(f"{db_table_name}_identifier_idx", *identifier_column_snaked))
+        indexes_to_create.append(
+            Index(f"{db_table_name}_identifier_idx", *identifier_column_snaked)
+        )
 
         # add Index objects to create
         index[db_table_name] = indexes_to_create
 
-
     def define_throughtable_index():
-        """ creates index(es) on the many-to-many table based on 'relation' specification
-            in the Amsterdam schema
-            """
+        """creates index(es) on the many-to-many table based on 'relation' specification
+        in the Amsterdam schema
+        """
 
         for table in dataset_table.get_through_tables_by_id():
 
+            through_tables = {}
+            table_short_name = []
+            indexes_to_create = []
+            # Postgres DB hold a 63 max charakters for objectnames.
+            # To prevent exceeds, the tables names are shortend and used in the index name.
+            for word in table.id.split("_"):
+                table_short_name += word[0]
+            table_short_name = ("").join(table_short_name)
 
-                through_tables = {}
-                table_short_name = []
-                indexes_to_create = []
-                # Postgres DB hold a 63 max charakters for objectnames.
-                # To prevent exceeds, the tables names are shortend and used in the index name.
-                for word in table.id.split("_"):
-                    table_short_name += word[0]
-                table_short_name = ('').join(table_short_name)
+            # make a dictionary of the indexes to create
+            if table.is_through_table:
+                through_tables["table"] = table.id
+                through_tables["properties"] = []
 
-                # make a dictionary of the indexes to create
-                if table.is_through_table:
-                    through_tables['table'] = table.id
-                    through_tables['properties'] = []
+                for field in table.fields:
+                    if field.relation:
+                        through_tables["properties"].append(field.name + "_id")
 
-                    for field in table.fields:
-                        if field.relation:
-                                through_tables['properties'].append(field.name+'_id')
+                        if dataset_table.is_temporal:
+                            through_tables["properties"].append(
+                                field.name + "_identificatie"
+                            )
+                            through_tables["properties"].append(
+                                field.name + "_volgnummer"
+                            )
 
-                                if dataset_table.is_temporal:
-                                    through_tables['properties'].append(field.name+'_identificatie')
-                                    through_tables['properties'].append(field.name+'_volgnummer')
+            # create the Index objects
+            if through_tables:
 
-                # create the Index objects
-                if through_tables:
+                table_name_prefix = db_table_name.split("_")[0]
+                table_name = f"{table_name_prefix}_{through_tables['table']}"
+                table_object = metadata.tables[f"{table_name_prefix}_{table.id}"]
 
-                    table_name_prefix = db_table_name.split('_')[0]
-                    table_name = f"{table_name_prefix}_{through_tables['table']}"
-                    table_object = metadata.tables[f"{table_name_prefix}_{table.id}"]
+                for column in through_tables["properties"]:
 
-                    for column in through_tables['properties']:
+                    try:
+                        indexes_to_create.append(
+                            Index(
+                                f"{db_table_name.split('_')[0]}_{table_short_name}_{column}_idx",
+                                table_object.c[column],
+                            )
+                        )
+                    except KeyError as e:
+                        logger.log_error(
+                            f"{e.__str__} on {db_table_name.split('_')[0]}_{table_short_name}_{column}_idx"
+                        )
+                        continue
 
-                        try:
-                            indexes_to_create.append(
-                                Index(f"{db_table_name.split('_')[0]}_{table_short_name}_{column}_idx", table_object.c[column])
-                                )
-                        except KeyError as e:
-                            logger.log_error(f"{e.__str__} on {db_table_name.split('_')[0]}_{table_short_name}_{column}_idx")
-                            continue
-
-                    # add Index objects to create
-                    index[table_name] = indexes_to_create
-
-
-
+                # add Index objects to create
+                index[table_name] = indexes_to_create
 
     if ind_extra_index:
         define_identifier_index()
