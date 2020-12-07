@@ -110,7 +110,6 @@ class FieldMaker:
                 return LooseRelationField, args, kwargs
 
 
-
         if relation is not None or nm_relation is not None:
             assert not (relation and nm_relation)
             field_cls = models.ManyToManyField if nm_relation else models.ForeignKey
