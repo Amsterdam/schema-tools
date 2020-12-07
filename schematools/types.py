@@ -183,7 +183,7 @@ class DatasetSchema(SchemaType):
                 },
             },
         )
-        return DatasetTableSchema(sub_table_schema, _parent_schema=self, _is_through_table=True)
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
 
     @property
     def temporal(self):
@@ -209,10 +209,10 @@ class DatasetTableSchema(DatasetSchema):
     This table definition follows the JSON Schema spec.
     """
 
-    def __init__(self, *args, _parent_schema=None, _is_through_table=False, **kwargs):
+    def __init__(self, *args, _parent_schema=None, through_table=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._parent_schema = _parent_schema
-        self._is_through_table = _is_through_table
+        self.through_table = through_table
 
         if self.get("type") != "table":
             raise ValueError("Invalid Amsterdam schema table data")
@@ -338,7 +338,7 @@ class DatasetTableSchema(DatasetSchema):
     @property
     def is_through_table(self):
         """Indicates if table is an intersection table (n:m relation table) or base table"""
-        return self._is_through_table
+        return self.through_table
 
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """
