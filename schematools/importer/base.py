@@ -209,10 +209,10 @@ class BaseImporter:
             try:
                 # Get indexes to create
                 self.indexes = index_factory(
-                self.dataset_table, ind_extra_index, metadata=metadata, db_table_name=self.db_table_name
+                self.dataset_table, ind_extra_index, metadata=metadata, db_table_name=self.db_table_name, logger=[]
                 )
                 metadata_inspector = inspect(metadata.bind)
-                self.prepare_extra_index(self.indexes, metadata_inspector, metadata.bind)
+                self.prepare_extra_index(self.indexes, metadata_inspector, metadata.bind, logger=[])
 
             except exc.NoInspectionAvailable as e:
                 metadata_inspector = []
@@ -272,9 +272,12 @@ class BaseImporter:
                 elif truncate:
                     self.engine.execute(table.delete())
 
-    def prepare_extra_index(self, indexes, inspector, engine):
+    def prepare_extra_index(self, indexes, inspector, engine, logger=None):
         """ Create extra indexes on identifiers columns in base tables
             and identifier columns in n:m tables, if not exists """
+
+        #setup logger
+        logger = LogfileLogger(logger) if logger else CliLogger()
 
         # In the indexes dict, the table name of each index, is stored in the key
         target_table_name = (list(indexes.keys()))
@@ -300,11 +303,11 @@ class BaseImporter:
         # create indexes - that do not exists yet- in DB
         for index in indexes_to_create:
             try:
-                print(f"Index '{index}' not found...creating")
+                logger.log_warning(f"Index '{index}' not found...creating")
                 schema_indexes_objects[index].create(bind=engine)
 
             except AttributeError as e:
-                print(f"Error creating index '{index}' for '{target_table_name}'")
+                logger.log_error(f"Error creating index '{index}' for '{target_table_name}', error: {e}")
                 continue
 
 
@@ -446,6 +449,7 @@ def index_factory(
     ind_extra_index: True,
     metadata: Optional[MetaData] = None,
     db_table_name=None,
+    logger=None,
 ) -> Dict[str, Index]:
     """Generate one or more SQLAlchemy Index objects to work with the JSON Schema
 
@@ -468,6 +472,7 @@ def index_factory(
 
     index = dict()
     metadata = metadata or MetaData()
+    logger = LogfileLogger(logger) if logger else CliLogger()
 
 
     def define_identifier_index():
@@ -487,7 +492,7 @@ def index_factory(
                         table_object.c[to_snake_case(identifier_column)]
                         )
                 except KeyError as e:
-                    print(f"{e.__str__} on {dataset_table.id}.{identifier_column}")
+                    logger.log_error(f"{e.__str__} on {dataset_table.id}.{identifier_column}")
                     continue
 
         indexes_to_create.append(Index(f"{db_table_name}_identifier_idx", *identifier_column_snaked))
@@ -535,9 +540,13 @@ def index_factory(
 
                     for column in through_tables['properties']:
 
-                        indexes_to_create.append(
-                            Index(f"{db_table_name.split('_')[0]}_{table_short_name}_{column}_idx", table_object.c[column])
-                            )
+                        try:
+                            indexes_to_create.append(
+                                Index(f"{db_table_name.split('_')[0]}_{table_short_name}_{column}_idx", table_object.c[column])
+                                )
+                        except KeyError as e:
+                            logger.log_error(f"{e.__str__} on {db_table_name.split('_')[0]}_{table_short_name}_{column}_idx")
+                            continue
 
                     # add Index objects to create
                     index[table_name] = indexes_to_create
