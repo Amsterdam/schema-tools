@@ -27,7 +27,6 @@ from schematools.types import (
 )
 from schematools.utils import to_snake_case
 
-from .managers import LooseRelationsManager
 
 from . import managers
 from .validators import URLPathValidator
@@ -162,11 +161,9 @@ class DynamicModel(models.Model):
     _display_field = None
 
     objects = Manager()
-    loose_objects = LooseRelationsManager()
 
     class Meta:
         abstract = True
-        base_manager_name = 'loose_objects'
 
     def __str__(self):
         if self._display_field:
@@ -243,7 +240,6 @@ class Dataset(models.Model):
 
     objects = managers.DatasetQuerySet.as_manager()
 
-    loose_objects = managers.LooseRelationsManager  # JVD
 
     class Meta:
         ordering = ("ordering", "name")
