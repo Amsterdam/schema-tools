@@ -8,7 +8,6 @@ from schematools.contrib.django.auth_backend import (
 from schematools.contrib.django.models import Profile
 
 
-
 @pytest.fixture
 def profile_medewerker():
     return Profile.objects.create(

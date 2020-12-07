@@ -104,7 +104,7 @@ class NDJSONImporter(BaseImporter):
                     sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
                     sub_rows[sub_table_id] = nested_row_records
 
-                for (nm_relation_field_name, field,) in nm_relation_field_info:
+                for (nm_relation_field_name, field) in nm_relation_field_info:
                     values = row[nm_relation_field_name]
                     if values is not None:
                         if not isinstance(values, list):

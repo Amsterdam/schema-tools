@@ -57,7 +57,8 @@ option_schema_url = click.option(
 )
 
 argument_schema_location = click.argument(
-    "schema_location", metavar="(DATASET-ID | DATASET-FILENAME)",
+    "schema_location",
+    metavar="(DATASET-ID | DATASET-FILENAME)",
 )
 
 option_profile_url = click.option(
@@ -71,10 +72,13 @@ option_profile_url = click.option(
 )
 
 argument_profile_location = click.argument(
-    "profile_location", metavar="(PROFILE-FILENAME | NONE)",
+    "profile_location",
+    metavar="(PROFILE-FILENAME | NONE)",
 )
 
-argument_role = click.argument("role",)
+argument_role = click.argument(
+    "role",
+)
 
 
 def _get_engine(db_url, pg_schemas=None):
@@ -457,7 +461,9 @@ def create_identifier_index(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data["tables"]:
-        importer.generate_db_objects(table["id"], ind_tables=False, ind_extra_index=True)
+        importer.generate_db_objects(
+            table["id"], ind_tables=False, ind_extra_index=True
+        )
 
 
 @create.command("tables")
@@ -472,7 +478,9 @@ def create_tables(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data["tables"]:
-        importer.generate_db_objects(table["id"], ind_extra_index=False, ind_tables=True)
+        importer.generate_db_objects(
+            table["id"], ind_extra_index=False, ind_tables=True
+        )
 
 
 @create.command("all")

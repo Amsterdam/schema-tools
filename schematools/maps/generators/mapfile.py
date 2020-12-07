@@ -11,8 +11,8 @@ MapfileStr = str
 
 @dataclass
 class MapserviceLayerContext:
-    """ Context for generating mapfile layers from a amsterdam datatable
-        and its parent dataset. """
+    """Context for generating mapfile layers from a amsterdam datatable
+    and its parent dataset."""
 
     dataset: DatasetSchema
     datatable: DatasetTableSchema

@@ -1,11 +1,15 @@
 import json
 from schematools.importer.ndjson import NDJSONImporter
 from pg_grant import query
-from schematools.permissions import create_acl_from_profiles, apply_schema_and_profile_permissions
+from schematools.permissions import (
+    create_acl_from_profiles,
+    apply_schema_and_profile_permissions,
+)
 from sqlalchemy.exc import ProgrammingError
 from psycopg2.errors import DuplicateObject
 import pytest
 from schematools.types import DatasetSchema
+
 
 def test_auto_permissions(here, engine, gebieden_schema_auth, dbsession):
     """
@@ -28,10 +32,16 @@ def test_auto_permissions(here, engine, gebieden_schema_auth, dbsession):
     profiles = {profile["name"]: profile}
 
     # Apply the permissions from Schema and Profiles.
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True)
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True
+    )
     _check_permission_granted(engine, "scope_level_a", "gebieden_buurten")
-    _check_permission_granted(engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_granted(engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_granted(
+        engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_granted(
+        engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
+    )
 
 
 def test_openbaar_permissions(here, engine, afval_schema, dbsession):
@@ -57,8 +67,12 @@ def test_openbaar_permissions(here, engine, afval_schema, dbsession):
     _check_permission_denied(engine, "openbaar", "afvalwegingen_containers")
     _check_permission_denied(engine, "bag_r", "afvalwegingen_clusters")
 
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "openbaar", "OPENBAAR")
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "bag_r", "BAG/R")
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "openbaar", "OPENBAAR"
+    )
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "bag_r", "BAG/R"
+    )
 
     _check_permission_granted(engine, "openbaar", "afvalwegingen_containers")
     _check_permission_denied(engine, "openbaar", "afvalwegingen_clusters")
@@ -98,20 +112,34 @@ def test_interacting_permissions(here, engine, gebieden_schema_auth, dbsession):
             _check_permission_denied(engine, test_role, table)
 
     # Apply the permissions from Schema and Profiles.
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_a", "LEVEL/A")
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_b", "LEVEL/B")
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_c", "LEVEL/C")
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_a", "LEVEL/A"
+    )
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_b", "LEVEL/B"
+    )
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_c", "LEVEL/C"
+    )
 
     # Check if the read priviliges are correct
     _check_permission_denied(engine, "level_a", "gebieden_bouwblokken")
     _check_permission_granted(engine, "level_a", "gebieden_buurten")
 
-    _check_permission_granted(engine, "level_b", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_denied(engine, "level_b", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_granted(
+        engine, "level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_denied(
+        engine, "level_b", "gebieden_bouwblokken", "begin_geldigheid"
+    )
     _check_permission_denied(engine, "level_b", "gebieden_buurten")
 
-    _check_permission_denied(engine, "level_c", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_granted(engine, "level_c", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_denied(
+        engine, "level_c", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_granted(
+        engine, "level_c", "gebieden_bouwblokken", "begin_geldigheid"
+    )
     _check_permission_denied(engine, "level_c", "gebieden_buurten")
 
 
@@ -138,7 +166,14 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
     profiles = {profile["name"]: profile}
 
     # Create postgres roles
-    test_roles = ["level_a1", "level_a2", "level_b1", "level_b2", "level_c1", "level_c2"]
+    test_roles = [
+        "level_a1",
+        "level_a2",
+        "level_b1",
+        "level_b2",
+        "level_c1",
+        "level_c2",
+    ]
     for test_role in test_roles:
         _create_role(engine, test_role)
 
@@ -148,12 +183,24 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
             _check_permission_denied(engine, test_role, table)
 
     # Apply the permissions from Schema and Profiles.
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_a1", "LEVEL/A1")
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_b1", "LEVEL/B1")
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_c1", "LEVEL/C1")
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_a2", "LEVEL/A2")
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_b2", "LEVEL/B2")
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "level_c2", "LEVEL/C2")
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_a1", "LEVEL/A1"
+    )
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_b1", "LEVEL/B1"
+    )
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_c1", "LEVEL/C1"
+    )
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_a2", "LEVEL/A2"
+    )
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_b2", "LEVEL/B2"
+    )
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "level_c2", "LEVEL/C2"
+    )
 
     # Check if the read priviliges are correct
     _check_permission_denied(engine, "level_a1", "gebieden_bouwblokken")
@@ -161,20 +208,37 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
     _check_permission_denied(engine, "level_a2", "gebieden_bouwblokken")
     _check_permission_granted(engine, "level_a2", "gebieden_buurten")
 
-    _check_permission_granted(engine, "level_b1", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_denied(engine, "level_b1", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_granted(
+        engine, "level_b1", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_denied(
+        engine, "level_b1", "gebieden_bouwblokken", "begin_geldigheid"
+    )
     _check_permission_denied(engine, "level_b1", "gebieden_buurten")
-    _check_permission_granted(engine, "level_b2", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_denied(engine, "level_b2", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_granted(
+        engine, "level_b2", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_denied(
+        engine, "level_b2", "gebieden_bouwblokken", "begin_geldigheid"
+    )
     _check_permission_denied(engine, "level_b2", "gebieden_buurten")
 
-    _check_permission_denied(engine, "level_c1", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_granted(engine, "level_c1", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_denied(
+        engine, "level_c1", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_granted(
+        engine, "level_c1", "gebieden_bouwblokken", "begin_geldigheid"
+    )
     _check_permission_denied(engine, "level_c1", "gebieden_buurten")
 
-    _check_permission_denied(engine, "level_c2", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_granted(engine, "level_c2", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_denied(
+        engine, "level_c2", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_granted(
+        engine, "level_c2", "gebieden_bouwblokken", "begin_geldigheid"
+    )
     _check_permission_denied(engine, "level_c2", "gebieden_buurten")
+
 
 def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
     """
@@ -205,17 +269,27 @@ def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
     # _check_role_does_not_exist(engine, "scope_level_c")
 
     # Apply the permissions from Schema and Profiles.
-    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True)
+    apply_schema_and_profile_permissions(
+        engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True
+    )
     # Check if roles exist and the read priviliges are correct
     _check_permission_denied(engine, "scope_level_a", "gebieden_bouwblokken")
     _check_permission_granted(engine, "scope_level_a", "gebieden_buurten")
 
-    _check_permission_granted(engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_denied(engine, "scope_level_b", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_granted(
+        engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_denied(
+        engine, "scope_level_b", "gebieden_bouwblokken", "begin_geldigheid"
+    )
     _check_permission_denied(engine, "scope_level_b", "gebieden_buurten")
 
-    _check_permission_denied(engine, "scope_level_c", "gebieden_bouwblokken", "id, eind_geldigheid")
-    _check_permission_granted(engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid")
+    _check_permission_denied(
+        engine, "scope_level_c", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_granted(
+        engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
+    )
     _check_permission_denied(engine, "scope_level_c", "gebieden_buurten")
 
 
@@ -231,12 +305,14 @@ def _create_role(engine, role):
 def _check_role_does_not_exist(engine, role):
     """Check if role does not exist"""
     with engine.begin() as connection:
-        result = connection.execute(f"SELECT rolname FROM pg_roles WHERE rolname='{role}'")
+        result = connection.execute(
+            f"SELECT rolname FROM pg_roles WHERE rolname='{role}'"
+        )
         rows = [row for row in result]
         assert len(rows) == 0
 
 
-def _check_permission_denied(engine, role, table, column='*'):
+def _check_permission_denied(engine, role, table, column="*"):
     """Check if role has no SELECT permission on table. Fail if role, table or column does not exist."""
     with pytest.raises(Exception) as e_info:
         with engine.begin() as connection:
@@ -246,11 +322,10 @@ def _check_permission_denied(engine, role, table, column='*'):
     assert "permission denied for table {}".format(table) in str(e_info)
 
 
-def _check_permission_granted(engine, role, table, column='*'):
+def _check_permission_granted(engine, role, table, column="*"):
     "Check if role has SELECT permission on table. Fail if role, table or column does not exist."
     with engine.begin() as connection:
         connection.execute("SET ROLE {}".format(role))
         result = connection.execute("SELECT {} FROM {}".format(column, table))
         connection.execute("RESET ROLE")
     assert result
-

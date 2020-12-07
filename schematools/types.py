@@ -183,7 +183,9 @@ class DatasetSchema(SchemaType):
                 },
             },
         )
-        return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
+        return DatasetTableSchema(
+            sub_table_schema, _parent_schema=self, through_table=True
+        )
 
     @property
     def temporal(self):
@@ -263,8 +265,8 @@ class DatasetTableSchema(DatasetSchema):
         """Access list of through_tables (for n-m relations) for a single base table """
         tables = []
         for field in self.fields:
-                if field.is_through_table:
-                    tables.append(super().build_through_table(table=self, field=field))
+            if field.is_through_table:
+                tables.append(super().build_through_table(table=self, field=field))
         return tables
 
     @property
@@ -339,6 +341,7 @@ class DatasetTableSchema(DatasetSchema):
     def is_through_table(self):
         """Indicates if table is an intersection table (n:m relation table) or base table"""
         return self.through_table
+
 
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """

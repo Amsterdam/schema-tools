@@ -36,6 +36,9 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"verbose_name": "Dataset", "verbose_name_plural": "Datasets",},
+            options={
+                "verbose_name": "Dataset",
+                "verbose_name_plural": "Datasets",
+            },
         ),
     ]

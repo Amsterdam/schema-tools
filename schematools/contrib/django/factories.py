@@ -20,7 +20,7 @@ from .models import (
     JSON_TYPE_TO_DJANGO,
     DynamicModel,
     ObjectMarker,
-    LooseRelationField
+    LooseRelationField,
 )
 
 
