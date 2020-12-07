@@ -135,3 +135,19 @@ def test_model_factory_loose_relations(meldingen_schema):
     model_cls = model_dict["statistieken"]
     meta = model_cls._meta
     assert isinstance(meta.get_field("buurt"), LooseRelationField)
+
+
+def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_schema):
+    """Prove that a loose relation is created when column
+    is part of relation definition (<dataset>:<table>:column)
+    """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            woningbouwplannen_schema, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    model_cls = model_dict["woningbouwplan"]
+    meta = model_cls._meta
+    assert isinstance(meta.get_field("buurten"), models.ManyToManyField)
+

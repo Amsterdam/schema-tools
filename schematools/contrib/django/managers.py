@@ -1,5 +1,4 @@
-from django.db.models import QuerySet
-
+from django.db.models import QuerySet, Manager
 
 class DatasetQuerySet(QuerySet):
     """Extra ORM methods for the Dataset model."""
@@ -14,3 +13,14 @@ class DatasetQuerySet(QuerySet):
 
     def api_enabled(self):
         return self.filter(enable_api=True)
+
+
+    def hallo(self):
+        return "hallo"
+
+
+class LooseRelationsManager(Manager):
+    def get_queryset(self):
+        # Hier logica om te dealen met loose relations
+        qs = super().get_queryset()
+        return qs

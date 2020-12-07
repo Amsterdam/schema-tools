@@ -21,6 +21,7 @@ from .models import (
     DynamicModel,
     ObjectMarker,
     LooseRelationField,
+    LooseRelationManyToManyField
 )
 
 
@@ -45,7 +46,7 @@ class FieldMaker:
 
     def _make_related_classname(self, relation_urn):
         related_dataset, related_table = [
-            to_snake_case(part) for part in relation_urn.split(":")
+            to_snake_case(part) for part in relation_urn.split(":")[:2]
         ]
         return f"{related_dataset}.{related_table}"
 
@@ -108,6 +109,8 @@ class FieldMaker:
                 kwargs["relation"] = relation
                 return LooseRelationField, args, kwargs
 
+
+
         if relation is not None or nm_relation is not None:
             assert not (relation and nm_relation)
             field_cls = models.ManyToManyField if nm_relation else models.ForeignKey
@@ -150,6 +153,13 @@ class FieldMaker:
             if nm_relation is None:
                 kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
                 kwargs["db_constraint"] = False  # relation is not mandatory
+
+        if nm_relation:
+            nm_relation_parts = nm_relation.split(":")
+            _, related_table_name = nm_relation_parts[:2]
+            if len(nm_relation_parts) > 2:
+                field_cls = LooseRelationManyToManyField
+                kwargs["relation"] = nm_relation
         return field_cls, args, kwargs
 
     def handle_date(
