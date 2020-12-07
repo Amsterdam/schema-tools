@@ -1,0 +1,9 @@
+# File format: https://pre-commit.com/#plugins
+# Supported hooks: https://pre-commit.com/hooks.html
+# Running "make format" fixes most issues for you
+repos:
+  - repo: https://github.com/ambv/black
+    rev: 20.8b1
+    hooks:
+      - id: black
+        language_version: python3.8
