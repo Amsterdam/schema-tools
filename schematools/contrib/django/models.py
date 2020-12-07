@@ -13,6 +13,9 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
+
+from django.db.models import Manager
+
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 from schematools.types import (
@@ -23,6 +26,8 @@ from schematools.types import (
     get_db_table_name,
 )
 from schematools.utils import to_snake_case
+
+from .managers import LooseRelationsManager
 
 from . import managers
 from .validators import URLPathValidator
@@ -156,8 +161,12 @@ class DynamicModel(models.Model):
     _table_schema: DatasetTableSchema = None
     _display_field = None
 
+    objects = Manager()
+    loose_objects = LooseRelationsManager()
+
     class Meta:
         abstract = True
+        base_manager_name = 'loose_objects'
 
     def __str__(self):
         if self._display_field:
@@ -233,6 +242,8 @@ class Dataset(models.Model):
     ordering = models.IntegerField(_("Ordering"), default=1)
 
     objects = managers.DatasetQuerySet.as_manager()
+
+    loose_objects = managers.LooseRelationsManager  # JVD
 
     class Meta:
         ordering = ("ordering", "name")
@@ -593,6 +604,29 @@ class LooseRelationField(models.CharField):
         return apps.all_models[dataset_name][table_name]
 
 
+class LooseRelationManyToManyField(models.ManyToManyField):
+
+    def __init__(self, *args, **kwargs):
+        self.relation = kwargs.pop("relation")
+        kwargs.setdefault('max_length', 254)
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        del kwargs["max_length"]
+        kwargs["relation"] = self.relation
+        return name, path, args, kwargs
+
+    @property
+    def related_model(self):
+        dataset_name, table_name, column_name = [to_snake_case(part)
+                                                 for part in self.relation.split(":")]
+        if dataset_name in apps.all_models and table_name in apps.all_models[dataset_name]:
+            return apps.all_models[dataset_name][table_name]
+        else:
+            #  The loosely related model may not be registered yet
+            return None
+
 def get_active_profiles():
     profiles = cache.get(PROFILES_CACHE_KEY)
     if profiles is None:
@@ -607,3 +641,4 @@ def get_active_profiles():
 
 
 get_active_profiles()
+
