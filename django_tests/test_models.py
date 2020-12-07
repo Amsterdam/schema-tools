@@ -1,7 +1,7 @@
 from django.contrib.gis.db import models
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from schematools.contrib.django.factories import model_factory, schema_models_factory
-from schematools.contrib.django.models import LooseRelationField
+from schematools.contrib.django.models import LooseRelationField, LooseRelationManyToManyField
 
 
 def test_model_factory_fields(afval_schema):
@@ -149,5 +149,5 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_schema):
     }
     model_cls = model_dict["woningbouwplan"]
     meta = model_cls._meta
-    assert isinstance(meta.get_field("buurten"), models.ManyToManyField)
+    assert isinstance(meta.get_field("buurten"), LooseRelationManyToManyField)
 
