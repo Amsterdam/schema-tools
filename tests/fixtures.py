@@ -79,3 +79,8 @@ def kadastraleobjecten_schema(schema_json) -> DatasetSchema:
 @pytest.fixture()
 def meldingen_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("meldingen.json"))
+
+
+@pytest.fixture()
+def woonplaatsen_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("woonplaatsen.json"))
