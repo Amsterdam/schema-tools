@@ -13,9 +13,6 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
-
-from django.db.models import Manager
-
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 from schematools.types import (
@@ -159,8 +156,6 @@ class DynamicModel(models.Model):
     #: Overwritten by subclasses / factory
     _table_schema: DatasetTableSchema = None
     _display_field = None
-
-    objects = Manager()
 
     class Meta:
         abstract = True
