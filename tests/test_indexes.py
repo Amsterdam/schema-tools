@@ -31,7 +31,10 @@ def test_index_creation():
                     "identifier": ["col1", "col2"],
                     "properties": {
                         "schema": {
-                            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
                         },
                         "id": {"type": "integer"},
                         "geometry": {
@@ -101,7 +104,10 @@ def test_index_troughtables_creation():
                     "display": "id",
                     "properties": {
                         "schema": {
-                            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
                         },
                         "identificatie": {"type": "string"},
                         "volgnummer": {"type": "integer"},
@@ -133,7 +139,10 @@ def test_index_troughtables_creation():
                     "display": "id",
                     "properties": {
                         "schema": {
-                            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
                         },
                         "identificatie": {"type": "string"},
                         "volgnummer": {"type": "integer"},

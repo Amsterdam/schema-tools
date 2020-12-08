@@ -1,4 +1,3 @@
-from schematools.introspect.geojson import geojson_to_table
 from schematools.provenance.create import ProvenaceIteration
 
 
@@ -25,7 +24,10 @@ def test_provenance_result():
                     "display": "id",
                     "properties": {
                         "schema": {
-                            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
                         },
                         "id": {"type": "integer"},
                         "wkb geometry": {

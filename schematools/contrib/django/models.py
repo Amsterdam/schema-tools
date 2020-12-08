@@ -15,7 +15,6 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
-import psycopg2
 from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
@@ -164,7 +163,8 @@ class DynamicModel(models.Model):
         if self._display_field:
             return str(getattr(self, self._display_field))
         else:
-            # this will not be shown in the dso-api view and will be omitted when display field is empty or not present
+            # this will not be shown in the dso-api view
+            # and will be omitted when display field is empty or not present
             return f"(no title: {self._meta.object_name} #{self.pk})"
 
     # These classmethods could have been a 'classproperty',

@@ -82,4 +82,4 @@ def highest_permission(permission1, permission2):
             key=lambda key: PERMISSION_LIST.index(key.split(":")[0]),
         )[0]
     except (ValueError, IndexError) as e:
-        raise ValueError("Permission {}".format(e.args[0]))
+        raise ValueError(f"Permission {e.args[0]}") from None

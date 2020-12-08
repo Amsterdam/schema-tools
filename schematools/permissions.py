@@ -1,6 +1,5 @@
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from .utils import to_snake_case
@@ -72,7 +71,7 @@ def apply_schema_and_profile_permissions(
             profile_list = profiles.values()
             create_acl_from_profiles(engine, pg_schema, profile_list, role, scope)
         session.commit()
-    except:
+    except Exception:
         session.rollback()
         print("warning: session rolled back")
         raise
@@ -127,6 +126,7 @@ def create_acl_from_schema(
                 ams_schema.id, dataset_scope_set
             )
         )
+
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = "{}_{}".format(
             table.dataset.id, to_snake_case(table.id)
@@ -137,14 +137,12 @@ def create_acl_from_schema(
         )
         if table.auth:
             print(
-                'Found table read permission for "{}" to scopes "{}"'.format(
-                    table_name, table_scope_set
-                )
+                f'Found table read permission for "{table_name}"'
+                f' to scopes "{table_scope_set}"'
             )
             print(
-                '"{}" overrules "{}" for read permission of "{}"'.format(
-                    table_scope_set, dataset_scope_set, table_name
-                )
+                f'"{table_scope_set}" overrules "{dataset_scope_set}"'
+                f' for read permission of "{table_name}"'
             )
         contains_field_grants = False
         fields = [field for field in table.fields if field.name != "schema"]
@@ -155,15 +153,13 @@ def create_acl_from_schema(
                     {field_scope} if isinstance(field_scope, str) else set(field_scope)
                 )
                 print(
-                    'Found field read permission for "{}" in table "{}" for scopes {}'.format(
-                        field.name, table_name, field_scope_set
-                    )
+                    f'Found field read permission for "{field.name}" in'
+                    f' table "{table_name}" for scopes {field_scope_set}'
                 )
                 contains_field_grants = True
                 print(
-                    '"{}" overrules "{}" for read permission of field {} in table {}"'.format(
-                        field_scope_set, table_scope_set, field.name, table_name
-                    )
+                    f'"{field_scope_set}" overrules "{table_scope_set}" for read'
+                    f' permission of field {field.name} in table {table_name}"'
                 )
                 if role == "AUTO":
                     grantees = [scope_to_role(scope) for scope in field_scope_set]
@@ -175,9 +171,8 @@ def create_acl_from_schema(
                     if create_roles:
                         _create_role_if_not_exists(session, grantee, dry_run=dry_run)
                     column_name = to_snake_case(field.name)
-                    column_priviliges = [
-                        "SELECT ({})".format(column_name),
-                    ]  # the space after SELECT is very important
+                    # the space after SELECT is very important
+                    column_priviliges = [f"SELECT ({column_name})"]
                     _execute_grant(
                         session,
                         grant(
@@ -196,17 +191,18 @@ def create_acl_from_schema(
             grantees = [role]
         else:
             grantees = []
+
         if contains_field_grants:
-            #  only grant those fields without their own scope. The other field have already been granted above
+            # Only grant those fields without their own scope.
+            # The other field have already been granted above
             for grantee in grantees:
                 if create_roles:
                     _create_role_if_not_exists(session, grantee, dry_run=dry_run)
                 for field in fields:
                     if not field.auth:
                         column_name = to_snake_case(field.name)
-                        column_priviliges = [
-                            "SELECT ({})".format(column_name),
-                        ]  # the space after SELECT is very important
+                        # the space after SELECT is very important:
+                        column_priviliges = ["SELECT ({})".format(column_name)]
                         _execute_grant(
                             session,
                             grant(
@@ -224,13 +220,11 @@ def create_acl_from_schema(
             for grantee in grantees:
                 if create_roles:
                     _create_role_if_not_exists(session, grantee, dry_run=dry_run)
-                table_priviliges = [
-                    "SELECT",
-                ]
+                table_privileges = ["SELECT"]
                 _execute_grant(
                     session,
                     grant(
-                        table_priviliges,
+                        table_privileges,
                         PgObjectType.TABLE,
                         table_name,
                         grantee,
@@ -267,7 +261,9 @@ def _revoke_all_priviliges_from_role(
         "DO $$ "
         "BEGIN "
         f"{revoke_statement}; "
-        "EXCEPTION WHEN undefined_object THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
+        "EXCEPTION"
+        " WHEN undefined_object"
+        " THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
         "END "
         "$$"
     )
@@ -283,10 +279,13 @@ def _revoke_all_priviliges_from_scope_roles(
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
     result = session.execute(
-        text(f"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'")
+        text(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'")
     )
     for rolname in result:
-        revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]};"
+        revoke_statement = (
+            f"REVOKE ALL PRIVILEGES ON ALL TABLES"
+            f" IN SCHEMA {pg_schema} FROM {rolname[0]};"
+        )
         if echo:
             print(f"{status_msg} --> {revoke_statement}")
         if not dry_run:
@@ -296,14 +295,17 @@ def _revoke_all_priviliges_from_scope_roles(
 
 
 def _execute_grant(session, grant_statement, echo=True, dry_run=False):
-    #  wrap the grant statement in an anonymous code block to catch reasonable exceptions
-    #  we don't want to break out the session just because a table or column doesn't exist yet or anymore.
+    # wrap the grant statement in an anonymous code block to catch reasonable exceptions
+    # we don't want to break out the session just because a table or column doesn't
+    # exist yet or anymore.
     status_msg = "Skipped" if dry_run else "Executed"
     sql_statement = (
         "DO $$ "
         "BEGIN "
         f"{grant_statement}; "
-        "EXCEPTION WHEN undefined_table OR undefined_column THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
+        "EXCEPTION"
+        " WHEN undefined_table OR undefined_column"
+        " THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
         "END "
         "$$"
     )
@@ -323,7 +325,9 @@ def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
             "DO $$ "
             "BEGIN "
             f"{create_role_statement}; "
-            "EXCEPTION WHEN duplicate_object THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
+            "EXCEPTION"
+            " WHEN duplicate_object"
+            " THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
             "END "
             "$$"
         )
@@ -335,4 +339,4 @@ def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
 
 
 def scope_to_role(scope):
-    return f"scope_{scope.lower().replace('/','_')}"
+    return f"scope_{scope.lower().replace('/', '_')}"

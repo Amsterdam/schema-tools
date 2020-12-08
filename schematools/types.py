@@ -143,7 +143,7 @@ class DatasetSchema(SchemaType):
                 "required": ["id", "schema"],
                 "properties": {
                     "id": {"type": "integer/autoincrement", "description": ""},
-                    "schema": {"$ref": f"/definitions/schema"},
+                    "schema": {"$ref": "/definitions/schema"},
                     "parent": {"type": "integer", "relation": f"{self.id}:{table.id}"},
                     **field["items"]["properties"],
                 },
@@ -170,7 +170,7 @@ class DatasetSchema(SchemaType):
                 "additionalProperties": False,
                 "required": ["schema"],
                 "properties": {
-                    "schema": {"$ref": f"/definitions/schema"},
+                    "schema": {"$ref": "/definitions/schema"},
                     left_table: {
                         "type": "integer",
                         "relation": f"{left_dataset}:{left_table}",
