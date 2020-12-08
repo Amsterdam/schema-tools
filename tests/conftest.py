@@ -15,7 +15,8 @@ HERE = Path(__file__).parent
 
 pytest_plugins = ["tests.fixtures"]
 
-# fixtures engine and dbengine provided by pytest-sqlalchemy, automatically discoverd by pytest via setuptools entry-points.
+# fixtures engine and dbengine provided by pytest-sqlalchemy,
+# automatically discovered by pytest via setuptools entry-points.
 # https://github.com/toirl/pytest-sqlalchemy/blob/master/pytest_sqlalchemy.py
 
 

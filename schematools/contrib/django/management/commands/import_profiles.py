@@ -6,7 +6,7 @@ from django.core.management import BaseCommand
 
 from schematools.contrib.django.models import Profile, PROFILES_CACHE_KEY
 from schematools.types import ProfileSchema
-from schematools.utils import profile_defs_from_url, to_snake_case
+from schematools.utils import profile_defs_from_url
 
 
 class Command(BaseCommand):

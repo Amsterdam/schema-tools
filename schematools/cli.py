@@ -30,7 +30,6 @@ from .importer.base import BaseImporter
 from .types import DatasetSchema, SchemaType
 from .utils import (
     schema_def_from_url,
-    profile_defs_from_url,
     schema_fetch_url_file,
     schema_defs_from_url,
 )
@@ -90,7 +89,7 @@ def _get_engine(db_url, pg_schemas=None):
     try:
         return create_engine(db_url, **kwargs)
     except SQLAlchemyError as e:
-        raise click.BadParameter(str(e), param_hint="--db-url")
+        raise click.BadParameter(str(e), param_hint="--db-url") from e
 
 
 def main():
@@ -155,7 +154,8 @@ def permissions_revoke(db_url, role):
 @click.option(
     "--schema-filename",
     is_flag=False,
-    help="Filename of local Amsterdam Schema (single dataset). If specified, it will be used instead of schema-url",
+    help="Filename of local Amsterdam Schema (single dataset)."
+    " If specified, it will be used instead of schema-url",
 )
 @click.option(
     "--profile-filename",
@@ -215,7 +215,8 @@ def permissions_apply(
     create_roles,
     revoke,
 ):
-    """Set permissions for a postgres role associated with a scope from Amsterdam Schema or Profiles."""
+    """Set permissions for a postgres role,
+    based on a scope from Amsterdam Schema or Profiles."""
     dry_run = not execute
     if auto:
         role = "AUTO"
@@ -298,7 +299,9 @@ def validate(meta_schema_url, schema_location):
 @show.command("provenance")
 @click.argument("schema_location")
 def show_provenance(schema_location):
-    """Retrieve the key-values pairs of the source column (specified as a 'provenance' property of an attribute) and its translated name (the attribute name itself)"""
+    """Retrieve the key-values pairs of the source column
+    (specified as a 'provenance' property of an attribute)
+    and its translated name (the attribute name itself)"""
     data = schema_fetch_url_file(schema_location)
     try:
         instance = ProvenaceIteration(data)
@@ -342,7 +345,7 @@ def show_mapfile(schema_url, dataset_id):
     try:
         dataset_schema = schema_def_from_url(schema_url, dataset_id)
     except KeyError:
-        raise click.BadParameter(f"Schema {dataset_id} not found.")
+        raise click.BadParameter(f"Schema {dataset_id} not found.") from None
     click.echo(create_mapfile(dataset_schema))
 
 
@@ -446,7 +449,7 @@ def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
         try:
             return schema_def_from_url(schema_url, schema_location)
         except KeyError:
-            raise click.BadParameter(f"Schema {schema_location} not found.")
+            raise click.BadParameter(f"Schema {schema_location} not found.") from None
 
 
 @create.command("extra_index")

@@ -182,8 +182,9 @@ class BaseImporter:
         ind_tables=True,
         ind_extra_index=True,
     ):
-        """Generate the tablemodels and tables and / or index on identifier as specified in the JSON data schema.
-        As default both table and index creation are set to True.
+        """Generate the tablemodels and tables and / or index on identifier
+        as specified in the JSON data schema. As default both table and index
+        creation are set to True.
         """
 
         if ind_tables or ind_extra_index:
@@ -221,9 +222,8 @@ class BaseImporter:
                 self.prepare_extra_index(
                     self.indexes, metadata_inspector, metadata.bind, logger=[]
                 )
-
-            except exc.NoInspectionAvailable as e:
-                metadata_inspector = []
+            except exc.NoInspectionAvailable:
+                pass
 
     def load_file(
         self,
@@ -512,8 +512,8 @@ def index_factory(
             for identifier_column in dataset_table.identifier:
                 try:
                     identifier_column_snaked.append(
-                        # precautionary measure:
-                        # If camelCase, translate to snake_case, so column(s) can be found in table.
+                        # precautionary measure: If camelCase, translate to
+                        # snake_case, so column(s) can be found in table.
                         table_object.c[to_snake_case(identifier_column)]
                     )
                 except KeyError as e:
@@ -570,18 +570,13 @@ def index_factory(
                 table_object = metadata.tables[f"{table_name_prefix}_{table.id}"]
 
                 for column in through_tables["properties"]:
-
+                    index_name = f"{table_name_prefix}_{table_short_name}_{column}_idx"
                     try:
                         indexes_to_create.append(
-                            Index(
-                                f"{db_table_name.split('_')[0]}_{table_short_name}_{column}_idx",
-                                table_object.c[column],
-                            )
+                            Index(index_name, table_object.c[column])
                         )
                     except KeyError as e:
-                        logger.log_error(
-                            f"{e.__str__} on {db_table_name.split('_')[0]}_{table_short_name}_{column}_idx"
-                        )
+                        logger.log_error(f"{e.__str__} on {index_name}")
                         continue
 
                 # add Index objects to create

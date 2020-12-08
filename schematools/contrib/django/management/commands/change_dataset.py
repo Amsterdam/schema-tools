@@ -11,7 +11,7 @@ def _strtobool(value):
     try:
         return bool(strtobool(value))
     except ValueError:
-        raise ArgumentTypeError("expected boolean value")
+        raise ArgumentTypeError("expected boolean value") from None
 
 
 class Command(BaseCommand):
@@ -72,7 +72,7 @@ class Command(BaseCommand):
             )
             raise CommandError(
                 f"Dataset not found: {name}.\nAvailable are: {available}"
-            )
+            ) from None
 
         # Validate illogical combinations
         if options.get("endpoint_url"):
@@ -113,7 +113,10 @@ class Command(BaseCommand):
                             for err in messages
                         ]
                     )
-                raise CommandError(f"Unable to save changes:\n" + "\n".join(errors))
+                raise CommandError(
+                    "Unable to save changes:\n" + "\n".join(errors)
+                ) from None
+
             dataset.save()
             self.stdout.write(
                 "The service needs to restart for changes to have effect."

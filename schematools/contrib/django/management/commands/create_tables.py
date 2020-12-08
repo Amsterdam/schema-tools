@@ -27,7 +27,7 @@ class Command(BaseCommand):
         )
 
 
-def create_tables(  # noqa:C901
+def create_tables(
     command: BaseCommand, datasets: Iterable[Dataset], allow_unmanaged=False, skip=None
 ):  # noqa:C901
     """Create tables for all updated datasets.

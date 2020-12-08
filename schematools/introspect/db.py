@@ -1,7 +1,6 @@
 import copy
 
 from sqlalchemy import inspect
-from string_utils import snake_case_to_camel
 from ..utils import toCamelCase
 
 from .utils import DATASET_TMPL, TABLE_TMPL

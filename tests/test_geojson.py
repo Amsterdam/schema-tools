@@ -6,7 +6,10 @@ def test_geojson_to_table():
     geojson = {
         "type": "FeatureCollection",
         "generator": "overpass-ide",
-        "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
+        "copyright": (
+            "The data included in this document is from www.openstreetmap.org."
+            " The data is made available under ODbL."
+        ),
         "timestamp": "2019-11-15T10:27:02Z",
         "features": [
             {
@@ -53,7 +56,10 @@ def test_geojson_to_table():
                 "display": "name",
                 "properties": {
                     "schema": {
-                        "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+                        "$ref": (
+                            "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                            "#/definitions/schema"
+                        )
                     },
                     "id": {"type": "string"},
                     "geometry": {"$ref": "https://geojson.org/schema/Point.json"},

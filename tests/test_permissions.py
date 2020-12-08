@@ -1,14 +1,13 @@
 import json
+
+import pytest
+from psycopg2.errors import DuplicateObject
+from sqlalchemy.exc import ProgrammingError
+
 from schematools.importer.ndjson import NDJSONImporter
-from pg_grant import query
 from schematools.permissions import (
-    create_acl_from_profiles,
     apply_schema_and_profile_permissions,
 )
-from sqlalchemy.exc import ProgrammingError
-from psycopg2.errors import DuplicateObject
-import pytest
-from schematools.types import DatasetSchema
 
 
 def test_auto_permissions(here, engine, gebieden_schema_auth, dbsession):
@@ -63,7 +62,8 @@ def test_openbaar_permissions(here, engine, afval_schema, dbsession):
     # Create postgres roles
     _create_role(engine, "openbaar")
     _create_role(engine, "bag_r")
-    # Check if the roles exist, the tables exist, and the roles have no read privilige on the tables.
+    # Check if the roles exist, the tables exist,
+    # and the roles have no read privilige on the tables.
     _check_permission_denied(engine, "openbaar", "afvalwegingen_containers")
     _check_permission_denied(engine, "bag_r", "afvalwegingen_clusters")
 
@@ -82,10 +82,14 @@ def test_openbaar_permissions(here, engine, afval_schema, dbsession):
 
 def test_interacting_permissions(here, engine, gebieden_schema_auth, dbsession):
     """
-    Prove that dataset, table, and field permissions are set according to the "OF-OF" Exclusief principle:
-    Een user met scope LEVEL/A mag alles uit de dataset gebieden zien, behalve tabel bouwblokken.
-    Een user met scope LEVEL/B mag alle velden van tabel bouwblokken zien, behalve beginGeldigheid.
-    Een user met scope LEVEL/C mag veld beginGeldigheid zien.
+    Prove that dataset, table, and field permissions are set
+    according to the "OF-OF" Exclusief principle:
+
+    * Een user met scope LEVEL/A mag alles uit de dataset gebieden zien,
+      behalve tabel bouwblokken.
+    * Een user met scope LEVEL/B mag alle velden van tabel bouwblokken zien,
+      behalve beginGeldigheid.
+    * Een user met scope LEVEL/C mag veld beginGeldigheid zien.
     """
 
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
@@ -106,7 +110,8 @@ def test_interacting_permissions(here, engine, gebieden_schema_auth, dbsession):
     for test_role in test_roles:
         _create_role(engine, test_role)
 
-    # Check if the roles exist, the tables exist, and the roles have no read privilige on the tables.
+    # Check if the roles exist, the tables exist,
+    # and the roles have no read privilige on the tables.
     for test_role in test_roles:
         for table in ["gebieden_bouwblokken", "gebieden_buurten"]:
             _check_permission_denied(engine, test_role, table)
@@ -145,11 +150,15 @@ def test_interacting_permissions(here, engine, gebieden_schema_auth, dbsession):
 
 def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsession):
     """
-    Prove that dataset, table, and field permissions are set according to the "OF-OF" Exclusief principle
+    Prove that dataset, table, and field permissions are set,
+    according to the "OF-OF" Exclusief principle.
     Prove that when the auth property is a list of scopes, this is interpreted as "OF-OF".
-    Een user met scope LEVEL/A1 of LEVEL/A2 mag alles uit de dataset gebieden zien, behalve tabel bouwblokken.
-    Een user met scope LEVEL/B1 of LEVEL/B2 mag alle velden van tabel bouwblokken zien, behalve beginGeldigheid.
-    Een user met scope LEVEL/C1 of LEVEL/B2 mag veld beginGeldigheid zien.
+
+    * Een user met scope LEVEL/A1 of LEVEL/A2 mag alles uit de dataset gebieden zien,
+      behalve tabel bouwblokken.
+    * Een user met scope LEVEL/B1 of LEVEL/B2 mag alle velden van tabel bouwblokken zien,
+      behalve beginGeldigheid.
+    * Een user met scope LEVEL/C1 of LEVEL/B2 mag veld beginGeldigheid zien.
     """
 
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
@@ -177,7 +186,8 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
     for test_role in test_roles:
         _create_role(engine, test_role)
 
-    # Check if the roles exist, the tables exist, and the roles have no read privilige on the tables.
+    # Check if the roles exist, the tables exist,
+    # and the roles have no read privilige on the tables.
     for test_role in test_roles:
         for table in ["gebieden_bouwblokken", "gebieden_buurten"]:
             _check_permission_denied(engine, test_role, table)
@@ -242,11 +252,17 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
 
 def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
     """
-    Prove that dataset, table, and field permissions are set according to the "OF-OF" Exclusief principle:
-    Een user met scope LEVEL/A mag alles uit de dataset gebieden zien, behalve tabel bouwblokken.
-    Een user met scope LEVEL/B mag alle velden van tabel bouwblokken zien, behalve beginGeldigheid.
-    Een user met scope LEVEL/C mag veld beginGeldigheid zien.
-    Drie corresponderende users worden automatisch aangemaakt: 'scope_level_a', 'scope_level_b', en 'scope_level_c;
+    Prove that dataset, table, and field permissions are set according,
+    to the "OF-OF" Exclusief principle:
+
+    * Een user met scope LEVEL/A mag alles uit de dataset gebieden zien,
+      behalve tabel bouwblokken.
+    * Een user met scope LEVEL/B mag alle velden van tabel bouwblokken zien,
+      behalve beginGeldigheid.
+    * Een user met scope LEVEL/C mag veld beginGeldigheid zien.
+
+    Drie corresponderende users worden automatisch aangemaakt:
+    'scope_level_a', 'scope_level_b', en 'scope_level_c;
     """
 
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
@@ -294,7 +310,8 @@ def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
 
 
 def _create_role(engine, role):
-    #  If role already exists just fail and ignore. This may happen if a previous pytest did not terminate correctly.
+    # If role already exists just fail and ignore.
+    # This may happen if a previous pytest did not terminate correctly.
     try:
         engine.execute('CREATE ROLE "{}"'.format(role))
     except ProgrammingError as e:
@@ -313,7 +330,8 @@ def _check_role_does_not_exist(engine, role):
 
 
 def _check_permission_denied(engine, role, table, column="*"):
-    """Check if role has no SELECT permission on table. Fail if role, table or column does not exist."""
+    """Check if role has no SELECT permission on table.
+    Fail if role, table or column does not exist."""
     with pytest.raises(Exception) as e_info:
         with engine.begin() as connection:
             connection.execute("SET ROLE {}".format(role))
@@ -323,7 +341,8 @@ def _check_permission_denied(engine, role, table, column="*"):
 
 
 def _check_permission_granted(engine, role, table, column="*"):
-    "Check if role has SELECT permission on table. Fail if role, table or column does not exist."
+    """Check if role has SELECT permission on table.
+    Fail if role, table or column does not exist."""
     with engine.begin() as connection:
         connection.execute("SET ROLE {}".format(role))
         result = connection.execute("SELECT {} FROM {}".format(column, table))

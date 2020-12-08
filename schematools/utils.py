@@ -33,7 +33,7 @@ def schema_def_from_url(schemas_url, schema_name):
         avail = ", ".join(sorted(schemas.keys()))
         raise ValueError(
             f"Schema f{schema_name} does not exist at {schemas_url}. Available are: {avail}"
-        )
+        ) from None
 
 
 @ttl_cache(ttl=16)
