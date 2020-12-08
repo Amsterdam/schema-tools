@@ -1,3 +1,4 @@
+import json
 import ndjson
 from shapely.geometry import shape
 from .base import BaseImporter, Row
@@ -48,7 +49,7 @@ class NDJSONImporter(BaseImporter):
             for _row in ndjson.reader(fh):
                 row = Row(_row, fields_provenances=fields_provenances)
                 for field_name in inactive_relation_info:
-                    row[field_name] = str(row[field_name])
+                    row[field_name] = json.dumps(row[field_name])
                 for field_name in jsonpath_provenance_info:
                     row[field_name] = row[field_name]  # uses Row to get from object
                 sub_rows = {}

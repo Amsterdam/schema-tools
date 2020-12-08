@@ -86,9 +86,7 @@ class Row(UserDict):
             self.data[key] = None
             return None
         matches = expr.find({top_element_name: top_level_data})
-        if not matches:
-            raise ValueError(f"No content for {prov_key}")
-        value = matches[0].value
+        value = None if not matches else matches[0].value
         self.data[key] = value
         return value
 
