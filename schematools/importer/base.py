@@ -567,13 +567,14 @@ def index_factory(
                     # To prevent exceeds and collisions,
                     # the index names are shortend based upon a hash.
                     # SHA1 holds a max output of 40 characters
-                    set_index_name = table_name + column
-                    hash = hashlib.sha1()
-                    hash.update(bytes(set_index_name, "utf-8"))
-                    shortend_index_name = hash.hexdigest() + "_idx"
+                    index_name = table_name + "_" + column + "_idx"
+                    if len(index_name) > 63:
+                        hash = hashlib.sha1()
+                        hash.update(bytes(index_name, "utf-8"))
+                        index_name = hash.hexdigest() + "_idx"
                     try:
                         indexes_to_create.append(
-                            Index(shortend_index_name, table_object.c[column])
+                            Index(index_name, table_object.c[column])
                         )
                     except KeyError as e:
                         logger.log_error(
