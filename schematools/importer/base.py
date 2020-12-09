@@ -1,3 +1,4 @@
+import hashlib
 from collections import UserDict, Counter
 from functools import reduce
 from itertools import islice
@@ -535,13 +536,7 @@ def index_factory(
         for table in dataset_table.get_through_tables_by_id():
 
             through_tables = {}
-            table_short_name = []
             indexes_to_create = []
-            # Postgres DB hold a 63 max charakters for objectnames.
-            # To prevent exceeds, the tables names are shortend and used in the index name.
-            for word in table.id.split("_"):
-                table_short_name += word[0]
-            table_short_name = ("").join(table_short_name)
 
             # make a dictionary of the indexes to create
             if table.is_through_table:
@@ -568,13 +563,19 @@ def index_factory(
                 table_object = metadata.tables[f"{table_name_prefix}_{table.id}"]
 
                 for column in through_tables["properties"]:
-                    index_name = f"{table_name_prefix}_{table_short_name}_{column}_idx"
+                    # Postgres DB holds currently 63 max charakters for objectnames.
+                    # To prevent exceeds and collisions, the index names are shortend based upon a hash.
+                    # SHA1 produces a max of 40 karakters
+                    index_name = table_name + column
+                    hash = hashlib.sha1()
+                    hash.update(bytes(index_name, 'utf-8'))
+                    hased_index_name = hash.hexdigest() + "_idx"
                     try:
                         indexes_to_create.append(
-                            Index(index_name, table_object.c[column])
+                            Index(hased_index_name, table_object.c[column])
                         )
                     except KeyError as e:
-                        logger.log_error(f"{e.__str__} on {index_name}")
+                        logger.log_error(f"{table_name}.{column} not found in {table_object.c}")
                         continue
 
                 # add Index objects to create
