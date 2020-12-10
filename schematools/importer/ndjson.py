@@ -102,9 +102,7 @@ class NDJSONImporter(BaseImporter):
                             if sub_field.is_temporal:
                                 continue
                             sub_field_name = to_snake_case(sub_field.name)
-                            nested_row_record[sub_field_name] = nested_row[
-                                sub_field.name
-                            ]
+                            nested_row_record[sub_field_name] = nested_row.get(sub_field.name)
                         nested_row_records.append(nested_row_record)
 
                     sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
