@@ -7,7 +7,7 @@ from sqlalchemy import MetaData, create_engine, inspect
 env = environ.Env()
 
 
-def test_index_creation():
+def test_index_creation(engine, db_schema):
     """Prove that identifier index is created based on schema specificiation """
 
     test_data = {
@@ -53,16 +53,13 @@ def test_index_creation():
     ind_index_exists = False
     parent_schema = SchemaType(data)
     dataset_schema = DatasetSchema(parent_schema)
-    DATABASE_URL = env("DATABASE_URL", None)
-    db_url = DATABASE_URL
-    engine = _get_engine(db_url)
 
     for table in data["tables"]:
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
         importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
-        CONN = create_engine(DATABASE_URL, client_encoding="UTF-8")
+        CONN = create_engine(engine.url, client_encoding="UTF-8")
         META_DATA = MetaData(bind=CONN, reflect=True)
         metadata_inspector = inspect(META_DATA.bind)
         indexes = metadata_inspector.get_indexes(
