@@ -235,7 +235,6 @@ class Dataset(models.Model):
 
     objects = managers.DatasetQuerySet.as_manager()
 
-
     class Meta:
         ordering = ("ordering", "name")
         verbose_name = _("Dataset")
@@ -596,10 +595,9 @@ class LooseRelationField(models.CharField):
 
 
 class LooseRelationManyToManyField(models.ManyToManyField):
-
     def __init__(self, *args, **kwargs):
         self.relation = kwargs.pop("relation")
-        kwargs.setdefault('max_length', 254)
+        kwargs.setdefault("max_length", 254)
         super().__init__(*args, **kwargs)
 
     def deconstruct(self):
@@ -610,13 +608,18 @@ class LooseRelationManyToManyField(models.ManyToManyField):
 
     @property
     def related_model(self):
-        dataset_name, table_name, column_name = [to_snake_case(part)
-                                                 for part in self.relation.split(":")]
-        if dataset_name in apps.all_models and table_name in apps.all_models[dataset_name]:
+        dataset_name, table_name, column_name = [
+            to_snake_case(part) for part in self.relation.split(":")
+        ]
+        if (
+            dataset_name in apps.all_models
+            and table_name in apps.all_models[dataset_name]
+        ):
             return apps.all_models[dataset_name][table_name]
         else:
             #  The loosely related model may not be registered yet
             return None
+
 
 def get_active_profiles():
     profiles = cache.get(PROFILES_CACHE_KEY)
@@ -632,4 +635,3 @@ def get_active_profiles():
 
 
 get_active_profiles()
-

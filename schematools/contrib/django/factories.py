@@ -21,7 +21,7 @@ from .models import (
     DynamicModel,
     ObjectMarker,
     LooseRelationField,
-    LooseRelationManyToManyField
+    LooseRelationManyToManyField,
 )
 
 
@@ -108,7 +108,6 @@ class FieldMaker:
                 kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
                 kwargs["relation"] = relation
                 return LooseRelationField, args, kwargs
-
 
         if relation is not None or nm_relation is not None:
             assert not (relation and nm_relation)

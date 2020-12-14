@@ -1,5 +1,6 @@
 from django.db.models import QuerySet
 
+
 class DatasetQuerySet(QuerySet):
     """Extra ORM methods for the Dataset model."""
 
@@ -13,5 +14,3 @@ class DatasetQuerySet(QuerySet):
 
     def api_enabled(self):
         return self.filter(enable_api=True)
-
-
