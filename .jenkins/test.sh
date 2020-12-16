@@ -9,7 +9,5 @@ source .jenkins/docker-wait.sh
 echo "Running style checks"
 flake8 --config=.flake8 ./ || true
 
-echo "Running functional tests"
-DJANGO_DEBUG=false pytest --nomigrations -vs tests
-echo "Running Django tests"
-DJANGO_DEBUG=false pytest --nomigrations -vs django_tests
+echo "Running tests"
+pytest --nomigrations -vs tests django_tests

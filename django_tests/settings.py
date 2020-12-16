@@ -20,6 +20,7 @@ DATABASES = {
         engine="django.contrib.gis.db.backends.postgis",
     ),
 }
+DATABASES["default"]["NAME"] += "_django"  # avoid duplication with sqlalchemy tests
 
 CACHES = {
     "default": {
