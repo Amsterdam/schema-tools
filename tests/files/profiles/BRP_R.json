@@ -1,0 +1,20 @@
+{
+    "name": "medewerker",
+    "scopes": ["BRP/R"],
+    "datasets": {
+        "brp": {
+            "tables": {
+                "ingeschrevenpersonen": {
+                    "permisssions": "read",
+                    "fields": {
+                        "bsn": "encoded"
+                    },
+                    "mandatoryFilterSets": [
+                        ["bsn", "lastname"],
+                        ["postcode", "lastname"]
+                    ]
+                }
+            }
+        }
+    }
+}
