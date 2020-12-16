@@ -27,6 +27,29 @@ def test_get_profiles_for_request(profile_medewerker, profile_brk_read):
 
 
 @pytest.mark.django_db
+def test_active_profiles_invalid(incorrect_auth_profile):
+    """Prove that only having a scope won't grant access."""
+    active = incorrect_auth_profile.get_active_profiles("brp", "ingeschrevenpersonen")
+    assert active == []
+
+
+@pytest.mark.django_db
+def test_active_profiles_valid(correct_auth_profile, brp_r_profile):
+    """Prove that the right combination of filters activates the profile"""
+    active = correct_auth_profile.get_active_profiles("brp", "ingeschrevenpersonen")
+    assert active == [brp_r_profile]
+
+
+@pytest.mark.django_db
+def test_get_all_permissions(correct_auth_profile, brp_dataset):
+    """Prove that all permissions can be retrieved"""
+    permissions = correct_auth_profile.get_all_permissions(
+        "brp:ingeschrevenpersonen:postcode"
+    )
+    assert permissions == {"brp:ingeschrevenpersonen:bsn": "encoded"}
+
+
+@pytest.mark.django_db
 def test_has_perm_dataset(profile_medewerker, profile_brk_read, brk_dataset):
     """Check that user who is authorized for all authorization checks can access data"""
     request = RequestFactory().get("/")

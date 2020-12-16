@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import pytest
 from typing import Callable
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, ProfileSchema
 
 HERE = Path(__file__).parent
 
@@ -89,3 +89,10 @@ def woonplaatsen_schema(schema_json) -> DatasetSchema:
 @pytest.fixture()
 def woningbouwplannen_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("woningbouwplannen.json"))
+
+
+@pytest.fixture()
+def brp_r_profile_schema(here) -> ProfileSchema:
+    """A downloaded profile schema definition"""
+    path = here / "files/profiles/BRP_R.json"
+    return ProfileSchema.from_file(path)

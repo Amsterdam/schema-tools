@@ -17,3 +17,17 @@ def test_geo_and_id_when_not_configured(here):
     assert table.main_geometry == "geometry"
     id_field = [field for field in table.fields if [field.name] == table.identifier][0]
     assert id_field.is_primary
+
+
+def test_profile(brp_r_profile_schema):
+    """Prove that the profile files are properly read,
+    and have their fields access the JSON data.
+    """
+    assert brp_r_profile_schema.scopes == ["BRP/R"]
+
+    brp = brp_r_profile_schema.datasets["brp"]
+    table = brp.tables["ingeschrevenpersonen"]
+    assert table.mandatory_filtersets == [
+        ["bsn", "lastname"],
+        ["postcode", "lastname"],
+    ]
