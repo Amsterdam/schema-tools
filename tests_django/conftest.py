@@ -1,4 +1,4 @@
 pytest_plugins = [
     "tests.fixtures",
-    "django_tests.fixtures",
+    "tests_django.fixtures",
 ]

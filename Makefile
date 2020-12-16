@@ -5,14 +5,14 @@ install:
 	pre-commit install
 
 test:
-	pytest -v tests/ django_tests
+	pytest -v tests/ tests_django/
 
 retest:
-	pytest -vv --lf tests/ django_tests/
+	pytest -vv --lf tests/ tests_django/
 
 .PHONY: coverage
 coverage:
-	pytest -vv --cov --cov-report=term-missing tests/ django_tests/
+	pytest -vv --cov --cov-report=term-missing tests/ tests_django/
 
 .PHONY: format
 format:

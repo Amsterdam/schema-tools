@@ -10,4 +10,4 @@ echo "Running style checks"
 flake8 --config=.flake8 ./ || true
 
 echo "Running tests"
-pytest --nomigrations -vs tests django_tests
+pytest --nomigrations -vs tests tests_django
