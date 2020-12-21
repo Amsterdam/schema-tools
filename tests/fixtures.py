@@ -96,3 +96,8 @@ def brp_r_profile_schema(here) -> ProfileSchema:
     """A downloaded profile schema definition"""
     path = here / "files/profiles/BRP_R.json"
     return ProfileSchema.from_file(path)
+
+
+@pytest.fixture()
+def brk_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("brk.json"))
