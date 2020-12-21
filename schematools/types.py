@@ -7,6 +7,7 @@ from collections import UserDict
 import jsonschema
 from . import RELATION_INDICATOR
 from schematools import MAX_TABLE_LENGTH, TMP_TABLE_POSTFIX
+from schematools.utils import to_snake_case
 
 
 class SchemaType(UserDict):
@@ -185,8 +186,9 @@ class DatasetSchema(SchemaType):
             to_snake_case(part) for part in field.nm_relation.split(":")[:2]
         ]
         snakecased_fieldname = to_snake_case(field.name)
+        table_id = get_db_table_name(table, snakecased_fieldname)
         sub_table_schema = dict(
-            id=f"{left_table}_{snakecased_fieldname}",
+            id=f"{table_id}",
             type="table",
             schema={
                 "$schema": "http://json-schema.org/draft-07/schema#",
@@ -382,6 +384,18 @@ class DatasetTableSchema(DatasetSchema):
     def is_through_table(self):
         """Indicates if table is an intersection table (n:m relation table) or base table"""
         return self.through_table
+
+    def db_name(self, through_table_field_name=None):
+        """Returns the database implementation name of a table.
+        TODO: Get database name from the JSON schema specification by defining 'shortname'.
+        For now using existing function that is already used in the GOB data (NDJson files)
+        """
+        if through_table_field_name:
+            # for n:m tables, use the relating field_name as part of DB table name
+            # i.e. heeft_verblijfsobjecten
+            return get_db_table_name(self, through_table_field_name)
+        else:
+            return get_db_table_name(self, None)
 
 
 class DatasetFieldSchema(DatasetType):
@@ -695,13 +709,14 @@ class ProfileTableSchema(DatasetType):
         return self.get("mandatoryFilterSets", [])
 
 
-def get_db_table_name(table: DatasetTableSchema) -> str:
+def get_db_table_name(table: DatasetTableSchema, through_table_field_name=None) -> str:
     """Generate the table name for a database schema."""
-    from schematools.utils import to_snake_case
-
     dataset = table._parent_schema
     app_label = dataset.id
     table_id = table.id
-    return to_snake_case(f"{app_label}_{table_id}")[
-        : MAX_TABLE_LENGTH - len(TMP_TABLE_POSTFIX)
-    ]
+    through_table_field_name = (
+        "_" + through_table_field_name if through_table_field_name else ""
+    )
+    return to_snake_case(f"{app_label}_{table_id}{through_table_field_name}").replace(
+        "-", "_"
+    )[: MAX_TABLE_LENGTH - len(TMP_TABLE_POSTFIX)]
