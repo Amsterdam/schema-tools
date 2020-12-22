@@ -1,7 +1,6 @@
 from unittest import mock
 
 import pytest
-from django.test import RequestFactory
 
 from schematools.contrib.django import models
 from schematools.contrib.django.auth_backend import (
@@ -11,17 +10,11 @@ from schematools.contrib.django.auth_backend import (
 
 
 @pytest.mark.django_db
-def test_get_profiles_for_request(profile_medewerker, profile_brk_read):
+def test_get_profiles_for_request(rf, profile_medewerker, profile_brk_read):
     """Check that correct Profiles returned for request."""
-    request = RequestFactory().get("/")
+    request = rf.get("/")
 
-    def auth(*scopes):
-        for scope in scopes:
-            if scope in ["FP/MD"]:
-                return True
-        return False
-
-    request.is_authorized_for = auth
+    request.is_authorized_for = lambda *scopes: "FP/MD" in set(scopes)
     request_profile = RequestProfile(request)
     assert request_profile.get_profiles() == {profile_medewerker}
 
@@ -50,14 +43,11 @@ def test_get_all_permissions(correct_auth_profile, brp_dataset):
 
 
 @pytest.mark.django_db
-def test_has_perm_dataset(profile_medewerker, profile_brk_read, brk_dataset):
+def test_has_perm_dataset(rf, profile_medewerker, profile_brk_read, brk_dataset):
     """Check that user who is authorized for all authorization checks can access data"""
-    request = RequestFactory().get("/")
+    request = rf.get("/")
 
-    def auth(*scopes):
-        return True
-
-    request.is_authorized_for = auth
+    request.is_authorized_for = lambda *scopes: True
     backend = ProfileAuthorizationBackend()
     user_1 = mock.MagicMock()
     user_1.request = request
@@ -66,16 +56,14 @@ def test_has_perm_dataset(profile_medewerker, profile_brk_read, brk_dataset):
 
 @pytest.mark.django_db
 def test_has_perm_dataset_field_two_profiles(
-    profile_medewerker, profile_brk_read, profile_brk_read_full, brk_dataset
+    rf, profile_medewerker, profile_brk_read, profile_brk_read_full, brk_dataset
 ):
     """Checks that profiles combine for a given user.
     And that he can access data accordingly, while regular medeweker not."""
-    request = RequestFactory().get("/")
+    request = rf.get("/")
 
-    def auth(*scopes):  # Both Profiles used
-        return any(scope == "BRK/RO" for scope in scopes)
-
-    request.is_authorized_for = auth
+    # Both Profiles used
+    request.is_authorized_for = lambda *scopes: "BRK/RO" in set(scopes)
 
     models.Dataset.objects.filter(name="brk").update(auth="MAG/NIET")
 
@@ -91,14 +79,12 @@ def test_has_perm_dataset_field_two_profiles(
 
 
 @pytest.mark.django_db
-def test_has_perm_dataset_field_read_profile(profile_brk_read_full, brk_dataset):
+def test_has_perm_dataset_field_read_profile(rf, profile_brk_read_full, brk_dataset):
     """Check that user with one profile can access data, while regular medeweker not."""
-    request = RequestFactory().get("/")
+    request = rf.get("/")
 
-    def auth(*scopes):  # Read Profile used
-        return any(scope == "BRK/RSN" for scope in scopes)
-
-    request.is_authorized_for = auth
+    # Read Profile used
+    request.is_authorized_for = lambda *scopes: "BRK/RSN" in set(scopes)
 
     backend = ProfileAuthorizationBackend()
 
@@ -116,14 +102,11 @@ def test_profile_field_inheritance_two_profiles(
 ):
     """Tests that profiles field permissions inherit properly"""
 
-    def auth(*scopes):  # Both Profiles used
-        return any(scope == "BRK/RO" for scope in scopes)
-
     models.Dataset.objects.filter(name="brk").update(auth="MAG/NIET")
 
     request = rf.get("/")
     request.auth_profile = RequestProfile(request)
-    request.is_authorized_for = auth
+    request.is_authorized_for = lambda *scopes: "BRK/RO" in set(scopes)
     auth_profile = request.auth_profile
     assert auth_profile.get_read_permission(perm="brk:kadastraleobjecten:id") == "read"
     assert (
@@ -153,7 +136,9 @@ def test_profile_field_inheritance_from_dataset(
 
     request = rf.get("/")
     request.auth_profile = RequestProfile(request)
-    request.is_authorized_for = auth
+    request.is_authorized_for = lambda *scopes: {"ONLY/ENCODED", "DATASET/SCOPE"} & set(
+        scopes
+    )
     auth_profile = request.auth_profile
     assert auth_profile.get_read_permission(perm="brk:kadastraleobjecten:id") == "read"
     assert (
