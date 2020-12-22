@@ -86,12 +86,22 @@ def tconn(engine, local_metadata):
 
 
 @pytest.fixture(scope="module")
-def local_metadata(engine):
+def module_metadata(engine):
     """A module scoped metadata. This can be used to collect table structures
     during tests that are part of a particular module. At the module boundary, these tables
     are dropped. When Table models are constructed serveral times in these tests,
     the 'extend_existing' constructor arg. can be used, to avoid errors.
     Tables are just replaced in the same metadata object.
+    """
+    _meta = MetaData()
+    yield _meta
+    _meta.drop_all(bind=engine)
+
+
+@pytest.fixture
+def local_metadata(engine):
+    """A function scoped metadata. Some tests really need to destroy and not update
+    previous instances of SA Table objects.
     """
     _meta = MetaData()
     yield _meta
