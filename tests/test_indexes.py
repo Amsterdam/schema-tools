@@ -57,9 +57,9 @@ def test_index_creation(engine, db_schema):
             f"{table['id']}", ind_tables=True, ind_extra_index=True
         )
 
-        CONN = create_engine(engine.url, client_encoding="UTF-8")
-        META_DATA = MetaData(bind=CONN, reflect=True)
-        metadata_inspector = inspect(META_DATA.bind)
+        conn = create_engine(engine.url, client_encoding="UTF-8")
+        meta_data = MetaData(bind=conn, reflect=True)
+        metadata_inspector = inspect(meta_data.bind)
         indexes = metadata_inspector.get_indexes(
             f"{parent_schema['id']}_{table['id']}", schema=None
         )
@@ -170,9 +170,9 @@ def test_index_troughtables_creation(engine, db_schema):
 
         for table in dataset_table.get_through_tables_by_id():
 
-            CONN = create_engine(engine.url, client_encoding="UTF-8")
-            META_DATA = MetaData(bind=CONN, reflect=True)
-            metadata_inspector = inspect(META_DATA.bind)
+            conn = create_engine(engine.url, client_encoding="UTF-8")
+            meta_data = MetaData(bind=conn, reflect=True)
+            metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(f"{table['id']}", schema=None)
 
             for index in indexes:
