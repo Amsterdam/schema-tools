@@ -47,7 +47,11 @@ class DatasetSchema(SchemaType):
     _datasets_cache = {}
 
     def __init__(
-        self, *args, datasets_cache: typing.Dict[str, DatasetSchema] = None, **kwargs
+        self,
+        *args,
+        datasets_cache: typing.Dict[str, DatasetSchema] = None,
+        use_dimension_fields: bool = False,
+        **kwargs,
     ):
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
@@ -56,6 +60,7 @@ class DatasetSchema(SchemaType):
         super().__init__(*args, **kwargs)
         if datasets_cache is not None:
             self._datasets_cache = datasets_cache
+        self._use_dimension_fields = use_dimension_fields
 
     def add_datasets_cache(self, datasets_cache: typing.Dict[str, DatasetSchema]):
         """ A bit hacky, we need some wrapping object for all datasets """
@@ -101,6 +106,17 @@ class DatasetSchema(SchemaType):
 
     def get_dataset_schema(self, dataset_id):
         return self._datasets_cache.get(dataset_id)
+
+    @property
+    def use_dimension_fields(self):
+        """Indication if schema has to add extra dimension fields
+        for relations
+        """
+        return self._use_dimension_fields
+
+    @use_dimension_fields.setter
+    def use_dimension_fields(self, value: bool):
+        self._use_dimension_fields = value
 
     @property
     def tables(self) -> typing.List[DatasetTableSchema]:
@@ -313,6 +329,13 @@ class DatasetTableSchema(DatasetSchema):
         return self._parent_schema.get_dataset_schema(dataset_id)
 
     @property
+    def use_dimension_fields(self):
+        """Indication if schema has to add extra dimension fields
+        for relations
+        """
+        return self._parent_schema.use_dimension_fields
+
+    @property
     def temporal(self):
         """Return the temporal info from the dataset schema """
         return self._parent_schema.fetch_temporal(field_modifier=lambda x: x)
@@ -520,7 +543,10 @@ class DatasetFieldSchema(DatasetType):
                 **spec,
             )
 
-        # Add temporal fields if the table is temporal
+        # Add temporal fields on the relation if the table is temporal
+        # and the use of dimension fields is enabled for the schema
+        if not self._parent_table.use_dimension_fields:
+            return
         if relation is not None or nm_relation is not None:
             dataset_id, table_id = (relation or nm_relation).split(
                 ":"

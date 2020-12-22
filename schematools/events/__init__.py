@@ -148,25 +148,33 @@ class SchemaInfo:
     table_id: str
     nm_table_id: str
     relation_fieldname: str
+    use_dimension_fields: bool = False
 
     @classmethod
-    def from_collection(cls, collection):
+    def from_collection(cls, collection, datasets):
         try:
-            schema_info = COLLECTION_TO_SCHEMA[collection]
+            schema_data = COLLECTION_TO_SCHEMA[collection]
         except KeyError as e:
             raise UnknownRelationException(
                 f"Relation {collection} cannot be handled"
             ) from e
-        return cls(*schema_info)
+        schema_info = cls(*schema_data)
+        schema_info.use_dimension_fields = datasets[
+            schema_info.dataset_id
+        ].use_dimension_fields
+        return schema_info
 
 
 # Mapping of GOB temporal relation names to amsterdam schema names
 
-GOB_FIELD_NAMES = {
+GOB_CORE_FIELD_NAMES = {
     "src_id": "identificatie",
     "src_volgnummer": "volgnummer",
     "dst_id": "identificatie",
     "dst_volgnummer": "volgnummer",
+}
+
+GOB_DIMENSION_FIELD_NAMES = {
     "begin_geldigheid": "begin_geldigheid",
     "eind_geldigheid": "eind_geldigheid",
 }
@@ -192,12 +200,15 @@ class RelationHandler:
         self.row = {}
         if db_info.data_fetcher is not None:
             self.row = db_info.data_fetcher(event_data)
-        for fn in GOB_FIELD_NAMES.keys():
+        self.gob_field_names = GOB_CORE_FIELD_NAMES.copy()
+        if self.schema_info.use_dimension_fields:
+            self.gob_field_names.update(GOB_DIMENSION_FIELD_NAMES)
+        for fn in self.gob_field_names.keys():
             setattr(self, fn, self.row.get(fn))
 
     def _add_update(self, initial, fn, value, prefix=None):
-        if fn in GOB_FIELD_NAMES.keys() and self.row.get(fn) is not None:
-            dso_fn = GOB_FIELD_NAMES[fn]
+        if fn in self.gob_field_names.keys() and self.row.get(fn) is not None:
+            dso_fn = self.gob_field_names[fn]
             initial[
                 "_".join(([prefix] if prefix is not None else []) + [dso_fn])
             ] = value
@@ -261,7 +272,7 @@ class FKRelationHandler(RelationHandler):
     def _null_updates(self):
         relation_fieldname = self.schema_info.relation_fieldname
         updates = {f"{relation_fieldname}_id": None}
-        for fn in set(GOB_FIELD_NAMES.values()):
+        for fn in set(self.gob_field_names.values()):
             # The src fields are not used for FK, only during ADD
             if fn.startswith("src"):
                 continue
@@ -275,12 +286,16 @@ class FKRelationHandler(RelationHandler):
             super().set_values()
             relation_fieldname = self.schema_info.relation_fieldname
             updates = {f"{relation_fieldname}_source_id": self.source_id}
-            self._add_update(
-                updates, "begin_geldigheid", self.begin_geldigheid, relation_fieldname
-            )
-            self._add_update(
-                updates, "eind_geldigheid", self.eind_geldigheid, relation_fieldname
-            )
+            if self.schema_info.use_dimension_fields:
+                self._add_update(
+                    updates,
+                    "begin_geldigheid",
+                    self.begin_geldigheid,
+                    relation_fieldname,
+                )
+                self._add_update(
+                    updates, "eind_geldigheid", self.eind_geldigheid, relation_fieldname
+                )
             self.updates.update(updates)
 
 
@@ -309,8 +324,9 @@ class M2MRelationHandler(RelationHandler):
             }
         self._add_update(updates, "src_id", self.src_id, table_id)
         self._add_update(updates, "src_volgnummer", self.src_volgnummer, table_id)
-        self._add_update(updates, "begin_geldigheid", self.begin_geldigheid)
-        self._add_update(updates, "eind_geldigheid", self.eind_geldigheid)
+        if self.schema_info.use_dimension_fields:
+            self._add_update(updates, "begin_geldigheid", self.begin_geldigheid)
+            self._add_update(updates, "eind_geldigheid", self.eind_geldigheid)
         self.updates.update(updates)
 
 
@@ -359,7 +375,7 @@ class EventsProcessor:
 
     def process_relation(self, source_id, event_meta, event_data):
         collection = event_meta["collection"]
-        schema_info = SchemaInfo.from_collection(collection)
+        schema_info = SchemaInfo.from_collection(collection, self.datasets)
         event_type = event_meta["event_type"]
         is_nm_table = schema_info.nm_table_id is not None
         db_info = DbInfo.from_event_type(is_nm_table, event_type)
