@@ -7,7 +7,6 @@ from collections import UserDict
 import jsonschema
 from . import RELATION_INDICATOR
 from schematools import MAX_TABLE_LENGTH, TMP_TABLE_POSTFIX
-from schematools.utils import to_snake_case
 
 
 class SchemaType(UserDict):
@@ -739,6 +738,8 @@ class ProfileTableSchema(DatasetType):
 
 def get_db_table_name(table: DatasetTableSchema, through_table_field_name=None) -> str:
     """Generate the table name for a database schema."""
+    # import within function to avoid a circular import with utils.py
+    from schematools.utils import to_snake_case
     dataset = table._parent_schema
     app_label = dataset.id
     table_id = table.id
