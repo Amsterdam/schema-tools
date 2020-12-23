@@ -1,10 +1,6 @@
 from schematools.types import SchemaType, DatasetSchema
 from schematools.importer.base import BaseImporter
-from schematools.cli import _get_engine
-import environ
 from sqlalchemy import MetaData, create_engine, inspect
-
-env = environ.Env()
 
 
 def test_index_creation(engine, db_schema):
@@ -12,7 +8,7 @@ def test_index_creation(engine, db_schema):
 
     test_data = {
         "type": "dataset",
-        "id": "TEST",
+        "id": "test",
         "title": "test table",
         "status": "beschikbaar",
         "description": "test table",
@@ -50,18 +46,18 @@ def test_index_creation(engine, db_schema):
     }
 
     data = test_data
-    ind_index_exists = False
     parent_schema = SchemaType(data)
     dataset_schema = DatasetSchema(parent_schema)
+    ind_index_exists = False
 
     for table in data["tables"]:
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
         importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
-        CONN = create_engine(engine.url, client_encoding="UTF-8")
-        META_DATA = MetaData(bind=CONN, reflect=True)
-        metadata_inspector = inspect(META_DATA.bind)
+        conn = create_engine(engine.url, client_encoding="UTF-8")
+        meta_data = MetaData(bind=conn, reflect=True)
+        metadata_inspector = inspect(meta_data.bind)
         indexes = metadata_inspector.get_indexes(
             f"{parent_schema['id']}_{table['id']}", schema=None
         )
@@ -74,12 +70,12 @@ def test_index_creation(engine, db_schema):
         assert ind_index_exists
 
 
-def test_index_troughtables_creation():
+def test_index_troughtables_creation(engine, db_schema):
     """Prove that many-to-many table indexes are created based on schema specificiation """
 
     test_data = {
         "type": "dataset",
-        "id": "TEST",
+        "id": "test",
         "title": "TEST",
         "status": "niet_beschikbaar",
         "version": "0.0.1",
@@ -154,16 +150,17 @@ def test_index_troughtables_creation():
     data = test_data
     parent_schema = SchemaType(data)
     dataset_schema = DatasetSchema(parent_schema)
-    DATABASE_URL = env("DATABASE_URL", None)
-    db_url = DATABASE_URL
-    engine = _get_engine(db_url)
     indexes_name = []
 
     for table in data["tables"]:
 
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
-        importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
+        importer.generate_db_objects(
+            table["id"],
+            ind_tables=True,
+            ind_extra_index=True,
+        )
 
     for table in data["tables"]:
 
@@ -171,9 +168,9 @@ def test_index_troughtables_creation():
 
         for table in dataset_table.get_through_tables_by_id():
 
-            CONN = create_engine(DATABASE_URL, client_encoding="UTF-8")
-            META_DATA = MetaData(bind=CONN, reflect=True)
-            metadata_inspector = inspect(META_DATA.bind)
+            conn = create_engine(engine.url, client_encoding="UTF-8")
+            meta_data = MetaData(bind=conn, reflect=True)
+            metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(
                 f"{parent_schema['id']}_{table['id']}", schema=None
             )

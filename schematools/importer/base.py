@@ -17,10 +17,9 @@ from sqlalchemy import (
     exc,
 )
 
-from schematools import MAX_TABLE_LENGTH
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
-from . import get_table_name, fetch_col_type
+from . import fetch_col_type
 
 metadata = MetaData()
 
@@ -108,10 +107,6 @@ class BaseImporter:
         self.pk_colname_lookup = {}
         self.logger = LogfileLogger(logger) if logger else CliLogger()
 
-    def get_db_table_name(self, table_name):
-        dataset_table = self.dataset_schema.get_table_by_id(table_name)
-        return get_table_name(dataset_table)
-
     def fetch_fields_provenances(self, dataset_table):
         """ Create mapping from provenance to camelcased fieldname """
         fields_provenances = {}
@@ -193,7 +188,7 @@ class BaseImporter:
             self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
             self.db_table_name = db_table_name
             if db_table_name is None:
-                self.db_table_name = get_table_name(self.dataset_table)
+                self.db_table_name = self.dataset_table.db_name()
             # Bind the metadata
             metadata.bind = self.engine
             # Get a table to import into
@@ -381,7 +376,7 @@ def table_factory(
     so during creation or records, the data can be associated with the correct table.
     """
     if db_table_name is None:
-        db_table_name = get_table_name(dataset_table)
+        db_table_name = dataset_table.db_name()
 
     metadata = metadata or MetaData()
     sub_tables = {}
@@ -391,10 +386,10 @@ def table_factory(
         if field.type.endswith("#/definitions/schema"):
             continue
         field_name = to_snake_case(field.name)
-        sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
 
         try:
             if field.is_array:
+                sub_table_id = dataset_table.db_name(field_name)
 
                 if field.is_nested_table:
                     # We assume parent has an id field, Django needs it
@@ -442,6 +437,7 @@ def table_factory(
                     sub_table_id,
                     metadata,
                     *sub_columns,
+                    extend_existing=True,
                 )
 
                 continue
@@ -502,7 +498,7 @@ def index_factory(
     def define_identifier_index():
         """ creates index based on the 'identifier' specification in the Amsterdam schema """
 
-        table_object = metadata.tables[db_table_name]
+        table_object = metadata.tables[dataset_table.db_name()]
         identifier_column_snaked = []
         indexes_to_create = []
 
@@ -557,17 +553,24 @@ def index_factory(
 
             # create the Index objects
             if through_tables:
+                table_id = f"{dataset_table._parent_schema.id}_{table.id}"
 
-                table_name_prefix = db_table_name.split("_")[0]
-                table_name = f"{table_name_prefix}_{through_tables['table']}"
-                table_object = metadata.tables[f"{table_name_prefix}_{table.id}"]
+                try:
+                    table_object = metadata.tables[table_id]
+
+                except KeyError:
+                    logger.log_error(
+                        f"Unable to create Indexes {dataset_table._parent_schema.id}_{table.id}."
+                        f"Table not found in DB."
+                    )
+                    continue
 
                 for column in through_tables["properties"]:
                     # Postgres DB holds currently 63 max charakters for objectnames.
                     # To prevent exceeds and collisions,
                     # the index names are shortend based upon a hash.
                     # SHA1 holds a max output of 40 characters
-                    index_name = table_name + "_" + column + "_idx"
+                    index_name = table_id + "_" + column + "_idx"
                     if len(index_name) > 63:
                         hash = hashlib.sha1()
                         hash.update(bytes(index_name, "utf-8"))
@@ -578,12 +581,12 @@ def index_factory(
                         )
                     except KeyError as e:
                         logger.log_error(
-                            f"{e.__str__}:{table_name}.{column} not found in {table_object.c}"
+                            f"{e.__str__}:{table_id}.{column} not found in {table_object.c}"
                         )
                         continue
 
                 # add Index objects to create
-                index[table_name] = indexes_to_create
+                index[table_id] = indexes_to_create
 
     if ind_extra_index:
         define_identifier_index()
