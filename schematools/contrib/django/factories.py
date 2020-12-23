@@ -34,10 +34,12 @@ class FieldMaker:
     def __init__(
         self,
         field_cls: Type[models.Field],
+        table: DatasetTableSchema,
         value_getter: Callable[[DatasetSchema], Dict[str, Any]] = None,
         **kwargs,
     ):
         self.field_cls = field_cls
+        self.table = table
         self.value_getter = value_getter
         self.kwargs = kwargs
         self.modifiers = [
@@ -53,8 +55,11 @@ class FieldMaker:
     def _make_through_classname(self, dataset_id, left_table_id, field_name):
         left_table = to_snake_case(left_table_id)
         snakecased_fieldname = to_snake_case(field_name)
-        through_table_id = f"{left_table}_{snakecased_fieldname}"
-        return f"{dataset_id}.{through_table_id}"[:MAX_TABLE_LENGTH]
+        through_table_id = get_db_table_name(self.table, snakecased_fieldname)
+        # dso-api expects the dataset_id seperated from the table_id by a point
+        table_id = '_'.join(through_table_id.split('_')[1:])
+        dataset_id = through_table_id.split('_')[0]
+        return f"{dataset_id}.{table_id}"
 
     def handle_basic(
         self,
@@ -236,7 +241,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
             init_kwargs = {}
 
         # Generate field object
-        kls, args, kwargs = FieldMaker(base_class, **init_kwargs)(field, dataset)
+        kls, args, kwargs = FieldMaker(base_class, table, **init_kwargs)(field, dataset)
         if kls is None or kls is ObjectMarker:
             # Some fields are not mapped into classes
             continue

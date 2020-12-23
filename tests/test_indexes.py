@@ -52,9 +52,9 @@ def test_index_creation(engine, db_schema):
 
     for table in data["tables"]:
         importer = BaseImporter(dataset_schema, engine)
-        # the generate_table and create index
+        # to generate table and create index
         importer.generate_db_objects(
-            f"{table['id']}", ind_tables=True, ind_extra_index=True
+            table['id'], ind_tables=True, ind_extra_index=True
         )
 
         conn = create_engine(engine.url, client_encoding="UTF-8")
@@ -157,9 +157,9 @@ def test_index_troughtables_creation(engine, db_schema):
     for table in data["tables"]:
 
         importer = BaseImporter(dataset_schema, engine)
-        # the generate_table and create index
+        # to generate table and create index
         importer.generate_db_objects(
-            f'{table["id"]}',
+            table["id"],
             ind_tables=True,
             ind_extra_index=True,
         )
@@ -173,7 +173,9 @@ def test_index_troughtables_creation(engine, db_schema):
             conn = create_engine(engine.url, client_encoding="UTF-8")
             meta_data = MetaData(bind=conn, reflect=True)
             metadata_inspector = inspect(meta_data.bind)
-            indexes = metadata_inspector.get_indexes(f"{table['id']}", schema=None)
+            indexes = metadata_inspector.get_indexes(
+                f"{parent_schema['id']}_{table['id']}", schema=None
+                )
 
             for index in indexes:
                 indexes_name.append(index["name"])

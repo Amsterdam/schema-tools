@@ -553,13 +553,14 @@ def index_factory(
 
             # create the Index objects
             if through_tables:
+                table_id = f"{dataset_table._parent_schema.id}_{table.id}"
 
                 try:
-                    table_object = metadata.tables[f"{table.id}"]
+                    table_object = metadata.tables[table_id]
 
                 except KeyError:
                     logger.log_error(
-                        f"Unable to create Indexes for {table.id}. Table not found in DB"
+                        f"Unable to create Indexes for {table_id}. Table not found in DB"
                     )
                     continue
 
@@ -568,7 +569,7 @@ def index_factory(
                     # To prevent exceeds and collisions,
                     # the index names are shortend based upon a hash.
                     # SHA1 holds a max output of 40 characters
-                    index_name = table.id + "_" + column + "_idx"
+                    index_name = table_id + "_" + column + "_idx"
                     if len(index_name) > 63:
                         hash = hashlib.sha1()
                         hash.update(bytes(index_name, "utf-8"))
@@ -579,12 +580,12 @@ def index_factory(
                         )
                     except KeyError as e:
                         logger.log_error(
-                            f"{e.__str__}:{table.id}.{column} not found in {table_object.c}"
+                            f"{e.__str__}:{table_id}.{column} not found in {table_object.c}"
                         )
                         continue
 
                 # add Index objects to create
-                index[table.id] = indexes_to_create
+                index[table_id] = indexes_to_create
 
     if ind_extra_index:
         define_identifier_index()

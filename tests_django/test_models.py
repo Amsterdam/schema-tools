@@ -108,7 +108,7 @@ def test_model_factory_temporary_n_m_relation(ggwgebieden_schema):
         )
     }
     # The through table is created
-    through_table_name = "gebieden_ggwgebieden_bestaatuitbuurten"
+    through_table_name = "ggwgebieden_bestaatuitbuurten"
     assert through_table_name in model_dict
 
     # Through table has refs to both 'sides' and extra fields for the relation
@@ -171,5 +171,5 @@ def test_table_name_creation_n_m_relation(brk_schema):
     # beware! the letter 't' is missing in the table name on purpose
     # currently the table name is maxed to 63 karakters minus 4 karakters
     # (because of the temp table which adde the postfix _new to the table name)
-    through_table_name = "brk_kadastraleobjecten_heeft_een_relatie_met_verblijfsobjec"
+    through_table_name = "kadastraleobjecten_heeft_een_relatie_met_verblijfsobjec"
     assert through_table_name in model_dict

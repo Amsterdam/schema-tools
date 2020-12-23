@@ -202,7 +202,9 @@ class DatasetSchema(SchemaType):
             to_snake_case(part) for part in field.nm_relation.split(":")[:2]
         ]
         snakecased_fieldname = to_snake_case(field.name)
-        table_id = get_db_table_name(table, snakecased_fieldname)
+        db_table_name = get_db_table_name(table, snakecased_fieldname)
+        # dso-api expects the dataset_id (as prefix) not part of the table_id
+        table_id = '_'.join(db_table_name.split('_')[1:])
         sub_table_schema = dict(
             id=f"{table_id}",
             type="table",
