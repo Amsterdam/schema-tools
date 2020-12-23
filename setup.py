@@ -16,7 +16,7 @@ def read(filename):
 
 setup(
     name="amsterdam-schema-tools",
-    version="0.16.1",
+    version="0.16.3",
     url="https://github.com/amsterdam/schema-tools",
     license="Mozilla Public 2.0",
     author="Jan Murre",
