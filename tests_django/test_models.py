@@ -153,3 +153,23 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_schema):
     model_cls = model_dict["woningbouwplan"]
     meta = model_cls._meta
     assert isinstance(meta.get_field("buurten"), LooseRelationManyToManyField)
+
+
+def test_table_name_creation_n_m_relation(brk_schema):
+    """Prove that through table name is looking at instance method db_name
+    of the datasettableschema class to define it's name.
+    Note: Adjust this test after db_name is getting value from Amsterdam schema
+    specification.
+    """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            brk_schema, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    # The through table is created
+    # beware! the letter 't' is missing in the table name on purpose
+    # currently the table name is maxed to 63 karakters minus 4 karakters
+    # (because of the temp table which adde the postfix _new to the table name)
+    through_table_name = "kadastraleobjecten_heeft_een_relatie_met_verblijfsobjec"
+    assert through_table_name in model_dict
