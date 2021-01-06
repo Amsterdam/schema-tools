@@ -3,6 +3,8 @@ import json
 import click
 import requests
 
+from deepdiff import DeepDiff
+
 import jsonschema
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -204,7 +206,7 @@ def permissions_revoke(db_url, role):
 def permissions_apply(
     db_url,
     schema_url,
-    profile_url,
+    profile_url,  # NoQA
     schema_filename,
     profile_filename,
     pg_schema,
@@ -265,6 +267,12 @@ def introspect():
 @schema.group()
 def create():
     """Subcommand to create a DB object."""
+    pass
+
+
+@schema.group()
+def diff():
+    """Subcommand to show schema diffs."""
     pass
 
 
@@ -504,3 +512,20 @@ def create_all_objects(schema_url, db_url):
 
     for table in data["tables"]:
         importer.generate_db_objects(table["id"])
+
+
+@diff.command("all")
+@option_schema_url
+@click.argument("diff_schema_url")
+def diff_schemas(schema_url, diff_schema_url):
+    """Shows diff for two sets of schemas. The left-side schemas location is
+    defined in SCHEMA_URL (or via --schema-url), the right-side schemas location
+    has to be on the command-line.
+
+    This can be used to compare two sets of schemas, e.g. ACC and PRD schemas.
+
+    For nicer output, pipe it through a json formatter.
+    """
+    schemas = schema_defs_from_url(schema_url)
+    diff_schemas = schema_defs_from_url(diff_schema_url)
+    click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
