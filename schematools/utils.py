@@ -17,7 +17,7 @@ re_camel_case = re.compile(
 )
 
 
-@ttl_cache(ttl=16)
+@ttl_cache(ttl=16)  # type: ignore
 def schema_defs_from_url(schemas_url) -> Dict[str, types.DatasetSchema]:
     """Fetch all schema definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
@@ -36,7 +36,7 @@ def schema_def_from_url(schemas_url, schema_name):
         ) from None
 
 
-@ttl_cache(ttl=16)
+@ttl_cache(ttl=16)  # type: ignore
 def profile_defs_from_url(profiles_url) -> Dict[str, types.ProfileSchema]:
     """Fetch all profile definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
@@ -74,7 +74,7 @@ def schema_def_from_file(filename) -> Dict[str, types.DatasetSchema]:
         return {schema_info["id"]: types.DatasetSchema.from_dict(schema_info)}
 
 
-def profile_def_from_file(filename) -> Dict[str, types.ProfileSchemaSchema]:
+def profile_def_from_file(filename) -> Dict[str, types.DatasetSchema]:
     """Read a profile from a file on local drive."""
     with open(filename, "r") as file_handler:
         schema_info = json.load(file_handler)
@@ -105,7 +105,7 @@ def toCamelCase(name):
     return "".join(w.lower() if i == 0 else w.title() for i, w in enumerate(words))
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=256)  # type: ignore
 def to_snake_case(name):
     """
     Convert field/column/dataset name from Space separated/Snake Case/Camel case

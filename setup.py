@@ -30,6 +30,7 @@ setup(
         "psycopg2",
         "pg-grant",
         "click",
+        "deepdiff",
         "jsonschema",
         "ndjson>=0.3.0",
         "shapely",
