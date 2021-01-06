@@ -139,7 +139,9 @@ class DatasetSchema(SchemaType):
     def get_table_by_id(
         self, table_id: str, include_nested=True, include_through=True
     ) -> DatasetTableSchema:
-        for table in self.get_tables(include_nested=include_nested):
+        for table in self.get_tables(
+            include_nested=include_nested, include_through=include_through
+        ):
             if table.id == table_id:
                 return table
 
@@ -309,7 +311,7 @@ class DatasetTableSchema(DatasetSchema):
             if field.name in set(field_names):
                 yield field
 
-    def get_field_by_id(self, field_name) -> DatasetFieldSchema:
+    def get_field_by_id(self, field_name) -> typing.Optional[DatasetFieldSchema]:
         for field_schema in self.fields:
             if field_schema.name == field_name:
                 return field_schema
@@ -453,7 +455,7 @@ class DatasetFieldSchema(DatasetType):
         return self._parent_field
 
     @property
-    def name(self) -> str:
+    def name(self) -> typing.Optional[str]:
         return self._name
 
     @property
@@ -461,7 +463,7 @@ class DatasetFieldSchema(DatasetType):
         return self.get("description")
 
     @property
-    def required(self) -> bool:
+    def required(self) -> typing.Optional[bool]:
         return self._required
 
     @property
@@ -740,6 +742,7 @@ def get_db_table_name(table: DatasetTableSchema, through_table_field_name=None) 
     """Generate the table name for a database schema."""
     # import within function to avoid a circular import with utils.py
     from schematools.utils import to_snake_case
+
     dataset = table._parent_schema
     app_label = dataset.id
     table_id = table.id
