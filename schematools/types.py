@@ -228,9 +228,7 @@ class DatasetSchema(SchemaType):
                 },
             },
         )
-        return DatasetTableSchema(
-            sub_table_schema, _parent_schema=self, through_table=True
-        )
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
 
     def fetch_temporal(self, field_modifier=None):
         """The original implementation of 'temporal' already does
@@ -246,9 +244,7 @@ class DatasetSchema(SchemaType):
         if temporal_configuration is None:
             return None
 
-        for key, [start_field, end_field] in temporal_configuration.get(
-            "dimensions", {}
-        ).items():
+        for key, [start_field, end_field] in temporal_configuration.get("dimensions", {}).items():
             temporal_configuration["dimensions"][key] = [
                 field_modifier(start_field),
                 field_modifier(end_field),
@@ -300,13 +296,9 @@ class DatasetTableSchema(DatasetSchema):
         # If compound key, add PK field
         # XXX we should check for an existing "id" field, avoid collisions
         if self.has_compound_key:
-            yield DatasetFieldSchema(
-                _name="id", _parent_table=self, _required=True, type="string"
-            )
+            yield DatasetFieldSchema(_name="id", _parent_table=self, _required=True, type="string")
 
-    def get_fields_by_id(
-        self, field_names
-    ) -> typing.Generator[DatasetFieldSchema, None, None]:
+    def get_fields_by_id(self, field_names) -> typing.Generator[DatasetFieldSchema, None, None]:
         for field in self.fields:
             if field.name in set(field_names):
                 yield field
@@ -411,17 +403,18 @@ class DatasetTableSchema(DatasetSchema):
         """Indicates if table is an intersection table (n:m relation table) or base table"""
         return self.through_table
 
-    def db_name(self, through_table_field_name=None):
+    def db_name(self, through_table_field_name=None, db_table_name=None):
         """Returns the database implementation name of a table.
         TODO: Get database name from the JSON schema specification by defining 'shortname'.
         For now using existing function that is already used in the GOB data (NDJson files)
         """
-        if through_table_field_name:
-            # for n:m tables, use the relating field_name as part of DB table name
-            # i.e. heeft_verblijfsobjecten
-            return get_db_table_name(self, through_table_field_name)
-        else:
-            return get_db_table_name(self, None)
+        # for n:m tables, use the relating field_name as part of DB table name
+        # i.e. heeft_verblijfsobjecten
+        return get_db_table_name(
+            self,
+            through_table_field_name=through_table_field_name,
+            db_table_name=db_table_name,
+        )
 
 
 class DatasetFieldSchema(DatasetType):
@@ -541,9 +534,7 @@ class DatasetFieldSchema(DatasetType):
             required = set(self.items.get("required") or ())
             properties = self.items["properties"]
         else:
-            raise ValueError(
-                "Subfields are only possible for 'object' or 'array' fields."
-            )
+            raise ValueError("Subfields are only possible for 'object' or 'array' fields.")
 
         relation = self.relation
         nm_relation = self.nm_relation
@@ -582,9 +573,7 @@ class DatasetFieldSchema(DatasetType):
             if nm_relation is not None:
                 field_name_prefix = ""
             if dataset_table.is_temporal:
-                for dimension_fieldnames in dataset_table.temporal.get(
-                    "dimensions", {}
-                ).values():
+                for dimension_fieldnames in dataset_table.temporal.get("dimensions", {}).values():
                     for dimension_fieldname in dimension_fieldnames:
                         field_name = f"{field_name_prefix}{dimension_fieldname}"
                         yield DatasetFieldSchema(
@@ -601,10 +590,7 @@ class DatasetFieldSchema(DatasetType):
         """
         Checks if field is an array field
         """
-        return (
-            self.get("type") == "array"
-            and self.get("items", {}).get("type") == "object"
-        )
+        return self.get("type") == "array" and self.get("items", {}).get("type") == "object"
 
     @property
     def is_nested_table(self) -> bool:
@@ -691,8 +677,7 @@ class ProfileDatasetSchema(DatasetType):
     @property
     def tables(self) -> typing.Dict[str, ProfileTableSchema]:
         return {
-            id: ProfileTableSchema(id, self, data)
-            for id, data in self.get("tables", {}).items()
+            id: ProfileTableSchema(id, self, data) for id, data in self.get("tables", {}).items()
         }
 
 
@@ -738,7 +723,9 @@ class ProfileTableSchema(DatasetType):
         return self.get("mandatoryFilterSets", [])
 
 
-def get_db_table_name(table: DatasetTableSchema, through_table_field_name=None) -> str:
+def get_db_table_name(
+    table: DatasetTableSchema, through_table_field_name=None, db_table_name=None
+) -> str:
     """Generate the table name for a database schema."""
     # import within function to avoid a circular import with utils.py
     from schematools.utils import to_snake_case
@@ -746,9 +733,9 @@ def get_db_table_name(table: DatasetTableSchema, through_table_field_name=None) 
     dataset = table._parent_schema
     app_label = dataset.id
     table_id = table.id
-    through_table_field_name = (
-        "_" + through_table_field_name if through_table_field_name else ""
-    )
-    return to_snake_case(f"{app_label}_{table_id}{through_table_field_name}").replace(
-        "-", "_"
-    )[: MAX_TABLE_LENGTH - len(TMP_TABLE_POSTFIX)]
+    if db_table_name is None:
+        db_table_name = f"{app_label}_{table_id}"
+    through_table_field_name = "_" + through_table_field_name if through_table_field_name else ""
+    return to_snake_case(f"{db_table_name}{through_table_field_name}").replace("-", "_")[
+        : MAX_TABLE_LENGTH - len(TMP_TABLE_POSTFIX)
+    ]

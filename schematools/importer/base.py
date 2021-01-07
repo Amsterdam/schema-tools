@@ -44,8 +44,7 @@ class Row(UserDict):
 
     def __init__(self, *args, **kwargs):
         self.fields_provenances = {
-            name: prov_name
-            for prov_name, name in kwargs.pop("fields_provenances", {}).items()
+            name: prov_name for prov_name, name in kwargs.pop("fields_provenances", {}).items()
         }
         super().__init__(*args, **kwargs)
 
@@ -101,7 +100,7 @@ class BaseImporter:
         self.dataset_table = None
         self.fields_provenances = None
         self.db_table_name = None
-        self.tables = []
+        self.tables = {}
         self.indexes = []
         self.pk_values_lookup = {}
         self.pk_colname_lookup = {}
@@ -163,9 +162,7 @@ class BaseImporter:
                 if pk_col.autoincrement == "auto":
                     continue
                 self.pk_colname_lookup[table_name] = pk_name
-                pks = set(
-                    [getattr(r, pk_name) for r in self.engine.execute(table.select())]
-                )
+                pks = set([getattr(r, pk_name) for r in self.engine.execute(table.select())])
                 self.pk_values_lookup[table_name] = pks
 
     def generate_db_objects(
@@ -386,10 +383,13 @@ def table_factory(
         if field.type.endswith("#/definitions/schema"):
             continue
         field_name = to_snake_case(field.name)
+        sub_columns = []
 
         try:
             if field.is_array:
-                sub_table_id = dataset_table.db_name(field_name)
+                sub_table_id = dataset_table.db_name(
+                    through_table_field_name=field_name, db_table_name=db_table_name
+                )
 
                 if field.is_nested_table:
                     # We assume parent has an id field, Django needs it
@@ -414,9 +414,7 @@ def table_factory(
                     # And the field(s) for the left side of the relation
                     # if this left table has a compound key
                     if dataset_table.has_compound_key:
-                        for id_field in dataset_table.get_fields_by_id(
-                            dataset_table.identifier
-                        ):
+                        for id_field in dataset_table.get_fields_by_id(dataset_table.identifier):
                             sub_columns.append(
                                 Column(
                                     f"{dataset_table.id}_{to_snake_case(id_field.name)}",
@@ -467,7 +465,7 @@ def table_factory(
 
 def index_factory(
     dataset_table: DatasetTableSchema,
-    ind_extra_index: True,
+    ind_extra_index: bool,
     metadata: Optional[MetaData] = None,
     db_table_name=None,
     logger=None,
@@ -512,9 +510,7 @@ def index_factory(
                         table_object.c[to_snake_case(identifier_column)]
                     )
                 except KeyError as e:
-                    logger.log_error(
-                        f"{e.__str__} on {dataset_table.id}.{identifier_column}"
-                    )
+                    logger.log_error(f"{e.__str__} on {dataset_table.id}.{identifier_column}")
                     continue
 
         indexes_to_create.append(
@@ -544,12 +540,8 @@ def index_factory(
                         through_tables["properties"].append(field.name + "_id")
 
                         if dataset_table.is_temporal:
-                            through_tables["properties"].append(
-                                field.name + "_identificatie"
-                            )
-                            through_tables["properties"].append(
-                                field.name + "_volgnummer"
-                            )
+                            through_tables["properties"].append(field.name + "_identificatie")
+                            through_tables["properties"].append(field.name + "_volgnummer")
 
             # create the Index objects
             if through_tables:
@@ -576,9 +568,7 @@ def index_factory(
                         hash.update(bytes(index_name, "utf-8"))
                         index_name = hash.hexdigest() + "_idx"
                     try:
-                        indexes_to_create.append(
-                            Index(index_name, table_object.c[column])
-                        )
+                        indexes_to_create.append(Index(index_name, table_object.c[column]))
                     except KeyError as e:
                         logger.log_error(
                             f"{e.__str__}:{table_id}.{column} not found in {table_object.c}"
