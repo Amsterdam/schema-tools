@@ -18,10 +18,19 @@ re_camel_case = re.compile(
 
 
 @ttl_cache(ttl=16)  # type: ignore
-def schema_defs_from_url(schemas_url) -> Dict[str, types.DatasetSchema]:
-    """Fetch all schema definitions from a remote file.
+def schema_defs_from_url(
+    schemas_url, dataset_name=None
+) -> Dict[str, types.DatasetSchema]:
+    """Fetch all schema definitions from a remote file (or single dataset if specified).
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
+    if dataset_name:
+        return def_from_url(
+            base_url=schemas_url,
+            data_type=types.DatasetSchema,
+            dataset_name=dataset_name,
+        )
+
     return defs_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
 
 
@@ -63,6 +72,25 @@ def defs_from_url(base_url, data_type):
             response_data = response.json()
 
             schema_lookup[dataset_name] = data_type.from_dict(response.json())
+
+    return schema_lookup
+
+
+def def_from_url(base_url, data_type, dataset_name):
+    """Fetch schema definitions from a remote file for a single dataset
+    The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
+    """
+    schema_lookup = {}
+    if not base_url.endswith("/"):
+        base_url = f"{base_url}/"
+
+    dataset_path = f"{dataset_name}/{dataset_name}"
+
+    with requests.Session() as connection:
+        response = connection.get(f"{base_url}{dataset_path}")
+        response.raise_for_status()
+
+        schema_lookup[dataset_name] = data_type.from_dict(response.json())
 
     return schema_lookup
 
