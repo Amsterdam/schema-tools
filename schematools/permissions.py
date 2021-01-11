@@ -3,6 +3,7 @@ from pg_grant.sql import grant, revoke
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from .utils import to_snake_case
+from .types import DatasetSchema
 
 PUBLIC_SCOPE = "OPENBAAR"
 
@@ -103,9 +104,7 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
                         engine.execute(grant_statement)
 
 
-def create_acl_from_schema(
-    session, pg_schema, ams_schema, role, scope, dry_run, create_roles
-):
+def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run, create_roles):
     grantee = None if role == "AUTO" else role
     if create_roles and grantee:
         _create_role_if_not_exists(session, grantee)
@@ -116,9 +115,7 @@ def create_acl_from_schema(
             PUBLIC_SCOPE,
         }
     )
-    dataset_scope_set = (
-        {dataset_scope} if isinstance(dataset_scope, str) else set(dataset_scope)
-    )
+    dataset_scope_set = {dataset_scope} if isinstance(dataset_scope, str) else set(dataset_scope)
 
     if dataset_scope_set - {PUBLIC_SCOPE}:
         print(
@@ -132,13 +129,10 @@ def create_acl_from_schema(
             table.dataset.id, to_snake_case(table.id)
         )  # een aantal table.id's zijn camelcase
         table_scope = table.auth if table.auth else dataset_scope
-        table_scope_set = (
-            {table_scope} if isinstance(table_scope, str) else set(table_scope)
-        )
+        table_scope_set = {table_scope} if isinstance(table_scope, str) else set(table_scope)
         if table.auth:
             print(
-                f'Found table read permission for "{table_name}"'
-                f' to scopes "{table_scope_set}"'
+                f'Found table read permission for "{table_name}"' f' to scopes "{table_scope_set}"'
             )
             print(
                 f'"{table_scope_set}" overrules "{dataset_scope_set}"'
@@ -246,15 +240,18 @@ def create_acl_from_schemas(
             _revoke_all_priviliges_from_scope_roles(session, pg_schema, dry_run=dry_run)
         else:
             _revoke_all_priviliges_from_role(session, pg_schema, role, dry_run=dry_run)
-    for dataset_name, dataset_schema in schemas.items():
-        create_acl_from_schema(
-            session, pg_schema, dataset_schema, role, scopes, dry_run, create_roles
-        )
+    # for a single dataset
+    if isinstance(schemas, DatasetSchema):
+        create_acl_from_schema(session, pg_schema, schemas, role, scopes, dry_run, create_roles)
+    # for all datasets (a dictionary of all datasets)
+    else:
+        for dataset_name, dataset_schema in schemas.items():
+            create_acl_from_schema(
+                session, pg_schema, dataset_schema, role, scopes, dry_run, create_roles
+            )
 
 
-def _revoke_all_priviliges_from_role(
-    session, pg_schema, role, echo=True, dry_run=False
-):
+def _revoke_all_priviliges_from_role(session, pg_schema, role, echo=True, dry_run=False):
     status_msg = "Skipped" if dry_run else "Executed"
     revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN {pg_schema} FROM {role}"
     sql_statement = (
@@ -273,25 +270,18 @@ def _revoke_all_priviliges_from_role(
         session.execute(sql_statement)
 
 
-def _revoke_all_priviliges_from_scope_roles(
-    session, pg_schema, echo=True, dry_run=False
-):
+def _revoke_all_priviliges_from_scope_roles(session, pg_schema, echo=True, dry_run=False):
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
-    result = session.execute(
-        text(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'")
-    )
+    result = session.execute(text(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'"))
     for rolname in result:
         revoke_statement = (
-            f"REVOKE ALL PRIVILEGES ON ALL TABLES"
-            f" IN SCHEMA {pg_schema} FROM {rolname[0]};"
+            f"REVOKE ALL PRIVILEGES ON ALL TABLES" f" IN SCHEMA {pg_schema} FROM {rolname[0]};"
         )
         if echo:
             print(f"{status_msg} --> {revoke_statement}")
         if not dry_run:
-            session.execute(
-                text(revoke_statement)
-            )  # .execution_options(autocommit=True))
+            session.execute(text(revoke_statement))  # .execution_options(autocommit=True))
 
 
 def _execute_grant(session, grant_statement, echo=True, dry_run=False):
