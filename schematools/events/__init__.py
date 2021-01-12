@@ -397,7 +397,6 @@ class EventsProcessor:
         row = {}
         dataset_id = event_meta["catalog"]
         table_id = event_meta["collection"]
-        identifier = self.datasets[dataset_id].get_table_by_id(table_id).identifier
         if data_fetcher is not None:
             row = data_fetcher(event_data)
             for field_name in self.geo_fields[dataset_id][table_id]:
@@ -407,6 +406,9 @@ class EventsProcessor:
 
             # Only for ADD we need to generate the PK
             if event_type == "ADD":
+                identifier = (
+                    self.datasets[dataset_id].get_table_by_id(table_id).identifier
+                )
                 id_value = ".".join(str(row[fn]) for fn in identifier)
                 row["id"] = id_value
             row["source_id"] = source_id
@@ -475,6 +477,7 @@ def tables_factory(
                 continue
             field_name = to_snake_case(field.name)
             sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
+            sub_columns = []
 
             try:
 
