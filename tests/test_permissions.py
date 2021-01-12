@@ -309,6 +309,64 @@ def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
     _check_permission_denied(engine, "scope_level_c", "gebieden_buurten")
 
 
+def test_single_dataset_permissions(
+    here, engine, gebieden_schema_auth, meetbouten_schema, dbsession
+):
+    """
+    Prove when revoking grants on one dataset, other datasets are unaffected.
+    """
+
+    # dataset 1: gebieden
+    ndjson_path = here / "files" / "data" / "gebieden.ndjson"
+    importer = NDJSONImporter(gebieden_schema_auth, engine)
+    importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
+    importer.load_file(ndjson_path)
+    importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
+
+    # dataset 2: meetbouten
+    ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
+    importer = NDJSONImporter(meetbouten_schema, engine)
+    importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
+    importer.generate_db_objects("metingen", truncate=True, ind_extra_index=False)
+    importer.generate_db_objects(
+        "referentiepunten", truncate=True, ind_extra_index=False
+    )
+
+    # Apply the permissions to gebieden
+    apply_schema_and_profile_permissions(
+        engine, "public", gebieden_schema_auth, None, "AUTO", "ALL", create_roles=True
+    )
+    # Check perms on gebieden
+    _check_permission_granted(engine, "scope_level_a", "gebieden_buurten")
+    _check_permission_granted(
+        engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_granted(
+        engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
+    )
+
+    # Apply the permissions to meetbouten
+    apply_schema_and_profile_permissions(
+        engine, "public", meetbouten_schema, None, "AUTO", "ALL", create_roles=True
+    )
+    # Check perms on meetbouten
+    _check_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten")
+
+    # Revoke permissions for dataset gebieden and set grant again
+    apply_schema_and_profile_permissions(
+        engine,
+        pg_schema="public",
+        ams_schema=gebieden_schema_auth,
+        profiles=None,
+        role="AUTO",
+        scope="ALL",
+        create_roles=True,
+        revoke=True,
+    )
+    # Check perms again on meetbouten
+    _check_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten")
+
+
 def _create_role(engine, role):
     # If role already exists just fail and ignore.
     # This may happen if a previous pytest did not terminate correctly.
