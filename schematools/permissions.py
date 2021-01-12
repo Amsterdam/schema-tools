@@ -116,7 +116,6 @@ def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run,
         }
     )
     dataset_scope_set = {dataset_scope} if isinstance(dataset_scope, str) else set(dataset_scope)
-
     if dataset_scope_set - {PUBLIC_SCOPE}:
         print(
             'Found dataset read permission for "{}" to scopes "{}"'.format(
@@ -237,13 +236,25 @@ def create_acl_from_schemas(
     #  table_names = list()
     if revoke:
         if role == "AUTO":
-            _revoke_all_priviliges_from_scope_roles(session, pg_schema, dry_run=dry_run)
+            if isinstance(schemas, DatasetSchema):
+                # for a single dataset
+                _revoke_all_priviliges_from_scope_roles(
+                    session, pg_schema, schemas, dry_run=dry_run
+                )
+            else:
+                _revoke_all_priviliges_from_scope_roles(session, pg_schema, dry_run=dry_run)
         else:
-            _revoke_all_priviliges_from_role(session, pg_schema, role, dry_run=dry_run)
-    # for a single dataset
+            if isinstance(schemas, DatasetSchema):
+                # for a single dataset
+                _revoke_all_priviliges_from_role(
+                    session, pg_schema, role, schemas, dry_run=dry_run
+                )
+            else:
+                _revoke_all_priviliges_from_role(session, pg_schema, role, dry_run=dry_run)
+
     if isinstance(schemas, DatasetSchema):
+        # for a single dataset
         create_acl_from_schema(session, pg_schema, schemas, role, scopes, dry_run, create_roles)
-    # for all datasets (a dictionary of all datasets)
     else:
         for dataset_name, dataset_schema in schemas.items():
             create_acl_from_schema(
@@ -251,9 +262,20 @@ def create_acl_from_schemas(
             )
 
 
-def _revoke_all_priviliges_from_role(session, pg_schema, role, echo=True, dry_run=False):
+def _revoke_all_priviliges_from_role(
+    session, pg_schema, role, dataset_name=None, echo=True, dry_run=False
+):
     status_msg = "Skipped" if dry_run else "Executed"
-    revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN {pg_schema} FROM {role}"
+    if dataset_name:
+        # for a single dataset
+        revoke_statements = []
+        for table in dataset_name.tables:
+            revoke_statements.append(
+                f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name()} FROM {role}"
+            )
+        revoke_statement = ";".join(revoke_statements)
+    else:
+        revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN {pg_schema} FROM {role}"
     sql_statement = (
         "DO $$ "
         "BEGIN "
@@ -270,14 +292,25 @@ def _revoke_all_priviliges_from_role(session, pg_schema, role, echo=True, dry_ru
         session.execute(sql_statement)
 
 
-def _revoke_all_priviliges_from_scope_roles(session, pg_schema, echo=True, dry_run=False):
+def _revoke_all_priviliges_from_scope_roles(
+    session, pg_schema, dataset_name=None, echo=True, dry_run=False
+):
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
     result = session.execute(text(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'"))
     for rolname in result:
-        revoke_statement = (
-            f"REVOKE ALL PRIVILEGES ON ALL TABLES" f" IN SCHEMA {pg_schema} FROM {rolname[0]};"
-        )
+        if dataset_name:
+            # for a single dataset
+            revoke_statements = []
+            for table in dataset_name.tables:
+                revoke_statements.append(
+                    f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name()} FROM {rolname[0]}"
+                )
+            revoke_statement = ";".join(revoke_statements)
+        else:
+            revoke_statement = (
+                f"REVOKE ALL PRIVILEGES ON ALL TABLES" f" IN SCHEMA {pg_schema} FROM {rolname[0]};"
+            )
         if echo:
             print(f"{status_msg} --> {revoke_statement}")
         if not dry_run:

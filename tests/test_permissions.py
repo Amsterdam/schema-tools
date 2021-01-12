@@ -38,9 +38,7 @@ def test_auto_permissions(here, engine, gebieden_schema_auth, dbsession):
     _check_permission_granted(
         engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
     )
-    _check_permission_granted(
-        engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_granted(engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid")
 
 
 def test_openbaar_permissions(here, engine, afval_schema, dbsession):
@@ -70,9 +68,7 @@ def test_openbaar_permissions(here, engine, afval_schema, dbsession):
     apply_schema_and_profile_permissions(
         engine, "public", ams_schema, profiles, "openbaar", "OPENBAAR"
     )
-    apply_schema_and_profile_permissions(
-        engine, "public", ams_schema, profiles, "bag_r", "BAG/R"
-    )
+    apply_schema_and_profile_permissions(engine, "public", ams_schema, profiles, "bag_r", "BAG/R")
 
     _check_permission_granted(engine, "openbaar", "afvalwegingen_containers")
     _check_permission_denied(engine, "openbaar", "afvalwegingen_clusters")
@@ -131,20 +127,12 @@ def test_interacting_permissions(here, engine, gebieden_schema_auth, dbsession):
     _check_permission_denied(engine, "level_a", "gebieden_bouwblokken")
     _check_permission_granted(engine, "level_a", "gebieden_buurten")
 
-    _check_permission_granted(
-        engine, "level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
-    )
-    _check_permission_denied(
-        engine, "level_b", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_granted(engine, "level_b", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_denied(engine, "level_b", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "level_b", "gebieden_buurten")
 
-    _check_permission_denied(
-        engine, "level_c", "gebieden_bouwblokken", "id, eind_geldigheid"
-    )
-    _check_permission_granted(
-        engine, "level_c", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_denied(engine, "level_c", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_granted(engine, "level_c", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "level_c", "gebieden_buurten")
 
 
@@ -218,35 +206,19 @@ def test_auth_list_permissions(here, engine, gebieden_schema_auth_list, dbsessio
     _check_permission_denied(engine, "level_a2", "gebieden_bouwblokken")
     _check_permission_granted(engine, "level_a2", "gebieden_buurten")
 
-    _check_permission_granted(
-        engine, "level_b1", "gebieden_bouwblokken", "id, eind_geldigheid"
-    )
-    _check_permission_denied(
-        engine, "level_b1", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_granted(engine, "level_b1", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_denied(engine, "level_b1", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "level_b1", "gebieden_buurten")
-    _check_permission_granted(
-        engine, "level_b2", "gebieden_bouwblokken", "id, eind_geldigheid"
-    )
-    _check_permission_denied(
-        engine, "level_b2", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_granted(engine, "level_b2", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_denied(engine, "level_b2", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "level_b2", "gebieden_buurten")
 
-    _check_permission_denied(
-        engine, "level_c1", "gebieden_bouwblokken", "id, eind_geldigheid"
-    )
-    _check_permission_granted(
-        engine, "level_c1", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_denied(engine, "level_c1", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_granted(engine, "level_c1", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "level_c1", "gebieden_buurten")
 
-    _check_permission_denied(
-        engine, "level_c2", "gebieden_bouwblokken", "id, eind_geldigheid"
-    )
-    _check_permission_granted(
-        engine, "level_c2", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_denied(engine, "level_c2", "gebieden_bouwblokken", "id, eind_geldigheid")
+    _check_permission_granted(engine, "level_c2", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "level_c2", "gebieden_buurten")
 
 
@@ -295,18 +267,68 @@ def test_auto_create_roles(here, engine, gebieden_schema_auth, dbsession):
     _check_permission_granted(
         engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
     )
-    _check_permission_denied(
-        engine, "scope_level_b", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_denied(engine, "scope_level_b", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "scope_level_b", "gebieden_buurten")
 
     _check_permission_denied(
         engine, "scope_level_c", "gebieden_bouwblokken", "id, eind_geldigheid"
     )
-    _check_permission_granted(
-        engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
-    )
+    _check_permission_granted(engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid")
     _check_permission_denied(engine, "scope_level_c", "gebieden_buurten")
+
+
+def test_single_dataset_permissions(
+    here, engine, gebieden_schema_auth, meetbouten_schema, dbsession
+):
+    """
+    Prove when revoking grants on one dataset, other datasets are unaffected.
+    """
+
+    # dataset 1: gebieden
+    ndjson_path = here / "files" / "data" / "gebieden.ndjson"
+    importer = NDJSONImporter(gebieden_schema_auth, engine)
+    importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
+    importer.load_file(ndjson_path)
+    importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
+
+    # dataset 2: meetbouten
+    ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
+    importer = NDJSONImporter(meetbouten_schema, engine)
+    importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
+    importer.generate_db_objects("metingen", truncate=True, ind_extra_index=False)
+    importer.generate_db_objects("referentiepunten", truncate=True, ind_extra_index=False)
+
+    # Apply the permissions to gebieden
+    apply_schema_and_profile_permissions(
+        engine, "public", gebieden_schema_auth, None, "AUTO", "ALL", create_roles=True
+    )
+    # Check perms on gebieden
+    _check_permission_granted(engine, "scope_level_a", "gebieden_buurten")
+    _check_permission_granted(
+        engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+    )
+    _check_permission_granted(engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid")
+
+    # Apply the permissions to meetbouten
+    apply_schema_and_profile_permissions(
+        engine, "public", meetbouten_schema, None, "AUTO", "ALL", create_roles=True
+    )
+    # Check perms on meetbouten
+    _check_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten")
+
+    # Revoke permissions for dataset gebieden and set grant again
+    apply_schema_and_profile_permissions(
+        engine,
+        pg_schema="public",
+        ams_schema=gebieden_schema_auth,
+        profiles=None,
+        role="AUTO",
+        scope="ALL",
+        create_roles=True,
+        revoke=True,
+    )
+    # Check perms again on meetbouten
+    _check_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten")
 
 
 def _create_role(engine, role):
@@ -322,9 +344,7 @@ def _create_role(engine, role):
 def _check_role_does_not_exist(engine, role):
     """Check if role does not exist"""
     with engine.begin() as connection:
-        result = connection.execute(
-            f"SELECT rolname FROM pg_roles WHERE rolname='{role}'"
-        )
+        result = connection.execute(f"SELECT rolname FROM pg_roles WHERE rolname='{role}'")
         rows = [row for row in result]
         assert len(rows) == 0
 
