@@ -378,7 +378,7 @@ def table_factory(
         sub_columns = []
 
         try:
-            if field.is_array:
+            if field.is_array_of_objects:
                 sub_table_id = dataset_table.db_name(
                     through_table_field_name=field_name, db_table_name=db_table_name
                 )

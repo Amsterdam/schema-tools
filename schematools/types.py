@@ -6,10 +6,8 @@ import typing
 from collections import UserDict
 
 import jsonschema
-
-from schematools import MAX_TABLE_LENGTH, TMP_TABLE_POSTFIX
-
-from . import RELATION_INDICATOR
+from schematools import RELATION_INDICATOR, MAX_TABLE_LENGTH, TMP_TABLE_POSTFIX
+from .datasetcollection import DatasetCollection
 
 
 class SchemaType(UserDict):
@@ -47,12 +45,9 @@ class DatasetSchema(SchemaType):
     This is a collection of JSON Schema's within a single file.
     """
 
-    _datasets_cache = {}
-
     def __init__(
         self,
         *args,
-        datasets_cache: typing.Dict[str, DatasetSchema] = None,
         use_dimension_fields: bool = False,
         **kwargs,
     ):
@@ -61,17 +56,9 @@ class DatasetSchema(SchemaType):
         about the related datasets
         """
         super().__init__(*args, **kwargs)
-        if datasets_cache is not None:
-            self._datasets_cache = datasets_cache
+        self.dataset_collection = DatasetCollection()
+        self.dataset_collection.add_dataset(self)
         self._use_dimension_fields = use_dimension_fields
-
-    def add_datasets_cache(self, datasets_cache: typing.Dict[str, DatasetSchema]):
-        """ A bit hacky, we need some wrapping object for all datasets """
-        self._datasets_cache = datasets_cache
-
-    def add_dataset_to_cache(self, dataset: DatasetSchema):
-        """ A bit hacky, we need some wrapping object for all datasets """
-        self._datasets_cache[dataset.id] = dataset
 
     @classmethod
     def from_file(cls, filename: str):
@@ -108,7 +95,7 @@ class DatasetSchema(SchemaType):
         return self.get("auth")
 
     def get_dataset_schema(self, dataset_id):
-        return self._datasets_cache.get(dataset_id)
+        return self.dataset_collection.get_dataset(dataset_id)
 
     @property
     def use_dimension_fields(self):
@@ -194,7 +181,7 @@ class DatasetSchema(SchemaType):
                 },
             },
         )
-        return DatasetTableSchema(sub_table_schema, _parent_schema=self)
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self, nested_table=True)
 
     def build_through_table(self, table, field):
         from schematools.utils import to_snake_case
@@ -260,14 +247,17 @@ class DatasetSchema(SchemaType):
         return self.fetch_temporal()
 
 
-class DatasetTableSchema(DatasetSchema):
+class DatasetTableSchema(SchemaType):
     """The table within a dataset.
     This table definition follows the JSON Schema spec.
     """
 
-    def __init__(self, *args, _parent_schema=None, through_table=False, **kwargs):
+    def __init__(
+        self, *args, _parent_schema=None, nested_table=False, through_table=False, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self._parent_schema = _parent_schema
+        self.nested_table = nested_table
         self.through_table = through_table
 
         if self.get("type") != "table":
@@ -316,7 +306,7 @@ class DatasetTableSchema(DatasetSchema):
         tables = []
         for field in self.fields:
             if field.is_through_table:
-                tables.append(super().build_through_table(table=self, field=field))
+                tables.append(self._parent_schema.build_through_table(table=self, field=field))
         return tables
 
     @property
@@ -405,6 +395,11 @@ class DatasetTableSchema(DatasetSchema):
     def is_through_table(self):
         """Indicates if table is an intersection table (n:m relation table) or base table"""
         return self.through_table
+
+    @property
+    def is_nested_table(self):
+        """Indicates if table is an nested table"""
+        return self.nested_table
 
     def db_name(self, through_table_field_name=None, db_table_name=None):
         """Returns the database implementation name of a table.
@@ -524,7 +519,7 @@ class DatasetFieldSchema(DatasetType):
     def sub_fields(self) -> typing.Generator[DatasetFieldSchema, None, None]:
         """Returns the sub fields for a nested structure. For a
         nested object, fields are based on its properties,
-        for an array, fields are based on the properties of
+        for an array of objects, fields are based on the properties of
         the "items" field.
         """
         field_name_prefix = ""
@@ -532,8 +527,8 @@ class DatasetFieldSchema(DatasetType):
             # Field has direct sub fields (type=object)
             required = set(self.get("required", []))
             properties = self["properties"]
-        elif self.is_array:
-            # Field has an array of objects (type=array)
+        elif self.is_array_of_objects:
+            # Field has an array of objects (type=array, items are objects)
             required = set(self.items.get("required") or ())
             properties = self.items["properties"]
         else:
@@ -593,21 +588,35 @@ class DatasetFieldSchema(DatasetType):
         """
         Checks if field is an array field
         """
-        return self.get("type") == "array" and self.get("items", {}).get("type") == "object"
+        return self.get("type") == "array"
+
+    @property
+    def is_array_of_objects(self) -> bool:
+        """
+        Checks if field is an array of objects
+        """
+        return self.is_array and self.get("items", {}).get("type") == "object"
+
+    @property
+    def is_array_of_scalars(self) -> bool:
+        """
+        Checks if field is an array of scalars
+        """
+        return self.is_array and self.get("items", {}).get("type") != "object"
 
     @property
     def is_nested_table(self) -> bool:
         """
         Checks if field is a possible nested table.
         """
-        return self.is_array and self.nm_relation is None
+        return self.is_array_of_objects and self.nm_relation is None
 
     @property
     def is_through_table(self) -> bool:
         """
         Checks if field is a possible through table.
         """
-        return self.is_array and self.nm_relation is not None
+        return self.is_array_of_objects and self.nm_relation is not None
 
     @property
     def auth(self) -> typing.Optional[str]:

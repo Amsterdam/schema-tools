@@ -35,7 +35,7 @@
           },
           "buurten": {
             "type": "array",
-            "relation": "gebieden:buurten:identificatie",
+            "relation": "gebieden:buurten",
             "items": {
               "type": "object",
               "properties": {
@@ -45,6 +45,14 @@
               }
             },
             "description": "Buurten waarin het woningbouwplan ligt"
+          },
+          "buurtenAsScalar": {
+            "type": "array",
+            "relation": "gebieden:buurten",
+            "items": {
+              "type": "string"
+            },
+            "description": "Buurten waarin het woningbouwplan ligt, simply as scalar"
           }
         }
       }
