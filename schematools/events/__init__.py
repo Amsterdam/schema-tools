@@ -233,7 +233,7 @@ class RelationHandler:
             db_operation = db_operation.where(self.where_clause)
         if self.db_info.needs_values:
             if not self.updates:
-                logger.warn("No values for update: %s", self.row)
+                logger.warning("No values for update: %s", self.row)
                 return
             db_operation = db_operation.values(**self.updates)
         result = conn.execute(
@@ -241,7 +241,7 @@ class RelationHandler:
         )
         retval = result.fetchall()
         if not retval:
-            logger.warn(
+            logger.warning(
                 "Nothing to update for %s",
                 self.row,
             )
@@ -335,8 +335,6 @@ class EventsProcessor:
         truncate=False,
     ):
         self.datasets: Dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
-        for ds in self.datasets.values():
-            ds.add_dataset_to_cache(ds)
         self.srid = srid
         self.conn = connection
         _metadata = local_metadata or metadata  # mainly for testing
@@ -410,7 +408,7 @@ class EventsProcessor:
             try:
                 self.process_relation(source_id, event_meta, event_data)
             except UnknownRelationException as e:
-                logger.warn("Unknown Relation: %s", e)
+                logger.warning("Unknown Relation: %s", e)
         else:
             self.process_row(source_id, event_meta, event_data)
 
