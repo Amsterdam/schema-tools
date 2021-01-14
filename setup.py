@@ -41,6 +41,7 @@ setup(
         "cachetools",
         "jsonpath-rw",
         "pg-grant",
+        "simple-singleton",
     ],
     extras_require={
         "tests": [

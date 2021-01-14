@@ -38,9 +38,6 @@ def test_ndjson_import_nm_compound_keys(
     here, engine, ggwgebieden_schema, dbsession, use_dimension_fields
 ):
     ndjson_path = here / "files" / "data" / "ggwgebieden.ndjson"
-    # Need to explcitly add dataset_schema to cache
-    # Normally this is done in eventsprocessor of django model factory
-    ggwgebieden_schema.add_dataset_to_cache(ggwgebieden_schema)
     ggwgebieden_schema.use_dimension_fields = use_dimension_fields
     importer = NDJSONImporter(ggwgebieden_schema, engine)
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)

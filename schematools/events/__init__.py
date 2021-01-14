@@ -463,7 +463,7 @@ def tables_factory(
 
             try:
 
-                if field.is_array:
+                if field.is_array_of_objects:
 
                     if field.is_nested_table:
                         # We assume parent has an id field, Django needs it

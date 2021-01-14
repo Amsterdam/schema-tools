@@ -27,6 +27,212 @@ from .models import (
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 
 
+class RelationMaker:
+    """ Superclass to generate info for relation fields """
+
+    def __init__(
+        self,
+        dataset: DatasetSchema,
+        table: DatasetTableSchema,
+        field: DatasetFieldSchema,
+        field_cls,
+        *args,
+        **kwargs,
+    ):
+        self.dataset = dataset
+        self.table = table
+        self.field = field
+        self._field_cls = field_cls
+        self._args = args
+        self._kwargs = kwargs
+        self.relation = field.relation or field.nm_relation
+        self.fk_relation = field.relation
+        self.nm_relation = field.nm_relation
+
+    @classmethod
+    def fetch_relation_parts(cls, relation):
+        relation_parts = relation.split(":")
+        return relation_parts[:2]
+
+    @classmethod
+    def is_loose_relation(cls, relation, dataset, field):
+        """Determine if relation is loose or not."""
+
+        related_dataset_id, related_table_id = cls.fetch_relation_parts(relation)
+        related_dataset = dataset.get_dataset_schema(related_dataset_id)
+        related_table = related_dataset.get_table_by_id(related_table_id)
+
+        # Short-circuit for non-temporal or on-the-fly (through or nested) schemas
+        if (
+            not related_table.is_temporal
+            or field._parent_table.is_through_table
+            or field._parent_table.is_nested_table
+        ):
+            return False
+
+        # So, target-side of relation is temporal
+        # Determine fieldnames used for temporal
+        sequence_identifier = related_table.temporal["identifier"]
+        identifier = related_dataset.identifier
+
+        # If temporal, this implicates that the type is not a scalar
+        # but needs to be more complex (object) or array_of_objects
+        if field.type in set(["string", "integer"]) or field.is_array_of_scalars:
+            return True
+
+        sequence_field = related_table.get_field_by_id(sequence_identifier)
+        identifier_field = related_table.get_field_by_id(identifier)
+        if sequence_field is None or identifier_field is None:
+            raise ValueError(f"Cannot find temporal fields of table {related_table.id}")
+
+        if field.is_array_of_objects:
+            properties = field.items["properties"]
+        elif field.is_object:
+            properties = field["properties"]
+        else:
+            raise ValueError("Relations should have string/array/object type")
+
+        source_type_set = set(
+            [(prop_name, prop_val["type"]) for prop_name, prop_val in properties.items()]
+        )
+        destination_type_set = set(
+            [
+                (sequence_field.name, sequence_field.type),
+                (identifier_field.name, identifier_field.type),
+            ]
+        )
+
+        return source_type_set != destination_type_set
+
+    @classmethod
+    def fetch_maker(cls, dataset, field):
+        # determine type of relation (FKLoose, FK, M2M, LooseM2M)
+        if field.relation:
+            if cls.is_loose_relation(field.relation, dataset, field):
+                return LooseFKRelationMaker
+            else:
+                return FKRelationMaker
+        elif field.nm_relation:
+            if cls.is_loose_relation(field.nm_relation, dataset, field):
+                return LooseM2MRelationMaker
+            else:
+                return M2MRelationMaker
+        else:
+            return None  # To signal this is not a relation
+
+    def _make_related_classname(self, relation):
+        related_dataset, related_table = [to_snake_case(part) for part in relation.split(":")[:2]]
+        return f"{related_dataset}.{related_table}"
+
+    def _make_through_classname(self, dataset_id, field_name):
+        snakecased_fieldname = to_snake_case(field_name)
+        through_table_id = get_db_table_name(self.table, snakecased_fieldname)
+        # dso-api expects the dataset_id seperated from the table_id by a point
+        table_id = "_".join(through_table_id.split("_")[1:])
+        dataset_id = through_table_id.split("_")[0]
+        return f"{dataset_id}.{table_id}"
+
+    @property
+    def field_cls(self):
+        return self._field_cls
+
+    @property
+    def field_args(self):
+        return [self._make_related_classname(self.relation)]
+
+    @property
+    def field_kwargs(self):
+        return self._kwargs
+
+    @property
+    def field_constructor_info(self):
+        return self.field_cls, self.field_args, self.field_kwargs
+
+
+class LooseFKRelationMaker(RelationMaker):
+    @property
+    def field_cls(self):
+        return LooseRelationField
+
+    @property
+    def field_args(self):
+        # NB overrides default behaviour in superclass
+        return self._args
+
+    @property
+    def field_kwargs(self):
+        kwargs = {}
+        kwargs["db_column"] = f"{to_snake_case(self.field.name)}_id"
+        kwargs["relation"] = self.fk_relation
+        return {**super().field_kwargs, **kwargs}
+
+
+class FKRelationMaker(RelationMaker):
+    @property
+    def field_cls(self):
+        return models.ForeignKey
+
+    @property
+    def field_args(self):
+        return super().field_args + [models.CASCADE if self.field.required else models.SET_NULL]
+
+    def _fetch_related_name_for_backward_relations(self):
+        related_name = None
+        try:
+            _, related_table_id = self.fetch_relation_parts(self.relation)
+            table = self.dataset.get_table_by_id(related_table_id)
+            for name, relation in table.relations.items():
+                if (
+                    relation["table"] == self.field.table.id
+                    and relation["field"] == self.field.name
+                ):
+                    related_name = name
+                    break
+        except ValueError:
+            pass
+
+        return related_name or "+"
+
+    @property
+    def field_kwargs(self):
+        kwargs = {}
+        # In schema foreign keys should be specified without _id,
+        # but the db_column should be with _id
+        kwargs["db_column"] = f"{to_snake_case(self.field.name)}_id"
+        kwargs["db_constraint"] = False  # relation is not mandatory
+        if self.field._parent_table.has_parent_table:
+            kwargs["related_name"] = self.field._parent_table["originalID"]
+        else:
+            kwargs["related_name"] = self._fetch_related_name_for_backward_relations()
+        return {**super().field_kwargs, **kwargs}
+
+
+class M2MRelationMaker(RelationMaker):
+    @property
+    def field_cls(self):
+        return models.ManyToManyField
+
+    @property
+    def field_kwargs(self):
+        kwargs = {}
+        snakecased_fieldname = to_snake_case(self.field.name)
+        parent_table = to_snake_case(self.field._parent_table.id)
+        kwargs["related_name"] = f"{snakecased_fieldname}_{parent_table}"
+        kwargs["through"] = self._make_through_classname(self.dataset.id, self.field.name)
+        kwargs["through_fields"] = (parent_table, snakecased_fieldname)
+        return {**super().field_kwargs, **kwargs}
+
+
+class LooseM2MRelationMaker(M2MRelationMaker):
+    @property
+    def field_cls(self):
+        return LooseRelationManyToManyField
+
+    @property
+    def field_kwargs(self):
+        return {**super().field_kwargs, "relation": self.nm_relation}
+
+
 class FieldMaker:
     """Generate the field for a JSON-Schema property"""
 
@@ -94,65 +300,14 @@ class FieldMaker:
         *args,
         **kwargs,
     ) -> TypeAndSignature:
-        relation = field.relation
-        nm_relation = field.nm_relation
-
-        # Short circuit for loose relations, if column is explicitly
-        # defined in the relation, this means the value is used as-is to
-        # construct a url (no checking on relations)
-        if relation:
-            relation_parts = relation.split(":")
-            _, related_table_name = relation_parts[:2]
-            if len(relation_parts) > 2:
-                kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
-                kwargs["relation"] = relation
-                return LooseRelationField, args, kwargs
-
-        if relation is not None or nm_relation is not None:
-            assert not (relation and nm_relation)
-            field_cls = models.ManyToManyField if nm_relation else models.ForeignKey
-            args = [self._make_related_classname(relation or nm_relation)]
-            if relation:
-                args.append(models.CASCADE if field.required else models.SET_NULL)
-
-            if nm_relation is not None:
-                snakecased_fieldname = to_snake_case(field.name)
-                parent_table = to_snake_case(field._parent_table.id)
-                kwargs["related_name"] = f"{snakecased_fieldname}_{parent_table}"
-                # kwargs["db_constraint"] = True
-                kwargs["through"] = self._make_through_classname(dataset.id, field.name)
-                kwargs["through_fields"] = (parent_table, snakecased_fieldname)
-            elif field._parent_table.has_parent_table:
-                kwargs["related_name"] = field._parent_table["originalID"]
-            else:
-                related_name = None
-                try:
-                    table = dataset.get_table_by_id(related_table_name)
-                    for name, relation in table.relations.items():
-                        if relation["table"] == field.table.id and relation["field"] == field.name:
-                            related_name = name
-                            break
-                except ValueError:
-                    pass
-
-                if related_name:
-                    kwargs["related_name"] = related_name
-                else:
-                    kwargs["related_name"] = "+"
-
-            # In schema foreign keys should be specified without _id,
-            # but the db_column should be with _id
-            if nm_relation is None:
-                kwargs["db_column"] = f"{to_snake_case(field.name)}_id"
-                kwargs["db_constraint"] = False  # relation is not mandatory
-
-        if nm_relation:
-            nm_relation_parts = nm_relation.split(":")
-            _, related_table_name = nm_relation_parts[:2]
-            if len(nm_relation_parts) > 2:
-                field_cls = LooseRelationManyToManyField
-                kwargs["relation"] = nm_relation
-        return field_cls, args, kwargs
+        relation_maker_cls = RelationMaker.fetch_maker(dataset, field)
+        if relation_maker_cls is not None:
+            relation_maker = relation_maker_cls(
+                dataset, self.table, field, field_cls, *args, **kwargs
+            )
+            return relation_maker.field_constructor_info
+        else:
+            return field_cls, args, kwargs
 
     def handle_date(
         self,
@@ -182,7 +337,6 @@ def schema_models_factory(
     dataset: DatasetSchema, tables=None, base_app_name=None
 ) -> List[Type[DynamicModel]]:
     """Generate Django models from the data of the schema."""
-    dataset.add_dataset_to_cache(dataset)
     return [
         model_factory(table=table, base_app_name=base_app_name)
         for table in dataset.get_tables(include_nested=True, include_through=True)

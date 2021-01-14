@@ -47,7 +47,7 @@ def test_model_factory_relations(afval_schema):
     assert cluster_fk.related_model._table_schema.id == models["clusters"]._table_schema.id
 
 
-def test_model_factory_n_m_relations(meetbouten_schema):
+def test_model_factory_n_m_relations(meetbouten_schema, gebieden_schema):
     """Prove that n-m relations between models can be resolved"""
     model_dict = {
         cls._meta.model_name: cls
@@ -69,7 +69,7 @@ def test_model_factory_sub_objects(parkeervakken_schema):
     assert isinstance(fields_dict["parent"], models.ForeignKey)
 
 
-def test_model_factory_temporary_1_n_relation(ggwgebieden_schema):
+def test_model_factory_temporary_1_n_relation(ggwgebieden_schema, gebieden_schema):
     """Prove that extra relation fields are added to temporary relation"""
     model_dict = {
         cls._meta.model_name: cls
@@ -106,7 +106,7 @@ def test_model_factory_temporary_n_m_relation(ggwgebieden_schema):
         assert isinstance(fields_dict[field_name], models.ForeignKey)
 
 
-def test_model_factory_loose_relations(meldingen_schema):
+def test_model_factory_loose_relations(meldingen_schema, gebieden_schema):
     """Prove that a loose relation is created when column
     is part of relation definition (<dataset>:<table>:column)
     """
@@ -132,9 +132,10 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_schema):
     model_cls = model_dict["woningbouwplan"]
     meta = model_cls._meta
     assert isinstance(meta.get_field("buurten"), LooseRelationManyToManyField)
+    assert isinstance(meta.get_field("buurten_as_scalar"), LooseRelationManyToManyField)
 
 
-def test_table_name_creation_n_m_relation(brk_schema):
+def test_table_name_creation_n_m_relation(brk_schema, verblijfsobjecten_schema):
     """Prove that through table name is looking at instance method db_name
     of the datasettableschema class to define it's name.
     Note: Adjust this test after db_name is getting value from Amsterdam schema
