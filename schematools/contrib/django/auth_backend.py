@@ -45,9 +45,7 @@ class RequestProfile(object):
             has_dataset_scope = self.request.is_authorized_for(dataset.auth)
             table = dataset.tables.get(name=table_id)
             for field in table.fields.all():
-                permission_key = generate_permission_key(
-                    dataset_id, table_id, field.name
-                )
+                permission_key = generate_permission_key(dataset_id, table_id, field.name)
                 if has_dataset_scope:
                     # get the top permission
                     permissions[permission_key] = PERMISSION_LIST[0]
@@ -70,9 +68,7 @@ class RequestProfile(object):
     def _mandatory_filterset_was_queried(self, mandatory_filterset, query_params):
         """checks if all of the mandatory parameters in a
         manadatory filterset were queried"""
-        return all(
-            mandatory_filter in query_params for mandatory_filter in mandatory_filterset
-        )
+        return all(mandatory_filter in query_params for mandatory_filter in mandatory_filterset)
 
     def get_valid_query_params(self):
         return [param for param, value in self.request.GET.items() if value]
@@ -85,9 +81,7 @@ class RequestProfile(object):
         if not self.valid_query_params:
             self.valid_query_params = self.get_valid_query_params()
         return any(
-            self._mandatory_filterset_was_queried(
-                mandatory_filterset, self.valid_query_params
-            )
+            self._mandatory_filterset_was_queried(mandatory_filterset, self.valid_query_params)
             for mandatory_filterset in table_schema.mandatory_filtersets
         )
 
@@ -100,13 +94,9 @@ class RequestProfile(object):
         for profile in self.get_profiles():
             relevant_dataset_schema = profile.schema.datasets.get(dataset_id, None)
             if relevant_dataset_schema:
-                relevant_table_schema = relevant_dataset_schema.tables.get(
-                    table_id, None
-                )
+                relevant_table_schema = relevant_dataset_schema.tables.get(table_id, None)
                 if relevant_table_schema:
-                    if self._mandatory_filterset_obligation_fulfilled(
-                        relevant_table_schema
-                    ):
+                    if self._mandatory_filterset_obligation_fulfilled(relevant_table_schema):
                         profiles.append(profile)
         return profiles
 

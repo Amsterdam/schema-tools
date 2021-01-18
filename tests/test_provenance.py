@@ -30,9 +30,7 @@ def test_provenance_result():
                             )
                         },
                         "id": {"type": "integer"},
-                        "wkb geometry": {
-                            "$ref": "https://geojson.org/schema/Geometry.json"
-                        },
+                        "wkb geometry": {"$ref": "https://geojson.org/schema/Geometry.json"},
                         "translated_colname": {
                             "type": "string",
                             "provenance": "source_colname",

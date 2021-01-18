@@ -227,9 +227,7 @@ class Dataset(models.Model):
     enable_api = models.BooleanField(default=True)
     enable_db = models.BooleanField(default=True)
     endpoint_url = models.URLField(blank=True, null=True)
-    url_prefix = models.CharField(
-        max_length=100, blank=True, validators=[URLPathValidator()]
-    )
+    url_prefix = models.CharField(max_length=100, blank=True, validators=[URLPathValidator()])
     auth = models.CharField(_("Authorization"), blank=True, null=True, max_length=250)
     ordering = models.IntegerField(_("Ordering"), default=1)
 
@@ -249,9 +247,7 @@ class Dataset(models.Model):
         # The check makes sure that deferred fields are not checked for changes,
         # nor that creating the model
         self._old_schema_data = (
-            self.schema_data
-            if "schema_data" in self.__dict__ and not self._state.adding
-            else None
+            self.schema_data if "schema_data" in self.__dict__ and not self._state.adding else None
         )
 
     @classmethod
@@ -361,9 +357,7 @@ class DatasetTable(models.Model):
     This table can be read by the 'geosearch' project to locate all our tables and data sources.
     """
 
-    dataset = models.ForeignKey(
-        Dataset, on_delete=models.CASCADE, related_name="tables"
-    )
+    dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="tables")
     name = models.CharField(max_length=100)
 
     # Exposed metadata from the jsonschema, so other utils can query these
@@ -406,9 +400,7 @@ class DatasetTable(models.Model):
         return ret
 
     @classmethod
-    def create_for_schema(
-        cls, dataset: Dataset, table: DatasetTableSchema
-    ) -> DatasetTable:
+    def create_for_schema(cls, dataset: Dataset, table: DatasetTableSchema) -> DatasetTable:
         """Create a DatasetTable object based on the Amsterdam Schema table spec.
 
         (The table spec contains a JSON-schema for all fields).
@@ -422,12 +414,9 @@ class DatasetTable(models.Model):
         self.name = to_snake_case(table.id)
         self.db_table = get_db_table_name(table)
         self.auth = _serialize_claims(table)
-        self.display_field = (
-            to_snake_case(table.display_field) if table.display_field else None
-        )
+        self.display_field = to_snake_case(table.display_field) if table.display_field else None
         self.enable_geosearch = (
-            table.dataset.id
-            not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
+            table.dataset.id not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
         )
         for field, value in self._get_field_values(table).items():
             setattr(self, field, value)
@@ -456,9 +445,7 @@ class DatasetTable(models.Model):
 class DatasetField(models.Model):
     """Exposed metadata per field."""
 
-    table = models.ForeignKey(
-        DatasetTable, on_delete=models.CASCADE, related_name="fields"
-    )
+    table = models.ForeignKey(DatasetTable, on_delete=models.CASCADE, related_name="fields")
     name = models.CharField(max_length=100)
 
     # Exposed metadata from the jsonschema, so other utils can query these
@@ -476,9 +463,7 @@ class DatasetField(models.Model):
         return self.name
 
     @classmethod
-    def create_for_schema(
-        cls, table: DatasetTable, field: DatasetFieldSchema
-    ) -> DatasetField:
+    def create_for_schema(cls, table: DatasetTable, field: DatasetFieldSchema) -> DatasetField:
         """Create a DatasetField object based on the Amsterdam Schema field spec."""
         instance = cls(table=table)
         instance.save_for_schema(field)
@@ -611,10 +596,7 @@ class LooseRelationManyToManyField(models.ManyToManyField):
         dataset_name, table_name, column_name = [
             to_snake_case(part) for part in self.relation.split(":")
         ]
-        if (
-            dataset_name in apps.all_models
-            and table_name in apps.all_models[dataset_name]
-        ):
+        if dataset_name in apps.all_models and table_name in apps.all_models[dataset_name]:
             return apps.all_models[dataset_name][table_name]
         else:
             #  The loosely related model may not be registered yet

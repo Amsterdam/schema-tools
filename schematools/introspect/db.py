@@ -28,9 +28,7 @@ DB_TO_ASCHEMA_TYPE = {
     "MULTIPOINT": {"$ref": "https://geojson.org/schema/MultiPoint.json"},
     "LINESTRING": {"$ref": "https://geojson.org/schema/LineString.json"},
     "MULTILINESTRING": {"$ref": "https://geojson.org/schema/MultiLineString.json"},
-    "GEOMETRYCOLLECTION": {
-        "$ref": "https://geojson.org/schema/GeometryCollection.json"
-    },
+    "GEOMETRYCOLLECTION": {"$ref": "https://geojson.org/schema/GeometryCollection.json"},
 }
 
 
@@ -66,9 +64,7 @@ def introspect_db_schema(engine, dataset_id, tablenames, db_schema=None, prefix=
         if len(pk_info["constrained_columns"]) == 0:
             raise Exception("no pk")
         # pk = pk_info["constrained_columns"][0]  # ASchema assumes 'id' for the pk
-        for col in insp.get_columns(
-            full_table_name, schema=db_schema
-        ):  # name, type, nullable
+        for col in insp.get_columns(full_table_name, schema=db_schema):  # name, type, nullable
             col_name = col["name"]
             if col_name.startswith("_"):
                 continue
@@ -85,9 +81,7 @@ def introspect_db_schema(engine, dataset_id, tablenames, db_schema=None, prefix=
             # XXX Add 'title' and 'description' to the column
 
         for field_name, referred_table in relations.items():
-            columns[field_name].update(
-                {"relation": referred_table.replace("_", ":", 1)}
-            )
+            columns[field_name].update({"relation": referred_table.replace("_", ":", 1)})
 
         # Generate table section
         table = copy.deepcopy(TABLE_TMPL)
@@ -96,9 +90,7 @@ def introspect_db_schema(engine, dataset_id, tablenames, db_schema=None, prefix=
             fix_name(fn, fv)
             for fn, fv in map(lambda n: (n, columns.get(n, None)), required_field_names)
         ]
-        table["schema"]["properties"].update(
-            {fix_name(fn, fv): fv for fn, fv in columns.items()}
-        )
+        table["schema"]["properties"].update({fix_name(fn, fv): fv for fn, fv in columns.items()})
         tables.append(table)
 
     # Generate main section

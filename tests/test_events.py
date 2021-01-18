@@ -49,9 +49,7 @@ def test_event_process_1n_relation_insert(
     here, tconn, local_metadata, gebieden_schema, use_dimension_fields
 ):
     events_bb_path = here / "files" / "data" / "bouwblokken.gobevents"
-    events_rel_path = (
-        here / "files" / "data" / "gebieden_bouwblokken_ligt_in_buurt.gobevents"
-    )
+    events_rel_path = here / "files" / "data" / "gebieden_bouwblokken_ligt_in_buurt.gobevents"
     gebieden_schema.use_dimension_fields = use_dimension_fields
     importer = EventsProcessor(
         [gebieden_schema],
@@ -123,10 +121,7 @@ def test_event_process_nm_relation_insert(
         for r in tconn.execute("SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten")
     }
     assert len(records) == 3
-    assert (
-        records["03630950000016.1.AMSBI.N65d"]["bestaat_uit_buurten_id"]
-        == "03630000000658.1"
-    )
+    assert records["03630950000016.1.AMSBI.N65d"]["bestaat_uit_buurten_id"] == "03630000000658.1"
     available_columns = {
         "source_id",
         "ggwgebieden_id",
@@ -147,10 +142,7 @@ def test_event_process_nm_relation_update(
     here, tconn, local_metadata, gebieden_schema, use_dimension_fields
 ):
     events_rel_path = (
-        here
-        / "files"
-        / "data"
-        / "gebieden_ggwgebieden_bestaat_uit_buurten_update.gobevents"
+        here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten_update.gobevents"
     )
     gebieden_schema.use_dimension_fields = use_dimension_fields
     importer = EventsProcessor(
@@ -166,18 +158,12 @@ def test_event_process_nm_relation_update(
         assert records["03630950000015.1.AMSBI.M50e"]["begin_geldigheid"] == dtparse(
             "2019-10-03T00:00:00.000000"
         )
-    assert (
-        records["03630950000015.1.AMSBI.M50e"]["bestaat_uit_buurten_id"]
-        == "03630023754008.1"
-    )
+    assert records["03630950000015.1.AMSBI.M50e"]["bestaat_uit_buurten_id"] == "03630023754008.1"
 
 
 def test_event_process_nm_relation_delete(here, tconn, local_metadata, gebieden_schema):
     events_rel_path = (
-        here
-        / "files"
-        / "data"
-        / "gebieden_ggwgebieden_bestaat_uit_buurten_delete.gobevents"
+        here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten_delete.gobevents"
     )
     importer = EventsProcessor(
         [gebieden_schema], 28992, tconn, local_metadata=local_metadata, truncate=True

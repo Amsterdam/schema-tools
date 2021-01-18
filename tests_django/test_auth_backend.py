@@ -36,9 +36,7 @@ def test_active_profiles_valid(correct_auth_profile, brp_r_profile):
 @pytest.mark.django_db
 def test_get_all_permissions(correct_auth_profile, brp_dataset):
     """Prove that all permissions can be retrieved"""
-    permissions = correct_auth_profile.get_all_permissions(
-        "brp:ingeschrevenpersonen:postcode"
-    )
+    permissions = correct_auth_profile.get_all_permissions("brp:ingeschrevenpersonen:postcode")
     assert permissions == {"brp:ingeschrevenpersonen:bsn": "encoded"}
 
 
@@ -109,18 +107,11 @@ def test_profile_field_inheritance_two_profiles(
     request.is_authorized_for = lambda *scopes: "BRK/RO" in set(scopes)
     auth_profile = request.auth_profile
     assert auth_profile.get_read_permission(perm="brk:kadastraleobjecten:id") == "read"
+    assert auth_profile.get_read_permission(perm="brk:kadastraleobjecten:volgnummer") == "read"
     assert (
-        auth_profile.get_read_permission(perm="brk:kadastraleobjecten:volgnummer")
-        == "read"
+        auth_profile.get_read_permission(perm="brk:kadastraleobjecten:identificatie") == "encoded"
     )
-    assert (
-        auth_profile.get_read_permission(perm="brk:kadastraleobjecten:identificatie")
-        == "encoded"
-    )
-    assert (
-        auth_profile.get_read_permission(perm="brk:kadastraleobjecten:registratiedatum")
-        is None
-    )
+    assert auth_profile.get_read_permission(perm="brk:kadastraleobjecten:registratiedatum") is None
 
 
 @pytest.mark.django_db
@@ -136,20 +127,11 @@ def test_profile_field_inheritance_from_dataset(
 
     request = rf.get("/")
     request.auth_profile = RequestProfile(request)
-    request.is_authorized_for = lambda *scopes: {"ONLY/ENCODED", "DATASET/SCOPE"} & set(
-        scopes
-    )
+    request.is_authorized_for = lambda *scopes: {"ONLY/ENCODED", "DATASET/SCOPE"} & set(scopes)
     auth_profile = request.auth_profile
     assert auth_profile.get_read_permission(perm="brk:kadastraleobjecten:id") == "read"
+    assert auth_profile.get_read_permission(perm="brk:kadastraleobjecten:volgnummer") == "read"
+    assert auth_profile.get_read_permission(perm="brk:kadastraleobjecten:identificatie") == "read"
     assert (
-        auth_profile.get_read_permission(perm="brk:kadastraleobjecten:volgnummer")
-        == "read"
-    )
-    assert (
-        auth_profile.get_read_permission(perm="brk:kadastraleobjecten:identificatie")
-        == "read"
-    )
-    assert (
-        auth_profile.get_read_permission(perm="brk:kadastraleobjecten:registratiedatum")
-        == "read"
+        auth_profile.get_read_permission(perm="brk:kadastraleobjecten:registratiedatum") == "read"
     )

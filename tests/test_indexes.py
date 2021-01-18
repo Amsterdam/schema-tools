@@ -33,9 +33,7 @@ def test_index_creation(engine, db_schema):
                             )
                         },
                         "id": {"type": "integer"},
-                        "geometry": {
-                            "$ref": "https://geojson.org/schema/Geometry.json"
-                        },
+                        "geometry": {"$ref": "https://geojson.org/schema/Geometry.json"},
                         "col1": {"type": "string"},
                         "col2": {"type": "string"},
                         "col3": {"type": "string"},

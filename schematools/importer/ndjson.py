@@ -71,9 +71,7 @@ class NDJSONImporter(BaseImporter):
                             if sub_field.is_temporal:
                                 continue
                             full_sub_field_name = sub_field.name
-                            sub_field_name = full_sub_field_name.split(
-                                RELATION_INDICATOR
-                            )[1]
+                            sub_field_name = full_sub_field_name.split(RELATION_INDICATOR)[1]
                             if relation_field_value is None:
                                 sub_field_value = None
                             else:
@@ -81,9 +79,7 @@ class NDJSONImporter(BaseImporter):
                                 fk_value_parts.append(sub_field_value)
                             row[full_sub_field_name] = sub_field_value
                         # empty fk_value_parts leads to None value
-                        relation_field_value = ".".join(
-                            (str(p) for p in fk_value_parts) or None
-                        )
+                        relation_field_value = ".".join((str(p) for p in fk_value_parts) or None)
                     row[f"{relation_field_name}_id"] = relation_field_value
                     del row[relation_field_name]
 
@@ -102,9 +98,7 @@ class NDJSONImporter(BaseImporter):
                             if sub_field.is_temporal:
                                 continue
                             sub_field_name = to_snake_case(sub_field.name)
-                            nested_row_record[sub_field_name] = nested_row.get(
-                                sub_field.name
-                            )
+                            nested_row_record[sub_field_name] = nested_row.get(sub_field.name)
                         nested_row_records.append(nested_row_record)
 
                     sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
@@ -139,9 +133,7 @@ class NDJSONImporter(BaseImporter):
                                     for f in field.sub_fields
                                     if not f.is_temporal
                                 ]
-                                to_fk = ".".join(
-                                    str(value[fn]) for fn in through_field_names
-                                )
+                                to_fk = ".".join(str(value[fn]) for fn in through_field_names)
                                 for through_field_name in through_field_names:
                                     full_through_field_name = to_snake_case(
                                         f"{field.name}_{through_field_name}"
@@ -152,9 +144,7 @@ class NDJSONImporter(BaseImporter):
                             through_row_record[f"{field_name}_id"] = to_fk
                             through_row_records.append(through_row_record)
 
-                        sub_table_id = f"{db_table_name}_{field_name}"[
-                            :MAX_TABLE_LENGTH
-                        ]
+                        sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
                         sub_rows[sub_table_id] = through_row_records
 
                     del row[nm_relation_field_name]

@@ -22,9 +22,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         skip = options.get("skip")
-        create_tables(
-            self, Dataset.objects.db_enabled(), allow_unmanaged=True, skip=skip
-        )
+        create_tables(self, Dataset.objects.db_enabled(), allow_unmanaged=True, skip=skip)
 
 
 def create_tables(
@@ -43,9 +41,7 @@ def create_tables(
         if not dataset.enable_db or dataset.name in to_be_skipped:
             continue  # in case create_tables() is called by import_schemas
 
-        models.extend(
-            schema_models_factory(dataset.schema, base_app_name="dso_api.dynamic_api")
-        )
+        models.extend(schema_models_factory(dataset.schema, base_app_name="dso_api.dynamic_api"))
 
     # Create all tables
     with connection.schema_editor() as schema_editor:
@@ -57,15 +53,11 @@ def create_tables(
             db_table_name = model._meta.db_table
             router_allows = router.allow_migrate_model(model._meta.app_label, model)
             if not router_allows:
-                command.stdout.write(
-                    f"  Skipping externally managed table: {db_table_name}"
-                )
+                command.stdout.write(f"  Skipping externally managed table: {db_table_name}")
                 continue
 
             if not allow_unmanaged and not model._meta.can_migrate(connection):
-                command.stderr.write(
-                    f"  Skipping non-managed model: {model._meta.db_table}"
-                )
+                command.stderr.write(f"  Skipping non-managed model: {model._meta.db_table}")
                 continue
 
             try:

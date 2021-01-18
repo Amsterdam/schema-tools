@@ -32,9 +32,7 @@ def local_strategy(uri: str) -> str:
     raise ValueError
 
 
-def load(
-    document_file: typing.IO[str], base_uri: str = "", loader=None, backend=jsonref.load
-):
+def load(document_file: typing.IO[str], base_uri: str = "", loader=None, backend=jsonref.load):
     loader = loader or JsonStrategicLoader([local_strategy])
     return backend(document_file, base_uri, loader)
 

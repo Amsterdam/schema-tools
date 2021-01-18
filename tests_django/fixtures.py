@@ -48,9 +48,7 @@ def profile_brk_read_full():
             "datasets": {
                 "brk": {
                     "tables": {
-                        "kadastraleobjecten": {
-                            "fields": {"id": "read", "volgnummer": "read"}
-                        }
+                        "kadastraleobjecten": {"fields": {"id": "read", "volgnummer": "read"}}
                     }
                 }
             }

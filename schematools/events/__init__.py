@@ -155,13 +155,9 @@ class SchemaInfo:
         try:
             schema_data = COLLECTION_TO_SCHEMA[collection]
         except KeyError as e:
-            raise UnknownRelationException(
-                f"Relation {collection} cannot be handled"
-            ) from e
+            raise UnknownRelationException(f"Relation {collection} cannot be handled") from e
         schema_info = cls(*schema_data)
-        schema_info.use_dimension_fields = datasets[
-            schema_info.dataset_id
-        ].use_dimension_fields
+        schema_info.use_dimension_fields = datasets[schema_info.dataset_id].use_dimension_fields
         return schema_info
 
 
@@ -209,9 +205,7 @@ class RelationHandler:
     def _add_update(self, initial, fn, value, prefix=None):
         if fn in self.gob_field_names.keys() and self.row.get(fn) is not None:
             dso_fn = self.gob_field_names[fn]
-            initial[
-                "_".join(([prefix] if prefix is not None else []) + [dso_fn])
-            ] = value
+            initial["_".join(([prefix] if prefix is not None else []) + [dso_fn])] = value
 
     @classmethod
     def fetch_handler(cls, is_nm_table):
@@ -224,15 +218,11 @@ class RelationHandler:
     def set_values(self):
         relation_fieldname = self.schema_info.relation_fieldname
         updates = {}
-        id_value = (
-            None if self.dst_id is None else f"{self.dst_id}.{self.dst_volgnummer}"
-        )
+        id_value = None if self.dst_id is None else f"{self.dst_id}.{self.dst_volgnummer}"
         if id_value is not None:
             updates = {f"{relation_fieldname}_id": id_value}
         self._add_update(updates, "dst_id", self.dst_id, relation_fieldname)
-        self._add_update(
-            updates, "dst_volgnummer", self.dst_volgnummer, relation_fieldname
-        )
+        self._add_update(updates, "dst_volgnummer", self.dst_volgnummer, relation_fieldname)
         self.updates = updates
 
     def execute(self, conn):
@@ -264,9 +254,7 @@ class FKRelationHandler(RelationHandler):
             self.column = self.table.c.id
             self.where_clause = self.column == f"{self.src_id}.{self.src_volgnummer}"
         else:
-            self.column = self.table.c[
-                f"{self.schema_info.relation_fieldname}_source_id"
-            ]
+            self.column = self.table.c[f"{self.schema_info.relation_fieldname}_source_id"]
             self.where_clause = self.column == self.source_id
 
     def _null_updates(self):
@@ -304,9 +292,7 @@ class M2MRelationHandler(RelationHandler):
 
     def set_query_info(self):
         # Need the NM table
-        self.table = self.tables[self.schema_info.dataset_id][
-            self.schema_info.nm_table_id
-        ]
+        self.table = self.tables[self.schema_info.dataset_id][self.schema_info.nm_table_id]
         self.column = self.table.c["source_id"]
         self.where_clause = self.column == self.source_id
 
@@ -314,9 +300,7 @@ class M2MRelationHandler(RelationHandler):
         super().set_values()
         table_id = self.schema_info.table_id
         updates = {}
-        id_value = (
-            None if self.src_id is None else f"{self.src_id}.{self.src_volgnummer}"
-        )
+        id_value = None if self.src_id is None else f"{self.src_id}.{self.src_volgnummer}"
         if id_value is not None:
             updates = {
                 "source_id": self.source_id,
@@ -391,9 +375,9 @@ class EventsProcessor:
     def process_row(self, source_id, event_meta, event_data):
 
         event_type = event_meta["event_type"]
-        db_operation_name, needs_select, _, data_fetcher = EVENT_TYPE_MAPPINGS[
-            NM_TABLE
-        ][event_type]
+        db_operation_name, needs_select, _, data_fetcher = EVENT_TYPE_MAPPINGS[NM_TABLE][
+            event_type
+        ]
         row = {}
         dataset_id = event_meta["catalog"]
         table_id = event_meta["collection"]
@@ -406,9 +390,7 @@ class EventsProcessor:
 
             # Only for ADD we need to generate the PK
             if event_type == "ADD":
-                identifier = (
-                    self.datasets[dataset_id].get_table_by_id(table_id).identifier
-                )
+                identifier = self.datasets[dataset_id].get_table_by_id(table_id).identifier
                 id_value = ".".join(str(row[fn]) for fn in identifier)
                 row["id"] = id_value
             row["source_id"] = source_id
@@ -488,9 +470,7 @@ def tables_factory(
                         fk_column = f"{db_table_name}.id"
                         sub_columns = [
                             Column("id", Integer, primary_key=True),
-                            Column(
-                                "parent_id", ForeignKey(fk_column, ondelete="CASCADE")
-                            ),
+                            Column("parent_id", ForeignKey(fk_column, ondelete="CASCADE")),
                         ]
 
                     elif field.is_through_table:
@@ -561,13 +541,9 @@ def tables_factory(
             # This should not be part of the schema, so only generate it here
             # and not in the table.sub_fields (types.py)
             if field.relation is not None:
-                columns.append(
-                    Column(f"{field_name}_source_id", String, index=True, unique=True)
-                )
+                columns.append(Column(f"{field_name}_source_id", String, index=True, unique=True))
 
-        tables[table_id] = Table(
-            db_table_name, metadata, *columns, extend_existing=True
-        )
+        tables[table_id] = Table(db_table_name, metadata, *columns, extend_existing=True)
         tables.update(**sub_tables)
 
     return tables

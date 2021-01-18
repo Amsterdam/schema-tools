@@ -62,9 +62,7 @@ class Generator:
 class MapfileGenerator(Generator):
     serializer: serializers.MappyfileSerializer
 
-    def generate_feature_class(
-        self, feature_dict, base_styles=None
-    ) -> types.FeatureClass:
+    def generate_feature_class(self, feature_dict, base_styles=None) -> types.FeatureClass:
         feature_class = types.FeatureClass(
             name=feature_dict["name"], expression=feature_dict.get("expression")
         )
@@ -83,9 +81,7 @@ class MapfileGenerator(Generator):
         return types.Layer(
             name=context.name,
             type=types.LayerType.polygon,
-            with_connection=types.Connection.for_postgres(
-                "postgres", "", "postgres", "postgres"
-            ),
+            with_connection=types.Connection.for_postgres("postgres", "", "postgres", "postgres"),
             data=[
                 types.Data.for_postgres(
                     "geometry",
@@ -96,9 +92,7 @@ class MapfileGenerator(Generator):
             ],
             classes=[
                 types.FeatureClass(
-                    styles=[
-                        {"__type__": "style", "color": [200, 50, 50], "antialias": True}
-                    ]
+                    styles=[{"__type__": "style", "color": [200, 50, 50], "antialias": True}]
                 )
             ],
             metadata=types.Metadata(context.metadata),

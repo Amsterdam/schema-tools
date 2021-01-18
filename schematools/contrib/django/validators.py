@@ -6,6 +6,4 @@ from django.utils.translation import ugettext_lazy as _
 @deconstructible
 class URLPathValidator(RegexValidator):
     regex = r"\A[a-z0-9]+([/-][a-z0-9]+)*\Z"
-    message = _(
-        "Only these characters are allowed: a-z, 0-9, '-' and '/' between paths."
-    )
+    message = _("Only these characters are allowed: a-z, 0-9, '-' and '/' between paths.")

@@ -29,9 +29,7 @@ def transformer_factory(model):
     transforms = defaultdict(lambda: lambda x: x)
     transforms[DateTime] = lambda x: x and dtparse(x) or None
 
-    transform_lookup = {
-        col.name: transforms[col.type.__class__] for col in model.__table__.c
-    }
+    transform_lookup = {col.name: transforms[col.type.__class__] for col in model.__table__.c}
 
     def _transformer(content):
         try:
@@ -44,18 +42,14 @@ def transformer_factory(model):
 
 def create_meta_table_data(engine, dataset_schema: DatasetSchema):
     session = sessionmaker(bind=engine)()
-    ds_content = {
-        camel_case_to_snake(k): v for k, v in dataset_schema.items() if k != "tables"
-    }
+    ds_content = {camel_case_to_snake(k): v for k, v in dataset_schema.items() if k != "tables"}
     ds_content["contact_point"] = str(ds_content.get("contact_point", ""))
     ds_transformer = transformer_factory(models.Dataset)
     dataset = models.Dataset(**ds_transformer(ds_content))
     session.add(dataset)
 
     for table_data in dataset_schema["tables"]:
-        table_content = {
-            camel_case_to_snake(k): v for k, v in table_data.items() if k != "schema"
-        }
+        table_content = {camel_case_to_snake(k): v for k, v in table_data.items() if k != "schema"}
 
         table = models.Table(
             **{
@@ -68,9 +62,7 @@ def create_meta_table_data(engine, dataset_schema: DatasetSchema):
 
         for field_name, field_value in table_data["schema"]["properties"].items():
             field_content = {
-                k.replace("$", ""): v
-                for k, v in field_value.items()
-                if k not in {"$comment"}
+                k.replace("$", ""): v for k, v in field_value.items() if k not in {"$comment"}
             }
             field_content["name"] = field_name
             try:
@@ -129,8 +121,7 @@ def fetch_schema_from_relational_schema(engine, dataset_id) -> dict:
         schema_version = table_dict.pop("schemaVersion")
         schema_properties["schema"] = {
             "$ref": (
-                f"https://schemas.data.amsterdam.nl/schema@{schema_version}"
-                "#/definitions/schema"
+                f"https://schemas.data.amsterdam.nl/schema@{schema_version}" "#/definitions/schema"
             )
         }
         table_dict["schema"]["properties"] = schema_properties

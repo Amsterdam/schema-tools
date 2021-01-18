@@ -57,9 +57,7 @@ class Command(BaseCommand):
         )
         parser.add_argument("--url-prefix", help="Set a prefix for the API URL.")
         parser.add_argument("--auth", help="Assign OAuth roles.")
-        parser.add_argument(
-            "--ordering", type=int, help="Set the ordering of the dataset"
-        )
+        parser.add_argument("--ordering", type=int, help="Set the ordering of the dataset")
         parser.add_argument("--endpoint-url")
 
     def handle(self, *args, **options):
@@ -67,12 +65,8 @@ class Command(BaseCommand):
         try:
             dataset = Dataset.objects.get(name=name)
         except Dataset.DoesNotExist:
-            available = ", ".join(
-                sorted(Dataset.objects.values_list("name", flat=True))
-            )
-            raise CommandError(
-                f"Dataset not found: {name}.\nAvailable are: {available}"
-            ) from None
+            available = ", ".join(sorted(Dataset.objects.values_list("name", flat=True)))
+            raise CommandError(f"Dataset not found: {name}.\nAvailable are: {available}") from None
 
         # Validate illogical combinations
         if options.get("endpoint_url"):
@@ -84,9 +78,7 @@ class Command(BaseCommand):
 
         changed = False
         if options.get("enable_geosearch") is not None:
-            dataset.tables.all().update(
-                enable_geosearch=options.get("enable_geosearch")
-            )
+            dataset.tables.all().update(enable_geosearch=options.get("enable_geosearch"))
             changed = True
 
         for field in self.setting_options:
@@ -108,18 +100,11 @@ class Command(BaseCommand):
                 errors = []
                 for field, messages in e.error_dict.items():
                     errors.extend(
-                        [
-                            f"--{field.replace('_', '-')}: {err.message}"
-                            for err in messages
-                        ]
+                        [f"--{field.replace('_', '-')}: {err.message}" for err in messages]
                     )
-                raise CommandError(
-                    "Unable to save changes:\n" + "\n".join(errors)
-                ) from None
+                raise CommandError("Unable to save changes:\n" + "\n".join(errors)) from None
 
             dataset.save()
-            self.stdout.write(
-                "The service needs to restart for changes to have effect."
-            )
+            self.stdout.write("The service needs to restart for changes to have effect.")
         else:
             self.stdout.write("No changes made.")

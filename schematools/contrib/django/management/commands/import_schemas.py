@@ -17,12 +17,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("schema", nargs="*", help="Local schema files to import")
         parser.add_argument("--schema-url", default=settings.SCHEMA_URL)
-        parser.add_argument(
-            "--create-tables", dest="create_tables", action="store_true"
-        )
-        parser.add_argument(
-            "--no-create-tables", dest="create_tables", action="store_false"
-        )
+        parser.add_argument("--create-tables", dest="create_tables", action="store_true")
+        parser.add_argument("--no-create-tables", dest="create_tables", action="store_false")
         parser.set_defaults(create_tables=False)
 
     def handle(self, *args, **options):

@@ -35,24 +35,14 @@ JSON_TYPE_TO_PG = {
     "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/class": String,
     "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/dataset": String,
     "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema": String,
-    "https://geojson.org/schema/Geometry.json": Geometry(
-        geometry_type="GEOMETRY", srid=28992
-    ),
-    "https://geojson.org/schema/Point.json": Geometry(
-        geometry_type="POINT", srid=28992
-    ),
-    "https://geojson.org/schema/Polygon.json": Geometry(
-        geometry_type="POLYGON", srid=28992
-    ),
+    "https://geojson.org/schema/Geometry.json": Geometry(geometry_type="GEOMETRY", srid=28992),
+    "https://geojson.org/schema/Point.json": Geometry(geometry_type="POINT", srid=28992),
+    "https://geojson.org/schema/Polygon.json": Geometry(geometry_type="POLYGON", srid=28992),
     "https://geojson.org/schema/MultiPolygon.json": Geometry(
         geometry_type="MULTIPOLYGON", srid=28992
     ),
-    "https://geojson.org/schema/MultiPoint.json": Geometry(
-        geometry_type="MULTIPOINT", srid=28992
-    ),
-    "https://geojson.org/schema/LineString.json": Geometry(
-        geometry_type="LINESTRING", srid=28992
-    ),
+    "https://geojson.org/schema/MultiPoint.json": Geometry(geometry_type="MULTIPOINT", srid=28992),
+    "https://geojson.org/schema/LineString.json": Geometry(geometry_type="LINESTRING", srid=28992),
     "https://geojson.org/schema/MultiLineString.json": Geometry(
         geometry_type="MULTILINESTRING", srid=28992
     ),

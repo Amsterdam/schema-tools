@@ -194,9 +194,7 @@ def permissions_revoke(db_url, role):
     default=False,
     help="Execute SQL statements or dry-run [default]",
 )
-@click.option(
-    "--create-roles", is_flag=True, default=False, help="Create missing postgres roles"
-)
+@click.option("--create-roles", is_flag=True, default=False, help="Create missing postgres roles")
 @click.option(
     "--revoke",
     is_flag=True,
@@ -358,9 +356,7 @@ def show_mapfile(schema_url, dataset_id):
 
 
 @introspect.command("db")
-@click.option(
-    "--db-schema", "-s", help="Tables are in a different postgres schema (not 'public')"
-)
+@click.option("--db-schema", "-s", help="Tables are in a different postgres schema (not 'public')")
 @click.option("--prefix", "-p", help="Tables have prefix that needs to be stripped")
 @option_db_url
 @click.argument("dataset_id")
@@ -388,9 +384,7 @@ def introspect_geojson(dataset_id, files):
 @click.argument("table_name")
 @click.argument("ndjson_path")
 @click.option("--truncate-table", is_flag=True)
-def import_ndjson(
-    db_url, schema_url, schema_location, table_name, ndjson_path, truncate_table
-):
+def import_ndjson(db_url, schema_url, schema_location, table_name, ndjson_path, truncate_table):
     """Import a NDJSON file into a table."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_url, schema_location)
@@ -405,9 +399,7 @@ def import_ndjson(
 @click.argument("table_name")
 @click.argument("geojson_path")
 @click.option("--truncate-table", is_flag=True)
-def import_geojson(
-    db_url, schema_url, schema_location, table_name, geojson_path, truncate_table
-):
+def import_geojson(db_url, schema_url, schema_location, table_name, geojson_path, truncate_table):
     """Import a GeoJSON file into a table."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_url, schema_location)
@@ -431,9 +423,7 @@ def import_events(db_url, schema_url, schema_location, events_path, truncate_tab
     srid = dataset_schema["crs"].split(":")[-1]
     # Run as a transaction
     with engine.begin() as connection:
-        importer = EventsProcessor(
-            [dataset_schema], srid, connection, truncate=truncate_table
-        )
+        importer = EventsProcessor([dataset_schema], srid, connection, truncate=truncate_table)
         importer.load_events_from_file(events_path)
 
 
@@ -477,9 +467,7 @@ def create_identifier_index(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data["tables"]:
-        importer.generate_db_objects(
-            table["id"], ind_tables=False, ind_extra_index=True
-        )
+        importer.generate_db_objects(table["id"], ind_tables=False, ind_extra_index=True)
 
 
 @create.command("tables")
@@ -494,9 +482,7 @@ def create_tables(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data["tables"]:
-        importer.generate_db_objects(
-            table["id"], ind_extra_index=False, ind_tables=True
-        )
+        importer.generate_db_objects(table["id"], ind_extra_index=False, ind_tables=True)
 
 
 @create.command("all")

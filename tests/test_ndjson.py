@@ -15,9 +15,7 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, dbsession):
     assert records[0]["hoortbijmeetbout_id"] == "13881032"
     records = [
         dict(r)
-        for r in engine.execute(
-            "SELECT * from meetbouten_metingen_refereertaanreferentiepunten"
-        )
+        for r in engine.execute("SELECT * from meetbouten_metingen_refereertaanreferentiepunten")
     ]
     # Should have a field 'identificatie' in the n-m table
     assert "refereertaanreferentiepunten_identificatie" in records[0]
@@ -52,8 +50,7 @@ def test_ndjson_import_nm_compound_keys(
     assert "id" in records[0]
     assert records[0]["id"] == "03630950000000.1"
     records = [
-        dict(r)
-        for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
+        dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
     ]
     assert len(records) == 3
     # Also the temporal fields are present in the database
@@ -80,9 +77,7 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
 ):
     ndjson_path = here / "files" / "data" / "kadastraleobjecten.ndjson"
     importer = NDJSONImporter(kadastraleobjecten_schema, engine)
-    importer.generate_db_objects(
-        "kadastraleobjecten", truncate=True, ind_extra_index=False
-    )
+    importer.generate_db_objects("kadastraleobjecten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten")]
     assert len(records) == 2
@@ -111,9 +106,7 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
 def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbsession):
     ndjson_path = here / "files" / "data" / "verblijfsobjecten.ndjson"
     importer = NDJSONImporter(verblijfsobjecten_schema, engine)
-    importer.generate_db_objects(
-        "verblijfsobjecten", truncate=True, ind_extra_index=False
-    )
+    importer.generate_db_objects("verblijfsobjecten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [
         dict(r)
@@ -146,31 +139,23 @@ def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
     assert "ligtinbuurt_identificatie" in records[0]
 
 
-def test_inactive_relation_that_are_commented_out(
-    here, engine, stadsdelen_schema, dbsession
-):
+def test_inactive_relation_that_are_commented_out(here, engine, stadsdelen_schema, dbsession):
     """ Prove that relations that are commented out in the schema are flattened to strings """
     ndjson_path = here / "files" / "data" / "stadsdelen.ndjson"
     importer = NDJSONImporter(stadsdelen_schema, engine)
     importer.generate_db_objects("stadsdelen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [
-        dict(r) for r in engine.execute("SELECT * from gebieden_stadsdelen ORDER BY id")
-    ]
+    records = [dict(r) for r in engine.execute("SELECT * from gebieden_stadsdelen ORDER BY id")]
     # Field is stringified, because in schema the relation is 'disabled'
     assert records[0]["ligt_in_gemeente"] == '{"identificatie": "0363"}'
 
 
-def test_missing_fields_in_jsonpath_provenance(
-    here, engine, woonplaatsen_schema, dbsession
-):
+def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema, dbsession):
     """ Prove that missing fields in jsonpath provenance fields do not crash """
     ndjson_path = here / "files" / "data" / "woonplaatsen.ndjson"
     importer = NDJSONImporter(woonplaatsen_schema, engine)
     importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [
-        dict(r) for r in engine.execute("SELECT * from baggob_woonplaatsen ORDER BY id")
-    ]
+    records = [dict(r) for r in engine.execute("SELECT * from baggob_woonplaatsen ORDER BY id")]
     assert len(records) == 2
     assert records[1]["status_code"] is None

@@ -7,10 +7,7 @@ def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsess
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [
-        dict(r)
-        for r in engine.execute("SELECT * from gebieden_bouwblokken ORDER BY id")
-    ]
+    records = [dict(r) for r in engine.execute("SELECT * from gebieden_bouwblokken ORDER BY id")]
     assert len(records) == 2
     assert set(records[0].keys()) == {
         "id",
@@ -22,9 +19,7 @@ def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsess
     assert records[0]["eind_geldigheid"] == date(2008, 11, 14)
 
 
-def test_skip_duplicate_keys_in_batch_during_import(
-    here, engine, bouwblokken_schema, dbsession
-):
+def test_skip_duplicate_keys_in_batch_during_import(here, engine, bouwblokken_schema, dbsession):
     """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
     ndjson_path = here / "files" / "data" / "gebieden-duplicate-id.ndjson"
     importer = NDJSONImporter(bouwblokken_schema, engine)

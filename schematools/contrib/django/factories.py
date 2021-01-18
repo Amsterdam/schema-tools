@@ -41,9 +41,7 @@ class FieldMaker:
         self.table = table
         self.value_getter = value_getter
         self.kwargs = kwargs
-        self.modifiers = [
-            getattr(self, an) for an in dir(self) if an.startswith("handle_")
-        ]
+        self.modifiers = [getattr(self, an) for an in dir(self) if an.startswith("handle_")]
 
     def _make_related_classname(self, relation_urn):
         related_dataset, related_table = [
@@ -84,9 +82,7 @@ class FieldMaker:
         **kwargs,
     ) -> TypeAndSignature:
         if field.data.get("type", "").lower() == "array" and not field.nm_relation:
-            base_field, _ = JSON_TYPE_TO_DJANGO[
-                field.data.get("entity", {}).get("type", "string")
-            ]
+            base_field, _ = JSON_TYPE_TO_DJANGO[field.data.get("entity", {}).get("type", "string")]
             kwargs["base_field"] = base_field()
         return field_cls, args, kwargs
 
@@ -133,10 +129,7 @@ class FieldMaker:
                 try:
                     table = dataset.get_table_by_id(related_table_name)
                     for name, relation in table.relations.items():
-                        if (
-                            relation["table"] == field.table.id
-                            and relation["field"] == field.name
-                        ):
+                        if relation["table"] == field.table.id and relation["field"] == field.name:
                             related_name = name
                             break
                 except ValueError:
@@ -174,17 +167,13 @@ class FieldMaker:
             field_cls = FORMAT_MODELS_LOOKUP[format_]
         return field_cls, args, kwargs
 
-    def __call__(
-        self, field: DatasetFieldSchema, dataset: DatasetSchema
-    ) -> TypeAndSignature:
+    def __call__(self, field: DatasetFieldSchema, dataset: DatasetSchema) -> TypeAndSignature:
         field_cls = self.field_cls
         kwargs = self.kwargs
         args = []
 
         for modifier in self.modifiers:
-            field_cls, args, kwargs = modifier(
-                dataset, field, field_cls, *args, **kwargs
-            )
+            field_cls, args, kwargs = modifier(dataset, field, field_cls, *args, **kwargs)
 
         return field_cls, args, kwargs
 
