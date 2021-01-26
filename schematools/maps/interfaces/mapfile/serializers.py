@@ -1,8 +1,9 @@
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+
+import mappyfile
 
 #  Serializing with Jinja templates
 from jinja2 import Environment, FileSystemLoader
-import mappyfile
 
 from . import types
 

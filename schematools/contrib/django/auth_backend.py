@@ -1,11 +1,8 @@
 from functools import lru_cache
 
 from django.contrib.auth.backends import BaseBackend
-from schematools.contrib.django.models import (
-    Dataset,
-    Profile,
-    generate_permission_key,
-)
+
+from schematools.contrib.django.models import Dataset, Profile, generate_permission_key
 
 # In order of importance, first one overrules the lower one
 PERMISSION_LIST = [

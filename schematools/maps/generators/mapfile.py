@@ -1,10 +1,10 @@
+import typing
 from collections import ChainMap
 from dataclasses import dataclass
-import typing
+
 from schematools.types import DatasetSchema, DatasetTableSchema
 
-from ..interfaces.mapfile import types, serializers
-
+from ..interfaces.mapfile import serializers, types
 
 MapfileStr = str
 

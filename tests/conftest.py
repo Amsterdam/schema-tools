@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
-from urllib.parse import urlparse, ParseResult
+from urllib.parse import ParseResult, urlparse
 
 import pytest
-from requests_mock import Mocker
-from sqlalchemy.orm import Session
-from sqlalchemy import MetaData
 import sqlalchemy_utils
 from geoalchemy2 import Geometry  # NoQA, needed to make postgis work
+from requests_mock import Mocker
+from sqlalchemy import MetaData
+from sqlalchemy.orm import Session
 
 from schematools.importer.base import metadata
 

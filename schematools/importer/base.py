@@ -1,24 +1,16 @@
 import hashlib
-from collections import UserDict, Counter
+import operator
+from collections import Counter, UserDict
 from functools import reduce
 from itertools import islice
-import operator
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 from jsonpath_rw import parse
-from sqlalchemy import (
-    MetaData,
-    inspect,
-    Table,
-    Column,
-    ForeignKey,
-    Integer,
-    String,
-    Index,
-    exc,
-)
+from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Table, exc, inspect
 
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
+
 from . import fetch_col_type
 
 metadata = MetaData()

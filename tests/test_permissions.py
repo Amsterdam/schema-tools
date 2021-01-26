@@ -5,9 +5,7 @@ from psycopg2.errors import DuplicateObject
 from sqlalchemy.exc import ProgrammingError
 
 from schematools.importer.ndjson import NDJSONImporter
-from schematools.permissions import (
-    apply_schema_and_profile_permissions,
-)
+from schematools.permissions import apply_schema_and_profile_permissions
 
 
 def test_auto_permissions(here, engine, gebieden_schema_auth, dbsession):

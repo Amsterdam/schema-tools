@@ -4,8 +4,8 @@ from typing import Any, Iterable, Tuple
 
 from shapely.geometry import shape
 
-from . import get_table_name
 from ..exceptions import ParserError
+from . import get_table_name
 from .base import BaseImporter
 
 ID_FORMAT = re.compile(r"^([a-z0-9_]+)[/.](\d+)$", re.I)

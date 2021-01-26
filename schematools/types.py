@@ -4,9 +4,12 @@ from __future__ import annotations
 import json
 import typing
 from collections import UserDict
+
 import jsonschema
-from . import RELATION_INDICATOR
+
 from schematools import MAX_TABLE_LENGTH, TMP_TABLE_POSTFIX
+
+from . import RELATION_INDICATOR
 
 
 class SchemaType(UserDict):

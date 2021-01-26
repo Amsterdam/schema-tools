@@ -1,4 +1,5 @@
 import pytest
+
 from schematools.importer.ndjson import NDJSONImporter
 
 

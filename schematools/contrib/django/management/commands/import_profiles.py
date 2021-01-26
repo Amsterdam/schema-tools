@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.management import BaseCommand
 
-from schematools.contrib.django.models import Profile, PROFILES_CACHE_KEY
+from schematools.contrib.django.models import PROFILES_CACHE_KEY, Profile
 from schematools.types import ProfileSchema
 from schematools.utils import profile_defs_from_url
 

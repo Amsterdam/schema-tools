@@ -1,6 +1,7 @@
-from schematools.types import SchemaType, DatasetSchema
-from schematools.importer.base import BaseImporter
 from sqlalchemy import MetaData, create_engine, inspect
+
+from schematools.importer.base import BaseImporter
+from schematools.types import DatasetSchema, SchemaType
 
 
 def test_index_creation(engine, db_schema):

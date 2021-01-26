@@ -1,7 +1,9 @@
 import json
 from pathlib import Path
-import pytest
 from typing import Callable
+
+import pytest
+
 from schematools.types import DatasetSchema, ProfileSchema
 
 HERE = Path(__file__).parent

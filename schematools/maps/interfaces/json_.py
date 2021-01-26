@@ -1,9 +1,10 @@
-import click
 import json
-import jsonref
-import pprint
 import os
+import pprint
 import typing
+
+import click
+import jsonref
 
 
 class JsonStrategicLoader(jsonref.JsonLoader):

@@ -1,41 +1,34 @@
 import json
 
 import click
-import requests
-
-from deepdiff import DeepDiff
-
 import jsonschema
+import requests
+from deepdiff import DeepDiff
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from .permissions import (
-    introspect_permissions,
-    revoke_permissions,
-)
-from .permissions import apply_schema_and_profile_permissions
-
 
 from .db import (
     create_meta_table_data,
     create_meta_tables,
-    fetch_table_names,
     fetch_schema_from_relational_schema,
+    fetch_table_names,
 )
-from .exceptions import ParserError
 from .events import EventsProcessor
-from .introspect.db import introspect_db_schema
-from .introspect.geojson import introspect_geojson_files
+from .exceptions import ParserError
+from .importer.base import BaseImporter
 from .importer.geojson import GeoJSONImporter
 from .importer.ndjson import NDJSONImporter
+from .introspect.db import introspect_db_schema
+from .introspect.geojson import introspect_geojson_files
 from .maps import create_mapfile
-from .importer.base import BaseImporter
-from .types import DatasetSchema, SchemaType
-from .utils import (
-    schema_def_from_url,
-    schema_fetch_url_file,
-    schema_defs_from_url,
+from .permissions import (
+    apply_schema_and_profile_permissions,
+    introspect_permissions,
+    revoke_permissions,
 )
 from .provenance.create import ProvenaceIteration
+from .types import DatasetSchema, SchemaType
+from .utils import schema_def_from_url, schema_defs_from_url, schema_fetch_url_file
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
 DEFAULT_PROFILE_URL = "https://schemas.data.amsterdam.nl/profiles/"

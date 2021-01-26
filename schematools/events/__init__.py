@@ -4,16 +4,18 @@ Direct de tabel bijwerken, of via een tussenstap (met validaties)
 Validaties wschl. eerder in het proces (bij de ingest)
 
 """
-from collections import defaultdict
-from dataclasses import dataclass
 import json
 import logging
-from typing import Optional, Callable, Dict, List
-from sqlalchemy import MetaData, Table, Column, ForeignKey, Integer, String
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional
+
+from sqlalchemy import Column, ForeignKey, Integer, MetaData, String, Table
+
 from schematools import MAX_TABLE_LENGTH
+from schematools.importer import fetch_col_type, get_table_name
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
-from schematools.importer import fetch_col_type, get_table_name
 
 metadata = MetaData()
 

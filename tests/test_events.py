@@ -1,6 +1,8 @@
-from datetime import datetime, date
-from dateutil.parser import parse as dtparse
+from datetime import date, datetime
+
 import pytest
+from dateutil.parser import parse as dtparse
+
 from schematools.events import EventsProcessor
 
 # pytestmark = pytest.mark.skip("all tests disabled")

@@ -1,6 +1,6 @@
 """Datbase storage of metadata from imported Amsterdam schema files."""
-from collections import defaultdict
 import json
+from collections import defaultdict
 
 from dateutil.parser import parse as dtparse
 from sqlalchemy import DateTime, inspect

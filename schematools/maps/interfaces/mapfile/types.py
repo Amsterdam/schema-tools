@@ -1,6 +1,6 @@
-from dataclasses import dataclass, InitVar, field
 import enum
 import typing
+from dataclasses import InitVar, dataclass, field
 
 
 class LayerType(str, enum.Enum):

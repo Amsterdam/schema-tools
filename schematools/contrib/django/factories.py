@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Tuple, Type
 from urllib.parse import urlparse
 
+from django.conf import settings
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
-from django.conf import settings
 
 from schematools.types import (
     DatasetFieldSchema,
@@ -14,15 +14,15 @@ from schematools.types import (
     get_db_table_name,
 )
 from schematools.utils import to_snake_case
+
 from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
     DynamicModel,
-    ObjectMarker,
     LooseRelationField,
     LooseRelationManyToManyField,
+    ObjectMarker,
 )
-
 
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 

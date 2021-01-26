@@ -3,10 +3,7 @@ from unittest import mock
 import pytest
 
 from schematools.contrib.django import models
-from schematools.contrib.django.auth_backend import (
-    ProfileAuthorizationBackend,
-    RequestProfile,
-)
+from schematools.contrib.django.auth_backend import ProfileAuthorizationBackend, RequestProfile
 
 
 @pytest.mark.django_db

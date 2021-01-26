@@ -4,13 +4,11 @@ import json
 import re
 from typing import Dict
 
-from cachetools.func import ttl_cache, lru_cache
 import requests
+from cachetools.func import lru_cache, ttl_cache
 from string_utils import slugify
 
-from . import types
-from . import RELATION_INDICATOR
-
+from . import RELATION_INDICATOR, types
 
 re_camel_case = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"

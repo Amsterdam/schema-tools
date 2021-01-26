@@ -1,16 +1,8 @@
-from schematools.types import DatasetTableSchema
-
 from geoalchemy2 import Geometry
-from sqlalchemy import (
-    Boolean,
-    Float,
-    Integer,
-    String,
-    Date,
-    Time,
-    DateTime,
-)
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, Time
 from sqlalchemy.types import ARRAY
+
+from schematools.types import DatasetTableSchema
 
 FORMAT_MODELS_LOOKUP = {
     "date": Date,

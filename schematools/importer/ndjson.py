@@ -1,11 +1,13 @@
 import json
+
 import ndjson
 from shapely.geometry import shape
-from .base import BaseImporter, Row
+
+from schematools import MAX_TABLE_LENGTH, RELATION_INDICATOR
 from schematools.utils import to_snake_case
 
 from . import get_table_name
-from schematools import RELATION_INDICATOR, MAX_TABLE_LENGTH
+from .base import BaseImporter, Row
 
 
 class NDJSONImporter(BaseImporter):
