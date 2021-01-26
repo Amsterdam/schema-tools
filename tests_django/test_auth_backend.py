@@ -34,9 +34,9 @@ def test_active_profiles_valid(correct_auth_profile, brp_r_profile):
 
 
 @pytest.mark.django_db
-def test_get_all_permissions(correct_auth_profile, brp_dataset):
+def test_get_table_permissions(correct_auth_profile, brp_dataset):
     """Prove that all permissions can be retrieved"""
-    permissions = correct_auth_profile.get_all_permissions("brp:ingeschrevenpersonen:postcode")
+    permissions = correct_auth_profile.get_table_permissions("brp", "ingeschrevenpersonen")
     assert permissions == {"brp:ingeschrevenpersonen:bsn": "encoded"}
 
 

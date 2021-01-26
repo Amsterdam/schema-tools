@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from django.contrib.auth.backends import BaseBackend
 from schematools.contrib.django.models import (
     Dataset,
@@ -17,52 +19,53 @@ PERMISSION_LIST = [
 class RequestProfile(object):
     def __init__(self, request):
         self.request = request
-        self.auth_profiles = None
-        self.auth_permissions = None
         self.valid_query_params = []
+
+        # Apply request-level caching to frequently read data.
+        self.get_profiles = lru_cache()(self.get_profiles)
+        self.get_table_permissions = lru_cache()(self.get_table_permissions)
 
     def get_profiles(self):
         """Get all profiles that match scopes of request."""
-        if self.auth_profiles is None:
-            profiles = []
-            for profile in Profile.objects.all():
-                scopes = profile.get_scopes()
-                if len(scopes) == 0:
-                    profiles.append(profile)
-                else:
-                    if hasattr(self.request, "is_authorized_for"):
-                        if self.request.is_authorized_for(*scopes):
-                            profiles.append(profile)
-            self.auth_profiles = set(profiles)
-        return self.auth_profiles
+        profiles = set()
+        for profile in Profile.objects.all():
+            scopes = profile.get_scopes()
+            if not scopes:
+                profiles.add(profile)
+            else:
+                if hasattr(self.request, "is_authorized_for"):
+                    if self.request.is_authorized_for(*scopes):
+                        profiles.add(profile)
 
-    def get_all_permissions(self, perm):
-        """Get all permissions for given request."""
-        if self.auth_permissions is None:
-            permissions = dict()
-            dataset_id, table_id, field_id = perm.split(":")
-            dataset = Dataset.objects.get(name=dataset_id)
-            has_dataset_scope = self.request.is_authorized_for(dataset.auth)
-            table = dataset.tables.get(name=table_id)
-            for field in table.fields.all():
-                permission_key = generate_permission_key(dataset_id, table_id, field.name)
-                if has_dataset_scope:
+        return profiles
+
+    def get_table_permissions(self, dataset_id, table_id):
+        """Get all permissions for a specific dataset in this request."""
+        permissions = dict()
+        dataset = Dataset.objects.get(name=dataset_id)
+        table = dataset.tables.get(name=table_id)
+        has_dataset_scope = self.request.is_authorized_for(dataset.auth)
+
+        for field in table.fields.all():
+            permission_key = generate_permission_key(dataset_id, table_id, field.name)
+            if has_dataset_scope:
+                # get the top permission
+                permissions[permission_key] = PERMISSION_LIST[0]
+            else:
+                if self.request.is_authorized_for(table.auth):
                     # get the top permission
                     permissions[permission_key] = PERMISSION_LIST[0]
-                else:
-                    has_table_scope = self.request.is_authorized_for(table.auth)
-                    if has_table_scope:
-                        # get the top permission
-                        permissions[permission_key] = PERMISSION_LIST[0]
-            for profile in self.get_active_profiles(dataset_id, table_id):
-                profile_permissions = profile.get_permissions()
-                permissions = merge_permissions(permissions, profile_permissions)
-            self.auth_permissions = permissions
-        return self.auth_permissions
+
+        for profile in self.get_active_profiles(dataset_id, table_id):
+            profile_permissions = profile.get_permissions()
+            permissions = merge_permissions(permissions, profile_permissions)
+
+        return permissions
 
     def get_read_permission(self, perm, obj=None):
         """Get permission to read/encode data from profiles."""
-        permissions = self.get_all_permissions(perm)
+        dataset_id, table_id, field_id = perm.split(":")
+        permissions = self.get_table_permissions(dataset_id, table_id)
         return permissions.get(perm, None)
 
     def _mandatory_filterset_was_queried(self, mandatory_filterset, query_params):

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from django.apps import apps
@@ -551,7 +552,10 @@ def _serialize_claims(schema_object) -> Optional[str]:
         return " ".join(claims)
 
 
+@lru_cache()
 def generate_permission_key(*args):
+    # As this function called many times, caching this gives huge performance wins.
+    # While the auth backend also caches, this cache also persists between requests.
     return ":".join([to_snake_case(key) for key in args])
 
 
