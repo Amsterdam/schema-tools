@@ -129,10 +129,12 @@ class DatasetSchema(SchemaType):
     def get_table_by_id(
         self, table_id: str, include_nested=True, include_through=True
     ) -> DatasetTableSchema:
+        from schematools.utils import to_snake_case
+
         for table in self.get_tables(
             include_nested=include_nested, include_through=include_through
         ):
-            if table.id == table_id:
+            if to_snake_case(table.id) == to_snake_case(table_id):
                 return table
 
         available = "', '".join([table["id"] for table in self["tables"]])
