@@ -253,7 +253,12 @@ class DatasetTableSchema(SchemaType):
     """
 
     def __init__(
-        self, *args, _parent_schema=None, nested_table=False, through_table=False, **kwargs
+        self,
+        *args,
+        _parent_schema=None,
+        nested_table=False,
+        through_table=False,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._parent_schema = _parent_schema
