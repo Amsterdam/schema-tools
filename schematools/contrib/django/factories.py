@@ -51,8 +51,8 @@ class RelationMaker:
 
     @classmethod
     def fetch_relation_parts(cls, relation):
-        relation_parts = relation.split(":")
-        return relation_parts[:2]
+        dataset_id, table_id, *_ = relation.split(":")
+        return dataset_id, table_id
 
     @classmethod
     def is_loose_relation(cls, relation, dataset, field):
@@ -77,7 +77,7 @@ class RelationMaker:
 
         # If temporal, this implicates that the type is not a scalar
         # but needs to be more complex (object) or array_of_objects
-        if field.type in set(["string", "integer"]) or field.is_array_of_scalars:
+        if field.type in ["string", "integer"] or field.is_array_of_scalars:
             return True
 
         sequence_field = related_table.get_field_by_id(sequence_identifier)
@@ -121,7 +121,9 @@ class RelationMaker:
             return None  # To signal this is not a relation
 
     def _make_related_classname(self, relation):
-        related_dataset, related_table = [to_snake_case(part) for part in relation.split(":")[:2]]
+        related_dataset, related_table = [
+            to_snake_case(part) for part in self.fetch_relation_parts(relation)
+        ]
         return f"{related_dataset}.{related_table}"
 
     def _make_through_classname(self, dataset_id, field_name):
