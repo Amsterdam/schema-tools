@@ -251,20 +251,6 @@ class FieldMaker:
         self.kwargs = kwargs
         self.modifiers = [getattr(self, an) for an in dir(self) if an.startswith("handle_")]
 
-    def _make_related_classname(self, relation_urn):
-        related_dataset, related_table = [
-            to_snake_case(part) for part in relation_urn.split(":")[:2]
-        ]
-        return f"{related_dataset}.{related_table}"
-
-    def _make_through_classname(self, dataset_id, field_name):
-        snakecased_fieldname = to_snake_case(field_name)
-        through_table_id = get_db_table_name(self.table, snakecased_fieldname)
-        # dso-api expects the dataset_id seperated from the table_id by a point
-        table_id = "_".join(through_table_id.split("_")[1:])
-        dataset_id = through_table_id.split("_")[0]
-        return f"{dataset_id}.{table_id}"
-
     def handle_basic(
         self,
         dataset: DatasetSchema,
