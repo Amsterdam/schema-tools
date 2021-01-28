@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from django.db.models.base import ModelBase
 from django_postgres_unlimited_varchar import UnlimitedCharField
 
 from schematools.contrib.django.factories import model_factory, schema_models_factory
@@ -119,7 +120,7 @@ def test_model_factory_loose_relations(meldingen_schema, gebieden_schema):
     assert isinstance(meta.get_field("buurt"), LooseRelationField)
 
 
-def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_schema):
+def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_schema, gebieden_schema):
     """Prove that a loose relation is created when column
     is part of relation definition (<dataset>:<table>:column)
     """
@@ -131,8 +132,12 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_schema):
     }
     model_cls = model_dict["woningbouwplan"]
     meta = model_cls._meta
-    assert isinstance(meta.get_field("buurten"), LooseRelationManyToManyField)
-    assert isinstance(meta.get_field("buurten_as_scalar"), LooseRelationManyToManyField)
+    buurten_field = meta.get_field("buurten")
+    assert isinstance(buurten_field, LooseRelationManyToManyField)
+    assert isinstance(buurten_field.remote_field.through, ModelBase)
+    buurten_as_scalar_field = meta.get_field("buurten_as_scalar")
+    assert isinstance(buurten_as_scalar_field, LooseRelationManyToManyField)
+    assert isinstance(buurten_as_scalar_field.remote_field.through, ModelBase)
 
 
 def test_table_name_creation_n_m_relation(brk_schema, verblijfsobjecten_schema):

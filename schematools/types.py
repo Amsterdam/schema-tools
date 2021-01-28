@@ -216,10 +216,15 @@ class DatasetSchema(SchemaType):
                         "type": "integer",
                         "relation": f"{right_dataset}:{right_table}",
                     },
-                    **field["items"]["properties"],
                 },
             },
         )
+
+        # Only for object type relations we can add the fields of the
+        # relation to the schema
+        if field.is_array_of_objects:
+            sub_table_schema["schema"]["properties"].update(field["items"]["properties"])
+
         return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
 
     def fetch_temporal(self, field_modifier=None):
@@ -623,7 +628,7 @@ class DatasetFieldSchema(DatasetType):
         """
         Checks if field is a possible through table.
         """
-        return self.is_array_of_objects and self.nm_relation is not None
+        return self.is_array and self.nm_relation is not None
 
     @property
     def auth(self) -> typing.Optional[str]:
