@@ -577,7 +577,7 @@ class LooseRelationField(models.CharField):
 
     @property
     def related_model(self):
-        dataset_name, table_name = [to_snake_case(part) for part in self.relation.split(":")]
+        dataset_name, table_name, *_ = [to_snake_case(part) for part in self.relation.split(":")]
         return apps.all_models[dataset_name][table_name]
 
 
@@ -595,7 +595,7 @@ class LooseRelationManyToManyField(models.ManyToManyField):
 
     @property
     def related_model(self):
-        dataset_name, table_name = [to_snake_case(part) for part in self.relation.split(":")]
+        dataset_name, table_name, *_ = [to_snake_case(part) for part in self.relation.split(":")]
         if dataset_name in apps.all_models and table_name in apps.all_models[dataset_name]:
             return apps.all_models[dataset_name][table_name]
         else:
