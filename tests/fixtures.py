@@ -10,7 +10,7 @@ HERE = Path(__file__).parent
 
 
 @pytest.fixture(scope="session")
-def here():
+def here() -> Path:
     return HERE
 
 

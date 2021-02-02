@@ -466,8 +466,20 @@ def create_identifier_index(schema_url, db_url):
 @create.command("tables")
 @option_db_url
 @option_schema_url
-def create_tables(schema_url, db_url):
-    """Execute SQLalchemy Table objects"""
+@click.option(
+    "--relname-from-identifier/--no-relname-from-identifier",
+    "-r/-R",
+    default=False,
+    help="Derive relation column name from `identifier` property in schema.",
+)
+def create_tables(schema_url: str, db_url: str, relname_from_identifier: bool):
+    """Execute SQLalchemy Table objects.
+
+    Without --relname-from-identifier all column names used to capture relations will have
+    an '_id' postfix. With this option, the postfix is the name of the column they refer too
+    as specified by the `identifier` property in the referred to tables. This currently only works
+    n:1 relations.
+    """
     data = schema_fetch_url_file(schema_url)
     engine = _get_engine(db_url)
     parent_schema = SchemaType(data)
@@ -475,14 +487,31 @@ def create_tables(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data["tables"]:
-        importer.generate_db_objects(table["id"], ind_extra_index=False, ind_tables=True)
+        importer.generate_db_objects(
+            table["id"],
+            ind_extra_index=False,
+            ind_tables=True,
+            relname_from_identifier=relname_from_identifier,
+        )
 
 
 @create.command("all")
 @option_db_url
 @option_schema_url
-def create_all_objects(schema_url, db_url):
-    """Execute SQLalchemy Index (Identifier fields) and Table objects"""
+@click.option(
+    "--relname-from-identifier/--no-relname-from-identifier",
+    "-r/-R",
+    default=False,
+    help="Derive relation column name from `identifier` property in schema.",
+)
+def create_all_objects(schema_url, db_url, relname_from_identifier: bool):
+    """Execute SQLalchemy Index (Identifier fields) and Table objects.
+
+    Without --relname-from-identifier all column names used to capture relations will have
+    an '_id' postfix. With this option, the postfix is the name of the column they refer too
+    as specified by the `identifier` property in the referred to tables. This currently only works
+    n:1 relations.
+    """
     data = schema_fetch_url_file(schema_url)
     engine = _get_engine(db_url)
     parent_schema = SchemaType(data)
@@ -490,7 +519,7 @@ def create_all_objects(schema_url, db_url):
     importer = BaseImporter(dataset_schema, engine)
 
     for table in data["tables"]:
-        importer.generate_db_objects(table["id"])
+        importer.generate_db_objects(table["id"], relname_from_identifier=relname_from_identifier)
 
 
 @diff.command("all")
@@ -508,3 +537,7 @@ def diff_schemas(schema_url, diff_schema_url):
     schemas = schema_defs_from_url(schema_url)
     diff_schemas = schema_defs_from_url(diff_schema_url)
     click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
+
+
+if __name__ == "__main__":
+    main()

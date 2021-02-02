@@ -3,7 +3,7 @@ import operator
 from collections import Counter, UserDict
 from functools import reduce
 from itertools import islice
-from typing import Dict, Optional
+from typing import Dict, Optional, cast
 
 from jsonpath_rw import parse
 from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Table, exc, inspect
@@ -164,10 +164,24 @@ class BaseImporter:
         truncate=False,
         ind_tables=True,
         ind_extra_index=True,
+        relname_from_identifier: bool = False,
     ):
-        """Generate the tablemodels and tables and / or index on identifier
-        as specified in the JSON data schema. As default both table and index
-        creation are set to True.
+        """Generate tables and indices as specified in the JSON Schema.
+
+        Indices are generated based on the ``identifier`` property in the table schema
+        definitions.
+
+        Args:
+            table_name:
+            db_table_name:
+            truncate:
+            ind_tables:
+            ind_extra_index:
+            relname_from_identifier: Whether to derive the column name, used for capturing the
+            relation, from the ``identifier`` property of the table it relates to.
+
+        Note re: ``relname_from_identifier``: this currently only works for n:1 relations.
+
         """
 
         if ind_tables or ind_extra_index:
@@ -185,6 +199,7 @@ class BaseImporter:
                 self.dataset_table,
                 metadata=metadata,
                 db_table_name=self.db_table_name,
+                relname_from_identifier=relname_from_identifier
             )
 
         if ind_tables:
@@ -354,15 +369,22 @@ def table_factory(
     dataset_table: DatasetTableSchema,
     metadata: Optional[MetaData] = None,
     db_table_name=None,
+    relname_from_identifier: bool = False,
 ) -> Dict[str, Table]:
     """Generate one or more SQLAlchemy Table objects to work with the JSON Schema
 
-    :param dataset_table: The Amsterdam Schema definition of the table
-    :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
-    :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
+    Args:
+        dataset_table:  The Amsterdam Schema definition
+        metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
+        db_table_name: Optional table name, which is otherwise inferred from the schema name.
+        relname_from_identifier: Whether to derive the column name, used for capturing the
+            relation, from the ``identifier`` property of the table it relates to.
 
-    The returned tables are keyed on the name of the table. The same goes for the incoming data,
-    so during creation or records, the data can be associated with the correct table.
+    Note re: ``relname_from_identifier``, this currently only works for n:1 relations.
+
+    Returns:
+        Tables keyed on the name of the table.
+
     """
     if db_table_name is None:
         db_table_name = dataset_table.db_name()
@@ -446,7 +468,17 @@ def table_factory(
             col_kwargs["nullable"] = False
             col_kwargs["autoincrement"] = False
 
-        id_postfix = "_id" if field.relation else ""
+        id_postfix = ""
+        if field.relation:
+            id_postfix = "_id"
+            if relname_from_identifier:
+                dataset_id, rel_table_id = map(to_snake_case, field.relation.split(":"))
+                for table in cast(DatasetTableSchema, dataset_table.dataset.tables):
+                    if to_snake_case(table.id) == rel_table_id and len(table.identifier) == 1:
+                        # We don't support composite keys yet -> hence len == 1, as that
+                        # requires a bit more thought with regards to max column name length.
+                        id_postfix = f"_{to_snake_case(table.identifier[0])}"
+                        break
         columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
 
     return {

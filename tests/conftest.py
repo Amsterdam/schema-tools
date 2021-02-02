@@ -21,7 +21,7 @@ pytest_plugins = ["tests.fixtures"]
 
 
 @pytest.fixture(scope="session")
-def db_url():
+def db_url() -> str:
     """Get the DATABASE_URL, prepend test_ to it."""
     url = os.environ.get("DATABASE_URL", "postgresql://localhost/schematools")
 
