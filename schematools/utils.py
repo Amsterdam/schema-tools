@@ -119,6 +119,7 @@ def schema_fetch_url_file(schema_url_file):
     return schema_location
 
 
+@lru_cache(maxsize=500)  # type: ignore
 def toCamelCase(name):
     """
     Unify field/column/dataset name from Space separated/Snake Case/Camel case
@@ -129,7 +130,7 @@ def toCamelCase(name):
     return "".join(w.lower() if i == 0 else w.title() for i, w in enumerate(words))
 
 
-@lru_cache(maxsize=256)  # type: ignore
+@lru_cache(maxsize=500)  # type: ignore
 def to_snake_case(name):
     """
     Convert field/column/dataset name from Space separated/Snake Case/Camel case
