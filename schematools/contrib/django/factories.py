@@ -288,7 +288,13 @@ class FieldMaker:
         *args,
         **kwargs,
     ) -> TypeAndSignature:
-        relation_maker_cls = RelationMaker.fetch_maker(dataset, field)
+        try:
+            relation_maker_cls = RelationMaker.fetch_maker(dataset, field)
+        except ValueError as e:
+            raise ValueError(
+                f"Failed to construct field {dataset.id}.{field.table.id}.{field.name}: {e}"
+            ) from e
+
         if relation_maker_cls is not None:
             relation_maker = relation_maker_cls(
                 dataset, self.table, field, field_cls, *args, **kwargs
