@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import typing
 from typing import TYPE_CHECKING
+
 from simple_singleton import Singleton
 
 if TYPE_CHECKING:
@@ -20,10 +22,10 @@ class DatasetCollection(metaclass=Singleton):
 
     def get_dataset(self, dataset_id: str) -> typing.Optional[DatasetSchema]:
         """ Gets a dataset by id, if not available, load the dataset """
-        dataset = self.datasets_cache.get(dataset_id)
-        if dataset is None:
+        try:
+            return self.datasets_cache[dataset_id]
+        except KeyError:
             # Get the dataset from the SCHEMA_DEFS_URL
             # Only things is that it can differ from the schema that is
             # in the django db model.
-            raise Exception(f"Dataset {dataset_id} is missing.")
-        return dataset
+            raise ValueError(f"Dataset {dataset_id} is missing.") from None
