@@ -1,5 +1,6 @@
 from datetime import date
 
+from schematools.importer.base import BaseImporter
 from schematools.importer.ndjson import NDJSONImporter
 
 
@@ -47,3 +48,26 @@ def test_skip_duplicate_keys_in_db_during_import_with_duplicate_in_next_batch(
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     importer.load_file(ndjson_path)
+
+
+def test_numeric_datatype_scale(here, engine, woningbouwplannen_schema, dbsession):
+    """Prove that when multipleOf is used in schema,
+    it's value is used to set the scale of the numeric datatype"""
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=True)
+    print("-----", woningbouwplannen_schema)
+    record = [
+        dict(r)
+        for r in engine.execute(
+            """
+                                                SELECT data_type, numeric_scale
+                                                FROM information_schema.columns
+                                                WHERE 1=1
+                                                AND table_schema = 'public'
+                                                AND table_name = 'woningbouwplannen_woningbouwplan'
+                                                AND column_name = 'avarage_sales_price';
+                                                """
+        )
+    ]
+    assert record[0]["data_type"] == "numeric"
+    assert record[0]["numeric_scale"] == 4

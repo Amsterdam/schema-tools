@@ -1,5 +1,5 @@
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, Time
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, Numeric, String, Time
 from sqlalchemy.types import ARRAY
 
 from schematools.types import DatasetTableSchema
@@ -41,6 +41,15 @@ JSON_TYPE_TO_PG = {
 }
 
 
+def numeric_datatype_scale(scale_=None):
+    if scale_:
+        scale_ = str(scale_)
+        if "." not in scale_:
+            return Numeric
+        # TODO: make it possible to set percision too
+        return Numeric(precision=12, scale=len(scale_) - scale_.index(".") - 1)
+
+
 def fetch_col_type(field):
     col_type = JSON_TYPE_TO_PG[field.type]
     # XXX no walrus until we can go to python 3.8 (airflow needs 3.7)
@@ -48,6 +57,12 @@ def fetch_col_type(field):
     field_format = field.format
     if field_format is not None:
         return FORMAT_MODELS_LOOKUP[field_format]
+    # TODO: format takes precedence over multipleof
+    # if there is an use case that both can apply for a field definition
+    # then logic must be changed
+    field_multiple = field.multipleof
+    if field_multiple is not None:
+        return numeric_datatype_scale(scale_=field_multiple)
     return col_type
 
 
