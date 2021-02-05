@@ -6,7 +6,9 @@ import typing
 from collections import UserDict
 
 import jsonschema
-from schematools import RELATION_INDICATOR, MAX_TABLE_LENGTH, TMP_TABLE_POSTFIX
+
+from schematools import MAX_TABLE_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
+
 from .datasetcollection import DatasetCollection
 
 
@@ -501,6 +503,10 @@ class DatasetFieldSchema(DatasetType):
     @property
     def format(self) -> typing.Optional[str]:
         return self.get("format")
+
+    @property
+    def multipleof(self) -> typing.Optional[str]:
+        return self.get("multipleOf")
 
     @property
     def is_object(self) -> bool:
