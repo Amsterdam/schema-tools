@@ -38,6 +38,16 @@
             "multipleOf": 0.0001,
             "description": "Gemiddelde verkoopprijs (test)"
           },
+          "avarageSalesPriceIncorrect": {
+            "type": "number",
+            "multipleOf": 9.111,
+            "description": "Gemiddelde verkoopprijs (test)"
+          },
+          "avarageSalesPriceIncorrectZero": {
+            "type": "number",
+            "multipleOf": 0.00,
+            "description": "Gemiddelde verkoopprijs (test)"
+          },
           "buurten": {
             "type": "array",
             "relation": "gebieden:buurten",
