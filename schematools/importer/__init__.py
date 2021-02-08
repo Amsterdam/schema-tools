@@ -1,3 +1,6 @@
+import numbers
+from decimal import Decimal
+
 from geoalchemy2 import Geometry
 from sqlalchemy import Boolean, Date, DateTime, Float, Integer, Numeric, String, Time
 from sqlalchemy.types import ARRAY
@@ -42,12 +45,20 @@ JSON_TYPE_TO_PG = {
 
 
 def numeric_datatype_scale(scale_=None):
-    if scale_:
-        scale_ = str(scale_)
-        if "." not in scale_:
-            return Numeric
+    """detect scale from decimal for database datatype scale definition"""
+    if (
+        isinstance(scale_, numbers.Number)
+        and str(scale_).count("1") == 1
+        and str(scale_).endswith("1")
+    ):
         # TODO: make it possible to set percision too
-        return Numeric(precision=12, scale=len(scale_) - scale_.index(".") - 1)
+        # now it defaults to max of 12
+        get_scale = Decimal(str(scale_)).as_tuple().exponent
+        if get_scale < 0:
+            get_scale = get_scale * -1
+        return Numeric(precision=12, scale=get_scale)
+    else:
+        return Numeric
 
 
 def fetch_col_type(field):

@@ -55,7 +55,6 @@ def test_numeric_datatype_scale(here, engine, woningbouwplannen_schema, dbsessio
     it's value is used to set the scale of the numeric datatype"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=True)
-    print("-----", woningbouwplannen_schema)
     record = [
         dict(r)
         for r in engine.execute(
@@ -71,3 +70,29 @@ def test_numeric_datatype_scale(here, engine, woningbouwplannen_schema, dbsessio
     ]
     assert record[0]["data_type"] == "numeric"
     assert record[0]["numeric_scale"] == 4
+
+
+def test_invalid_numeric_datatype_scale(here, engine, woningbouwplannen_schema, dbsession):
+    """Prove that when invaldi multipleOf i.e. 0.000 is used in schema,
+    the datatype is in that case just plain numeric without scale"""
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=True)
+    record = [
+        dict(r)
+        for r in engine.execute(
+            """
+                                                SELECT data_type, numeric_scale
+                                                FROM information_schema.columns
+                                                WHERE 1=1
+                                                AND table_schema = 'public'
+                                                AND table_name = 'woningbouwplannen_woningbouwplan'
+                                                AND column_name = 'avarage_sales_price_incorrect'
+                                                OR
+                                                column_name = 'avarage_sales_price_incorrect_zero';
+                                                """
+        )
+    ]
+    assert record[0]["data_type"] == "numeric"
+    assert not record[0]["numeric_scale"]
+    assert record[1]["data_type"] == "numeric"
+    assert not record[1]["numeric_scale"]
