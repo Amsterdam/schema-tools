@@ -51,6 +51,8 @@ def apply_schema_and_profile_permissions(
     profiles,
     role,
     scope,
+    set_read_permissions=True,
+    set_write_permissions=True,
     dry_run=False,
     create_roles=False,
     revoke=False,
@@ -65,6 +67,8 @@ def apply_schema_and_profile_permissions(
                 ams_schema,
                 role,
                 scope,
+                set_read_permissions,
+                set_write_permissions,
                 dry_run,
                 create_roles,
                 revoke,
@@ -105,7 +109,32 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
                         engine.execute(grant_statement)
 
 
-def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run, create_roles):
+def set_dataset_write_permissions(session, pg_schema, ams_schema, dry_run, create_roles):
+    grantee = f"write_{ams_schema.id}"
+    if create_roles:
+        _create_role_if_not_exists(session, grantee, dry_run=dry_run)
+    for table in ams_schema.get_tables(include_nested=True, include_through=True):
+        table_name = "{}_{}".format(
+            table.dataset.id, to_snake_case(table.id)
+        )  # een aantal table.id's zijn camelcase
+        table_privileges = ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"]
+        _execute_grant(
+            session,
+            grant(
+                table_privileges,
+                PgObjectType.TABLE,
+                table_name,
+                grantee,
+                grant_option=False,
+                schema=pg_schema,
+            ),
+            dry_run=dry_run,
+        )
+
+
+def set_dataset_read_permissions(
+    session, pg_schema, ams_schema, role, scope, dry_run, create_roles
+):
     grantee = None if role == "AUTO" else role
     if create_roles and grantee:
         _create_role_if_not_exists(session, grantee)
@@ -230,40 +259,68 @@ def create_acl_from_schema(session, pg_schema, ams_schema, role, scope, dry_run,
 
 
 def create_acl_from_schemas(
-    session, pg_schema, schemas, role, scopes, dry_run, create_roles, revoke
+    session,
+    pg_schema,
+    schemas,
+    role,
+    scopes,
+    set_read_permissions,
+    set_write_permissions,
+    dry_run,
+    create_roles,
+    revoke,
 ):
-    #  acl_list = query.get_all_table_acls(engine, schema='public')
-    #  acl_table_list = [item.name for item in acl_list]
-    #  table_names = list()
+    """Create and set the ACL for automatically generated roles based on Amsterdam Schema.
+    Read permissions are granted to roles 'scope_X', where X are scopes found in Amsterdam Schema
+    Write permissions are granted to roles 'write_Y', where Y are dataset ids,
+    for all tables belonging to the dataset.
+    Revoke old privileges before assigning new in case new privileges are more restrictive.
+    """
+
     if revoke:
         if role == "AUTO":
             if isinstance(schemas, DatasetSchema):
                 # for a single dataset
-                _revoke_all_priviliges_from_scope_roles(
+                _revoke_all_privileges_from_read_and_write_roles(
                     session, pg_schema, schemas, dry_run=dry_run
                 )
             else:
-                _revoke_all_priviliges_from_scope_roles(session, pg_schema, dry_run=dry_run)
+                _revoke_all_privileges_from_read_and_write_roles(
+                    session, pg_schema, dry_run=dry_run
+                )
         else:
             if isinstance(schemas, DatasetSchema):
                 # for a single dataset
-                _revoke_all_priviliges_from_role(
+                _revoke_all_privileges_from_role(
                     session, pg_schema, role, schemas, dry_run=dry_run
                 )
             else:
-                _revoke_all_priviliges_from_role(session, pg_schema, role, dry_run=dry_run)
+                _revoke_all_privileges_from_role(session, pg_schema, role, dry_run=dry_run)
 
-    if isinstance(schemas, DatasetSchema):
-        # for a single dataset
-        create_acl_from_schema(session, pg_schema, schemas, role, scopes, dry_run, create_roles)
-    else:
-        for dataset_name, dataset_schema in schemas.items():
-            create_acl_from_schema(
-                session, pg_schema, dataset_schema, role, scopes, dry_run, create_roles
+    if set_read_permissions:
+        if isinstance(schemas, DatasetSchema):
+            # for a single dataset
+            set_dataset_read_permissions(
+                session, pg_schema, schemas, role, scopes, dry_run, create_roles
             )
+        else:
+            for dataset_name, dataset_schema in schemas.items():
+                set_dataset_read_permissions(
+                    session, pg_schema, dataset_schema, role, scopes, dry_run, create_roles
+                )
+
+    if set_write_permissions:
+        if isinstance(schemas, DatasetSchema):
+            # for a single dataset
+            set_dataset_write_permissions(session, pg_schema, schemas, dry_run, create_roles)
+        else:
+            for dataset_name, dataset_schema in schemas.items():
+                set_dataset_write_permissions(
+                    session, pg_schema, dataset_schema, dry_run, create_roles
+                )
 
 
-def _revoke_all_priviliges_from_role(
+def _revoke_all_privileges_from_role(
     session, pg_schema, role, dataset_name=None, echo=True, dry_run=False
 ):
     status_msg = "Skipped" if dry_run else "Executed"
@@ -293,12 +350,20 @@ def _revoke_all_priviliges_from_role(
         session.execute(sql_statement)
 
 
-def _revoke_all_priviliges_from_scope_roles(
+def _revoke_all_privileges_from_read_and_write_roles(
     session, pg_schema, dataset_name=None, echo=True, dry_run=False
 ):
+    """Revoke all privileges that may have been previously granted to the scope_{} and write_{} roles.
+    If dataset_name is provided, revoke only rights to the tables belonging to dataset_name.
+    """
+
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
-    result = session.execute(text(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%'"))
+    result = session.execute(
+        text(
+            r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%' OR rolname LIKE 'write\_%'"  # noqa: E501
+        )
+    )
     for rolname in result:
         if dataset_name:
             # for a single dataset
@@ -319,16 +384,18 @@ def _revoke_all_priviliges_from_scope_roles(
 
 
 def _execute_grant(session, grant_statement, echo=True, dry_run=False):
-    # wrap the grant statement in an anonymous code block to catch reasonable exceptions
-    # we don't want to break out the session just because a table or column doesn't
-    # exist yet or anymore.
+    """Wrap the grant statement in an anonymous code block to catch reasonable exceptions.
+    We don't want to break out of the session just because a table, column, or user doesn't
+    exist.
+    """
+
     status_msg = "Skipped" if dry_run else "Executed"
     sql_statement = (
         "DO $$ "
         "BEGIN "
         f"{grant_statement}; "
         "EXCEPTION"
-        " WHEN undefined_table OR undefined_column"
+        " WHEN undefined_table OR undefined_column OR undefined_object"
         " THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
         "END "
         "$$"
@@ -340,8 +407,10 @@ def _execute_grant(session, grant_statement, echo=True, dry_run=False):
 
 
 def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
-    # wrap the create role statement in an anonymous code block to be able to catch exception
-    # we don't want to break out of the session just because the role already exists
+    """Wrap the create role statement in an anonymous code block to be able to catch exception
+    Don't break out of the session just because the role already exists
+    """
+
     status_msg = "Skipped" if dry_run else "Executed"
     create_role_statement = f"CREATE ROLE {role}"
     if role not in existing_roles:
