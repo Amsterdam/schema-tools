@@ -187,6 +187,18 @@ def permissions_revoke(db_url, role):
     default=False,
     help="Execute SQL statements or dry-run [default]",
 )
+@click.option(
+    "--read/--no-read",
+    "set_read_permissions",
+    default=True,
+    help="Set read permissions [default=read]",
+)
+@click.option(
+    "--write/--no-write",
+    "set_write_permissions",
+    default=True,
+    help="Set dataset-level write permissions [default=write]",
+)
 @click.option("--create-roles", is_flag=True, default=False, help="Create missing postgres roles")
 @click.option(
     "--revoke",
@@ -207,10 +219,13 @@ def permissions_apply(
     execute,
     create_roles,
     revoke,
+    set_read_permissions,
+    set_write_permissions,
 ):
     """Set permissions for a postgres role,
     based on a scope from Amsterdam Schema or Profiles."""
     dry_run = not execute
+
     if auto:
         role = "AUTO"
         scope = "ALL"
@@ -239,6 +254,8 @@ def permissions_apply(
             profiles,
             role,
             scope,
+            set_read_permissions,
+            set_write_permissions,
             dry_run,
             create_roles,
             revoke,
