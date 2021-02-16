@@ -478,19 +478,54 @@ def index_factory(
     In case of temporal data, this will lead to intersection tables a.k.a. through tables to
     accomodate n:m relations.
 
+    FK index:
+    In the JSON schema definition of the table, relations may be 1:N relations definied.
+    Where the child table is referencing a parent table.
+    These reference are not enforced by a database foreign key constraint. But will be
+    used in joins to collect data when calling a API endpoint. Therefore must be indexed
+    for optimal performance.
+
     The returned Index objects are keyed on the name of table
     """
 
     index = dict()
     metadata = metadata or MetaData()
     logger = LogfileLogger(logger) if logger else CliLogger()
+    table_object = metadata.tables[dataset_table.db_name()]
+    indexes_to_create = []
+
+    def make_hash_value(index_name):
+        """
+        Postgres DB holds currently 63 max charakters for objectnames.
+        To prevent exceeds and collisions, the index names are shortend
+        based upon a hash.
+        SHA1 holds a max output of 40 characters
+        """
+        hash = hashlib.sha1()
+        hash.update(bytes(index_name, "utf-8"))
+        index_name = hash.hexdigest() + "_idx"
+        return index_name
+
+    def define_fk_index():
+        """creates an index on the columns that refer to another table as
+        a child (foreign key reference)"""
+
+        if dataset_table.get_fk_fields():
+
+            for field in dataset_table.get_fk_fields():
+                field_name = f"{to_snake_case(field)}_id"
+                index_name = f"{db_table_name}_{field_name}_idx"
+                if len(index_name) > 64:
+                    index_name = make_hash_value(index_name)
+                indexes_to_create.append(Index(index_name, table_object.c[field_name]))
+
+        # add Index objects to create
+        index[db_table_name] = indexes_to_create
 
     def define_identifier_index():
         """ creates index based on the 'identifier' specification in the Amsterdam schema """
 
-        table_object = metadata.tables[dataset_table.db_name()]
         identifier_column_snaked = []
-        indexes_to_create = []
 
         if not indexes_to_create and dataset_table.identifier:
 
@@ -550,15 +585,9 @@ def index_factory(
                     continue
 
                 for column in through_tables["properties"]:
-                    # Postgres DB holds currently 63 max charakters for objectnames.
-                    # To prevent exceeds and collisions,
-                    # the index names are shortend based upon a hash.
-                    # SHA1 holds a max output of 40 characters
                     index_name = table_id + "_" + column + "_idx"
                     if len(index_name) > 63:
-                        hash = hashlib.sha1()
-                        hash.update(bytes(index_name, "utf-8"))
-                        index_name = hash.hexdigest() + "_idx"
+                        index_name = make_hash_value(index_name)
                     try:
                         indexes_to_create.append(Index(index_name, table_object.c[column]))
                     except KeyError as e:
@@ -573,5 +602,6 @@ def index_factory(
     if ind_extra_index:
         define_identifier_index()
         define_throughtable_index()
+        define_fk_index()
 
     return index

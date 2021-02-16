@@ -428,6 +428,17 @@ class DatasetTableSchema(SchemaType):
             db_table_name=db_table_name,
         )
 
+    def get_fk_fields(self):
+        """Generates fields names that contain a 1:N relation to a parent table"""
+        fields_items = self["schema"]["properties"].items()
+        field_schema = (
+            DatasetFieldSchema(_name=name, _parent_table=self, **spec)
+            for name, spec in fields_items
+        )
+        for field in field_schema:
+            if field.relation:
+                yield field.name
+
 
 class DatasetFieldSchema(DatasetType):
     """ A single field (column) in a table """

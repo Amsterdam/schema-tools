@@ -181,3 +181,88 @@ def test_index_troughtables_creation(engine, db_schema):
 
     # Many-to-many tables must have at least one index
     assert number_of_indexes > 0
+
+
+def test_fk_index_creation(engine, db_schema):
+    """Prove that identifier index is created based on schema specificiation """
+
+    test_data = {
+        "type": "dataset",
+        "id": "test",
+        "title": "test table",
+        "status": "beschikbaar",
+        "description": "test table",
+        "version": "0.0.1",
+        "crs": "EPSG:28992",
+        "tables": [
+            {
+                "id": "parent_test",
+                "type": "table",
+                "schema": {
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "additionalProperties": "false",
+                    "required": ["schema", "id"],
+                    "identifier": "id",
+                    "properties": {
+                        "schema": {
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
+                        },
+                        "id": {"type": "string"},
+                    },
+                },
+            },
+            {
+                "id": "child_test",
+                "type": "table",
+                "schema": {
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "additionalProperties": "false",
+                    "required": ["schema"],
+                    "properties": {
+                        "schema": {
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
+                        },
+                        "id": {"type": "string"},
+                        "fkColumnReference": {
+                            "type": "string",
+                            "relation": "test:parent_test",
+                        },
+                    },
+                },
+            },
+        ],
+    }
+
+    data = test_data
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+    ind_index_exists = False
+
+    for table in data["tables"]:
+        if table["id"] == "child_test":
+
+            importer = BaseImporter(dataset_schema, engine)
+            # the generate_table and create index
+            importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
+
+            conn = create_engine(engine.url, client_encoding="UTF-8")
+            meta_data = MetaData(bind=conn, reflect=True)
+            metadata_inspector = inspect(meta_data.bind)
+            indexes = metadata_inspector.get_indexes(
+                f"{parent_schema['id']}_{table['id']}", schema=None
+            )
+            indexes_name = []
+
+            for index in indexes:
+                indexes_name.append(index["name"])
+            if any("fk_column_reference" in i for i in indexes_name):
+                ind_index_exists = True
+            assert ind_index_exists
