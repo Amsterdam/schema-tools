@@ -1,3 +1,4 @@
 RELATION_INDICATOR = "_"
 MAX_TABLE_LENGTH = 63  # limitation of PostgreSQL
 TMP_TABLE_POSTFIX = "_new"
+TABLE_INDEX_POSTFIX = "_idx"

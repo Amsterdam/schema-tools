@@ -8,6 +8,7 @@ from typing import Dict, Optional
 from jsonpath_rw import parse
 from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Table, exc, inspect
 
+from schematools import MAX_TABLE_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
 
@@ -496,15 +497,16 @@ def index_factory(
 
     def make_hash_value(index_name):
         """
-        Postgres DB holds currently 63 max charakters for objectnames.
+        Postgres DB holds currently 63 max characters for objectnames.
         To prevent exceeds and collisions, the index names are shortend
         based upon a hash.
-        SHA1 holds a max output of 40 characters
+        With the blake2s algorithm a digest size is set to 20 bytes,
+        which proceduces a 40 character long heximal string plus
+        the additional 4 character postfix of '_idx' (TABLE_INDEX_POSTFIX).
         """
-        hash = hashlib.sha1()
-        hash.update(bytes(index_name, "utf-8"))
-        index_name = hash.hexdigest() + "_idx"
-        return index_name
+        return (
+            hashlib.blake2s(index_name.encode(), digest_size=20).hexdigest() + TABLE_INDEX_POSTFIX
+        )
 
     def define_fk_index():
         """creates an index on the columns that refer to another table as
@@ -515,7 +517,7 @@ def index_factory(
             for field in dataset_table.get_fk_fields():
                 field_name = f"{to_snake_case(field)}_id"
                 index_name = f"{db_table_name}_{field_name}_idx"
-                if len(index_name) > 64:
+                if len(index_name) > MAX_TABLE_LENGTH:
                     index_name = make_hash_value(index_name)
                 indexes_to_create.append(Index(index_name, table_object.c[field_name]))
 
@@ -585,8 +587,8 @@ def index_factory(
                     continue
 
                 for column in through_tables["properties"]:
-                    index_name = table_id + "_" + column + "_idx"
-                    if len(index_name) > 63:
+                    index_name = table_id + "_" + column + TABLE_INDEX_POSTFIX
+                    if len(index_name) > MAX_TABLE_LENGTH:
                         index_name = make_hash_value(index_name)
                     try:
                         indexes_to_create.append(Index(index_name, table_object.c[column]))
