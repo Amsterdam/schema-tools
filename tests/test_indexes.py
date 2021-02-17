@@ -1,5 +1,6 @@
 from sqlalchemy import MetaData, create_engine, inspect
 
+from schematools import MAX_TABLE_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.importer.base import BaseImporter
 from schematools.types import DatasetSchema, SchemaType
 
@@ -184,7 +185,7 @@ def test_index_troughtables_creation(engine, db_schema):
 
 
 def test_fk_index_creation(engine, db_schema):
-    """Prove that identifier index is created based on schema specificiation """
+    """Prove that index is created on 1:N relational columns based on schema specificiation"""
 
     test_data = {
         "type": "dataset",
@@ -266,3 +267,88 @@ def test_fk_index_creation(engine, db_schema):
             if any("fk_column_reference" in i for i in indexes_name):
                 ind_index_exists = True
             assert ind_index_exists
+
+
+def test_size_of_index_name(engine, db_schema):
+    """Prove that the size of the index name not exceeds then the size
+    for Postgres database object names as defined in MAX_TABLE_LENGTH plus TABLE_INDEX_POSTFIX
+    """
+
+    test_data = {
+        "type": "dataset",
+        "id": "test",
+        "title": "test table",
+        "status": "beschikbaar",
+        "description": "test table",
+        "version": "0.0.1",
+        "crs": "EPSG:28992",
+        "tables": [
+            {
+                "id": "parent_test_size",
+                "type": "table",
+                "schema": {
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "additionalProperties": "false",
+                    "required": ["schema", "id"],
+                    "identifier": "id",
+                    "properties": {
+                        "schema": {
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
+                        },
+                        "id": {"type": "string"},
+                    },
+                },
+            },
+            {
+                "id": "child_test_size",
+                "type": "table",
+                "schema": {
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "additionalProperties": "false",
+                    "required": ["schema"],
+                    "properties": {
+                        "schema": {
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
+                        },
+                        "id": {"type": "string"},
+                        "fkColumnReferenceWithAReallyLongRidiculousNameThatMustBeShortend": {
+                            "type": "string",
+                            "relation": "test:parent_test",
+                        },
+                    },
+                },
+            },
+        ],
+    }
+
+    data = test_data
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+
+    for table in data["tables"]:
+        if table["id"] == "child_test_size":
+
+            importer = BaseImporter(dataset_schema, engine)
+            # the generate_table and create index
+            importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
+
+            conn = create_engine(engine.url, client_encoding="UTF-8")
+            meta_data = MetaData(bind=conn, reflect=True)
+            metadata_inspector = inspect(meta_data.bind)
+            indexes = metadata_inspector.get_indexes(
+                f"{parent_schema['id']}_{table['id']}", schema=None
+            )
+            indexes_name = []
+
+            for index in indexes:
+                indexes_name.append(index["name"])
+            for index_name in indexes_name:
+                assert len(index_name) <= (MAX_TABLE_LENGTH + len(TABLE_INDEX_POSTFIX))
