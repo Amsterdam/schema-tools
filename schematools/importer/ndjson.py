@@ -92,10 +92,13 @@ class NDJSONImporter(BaseImporter):
                     if not row[field.name]:
                         continue
                     for nested_row in row[field.name]:
-                        # XXX we assume an id field in the parent
-                        # Maybe not always true? Add method to types.py?
+                        # When the identifier is compound, we can assume
+                        # that an extra 'id' field will be available, because
+                        # Django cannot live without it.
+                        id_field = dataset_table.identifier
+                        id_field_name = "id" if len(id_field) > 1 else id_field[0]
                         nested_row_record = {}
-                        nested_row_record["parent_id"] = row["id"]
+                        nested_row_record["parent_id"] = row[id_field_name]
                         for sub_field in field.sub_fields:
                             if sub_field.is_temporal:
                                 continue
