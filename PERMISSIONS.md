@@ -1,18 +1,53 @@
 # Permissions at the Database Level
 
-Authorization is set in two different ways:
-- Amsterdam Schema Authorization.  An "auth" field may be set at dataset, tabel, or field level, and contains a string or list of strings of scopes.
-- Profile Authorization (in progress).
+Read authorization for database roles is defined by Amsterdam Schema using the `auth` property.
 
-This document describes how the CLI can be used to set permissions at the database level using these two methods.
+An `auth` property may be set at dataset, table, or field/column level, and contains a string or 
+list of strings of scopes.
+
+The following rules are applied to determine which role has read (`SELECT`) access to what database column:
+
+- For each scope `x` in Amsterdam Schema, an associated postgres role is created with the name `scope_x`.
+- If there is no `auth` specified on dataset, table, or column level, read access is given to 
+  the default role `scope_openbaar`. This scope means the data is publicly readable.
+- If a dataset has an `auth` scope specified, the associated role is given read access to 
+  all columns in all tables within the dataset, unless it is overridden by an `auth` scope 
+  on table or column level.   
+- If a table has an `auth` scope specified, the associated role is given read access to 
+  the whole table, except for those columns that have their own `auth` scope. 
+  Any scope defined at the dataset level is in this case being overruled, and read access to this 
+  particular table denied.
+- If a column has an `auth` role specified, the associated role is given read acces to the column. 
+  Any scope defined at the dataset or table level is in this case being overruled, and read access
+  to this particular column denied.
+  
+In summary, lower level scopes overrule higher level scopes, and priviliges granted to lower level scopes
+are taken away from higher level scopes. The field/column level is lowest, dataset is highest. A 
+typical use case is a dataset with a broad scope and accessible to a large group of people, while 
+certain privacy sensitive tables or columns have a more restricted access with a more narrow scope.
+
+For each dataset, a write role is created with the name `write_{dataset.id}`, with `INSERT`, `UPDATE`, `DELETE`, 
+`TRUNCATE`, and `REFERENCES` priviliges. These roles may be granted to a particular user to allow writing
+data to existing tables. It should be noted that the write roles do not have the `SELECT` privilege,
+since that would bypass the previously discussed mechanism for assigning read privileges by 
+Amsterdam Schema. 
+
+For a user to update data in dataset `X` with scope `Y`, she would need to have been granted both the
+`write_X` and `scope_Y` roles, because updating requires both `UPDATE` and `SELECT` privileges.
 
 
 ## CLI
 
+For a complete overview of CLI options use the `--help` option.
+
 Examples of CLI usage:
 
-### Postgres user authorization 
+### Typical use case to create and/or update all read and write roles
+```shell script
+schema permissions apply --auto --revoke --create-roles --execute
+````
 
+### Postgres user authorization
 ```shell script
 schema permissions apply tests/files/gebieden_auth.json tests/files/profiles/gebieden_test.json level_b_user LEVEL/B
 ```
