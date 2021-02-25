@@ -385,8 +385,12 @@ def table_factory(
                 )
 
                 if field.is_nested_table:
-                    # We assume parent has an id field, Django needs it
-                    fk_column = f"{db_table_name}.id"
+                    # When the identifier is compound, we can assume
+                    # that an extra 'id' field will be available, because
+                    # Django cannot live without it.
+                    id_field = dataset_table.identifier
+                    id_field_name = "id" if len(id_field) > 1 else id_field[0]
+                    fk_column = f"{db_table_name}.{id_field_name}"
                     sub_columns = [
                         Column("id", Integer, primary_key=True),
                         Column("parent_id", ForeignKey(fk_column, ondelete="CASCADE")),
