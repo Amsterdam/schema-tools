@@ -55,6 +55,7 @@ class GeoJSONImporter(BaseImporter):
             field.name for field in dataset_table.fields if field.relation is not None
         ]
         for feature in features:
+            wkt = ""
             if main_geometry is not None:
                 wkt = shape(feature["geometry"]).wkt
             record = dict(

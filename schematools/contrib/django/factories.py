@@ -11,9 +11,8 @@ from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,
-    get_db_table_name,
 )
-from schematools.utils import to_snake_case
+from schematools.utils import to_snake_case, get_through_table_name
 
 from .models import (
     FORMAT_MODELS_LOOKUP,
@@ -126,11 +125,11 @@ class RelationMaker:
 
     def _make_through_classname(self, dataset_id, field_name):
         snakecased_fieldname = to_snake_case(field_name)
-        through_table_id = get_db_table_name(self.table, snakecased_fieldname)
-        # dso-api expects the dataset_id seperated from the table_id by a point
-        table_id = "_".join(through_table_id.split("_")[1:])
-        dataset_id = through_table_id.split("_")[0]
-        return f"{dataset_id}.{table_id}"
+        through_table_id = get_through_table_name(
+            len(dataset_id) + 1, self.table.name, snakecased_fieldname
+        )
+        # dso-api expects the dataset_id separated from the table_id by a point
+        return f"{dataset_id}.{through_table_id}"
 
     @property
     def field_cls(self):
@@ -201,7 +200,7 @@ class FKRelationMaker(RelationMaker):
         kwargs["db_column"] = f"{to_snake_case(self.field.name)}_id"
         kwargs["db_constraint"] = False  # relation is not mandatory
         if self.field._parent_table.has_parent_table:
-            kwargs["related_name"] = self.field._parent_table["originalID"]
+            kwargs["related_name"] = to_snake_case(self.field._parent_table["originalID"])
         else:
             kwargs["related_name"] = self._fetch_related_name_for_backward_relations()
         return {**super().field_kwargs, **kwargs}
@@ -342,7 +341,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
     app_label = dataset.id
     base_app_name = base_app_name or "dso_api.dynamic_api"
     module_name = f"{base_app_name}.{app_label}.models"
-    model_name = to_snake_case(table.id)
+    model_name = to_snake_case(table.name)
     display_field = to_snake_case(table.display_field) if table.display_field else None
     is_temporal = table.is_temporal
 
@@ -390,7 +389,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
         (),
         {
             "managed": False,
-            "db_table": get_db_table_name(table),
+            "db_table": table.db_name(),
             "app_label": app_label,
             "verbose_name": table.id.title(),
             "ordering": [to_snake_case(fn) for fn in table.identifier],

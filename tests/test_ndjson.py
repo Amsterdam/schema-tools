@@ -157,3 +157,40 @@ def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema
     records = [dict(r) for r in engine.execute("SELECT * from baggob_woonplaatsen ORDER BY id")]
     assert len(records) == 2
     assert records[1]["status_code"] is None
+
+
+def test_ndjson_import_with_shortnames_in_schema(here, engine, hr_schema, dbsession):
+    """ Prove that data for schemas with shortnames for tables/fields is imported correctly. """
+    ndjson_path = here / "files" / "data" / "hr.ndjson"
+    importer = NDJSONImporter(hr_schema, engine)
+    importer.generate_db_objects(
+        "maatschappelijkeactiviteiten", truncate=True, ind_extra_index=False
+    )
+    importer.load_file(ndjson_path)
+    records = [dict(r) for r in engine.execute("SELECT * from hr_activiteiten")]
+    assert len(records) == 1
+    assert records[0]["kvknummer"] == "90004213"
+
+    records = [
+        dict(r) for r in engine.execute("SELECT * from hr_activiteiten_sbi_maatschappelijk")
+    ]
+    assert len(records) == 1
+    assert records[0] == {"parent_id": "90004213", "bronwaarde": 1130, "id": 1}
+
+    records = [
+        dict(r)
+        for r in engine.execute(
+            "SELECT * from hr_activiteiten_heeft_sbi_activiteiten_voor_onderneming"
+        )
+    ]
+    assert len(records) == 1
+    assert records[0] == {"parent_id": "90004213", "bronwaarde": 1131, "id": 1}
+
+    records = [dict(r) for r in engine.execute("SELECT * from hr_activiteiten_verblijfsobjecten")]
+    assert len(records) == 1
+    assert records[0] == {
+        "activiteiten_id": "90004213",
+        "verblijfsobjecten_id": "01001.1",
+        "verblijfsobjecten_identificatie": "01001",
+        "verblijfsobjecten_volgnummer": 1,
+    }

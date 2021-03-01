@@ -103,3 +103,8 @@ def brp_r_profile_schema(here) -> ProfileSchema:
 @pytest.fixture()
 def brk_schema(schema_json) -> DatasetSchema:
     return DatasetSchema.from_dict(schema_json("brk.json"))
+
+
+@pytest.fixture()
+def hr_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("hr.json"))
