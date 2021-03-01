@@ -1,4 +1,6 @@
-RELATION_INDICATOR = "_"
-MAX_TABLE_LENGTH = 63  # limitation of PostgreSQL
-TMP_TABLE_POSTFIX = "_new"
-TABLE_INDEX_POSTFIX = "_idx"
+from typing import Final
+
+RELATION_INDICATOR: Final[str] = "_"
+MAX_TABLE_LENGTH: Final[int] = 63  # limitation of PostgreSQL
+TMP_TABLE_POSTFIX: Final[str] = "_new"
+TABLE_INDEX_POSTFIX: Final[str] = "_idx"

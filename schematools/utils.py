@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Dict
+from typing import Dict, Final, Pattern
 
 import requests
 from cachetools.func import lru_cache, ttl_cache
@@ -10,7 +10,7 @@ from string_utils import slugify
 
 from . import RELATION_INDICATOR, types
 
-re_camel_case = re.compile(
+RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
 )
 
@@ -126,7 +126,7 @@ def toCamelCase(name):
     to camelCase.
     """
     name = " ".join(name.split("_"))
-    words = re_camel_case.sub(r" \1", name).strip().lower().split(" ")
+    words = RE_CAMEL_CASE.sub(r" \1", name).strip().lower().split(" ")
     return "".join(w.lower() if i == 0 else w.title() for i, w in enumerate(words))
 
 
@@ -140,6 +140,5 @@ def to_snake_case(name):
     # Also preserve RELATION_INDICATOR in names (RELATION_INDICATOR are used for object relations)
     name_parts = [toCamelCase(part) for part in name.split(RELATION_INDICATOR)]
     return RELATION_INDICATOR.join(
-        slugify(re_camel_case.sub(r" \1", part).strip().lower(), separator="_")
-        for part in name_parts
+        slugify(RE_CAMEL_CASE.sub(r" \1", part).strip(), separator="_") for part in name_parts
     )
