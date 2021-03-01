@@ -1,6 +1,6 @@
 from sqlalchemy import MetaData, create_engine, inspect
 
-from schematools import MAX_TABLE_LENGTH, TABLE_INDEX_POSTFIX
+from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.importer.base import BaseImporter
 from schematools.types import DatasetSchema, SchemaType
 
@@ -271,7 +271,7 @@ def test_fk_index_creation(engine, db_schema):
 
 def test_size_of_index_name(engine, db_schema):
     """Prove that the size of the index name not exceeds then the size
-    for Postgres database object names as defined in MAX_TABLE_LENGTH plus TABLE_INDEX_POSTFIX
+    for Postgres database object names as defined in MAX_TABLE_NAME_LENGTH plus TABLE_INDEX_POSTFIX
     """
 
     test_data = {
@@ -351,4 +351,4 @@ def test_size_of_index_name(engine, db_schema):
             for index in indexes:
                 indexes_name.append(index["name"])
             for index_name in indexes_name:
-                assert len(index_name) <= (MAX_TABLE_LENGTH + len(TABLE_INDEX_POSTFIX))
+                assert len(index_name) <= (MAX_TABLE_NAME_LENGTH + len(TABLE_INDEX_POSTFIX))
