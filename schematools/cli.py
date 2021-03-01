@@ -1,4 +1,5 @@
 import json
+import sys
 
 import click
 import jsonschema
@@ -6,6 +7,8 @@ import requests
 from deepdiff import DeepDiff
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
+
+from schematools.validation import Validator
 
 from .db import (
     create_meta_table_data,
@@ -287,7 +290,7 @@ def diff():
 @schema.command()
 @click.argument("meta_schema_url")
 @click.argument("schema_location")
-def validate(meta_schema_url, schema_location):
+def validate(meta_schema_url: str, schema_location: str) -> None:
     """Validate a JSON file against the amsterdam schema meta schema.
     schema_location can be a url or a filesystem path.
     """
@@ -305,11 +308,28 @@ def validate(meta_schema_url, schema_location):
     schema = _fetch_json(meta_schema_url)
     instance = _fetch_json(schema_location)
 
+    structural_errors = False
     try:
+        click.echo("Structural validation: ", nl=False)
         jsonschema.validate(instance=instance, schema=schema)
     except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
-        click.echo(str(e), err=True)
-        exit(1)
+        structural_errors = True
+        click.echo(f"\n{e!s}", err=True)
+    else:
+        click.echo("success!")
+
+    dataset = _get_dataset_schema(meta_schema_url, schema_location)
+    click.echo("Semantic validation: ", nl=False)
+    semantic_errors = False
+    validator = Validator(dataset=dataset)
+    for error in validator.run_all():
+        semantic_errors = True
+        click.echo(f"\n{error!s}", err=True)
+    if not semantic_errors:
+        click.echo("success!")
+
+    if structural_errors or semantic_errors:
+        sys.exit(1)
 
 
 @show.command("provenance")

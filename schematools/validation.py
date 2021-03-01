@@ -1,0 +1,149 @@
+"""Semantic JSON schema validation.
+
+This package provides a simple :class:`Validator` class
+that allows us to perform semantic validation
+on a given JSON schema.
+
+Semantic validation is different from structural validation,
+as performed by the :module:`jsonschema`,
+in that it takes into account the implied logic behind a JSON schema.
+For instance,
+we might indicate that what identifies a table
+is a set of properties (columns).
+In Amsterdam Schema this is done using the ``identifier`` property
+that can take an array of property names.
+Structural validation cannot verify that the properties specified in that array
+actually do exist in the schema.
+Semantic validation can and should.
+
+Specific semantic validations are created by subclassing :class:`Validator`
+and overriding the :meth:`Validator.validate` method.
+Simply by means of subclassing,
+the new validator is automatically registered.
+Registered validator classes will all be run
+when :meth:`Validator.run_all()` is invoked.
+
+.. note::
+
+   For the registration to work
+   all :class:`Validator` subclasses need to be parsed by the Python interpreter.
+   This can be achieved by importing the module they reside in.
+
+Example:
+    The following will run all registered validators
+    on a dataset ``dataset``.
+    Any validation errors are printed to ``stdout``::
+
+        dataset = _get_dataset_schema(meta_schema_url, schema_location)
+        validator = Validator(dataset=dataset)
+        for error in validator.run_all():
+            print(error)
+
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import ClassVar, Iterator, List, Type, final
+
+from schematools import MAX_TABLE_NAME_LENGTH
+from schematools.types import DatasetSchema
+from schematools.utils import to_snake_case
+
+
+@dataclass(frozen=True)
+class ValidationError:
+    """Capture validation errors."""
+
+    validator_name: str
+    message: str
+
+    def __str__(self) -> str:
+        return f"[{self.validator_name}] {self.message}"
+
+
+class ValidationException(Exception):
+    """Raised when validation fails to execute.
+
+    .. note::
+
+       This is not for validation errors. See :class:`ValidationError` instead.
+    """
+
+    message: str
+
+    def __init__(self, message: str) -> None:
+        super().__init__(*message)
+        self.message = message
+
+
+class Validator:
+    """Base class for validators.
+
+    Not only is this a base class for validators,
+    it is also used for running all registered validators.
+    See Also: :meth:`run_all`
+
+    Registration is a side-effect of overriding this base class.
+
+    """
+
+    _registry: ClassVar[List[Type[Validator]]] = []
+    dataset: DatasetSchema
+
+    @classmethod
+    def __init_subclass__(cls: Type[Validator]) -> None:
+        """Register sub classes."""
+        super().__init_subclass__()
+        cls._registry.append(cls)
+
+    def __init__(self, dataset: DatasetSchema) -> None:
+        """Initialize the validator with a dataset.
+
+        Args:
+            dataset: The dataset to run the validations on.
+        """
+        self.dataset = dataset
+
+    def validate(self) -> Iterator[ValidationError]:
+        """Run validation."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__}.{self.validate.__name__} should be overridden in "
+            f"subclasses and called from there."
+        )
+
+    @final
+    def run_all(self) -> Iterator[ValidationError]:
+        """Run all registered validators.
+
+        Yields:
+            :class:`ValidationError`s if any.
+
+        """
+        for validator_cls in self._registry:
+            validator_inst = validator_cls(dataset=self.dataset)
+            yield from validator_inst.validate()
+
+
+class PsqlIdentifierLengthValidator(Validator):
+    """Validate inferred PostgreSQL table names for not exceeding max length.
+
+    PostgreSQL has a maximum length for identifiers such as table names.
+    We infer table names from dataset and table ids in the schemas.
+    Those inferred table names should not exceed the max identifier length
+    supported by PostgreSQL.
+    """
+
+    def validate(self) -> Iterator[ValidationError]:
+        for table in self.dataset.get_tables(include_nested=True, include_through=True):
+            # `table_name` should probably be a property on `DatasetTableSchema`.
+            # There already is a `db_name` property however it truncates the inferred
+            # table name to prevent exceeding the PostgreSQL limit. Hence it cannot
+            # be used for validation purposes.
+            table_name = to_snake_case("_".join((self.dataset.id, table.id)))
+            if (length := len(table_name)) > MAX_TABLE_NAME_LENGTH:
+                excess = length - MAX_TABLE_NAME_LENGTH
+                yield ValidationError(
+                    self.__class__.__name__,
+                    f"Inferred PostgreSQL table name '{table_name}' is '{excess}' characters too "
+                    f"long. Maximum table name length is '{MAX_TABLE_NAME_LENGTH}'.",
+                )
