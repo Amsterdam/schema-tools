@@ -1,6 +1,6 @@
 .PHONY: install
 install:
-	pip install -e .
+	pip install -e '.[tests]'
 	pip install pre-commit
 	pre-commit install
 

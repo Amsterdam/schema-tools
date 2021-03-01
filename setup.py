@@ -2,11 +2,13 @@
 import io
 import os
 import re
+from pathlib import Path
+from typing import Union
 
 from setuptools import find_packages, setup
 
 
-def read(filename):
+def read(filename: Union[Path, str]) -> str:
     filename = os.path.join(os.path.dirname(__file__), filename)
     text_type = type(u"")
     with io.open(filename, mode="r", encoding="utf-8") as fd:
@@ -45,7 +47,17 @@ setup(
     ],
     extras_require={
         "tests": [
+            "mypy",
             "flake8",
+            "flake8-bandit",  # security checks
+            "flake8-bugbear",  # assorted opinionated checks
+            "flake8-builtins",  # check for name collision with builtins
+            "flake8-comprehensions",
+            "flake8-docstrings",
+            "flake8-implicit-str-concat",
+            "flake8-print",
+            "flake8-rst",  # Allows run flake8 on code snippets in docstrings or rst files
+            "flake8-string-format",
             "pytest",
             "pytest-cov",
             "pytest-django",

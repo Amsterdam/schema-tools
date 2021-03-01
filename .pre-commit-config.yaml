@@ -17,7 +17,23 @@ repos:
           - flake8-debugger == 3.2.1
           - flake8-colors == 0.1.6
           - flake8-raise == 0.0.5
-
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.4.0
+    hooks:
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: debug-statements
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.812
+    hooks:
+      - id: mypy
+        language_version: python3
   - repo: https://github.com/pycqa/isort
     rev: 5.7.0
     hooks:
