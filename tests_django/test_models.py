@@ -153,6 +153,26 @@ def test_table_name_creation_n_m_relation(brk_schema, verblijfsobjecten_schema):
     # The through table is created
     # beware! the letter 't' is missing in the table name on purpose
     # currently the table name is maxed to 63 karakters minus 4 karakters
-    # (because of the temp table which adde the postfix _new to the table name)
+    # (because of the temp table which adds the postfix _new to the table name)
     through_table_name = "kadastraleobjecten_heeft_een_relatie_met_verblijfsobjec"
     assert through_table_name in model_dict
+
+
+def test_table_shortname(hr_schema, verblijfsobjecten_schema):
+    """Prove that the shortnames definition for tables and fields
+    are showing up in the Django model definitions.
+    We changed the table name to 'activiteiten'.
+    And used a shortname for a nested and for a relation field.
+    """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(hr_schema, base_app_name="dso_api.dynamic_api")
+    }
+    model_names = {
+        "activiteiten",
+        "activiteiten_sbi_maatschappelijk",
+        "activiteiten_heeft_sbi_activiteiten_voor_onderneming",
+        "activiteiten_verblijfsobjecten",
+    }
+
+    assert model_names == set(model_dict.keys())

@@ -22,7 +22,6 @@ from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
     ProfileSchema,
-    get_db_table_name,
 )
 from schematools.utils import to_snake_case
 
@@ -373,7 +372,7 @@ class DatasetTable(models.Model):
     def save_for_schema(self, table: DatasetTableSchema):
         """Save changes to the dataset table."""
         self.name = to_snake_case(table.id)
-        self.db_table = get_db_table_name(table)
+        self.db_table = table.db_name()
         self.auth = _serialize_claims(table)
         self.display_field = to_snake_case(table.display_field) if table.display_field else None
         self.enable_geosearch = (

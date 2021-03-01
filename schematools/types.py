@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, Unio
 
 import jsonschema
 
-from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
+from schematools import RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
 
 
@@ -163,8 +163,12 @@ class DatasetSchema(SchemaType):
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
         # Map Arrays into tables.
+        from schematools.utils import to_snake_case, get_through_table_name
+
+        snakecased_fieldname = to_snake_case(field.name)
+        sub_table_id = get_through_table_name(len(self.id) + 1, table.name, snakecased_fieldname)
         sub_table_schema = {
-            "id": f"{table.id}_{field.name}",
+            "id": sub_table_id,
             "originalID": field.name,
             "type": "table",
             "schema": {
@@ -186,18 +190,19 @@ class DatasetSchema(SchemaType):
     def build_through_table(
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
-        from schematools.utils import to_snake_case
+        from schematools.utils import to_snake_case, get_through_table_name
 
         # Build the through_table for n-m relation
+        # For relations, we have to use the real ids of the tables
+        # and not the shortnames
         left_dataset = to_snake_case(self.id)
         left_table = to_snake_case(table.id)
         right_dataset, right_table = [
             to_snake_case(part) for part in field.nm_relation.split(":")[:2]
         ]
         snakecased_fieldname = to_snake_case(field.name)
-        table_id = get_db_table_name(table, snakecased_fieldname)
-        # dso-api expects the dataset_id (as prefix) not part of the table_id
-        table_id = "_".join(table_id.split("_")[1:])
+        table_id = get_through_table_name(len(self.id) + 1, table.name, snakecased_fieldname)
+
         sub_table_schema = {
             "id": table_id,
             "type": "table",
@@ -276,6 +281,10 @@ class DatasetTableSchema(SchemaType):
             raise ValueError("Invalid JSON-schema contents of table")
 
     @property
+    def name(self) -> Optional[str]:
+        return self.get("shortname", self.id)
+
+    @property
     def dataset(self) -> Optional[DatasetSchema]:
         """The dataset that this table is part of."""
         return self._parent_schema
@@ -283,9 +292,9 @@ class DatasetTableSchema(SchemaType):
     @property
     def fields(self) -> Iterator[DatasetFieldSchema]:
         required = set(self["schema"]["required"])
-        for name, spec in self["schema"]["properties"].items():
+        for id_, spec in self["schema"]["properties"].items():
             field_schema = DatasetFieldSchema(
-                _name=name, _parent_table=self, _required=(name in required), **spec
+                _id=id_, _parent_table=self, _required=(id_ in required), **spec
             )
             # Add extra fields for relations of type object
             # These fields are added to identify the different
@@ -298,16 +307,16 @@ class DatasetTableSchema(SchemaType):
         # If compound key, add PK field
         # XXX we should check for an existing "id" field, avoid collisions
         if self.has_compound_key:
-            yield DatasetFieldSchema(_name="id", _parent_table=self, _required=True, type="string")
+            yield DatasetFieldSchema(_id="id", _parent_table=self, _required=True, type="string")
 
-    def get_fields_by_id(self, field_names: List[str]) -> Iterator[DatasetFieldSchema]:
+    def get_fields_by_id(self, field_ids: List[str]) -> Iterator[DatasetFieldSchema]:
         for field in self.fields:
-            if field.name in set(field_names):
+            if field.id in set(field_ids):
                 yield field
 
-    def get_field_by_id(self, field_name) -> Optional[DatasetFieldSchema]:
+    def get_field_by_id(self, field_id) -> Optional[DatasetFieldSchema]:
         for field_schema in self.fields:
-            if field_schema.name == field_name:
+            if field_schema.id == field_id:
                 return field_schema
 
     def get_through_tables_by_id(self) -> List[DatasetTableSchema]:
@@ -410,27 +419,20 @@ class DatasetTableSchema(SchemaType):
         """Indicates if table is an nested table"""
         return self.nested_table
 
-    def db_name(
-        self, through_table_field_name: Optional[str] = None, db_table_name: Optional[str] = None
-    ) -> str:
-        """Returns the database implementation name of a table.
-        TODO: Get database name from the JSON schema specification by defining 'shortname'.
-        For now using existing function that is already used in the GOB data (NDJson files)
+    def db_name(self) -> str:
+        """Returns the tablename for the database, prefixed with the schemaname.
+        NB. self.name could have been changed by a 'shortname' in the schema.
         """
-        # for n:m tables, use the relating field_name as part of DB table name
-        # i.e. heeft_verblijfsobjecten
-        return get_db_table_name(
-            self,
-            through_table_field_name=through_table_field_name,
-            db_table_name=db_table_name,
-        )
+
+        from schematools.utils import to_snake_case
+
+        return to_snake_case(f"{self.dataset.id}_{self.name}")
 
     def get_fk_fields(self) -> Iterator[str]:
         """Generates fields names that contain a 1:N relation to a parent table"""
         fields_items = self["schema"]["properties"].items()
         field_schema = (
-            DatasetFieldSchema(_name=name, _parent_table=self, **spec)
-            for name, spec in fields_items
+            DatasetFieldSchema(_id=_id, _parent_table=self, **spec) for _id, spec in fields_items
         )
         for field in field_schema:
             if field.relation:
@@ -443,7 +445,7 @@ class DatasetFieldSchema(DatasetType):
     def __init__(
         self,
         *args,
-        _name=None,
+        _id=None,
         _parent_table=None,
         _parent_field=None,
         _required=None,
@@ -451,7 +453,7 @@ class DatasetFieldSchema(DatasetType):
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
-        self._name = _name
+        self._id = _id
         self._parent_table = _parent_table
         self._parent_field = _parent_field
         self._required = _required
@@ -468,8 +470,13 @@ class DatasetFieldSchema(DatasetType):
         return self._parent_field
 
     @property
-    def name(self) -> str:
-        return self._name
+    def id(self) -> Optional[str]:
+        return self._id
+
+    @property
+    def name(self) -> Optional[str]:
+        """ If there is a 'shortname' in the field schema, it overrides the name """
+        return self.get("shortname", self._id)
 
     @property
     def description(self) -> Optional[str]:
@@ -565,13 +572,13 @@ class DatasetFieldSchema(DatasetType):
         if relation is not None or nm_relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
 
-        for name, spec in properties.items():
-            field_name = f"{field_name_prefix}{name}"
+        for id_, spec in properties.items():
+            field_id = f"{field_name_prefix}{id_}"
             yield DatasetFieldSchema(
-                _name=field_name,
+                _id=field_id,
                 _parent_table=self._parent_table,
                 _parent_field=self,
-                _required=(name in required),
+                _required=(id_ in required),
                 **spec,
             )
 
@@ -601,7 +608,7 @@ class DatasetFieldSchema(DatasetType):
                     for dimension_fieldname in dimension_fieldnames:
                         field_name = f"{field_name_prefix}{dimension_fieldname}"
                         yield DatasetFieldSchema(
-                            _name=field_name,
+                            _id=field_name,
                             _parent_table=self._parent_table,
                             _parent_field=self,
                             _required=False,
@@ -759,23 +766,3 @@ class ProfileTableSchema(DatasetType):
             ]
         """
         return self.get("mandatoryFilterSets", [])
-
-
-def get_db_table_name(
-    table: DatasetTableSchema,
-    through_table_field_name: Optional[str] = None,
-    db_table_name: Optional[str] = None,
-) -> str:
-    """Generate the table name for a database schema."""
-    # import within function to avoid a circular import with utils.py
-    from schematools.utils import to_snake_case
-
-    dataset = table._parent_schema
-    app_label = dataset.id
-    table_id = table.id
-    if db_table_name is None:
-        db_table_name = f"{app_label}_{table_id}"
-    through_table_field_name = "_" + through_table_field_name if through_table_field_name else ""
-    return to_snake_case(f"{db_table_name}{through_table_field_name}").replace("-", "_")[
-        : MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX)
-    ]

@@ -10,7 +10,7 @@ from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Tab
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.types import DatasetSchema, DatasetTableSchema
-from schematools.utils import to_snake_case
+from schematools.utils import to_snake_case, shorten_name
 
 from . import fetch_col_type
 
@@ -380,9 +380,7 @@ def table_factory(
 
         try:
             if field.is_array_of_objects:
-                sub_table_id = dataset_table.db_name(
-                    through_table_field_name=field_name, db_table_name=db_table_name
-                )
+                sub_table_id = shorten_name(f"{db_table_name}_{field_name}")
 
                 if field.is_nested_table:
                     # When the identifier is compound, we can assume
@@ -400,7 +398,7 @@ def table_factory(
                     # We need a 'through' table for the n-m relation
                     sub_columns = [
                         Column(
-                            f"{dataset_table.id}_id",
+                            f"{dataset_table.name}_id",
                             String,
                         ),
                         Column(

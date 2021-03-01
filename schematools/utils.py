@@ -8,7 +8,7 @@ import requests
 from cachetools.func import lru_cache, ttl_cache
 from string_utils import slugify
 
-from . import RELATION_INDICATOR, types
+from . import MAX_TABLE_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
 
 RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
@@ -142,3 +142,15 @@ def to_snake_case(name):
     return RELATION_INDICATOR.join(
         slugify(RE_CAMEL_CASE.sub(r" \1", part).strip(), separator="_") for part in name_parts
     )
+
+
+def get_through_table_name(prefix_length: int, table_name: str, through_name: str) -> str:
+    """Create through table name from table_name and an extra fieldname.
+    Take length of prefix (dataset.id) into account, postgresql has maxsize for tablenames."""
+    through_table_name = f"{table_name}_{through_name}"
+    return through_table_name[: MAX_TABLE_LENGTH - len(TMP_TABLE_POSTFIX) - prefix_length]
+
+
+def shorten_name(db_table_name: str) -> str:
+    """ Utility function to shorten names to safe length for postgresql """
+    return db_table_name[: MAX_TABLE_LENGTH - len(TMP_TABLE_POSTFIX)]
