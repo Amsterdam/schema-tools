@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, Unio
 
 import jsonschema
 
-from schematools import MAX_TABLE_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
+from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
 from schematools.datasetcollection import DatasetCollection
 
 
@@ -777,5 +777,5 @@ def get_db_table_name(
         db_table_name = f"{app_label}_{table_id}"
     through_table_field_name = "_" + through_table_field_name if through_table_field_name else ""
     return to_snake_case(f"{db_table_name}{through_table_field_name}").replace("-", "_")[
-        : MAX_TABLE_LENGTH - len(TMP_TABLE_POSTFIX)
+        : MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX)
     ]

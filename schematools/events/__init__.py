@@ -12,7 +12,7 @@ from typing import Callable, Dict, List, Optional
 
 from sqlalchemy import Column, ForeignKey, Integer, MetaData, String, Table
 
-from schematools import MAX_TABLE_LENGTH
+from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.importer import fetch_col_type, get_table_name
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
@@ -458,7 +458,7 @@ def tables_factory(
             if field.type.endswith("#/definitions/schema"):
                 continue
             field_name = to_snake_case(field.name)
-            sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
+            sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]
             sub_columns = []
 
             try:

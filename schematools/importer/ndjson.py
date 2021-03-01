@@ -3,7 +3,7 @@ import json
 import ndjson
 from shapely.geometry import shape
 
-from schematools import MAX_TABLE_LENGTH, RELATION_INDICATOR
+from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR
 from schematools.utils import to_snake_case
 
 from . import get_table_name
@@ -106,7 +106,7 @@ class NDJSONImporter(BaseImporter):
                             nested_row_record[sub_field_name] = nested_row.get(sub_field.name)
                         nested_row_records.append(nested_row_record)
 
-                    sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
+                    sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]
                     sub_rows[sub_table_id] = nested_row_records
 
                 for (nm_relation_field_name, field) in nm_relation_field_info:
@@ -149,7 +149,7 @@ class NDJSONImporter(BaseImporter):
                             through_row_record[f"{field_name}_id"] = to_fk
                             through_row_records.append(through_row_record)
 
-                        sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_LENGTH]
+                        sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]
                         sub_rows[sub_table_id] = through_row_records
 
                     del row[nm_relation_field_name]

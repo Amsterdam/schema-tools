@@ -8,7 +8,7 @@ from typing import Dict, Optional
 from jsonpath_rw import parse
 from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Table, exc, inspect
 
-from schematools import MAX_TABLE_LENGTH, TABLE_INDEX_POSTFIX
+from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
 
@@ -521,7 +521,7 @@ def index_factory(
             for field in dataset_table.get_fk_fields():
                 field_name = f"{to_snake_case(field)}_id"
                 index_name = f"{db_table_name}_{field_name}_idx"
-                if len(index_name) > MAX_TABLE_LENGTH:
+                if len(index_name) > MAX_TABLE_NAME_LENGTH:
                     index_name = make_hash_value(index_name)
                 indexes_to_create.append(Index(index_name, table_object.c[field_name]))
 
@@ -592,7 +592,7 @@ def index_factory(
 
                 for column in through_tables["properties"]:
                     index_name = table_id + "_" + column + TABLE_INDEX_POSTFIX
-                    if len(index_name) > MAX_TABLE_LENGTH:
+                    if len(index_name) > MAX_TABLE_NAME_LENGTH:
                         index_name = make_hash_value(index_name)
                     try:
                         indexes_to_create.append(Index(index_name, table_object.c[column]))
