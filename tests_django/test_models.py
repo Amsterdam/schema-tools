@@ -11,7 +11,7 @@ def test_model_factory_fields(afval_schema):
     table = afval_schema.tables[0]
     model_cls = model_factory(table, base_app_name="dso_api.dynamic_api")
     meta = model_cls._meta
-    assert set(f.name for f in meta.get_fields()) == {
+    assert {f.name for f in meta.get_fields()} == {
         "id",
         "cluster",
         "serienummer",
@@ -80,7 +80,7 @@ def test_model_factory_temporary_1_n_relation(ggwgebieden_schema, gebieden_schem
         "ligtinstadsdeel_identificatie",
         "ligtinstadsdeel_volgnummer",
     }
-    assert set(f.name for f in model_dict["ggwgebieden"]._meta.fields) > related_temporary_fields
+    assert {f.name for f in model_dict["ggwgebieden"]._meta.fields} > related_temporary_fields
 
 
 def test_model_factory_temporary_n_m_relation(ggwgebieden_schema):

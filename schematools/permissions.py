@@ -94,7 +94,7 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
     grantee = role
     for profile in profile_list:
         if scope in profile["scopes"]:
-            for dataset, details in profile["schema_data"]["datasets"].items():
+            for dataset, _details in profile["schema_data"]["datasets"].items():
                 for item in acl_list:
                     if item.name.startswith(dataset + "_"):
                         grant_statement = grant(
@@ -160,9 +160,7 @@ def set_dataset_read_permissions(
         table_scope = table.auth if table.auth else dataset_scope
         table_scope_set = {table_scope} if isinstance(table_scope, str) else set(table_scope)
         if table.auth:
-            print(
-                f'Found table read permission for "{table_name}"' f' to scopes "{table_scope_set}"'
-            )
+            print(f'Found table read permission for "{table_name}" to scopes "{table_scope_set}"')
             print(
                 f'"{table_scope_set}" overrules "{dataset_scope_set}"'
                 f' for read permission of "{table_name}"'
@@ -304,7 +302,7 @@ def create_acl_from_schemas(
                 session, pg_schema, schemas, role, scopes, dry_run, create_roles
             )
         else:
-            for dataset_name, dataset_schema in schemas.items():
+            for _dataset_name, dataset_schema in schemas.items():
                 set_dataset_read_permissions(
                     session, pg_schema, dataset_schema, role, scopes, dry_run, create_roles
                 )
@@ -314,7 +312,7 @@ def create_acl_from_schemas(
             # for a single dataset
             set_dataset_write_permissions(session, pg_schema, schemas, dry_run, create_roles)
         else:
-            for dataset_name, dataset_schema in schemas.items():
+            for _dataset_name, dataset_schema in schemas.items():
                 set_dataset_write_permissions(
                     session, pg_schema, dataset_schema, dry_run, create_roles
                 )
@@ -353,15 +351,21 @@ def _revoke_all_privileges_from_role(
 def _revoke_all_privileges_from_read_and_write_roles(
     session, pg_schema, dataset_name=None, echo=True, dry_run=False
 ):
-    """Revoke all privileges that may have been previously granted to the scope_{} and write_{} roles.
-    If dataset_name is provided, revoke only rights to the tables belonging to dataset_name.
+    """Revoke all privileges that may have been previously granted to the scope_{} and write_{}
+    roles. If dataset_name is provided, revoke only rights to the tables belonging to
+    dataset_name.
     """
 
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
     result = session.execute(
         text(
-            r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'scope\_%' OR rolname LIKE 'write\_%'"  # noqa: E501
+            r"""
+            SELECT rolname
+            FROM pg_roles
+            WHERE rolname LIKE 'scope\_%'
+               OR rolname LIKE 'write\_%'
+            """
         )
     )
     for rolname in result:
@@ -375,7 +379,7 @@ def _revoke_all_privileges_from_read_and_write_roles(
             revoke_statement = ";".join(revoke_statements)
         else:
             revoke_statement = (
-                f"REVOKE ALL PRIVILEGES ON ALL TABLES" f" IN SCHEMA {pg_schema} FROM {rolname[0]};"
+                f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]};"
             )
         if echo:
             print(f"{status_msg} --> {revoke_statement}")
@@ -390,16 +394,17 @@ def _execute_grant(session, grant_statement, echo=True, dry_run=False):
     """
 
     status_msg = "Skipped" if dry_run else "Executed"
-    sql_statement = (
-        "DO $$ "
-        "BEGIN "
-        f"{grant_statement}; "
-        "EXCEPTION"
-        " WHEN undefined_table OR undefined_column OR undefined_object"
-        " THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
-        "END "
-        "$$"
-    )
+    sql_statement = f"""
+        DO
+        $$
+            BEGIN
+                {grant_statement};
+            EXCEPTION
+                WHEN undefined_table OR undefined_column OR undefined_object
+                    THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
+            END
+        $$
+        """
     if echo:
         print(f"{status_msg} --> {grant_statement}")
     if not dry_run:

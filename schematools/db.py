@@ -121,7 +121,7 @@ def fetch_schema_from_relational_schema(engine, dataset_id) -> dict:
         schema_version = table_dict.pop("schemaVersion")
         schema_properties["schema"] = {
             "$ref": (
-                f"https://schemas.data.amsterdam.nl/schema@{schema_version}" "#/definitions/schema"
+                f"https://schemas.data.amsterdam.nl/schema@{schema_version}#/definitions/schema"
             )
         }
         table_dict["schema"]["properties"] = schema_properties

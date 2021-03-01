@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         datasets = Dataset.objects.all()
-        imported_datasets = set([d.name for d in datasets])
+        imported_datasets = {d.name for d in datasets}
         drop_schemas = set(options.get("schemas", []))
         if not drop_schemas <= imported_datasets:
             impossible_schemas = drop_schemas - imported_datasets

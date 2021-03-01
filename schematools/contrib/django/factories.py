@@ -92,15 +92,13 @@ class RelationMaker:
         else:
             raise ValueError("Relations should have string/array/object type")
 
-        source_type_set = set(
-            [(prop_name, prop_val["type"]) for prop_name, prop_val in properties.items()]
-        )
-        destination_type_set = set(
-            [
-                (sequence_field.name, sequence_field.type),
-                (identifier_field.name, identifier_field.type),
-            ]
-        )
+        source_type_set = {
+            (prop_name, prop_val["type"]) for prop_name, prop_val in properties.items()
+        }
+        destination_type_set = {
+            (sequence_field.name, sequence_field.type),
+            (identifier_field.name, identifier_field.type),
+        }
 
         return source_type_set != destination_type_set
 

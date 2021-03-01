@@ -341,7 +341,7 @@ class EventsProcessor:
         _metadata.bind = connection.engine
         self.tables = {}
         for dataset_id, dataset in self.datasets.items():
-            base_tables_ids = set(dataset_table.id for dataset_table in dataset.tables)
+            base_tables_ids = {dataset_table.id for dataset_table in dataset.tables}
             self.tables[dataset_id] = tfac = tables_factory(dataset, _metadata)
             self.geo_fields = defaultdict(lambda: defaultdict(list))
             for table_id, table in tfac.items():
