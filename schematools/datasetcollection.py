@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import typing
 from typing import TYPE_CHECKING
 
 from simple_singleton import Singleton
 
 if TYPE_CHECKING:
-    from .types import DatasetSchema
+    from schematools.types import DatasetSchema
 
 
 class DatasetCollection(metaclass=Singleton):
@@ -14,13 +13,13 @@ class DatasetCollection(metaclass=Singleton):
     This can hold a cache of datasets that have already been collected.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.datasets_cache = {}
 
-    def add_dataset(self, dataset: DatasetSchema):
+    def add_dataset(self, dataset: DatasetSchema) -> None:
         self.datasets_cache[dataset.id] = dataset
 
-    def get_dataset(self, dataset_id: str) -> typing.Optional[DatasetSchema]:
+    def get_dataset(self, dataset_id: str) -> DatasetSchema:
         """ Gets a dataset by id, if not available, load the dataset """
         try:
             return self.datasets_cache[dataset_id]

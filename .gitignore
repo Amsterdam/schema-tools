@@ -113,3 +113,5 @@ ENV/
 
 #
 /scratch
+
+monkeytype.sqlite3

@@ -525,3 +525,6 @@ def diff_schemas(schema_url, diff_schema_url):
     schemas = schema_defs_from_url(schema_url)
     diff_schemas = schema_defs_from_url(diff_schema_url)
     click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
+
+if __name__ == '__main__':
+    main()
