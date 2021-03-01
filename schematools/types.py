@@ -163,11 +163,11 @@ class DatasetSchema(SchemaType):
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
         # Map Arrays into tables.
-        sub_table_schema = dict(
-            id=f"{table.id}_{field.name}",
-            originalID=field.name,
-            type="table",
-            schema={
+        sub_table_schema = {
+            "id": f"{table.id}_{field.name}",
+            "originalID": field.name,
+            "type": "table",
+            "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object",
                 "additionalProperties": False,
@@ -180,7 +180,7 @@ class DatasetSchema(SchemaType):
                     **field["items"]["properties"],
                 },
             },
-        )
+        }
         return DatasetTableSchema(sub_table_schema, _parent_schema=self, nested_table=True)
 
     def build_through_table(
@@ -198,10 +198,10 @@ class DatasetSchema(SchemaType):
         table_id = get_db_table_name(table, snakecased_fieldname)
         # dso-api expects the dataset_id (as prefix) not part of the table_id
         table_id = "_".join(table_id.split("_")[1:])
-        sub_table_schema = dict(
-            id=table_id,
-            type="table",
-            schema={
+        sub_table_schema = {
+            "id": table_id,
+            "type": "table",
+            "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object",
                 "additionalProperties": False,
@@ -218,7 +218,7 @@ class DatasetSchema(SchemaType):
                     },
                 },
             },
-        )
+        }
 
         # Only for object type relations we can add the fields of the
         # relation to the schema

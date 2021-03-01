@@ -518,7 +518,7 @@ def _check_role_does_not_exist(engine, role):
     """Check if role does not exist"""
     with engine.begin() as connection:
         result = connection.execute(f"SELECT rolname FROM pg_roles WHERE rolname='{role}'")
-        rows = [row for row in result]
+        rows = list(result)
         assert len(rows) == 0
 
 

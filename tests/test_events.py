@@ -73,7 +73,7 @@ def test_event_process_1n_relation_insert(
             "ligt_in_buurt_begin_geldigheid",
             "ligt_in_buurt_eind_geldigheid",
         }
-    available_columns < records[0].keys()
+    assert available_columns < records[0].keys()
 
 
 @pytest.mark.parametrize("use_dimension_fields", (False, True))

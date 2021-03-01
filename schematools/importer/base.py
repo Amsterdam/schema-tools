@@ -155,7 +155,7 @@ class BaseImporter:
                 if pk_col.autoincrement == "auto":
                     continue
                 self.pk_colname_lookup[table_name] = pk_name
-                pks = set([getattr(r, pk_name) for r in self.engine.execute(table.select())])
+                pks = {getattr(r, pk_name) for r in self.engine.execute(table.select())}
                 self.pk_values_lookup[table_name] = pks
 
     def generate_db_objects(
@@ -287,7 +287,7 @@ class BaseImporter:
 
         # get all found indexes generated out of Amsterdam schema
         schema_indexes = set()
-        schema_indexes_objects = dict()
+        schema_indexes_objects = {}
         for index_object_list in indexes.values():
             for index_object in index_object_list:
                 schema_indexes.add(index_object.name)
@@ -493,7 +493,7 @@ def index_factory(
     The returned Index objects are keyed on the name of table
     """
 
-    index = dict()
+    index = {}
     metadata = metadata or MetaData()
     logger = LogfileLogger(logger) if logger else CliLogger()
     table_object = metadata.tables[dataset_table.db_name()]

@@ -38,7 +38,7 @@ class RequestProfile(object):
 
     def get_table_permissions(self, dataset_id, table_id):
         """Get all permissions for a specific dataset in this request."""
-        permissions = dict()
+        permissions = {}
         dataset = Dataset.objects.get(name=dataset_id)
         table = dataset.tables.get(name=table_id)
         has_dataset_scope = self.request.is_authorized_for(dataset.auth)

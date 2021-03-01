@@ -78,75 +78,35 @@ JSON_TYPE_TO_DJANGO = {
     "/definitions/schema": (UnlimitedCharField, None),
     "https://geojson.org/schema/Geometry.json": (
         gis_models.GeometryField,
-        dict(
-            value_getter=fetch_srid,
-            srid=RD_NEW.srid,
-            geography=False,
-            db_index=True,
-        ),
+        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/Point.json": (
         gis_models.PointField,
-        dict(
-            value_getter=fetch_srid,
-            srid=RD_NEW.srid,
-            geography=False,
-            db_index=True,
-        ),
+        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/MultiPoint.json": (
         gis_models.MultiPointField,
-        dict(
-            value_getter=fetch_srid,
-            srid=RD_NEW.srid,
-            geography=False,
-            db_index=True,
-        ),
+        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/Polygon.json": (
         gis_models.PolygonField,
-        dict(
-            value_getter=fetch_srid,
-            srid=RD_NEW.srid,
-            geography=False,
-            db_index=True,
-        ),
+        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/MultiPolygon.json": (
         gis_models.MultiPolygonField,
-        dict(
-            value_getter=fetch_srid,
-            srid=RD_NEW.srid,
-            geography=False,
-            db_index=True,
-        ),
+        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/LineString.json": (
         gis_models.LineStringField,
-        dict(
-            value_getter=fetch_srid,
-            srid=RD_NEW.srid,
-            geography=False,
-            db_index=True,
-        ),
+        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/MultiLineString.json": (
         gis_models.MultiLineStringField,
-        dict(
-            value_getter=fetch_srid,
-            srid=RD_NEW.srid,
-            geography=False,
-            db_index=True,
-        ),
+        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/GeometryCollection.json": (
         gis_models.GeometryCollectionField,
-        dict(
-            value_getter=fetch_srid,
-            srid=RD_NEW.srid,
-            geography=False,
-            db_index=True,
-        ),
+        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
 }
 
@@ -499,7 +459,7 @@ class Profile(models.Model):
         {dataset}:{table} = "permission"
         {dataset}:{table}:{field} = "permission"
         """
-        permissions = dict()
+        permissions = {}
         for dataset_id, dataset_settings in self.schema.datasets.items():
             dataset_key = generate_permission_key(dataset_id)
             if dataset_settings.permissions:
@@ -607,7 +567,7 @@ def get_active_profiles():
     profiles = cache.get(PROFILES_CACHE_KEY)
     if profiles is None:
         try:
-            profiles = [profile for profile in Profile.objects.all()]
+            profiles = list(Profile.objects.all())
         except Exception:
             # Return empty list and do not cache result.
             profiles = []

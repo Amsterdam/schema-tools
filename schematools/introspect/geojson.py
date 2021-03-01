@@ -61,7 +61,7 @@ def geojson_to_table(geojson_features: Iterable[dict], file_name: str) -> List[d
 
     # Overlay all results into the amsterdam schem table format.
     result = []
-    for name, table_data in all_schema.items():
+    for name in all_schema:
         table = deepcopy(TABLE_TMPL)
         table["id"] = name if name == default_name else f"{default_name}_{name}"
         table["schema"].update(all_schema[name])
