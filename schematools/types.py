@@ -2,21 +2,20 @@
 from __future__ import annotations
 
 import json
-import typing
 from collections import UserDict
+from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, Union
 
 import jsonschema
 
 from schematools import MAX_TABLE_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
-
-from .datasetcollection import DatasetCollection
+from schematools.datasetcollection import DatasetCollection
 
 
 class SchemaType(UserDict):
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
-    def __missing__(self, key):
+    def __missing__(self, key: str) -> NoReturn:
         raise KeyError(f"No field named '{key}' exists in {self!r}")
 
     @property
@@ -30,15 +29,15 @@ class SchemaType(UserDict):
     def json(self) -> str:
         return json.dumps(self.data)
 
-    def json_data(self) -> dict:
+    def json_data(self) -> Dict[str, Any]:
         return self.data
 
 
 class DatasetType(UserDict):
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
-    def __missing__(self, key):
+    def __missing__(self, key: str) -> NoReturn:
         raise KeyError(f"No field named '{key}' exists in {self!r}")
 
 
@@ -47,12 +46,7 @@ class DatasetSchema(SchemaType):
     This is a collection of JSON Schema's within a single file.
     """
 
-    def __init__(
-        self,
-        *args,
-        use_dimension_fields: bool = False,
-        **kwargs,
-    ):
+    def __init__(self, *args, use_dimension_fields: bool = False, **kwargs) -> None:
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
         about the related datasets
@@ -69,7 +63,7 @@ class DatasetSchema(SchemaType):
             return cls.from_dict(json.load(fh))
 
     @classmethod
-    def from_dict(cls, obj: dict):
+    def from_dict(cls, obj: Dict[str, Any]) -> DatasetSchema:
         """ Parses given dict and validates the given schema """
         if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Schema file")
@@ -77,12 +71,12 @@ class DatasetSchema(SchemaType):
         return cls(obj)
 
     @property
-    def title(self):
+    def title(self) -> str:
         """Title of the dataset (if set)"""
         return self.get("title")
 
     @property
-    def description(self):
+    def description(self) -> str:
         """Description of the dataset (if set)"""
         return self.get("description")
 
@@ -96,7 +90,7 @@ class DatasetSchema(SchemaType):
         """Auth of the dataset (if set)"""
         return self.get("auth")
 
-    def get_dataset_schema(self, dataset_id):
+    def get_dataset_schema(self, dataset_id) -> DatasetSchema:
         return self.dataset_collection.get_dataset(dataset_id)
 
     @property
@@ -107,19 +101,19 @@ class DatasetSchema(SchemaType):
         return self._use_dimension_fields
 
     @use_dimension_fields.setter
-    def use_dimension_fields(self, value: bool):
+    def use_dimension_fields(self, value: bool) -> None:
         self._use_dimension_fields = value
 
     @property
-    def tables(self) -> typing.List[DatasetTableSchema]:
+    def tables(self) -> List[DatasetTableSchema]:
         """Access the tables within the file"""
         return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
 
     def get_tables(
         self,
-        include_nested=False,
-        include_through=False,
-    ) -> typing.List[DatasetTableSchema]:
+        include_nested: bool = False,
+        include_through: bool = False,
+    ) -> List[DatasetTableSchema]:
         """List tables, including nested"""
         tables = self.tables
         if include_nested:
@@ -129,7 +123,7 @@ class DatasetSchema(SchemaType):
         return tables
 
     def get_table_by_id(
-        self, table_id: str, include_nested=True, include_through=True
+        self, table_id: str, include_nested: bool = True, include_through: bool = True
     ) -> DatasetTableSchema:
         from schematools.utils import to_snake_case
 
@@ -146,7 +140,7 @@ class DatasetSchema(SchemaType):
         )
 
     @property
-    def nested_tables(self) -> typing.List[DatasetTableSchema]:
+    def nested_tables(self) -> List[DatasetTableSchema]:
         """Access list of nested tables"""
         tables = []
         for table in self.tables:
@@ -156,7 +150,7 @@ class DatasetSchema(SchemaType):
         return tables
 
     @property
-    def through_tables(self) -> typing.List[DatasetTableSchema]:
+    def through_tables(self) -> List[DatasetTableSchema]:
         """Access list of through_tables (for n-m relations) """
         tables = []
         for table in self.tables:
@@ -165,7 +159,9 @@ class DatasetSchema(SchemaType):
                     tables.append(self.build_through_table(table=table, field=field))
         return tables
 
-    def build_nested_table(self, table, field):
+    def build_nested_table(
+        self, table: DatasetTableSchema, field: DatasetFieldSchema
+    ) -> DatasetTableSchema:
         # Map Arrays into tables.
         sub_table_schema = dict(
             id=f"{table.id}_{field.name}",
@@ -187,7 +183,9 @@ class DatasetSchema(SchemaType):
         )
         return DatasetTableSchema(sub_table_schema, _parent_schema=self, nested_table=True)
 
-    def build_through_table(self, table, field):
+    def build_through_table(
+        self, table: DatasetTableSchema, field: DatasetFieldSchema
+    ) -> DatasetTableSchema:
         from schematools.utils import to_snake_case
 
         # Build the through_table for n-m relation
@@ -229,7 +227,9 @@ class DatasetSchema(SchemaType):
 
         return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
 
-    def fetch_temporal(self, field_modifier=None):
+    def fetch_temporal(
+        self, field_modifier: Optional[Callable] = None
+    ) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
         """The original implementation of 'temporal' already does
         a to_snake_case, however, we also need a version that
         leaves the fields in camelcase.
@@ -262,13 +262,8 @@ class DatasetTableSchema(SchemaType):
     """
 
     def __init__(
-        self,
-        *args,
-        _parent_schema=None,
-        nested_table=False,
-        through_table=False,
-        **kwargs,
-    ):
+        self, *args, _parent_schema=None, nested_table=False, through_table=False, **kwargs
+    ) -> None:
         super().__init__(*args, **kwargs)
         self._parent_schema = _parent_schema
         self.nested_table = nested_table
@@ -281,12 +276,12 @@ class DatasetTableSchema(SchemaType):
             raise ValueError("Invalid JSON-schema contents of table")
 
     @property
-    def dataset(self) -> typing.Optional[DatasetSchema]:
+    def dataset(self) -> Optional[DatasetSchema]:
         """The dataset that this table is part of."""
         return self._parent_schema
 
     @property
-    def fields(self):
+    def fields(self) -> Iterator[DatasetFieldSchema]:
         required = set(self["schema"]["required"])
         for name, spec in self["schema"]["properties"].items():
             field_schema = DatasetFieldSchema(
@@ -305,17 +300,17 @@ class DatasetTableSchema(SchemaType):
         if self.has_compound_key:
             yield DatasetFieldSchema(_name="id", _parent_table=self, _required=True, type="string")
 
-    def get_fields_by_id(self, field_names) -> typing.Generator[DatasetFieldSchema, None, None]:
+    def get_fields_by_id(self, field_names: List[str]) -> Iterator[DatasetFieldSchema]:
         for field in self.fields:
             if field.name in set(field_names):
                 yield field
 
-    def get_field_by_id(self, field_name) -> typing.Optional[DatasetFieldSchema]:
+    def get_field_by_id(self, field_name) -> Optional[DatasetFieldSchema]:
         for field_schema in self.fields:
             if field_schema.name == field_name:
                 return field_schema
 
-    def get_through_tables_by_id(self) -> typing.List[DatasetTableSchema]:
+    def get_through_tables_by_id(self) -> List[DatasetTableSchema]:
         """Access list of through_tables (for n-m relations) for a single base table """
         tables = []
         for field in self.fields:
@@ -333,19 +328,19 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema.get_dataset_schema(dataset_id)
 
     @property
-    def use_dimension_fields(self):
+    def use_dimension_fields(self) -> bool:
         """Indication if schema has to add extra dimension fields
         for relations
         """
         return self._parent_schema.use_dimension_fields
 
     @property
-    def temporal(self):
+    def temporal(self) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
         """Return the temporal info from the dataset schema """
         return self._parent_schema.fetch_temporal(field_modifier=lambda x: x)
 
     @property
-    def is_temporal(self):
+    def is_temporal(self) -> bool:
         """Indicates if this is a table with temporal charateristics """
         return self["schema"].get("isTemporal", self.temporal is not None)
 
@@ -357,7 +352,7 @@ class DatasetTableSchema(SchemaType):
         return self["schema"].get("mainGeometry", "geometry")
 
     @property
-    def identifier(self):
+    def identifier(self) -> List[str]:
         """The main identifier field, if there is an identifier field available.
         Default to "id" for existing schemas without an identifier field.
         """
@@ -368,12 +363,12 @@ class DatasetTableSchema(SchemaType):
         return identifier
 
     @property
-    def has_compound_key(self):
+    def has_compound_key(self) -> bool:
         if isinstance(self.identifier, str):
             return False
         return len(self.identifier) > 1
 
-    def validate(self, row: dict):
+    def validate(self, row: Dict[str, Any]):
         """Validate a record against the schema."""
         jsonschema.validate(row, self.data["schema"])
 
@@ -406,7 +401,7 @@ class DatasetTableSchema(SchemaType):
         return self.get("auth")
 
     @property
-    def is_through_table(self):
+    def is_through_table(self) -> bool:
         """Indicates if table is an intersection table (n:m relation table) or base table"""
         return self.through_table
 
@@ -415,7 +410,9 @@ class DatasetTableSchema(SchemaType):
         """Indicates if table is an nested table"""
         return self.nested_table
 
-    def db_name(self, through_table_field_name=None, db_table_name=None):
+    def db_name(
+        self, through_table_field_name: Optional[str] = None, db_table_name: Optional[str] = None
+    ) -> str:
         """Returns the database implementation name of a table.
         TODO: Get database name from the JSON schema specification by defining 'shortname'.
         For now using existing function that is already used in the GOB data (NDJson files)
@@ -428,7 +425,7 @@ class DatasetTableSchema(SchemaType):
             db_table_name=db_table_name,
         )
 
-    def get_fk_fields(self):
+    def get_fk_fields(self) -> Iterator[str]:
         """Generates fields names that contain a 1:N relation to a parent table"""
         fields_items = self["schema"]["properties"].items()
         field_schema = (
@@ -452,7 +449,7 @@ class DatasetFieldSchema(DatasetType):
         _required=None,
         _temporal=False,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(*args, **kwargs)
         self._name = _name
         self._parent_table = _parent_table
@@ -461,25 +458,25 @@ class DatasetFieldSchema(DatasetType):
         self._temporal = _temporal
 
     @property
-    def table(self) -> typing.Optional[DatasetTableSchema]:
+    def table(self) -> DatasetTableSchema:
         """The table that this field is a part of"""
         return self._parent_table
 
     @property
-    def parent_field(self) -> typing.Optional[DatasetFieldSchema]:
+    def parent_field(self) -> Optional[DatasetFieldSchema]:
         """Provide access to the top-level field where is is a property for."""
         return self._parent_field
 
     @property
-    def name(self) -> typing.Optional[str]:
+    def name(self) -> str:
         return self._name
 
     @property
-    def description(self) -> typing.Optional[str]:
+    def description(self) -> Optional[str]:
         return self.get("description")
 
     @property
-    def required(self) -> typing.Optional[bool]:
+    def required(self) -> bool:
         return self._required
 
     @property
@@ -500,23 +497,23 @@ class DatasetFieldSchema(DatasetType):
         return self.name == "id" or [self.name] == self.table.identifier
 
     @property
-    def relation(self) -> typing.Optional[str]:
+    def relation(self) -> Optional[str]:
         if self.type == "array":
             return None
         return self.get("relation")
 
     @property
-    def nm_relation(self) -> typing.Optional[str]:
+    def nm_relation(self) -> Optional[str]:
         if self.type != "array":
             return None
         return self.get("relation")
 
     @property
-    def format(self) -> typing.Optional[str]:
+    def format(self) -> Optional[str]:
         return self.get("format")
 
     @property
-    def multipleof(self) -> typing.Optional[str]:
+    def multipleof(self) -> Optional[float]:
         return self.get("multipleOf")
 
     @property
@@ -535,17 +532,17 @@ class DatasetFieldSchema(DatasetType):
         return "geojson.org" in self.get("$ref", "")
 
     @property
-    def provenance(self) -> typing.Optional[str]:
+    def provenance(self) -> Optional[str]:
         """ Get the provenance info, if available, or None"""
         return self.get("provenance")
 
     @property
-    def items(self) -> typing.Optional[dict]:
+    def items(self) -> Dict[str, Any]:
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
 
     @property
-    def sub_fields(self) -> typing.Generator[DatasetFieldSchema, None, None]:
+    def sub_fields(self) -> Iterator[DatasetFieldSchema]:
         """Returns the sub fields for a nested structure. For a
         nested object, fields are based on its properties,
         for an array of objects, fields are based on the properties of
@@ -648,7 +645,7 @@ class DatasetFieldSchema(DatasetType):
         return self.is_array and self.nm_relation is not None
 
     @property
-    def auth(self) -> typing.Optional[str]:
+    def auth(self) -> Optional[str]:
         """Auth of the field, if available, or None"""
         return self.get("auth")
 
@@ -671,7 +668,7 @@ class ProfileSchema(SchemaType):
             return cls.from_dict(json.load(fh))
 
     @classmethod
-    def from_dict(cls, obj: dict):
+    def from_dict(cls, obj: Dict[str, Any]):
         """ Parses given dict and validates the given schema """
         return cls(obj)
 
@@ -686,7 +683,7 @@ class ProfileSchema(SchemaType):
         return self.get("scopes")
 
     @property
-    def datasets(self) -> typing.Dict[str, ProfileDatasetSchema]:
+    def datasets(self) -> Dict[str, ProfileDatasetSchema]:
         return {
             id: ProfileDatasetSchema(id, self, data)
             for id, data in self.get("datasets", {}).items()
@@ -696,7 +693,7 @@ class ProfileSchema(SchemaType):
 class ProfileDatasetSchema(DatasetType):
     """A schema inside the profile dataset"""
 
-    def __init__(self, _id, _parent_schema=None, data: typing.Optional[dict] = None):
+    def __init__(self, _id, _parent_schema=None, data: Optional[Dict[str, Any]] = None):
         super().__init__(data)
         self._id = _id
         self._parent_schema = _parent_schema
@@ -706,17 +703,17 @@ class ProfileDatasetSchema(DatasetType):
         return self._id
 
     @property
-    def profile(self) -> typing.Optional[ProfileSchema]:
+    def profile(self) -> Optional[ProfileSchema]:
         """The profile that this definition is part of."""
         return self._parent_schema
 
     @property
-    def permissions(self) -> typing.Optional[str]:
+    def permissions(self) -> Optional[str]:
         """Global permissions for the dataset"""
         return self.get("permissions")
 
     @property
-    def tables(self) -> typing.Dict[str, ProfileTableSchema]:
+    def tables(self) -> Dict[str, ProfileTableSchema]:
         return {
             id: ProfileTableSchema(id, self, data) for id, data in self.get("tables", {}).items()
         }
@@ -725,7 +722,7 @@ class ProfileDatasetSchema(DatasetType):
 class ProfileTableSchema(DatasetType):
     """A single table in the profile"""
 
-    def __init__(self, _id, _parent_schema=None, data: typing.Optional[dict] = None):
+    def __init__(self, _id, _parent_schema=None, data: Optional[Dict[str, Any]] = None):
         super().__init__(data)
         self._id = _id
         self._parent_schema = _parent_schema
@@ -735,22 +732,22 @@ class ProfileTableSchema(DatasetType):
         return self._id
 
     @property
-    def dataset(self) -> typing.Optional[ProfileDatasetSchema]:
+    def dataset(self) -> Optional[ProfileDatasetSchema]:
         """The profile that this definition is part of."""
         return self._parent_schema
 
     @property
-    def permissions(self) -> typing.Optional[str]:
+    def permissions(self) -> Optional[str]:
         """Global permissions for the table"""
         return self.get("permissions")
 
     @property
-    def fields(self) -> typing.Dict[str, str]:
+    def fields(self) -> Dict[str, str]:
         """The fields with their permission keys"""
         return self.get("fields", {})
 
     @property
-    def mandatory_filtersets(self) -> typing.List[dict]:
+    def mandatory_filtersets(self) -> List[Dict[str, Any]]:
         """Tell whether the listing can only be requested with certain inputs.
         E.g. an API user may only list data when they supply the lastname + birthdate.
 
@@ -765,7 +762,9 @@ class ProfileTableSchema(DatasetType):
 
 
 def get_db_table_name(
-    table: DatasetTableSchema, through_table_field_name=None, db_table_name=None
+    table: DatasetTableSchema,
+    through_table_field_name: Optional[str] = None,
+    db_table_name: Optional[str] = None,
 ) -> str:
     """Generate the table name for a database schema."""
     # import within function to avoid a circular import with utils.py
