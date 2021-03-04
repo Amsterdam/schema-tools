@@ -30,15 +30,12 @@ def schema_defs_from_url(schemas_url, dataset_name=None) -> Dict[str, types.Data
     return defs_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
 
 
-def schema_def_from_url(schemas_url, schema_name):
-    schemas = schema_defs_from_url(schemas_url)
-    try:
-        return schemas[schema_name]
-    except KeyError:
-        avail = ", ".join(sorted(schemas.keys()))
-        raise ValueError(
-            f"Schema f{schema_name} does not exist at {schemas_url}. Available are: {avail}"
-        ) from None
+def schema_def_from_url(schemas_url, dataset_name):
+    return def_from_url(
+        base_url=schemas_url,
+        data_type=types.DatasetSchema,
+        dataset_name=dataset_name,
+    )
 
 
 @ttl_cache(ttl=16)  # type: ignore
