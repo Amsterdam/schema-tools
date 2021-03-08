@@ -42,8 +42,11 @@ Example:
 """
 from __future__ import annotations
 
+import operator
+import re
 from dataclasses import dataclass
-from typing import ClassVar, Iterator, List, Type, final
+from functools import partial
+from typing import Callable, ClassVar, Iterator, List, Set, Type, cast, final
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.types import DatasetSchema
@@ -72,7 +75,7 @@ class ValidationException(Exception):
     message: str
 
     def __init__(self, message: str) -> None:
-        super().__init__(*message)
+        super().__init__(message)
         self.message = message
 
 
@@ -147,3 +150,60 @@ class PsqlIdentifierLengthValidator(Validator):
                     f"Inferred PostgreSQL table name '{table_name}' is '{excess}' characters too "
                     f"long. Maximum table name length is '{MAX_TABLE_NAME_LENGTH}'.",
                 )
+
+
+class IdentPropRefsValidator(Validator):
+    """Validate that the identifier property refers to actual fields on the table definitions."""
+
+    def validate(self) -> Iterator[ValidationError]:
+        @dataclass
+        class DerivedField:
+            original: str
+            derived: str
+
+        for table in self.dataset.get_tables(include_nested=True, include_through=True):
+            identifiers = set(table.identifier)
+            table_fields = cast(Set[str], set(map(operator.attrgetter("id"), table.fields)))
+            if not identifiers.issubset(table_fields):
+                missing_fields = identifiers - table_fields
+                # The 'identifier' property is weird in that it is not exclusively defined in
+                # terms of literally defined fields on the table. For instance, given a relation:
+                #
+                #     "indicatorDefinitie": {
+                #       "type": "string",
+                #       "relation": "bbga:indicatorenDefinities",
+                #        "description": "De variabele in kwestie."
+                #     }
+                #
+                # 'identifier' can refer to this field as 'identifierDefinitionId' (mind the
+                # 'Id' postfix). Simply referring to this field (from 'identifier') as
+                # 'indicatorDefinitie', eg as:
+                #
+                #     "identifier": ["indicatorDefinitie", "jaar", "gebiedcode15"],
+                #
+                #  will NOT work. It has to be postfixed with 'Id', eg:
+                #
+                #     "identifier": ["indicatorDefinitieId", "jaar", "gebiedcode15"],
+                #
+                # I think this is a bug is schema-tools, but for now I'll cover this case
+                # explicitly.
+                remove_id_suffix = cast(Callable[[str], str], partial(re.sub, r"(.+)Id", r"\1"))
+                derived_fields = tuple(
+                    map(
+                        lambda f: DerivedField(original=remove_id_suffix(f), derived=f),
+                        missing_fields,
+                    )
+                )
+                for df in derived_fields:
+                    if df.original in table_fields:
+                        missing_fields.discard(df.derived)
+                if missing_fields:
+                    fields, have = (
+                        ("fields", "have") if len(missing_fields) > 1 else ("field", "has")
+                    )
+                    yield ValidationError(
+                        self.__class__.__name__,
+                        f"Property 'identifier' on table '{table.id}' refers to {fields} "
+                        f"'{', '.join(missing_fields)}' that {have} not been defined on the "
+                        "table.",
+                    )
