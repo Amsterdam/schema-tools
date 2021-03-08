@@ -12,6 +12,8 @@ def test_toCamelCase():
     assert toCamelCase("testNameMagic") == "testNameMagic"
     assert toCamelCase("TestNameMagic") == "testNameMagic"
     assert toCamelCase("test_name_magic") == "testNameMagic"
+    assert toCamelCase("numbers_33_in_the_middle_44") == "numbers33InTheMiddle44"
+    assert toCamelCase("per_jaar_per_m2") == "perJaarPerM2"
 
 
 def test_to_snake_case():

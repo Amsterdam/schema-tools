@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import StringIO
 import json
 import re
 from typing import Dict, Final, Pattern
@@ -117,14 +118,28 @@ def schema_fetch_url_file(schema_url_file):
 
 
 @lru_cache(maxsize=500)  # type: ignore
-def toCamelCase(name):
+def toCamelCase(name: str) -> str:
     """
     Unify field/column/dataset name from Space separated/Snake Case/Camel case
     to camelCase.
     """
-    name = " ".join(name.split("_"))
-    words = RE_CAMEL_CASE.sub(r" \1", name).strip().lower().split(" ")
-    return "".join(w.lower() if i == 0 else w.title() for i, w in enumerate(words))
+    out = StringIO()
+    next_upper = False
+    first = True
+
+    for char in name:
+        if char == "_" or char.isspace():
+            next_upper = True
+            continue
+        if first:
+            char = char.lower()
+            first = False
+        elif next_upper:
+            char = char.upper()
+            next_upper = False
+        out.write(char)
+
+    return out.getvalue()
 
 
 @lru_cache(maxsize=500)  # type: ignore
