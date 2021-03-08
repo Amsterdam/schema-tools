@@ -108,8 +108,8 @@ def test_biginteger_datatype(here, engine, woningbouwplannen_schema, dbsession):
         SELECT data_type, numeric_precision
         FROM information_schema.columns
         WHERE table_schema = 'public'
-          AND table_name = 'woningbouwplannen_woningbouwplan'
-          AND column_name = 'id_big';
+        AND table_name = 'woningbouwplannen_woningbouwplan'
+        AND column_name = 'id';
     """
     )
     record = results.fetchone()
