@@ -288,11 +288,18 @@ def diff():
 
 
 @schema.command()
+@option_schema_url
+@argument_schema_location
 @click.argument("meta_schema_url")
-@click.argument("schema_location")
-def validate(meta_schema_url: str, schema_location: str) -> None:
+def validate(schema_url: str, schema_location: str, meta_schema_url: str) -> None:
     """Validate a JSON file against the amsterdam schema meta schema.
     schema_location can be a url or a filesystem path.
+
+    DATASET-ID | DATASET-FILENAME: When an DATASET-ID is provided, this is combined with
+    the schema-url to produce a full url to a dataset schema. A DATASET-FILENAME is detected
+    when the argument has a '.' or a '/'.
+
+    META_SCHEMA_URL is the url where the metaschema for amsterdam schema definitions can be found.
     """
 
     def _fetch_json(location):
@@ -306,19 +313,18 @@ def validate(meta_schema_url: str, schema_location: str) -> None:
         return json_obj
 
     schema = _fetch_json(meta_schema_url)
-    instance = _fetch_json(schema_location)
+    dataset = _get_dataset_schema(schema_url, schema_location)
 
     structural_errors = False
     try:
         click.echo("Structural validation: ", nl=False)
-        jsonschema.validate(instance=instance, schema=schema)
+        jsonschema.validate(instance=dataset.json_data(), schema=schema)
     except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
         structural_errors = True
         click.echo(f"\n{e!s}", err=True)
     else:
         click.echo("success!")
 
-    dataset = _get_dataset_schema(meta_schema_url, schema_location)
     click.echo("Semantic validation: ", nl=False)
     semantic_errors = False
     validator = Validator(dataset=dataset)
