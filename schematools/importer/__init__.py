@@ -2,7 +2,7 @@ import numbers
 from decimal import Decimal
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, Date, DateTime, Float, Integer, Numeric, String, Time
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, Integer, Numeric, String, Time
 from sqlalchemy.types import ARRAY
 
 from schematools.types import DatasetTableSchema
@@ -20,6 +20,7 @@ JSON_TYPE_TO_PG = {
     "object": String,
     "boolean": Boolean,
     "integer": Integer,
+    "biginteger": BigInteger,
     "number": Float,
     "array": ARRAY(String),
     "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id": String,

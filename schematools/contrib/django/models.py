@@ -17,12 +17,7 @@ from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 
-from schematools.types import (
-    DatasetFieldSchema,
-    DatasetSchema,
-    DatasetTableSchema,
-    ProfileSchema,
-)
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema, ProfileSchema
 from schematools.utils import to_snake_case
 
 from . import managers
@@ -65,6 +60,7 @@ def fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> Dict[str, A
 JSON_TYPE_TO_DJANGO = {
     "string": (UnlimitedCharField, None),
     "integer": (models.IntegerField, None),
+    "biginteger": (models.BigIntegerField, None),
     "integer/autoincrement": (models.AutoField, None),
     "date": (models.DateField, None),
     "datetime": (models.DateTimeField, None),
