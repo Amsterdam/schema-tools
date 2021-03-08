@@ -96,3 +96,25 @@ def test_invalid_numeric_datatype_scale(here, engine, woningbouwplannen_schema, 
     assert not record[0]["numeric_scale"]
     assert record[1]["data_type"] == "numeric"
     assert not record[1]["numeric_scale"]
+
+
+def test_biginteger_datatype(here, engine, woningbouwplannen_schema, dbsession):
+    """Prove that when biginter is used as datatype in schema, the datatype
+    in the database is set to datatype int(8) instead of int(4)"""
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=True)
+    record = [
+        dict(r)
+        for r in engine.execute(
+            """
+                                                SELECT data_type, numeric_precision
+                                                FROM information_schema.columns
+                                                WHERE 1=1
+                                                AND table_schema = 'public'
+                                                AND table_name = 'woningbouwplannen_woningbouwplan'
+                                                AND column_name = 'id_big';
+                                                """
+        )
+    ]
+    assert record[0]["data_type"] == "bigint"
+    assert record[0]["numeric_precision"] == 64
