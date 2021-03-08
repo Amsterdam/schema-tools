@@ -103,18 +103,15 @@ def test_biginteger_datatype(here, engine, woningbouwplannen_schema, dbsession):
     in the database is set to datatype int(8) instead of int(4)"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=True)
-    record = [
-        dict(r)
-        for r in engine.execute(
-            """
-                                                SELECT data_type, numeric_precision
-                                                FROM information_schema.columns
-                                                WHERE 1=1
-                                                AND table_schema = 'public'
-                                                AND table_name = 'woningbouwplannen_woningbouwplan'
-                                                AND column_name = 'id_big';
-                                                """
-        )
-    ]
-    assert record[0]["data_type"] == "bigint"
-    assert record[0]["numeric_precision"] == 64
+    results = engine.execute(
+        """
+        SELECT data_type, numeric_precision
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'woningbouwplannen_woningbouwplan'
+          AND column_name = 'id_big';
+    """
+    )
+    record = results.fetchone()
+    assert record.data_type == "bigint"
+    assert record.numeric_precision == 64
