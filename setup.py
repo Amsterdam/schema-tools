@@ -17,11 +17,11 @@ def read(filename: Union[Path, str]) -> str:
 
 setup(
     name="amsterdam-schema-tools",
-    version="0.17.5",
+    version="0.17.6",
     url="https://github.com/amsterdam/schema-tools",
     license="Mozilla Public 2.0",
-    author="Jan Murre",
-    author_email="jan.murre@catalyz.nl",
+    author="Amsterdam Data en Informatie",
+    author_email="datapunt@amsterdam.nl",
     description="Tools to work with Amsterdam schema.",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
