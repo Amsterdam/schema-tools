@@ -366,7 +366,7 @@ class DatasetTable(models.Model):
 
     def save_for_schema(self, table: DatasetTableSchema):
         """Save changes to the dataset table."""
-        self.name = to_snake_case(table.id)
+        self.name = to_snake_case(table.name)
         self.db_table = table.db_name()
         self.auth = _serialize_claims(table)
         self.display_field = to_snake_case(table.display_field) if table.display_field else None
@@ -453,6 +453,7 @@ class Profile(models.Model):
         {dataset}:{table} = "permission"
         {dataset}:{table}:{field} = "permission"
         """
+
         permissions = {}
         for dataset_id, dataset_settings in self.schema.datasets.items():
             dataset_key = generate_permission_key(dataset_id)
