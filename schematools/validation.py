@@ -161,7 +161,7 @@ class IdentPropRefsValidator(Validator):
             original: str
             derived: str
 
-        for table in self.dataset.get_tables(include_nested=True, include_through=True):
+        for table in self.dataset.get_tables(include_nested=True):
             identifiers = set(table.identifier)
             table_fields = cast(Set[str], set(map(operator.attrgetter("id"), table.fields)))
             if not identifiers.issubset(table_fields):
