@@ -196,8 +196,11 @@ def test_ndjson_import_with_shortnames_in_schema(here, engine, hr_schema, dbsess
     }
 
 
-def test_provenance_for_original_fieldnames(here, engine, woonplaatsen_schema, dbsession):
-    """ prove """
+def test_provenance_for_schema_field_ids_equal_to_ndjson_keys(
+    here, engine, woonplaatsen_schema, dbsession
+):
+    """Prove that imports where the schema field is equal to the key in the imported ndjson
+    data are processed correctly."""
     ndjson_path = here / "files" / "data" / "woonplaatsen.ndjson"
     importer = NDJSONImporter(woonplaatsen_schema, engine)
     importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
