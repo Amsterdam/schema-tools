@@ -39,27 +39,38 @@ class Row(UserDict):
         self.fields_provenances = {
             name: prov_name for prov_name, name in kwargs.pop("fields_provenances", {}).items()
         }
+        # Provenanced keys are stored in a cache. This is not only for efficiency.
+        # Sometimes, the key that is 'provenanced' is the same key that is in the ndjson
+        # import data. When this key gets replaced, the original object structure
+        # is not available anymore, so subsequent jsonpath lookups will fail.
+        self.provenances_cache = {}
+
         super().__init__(*args, **kwargs)
 
     def __getitem__(self, key):
         try:
             value = super().__getitem__(self._transform_key(key))
         except JsonPathException:
-            value = self._fetch_value_for_jsonpath(key)
+            value = self.provenances_cache.get(key) or self._fetch_value_for_jsonpath(key)
+            self.provenances_cache[key] = value
         return value
 
     def __delitem__(self, key):
-        return super().__delitem__(self._transform_key(key))
+        try:
+            return super().__delitem__(self._transform_key(key))
+        except JsonPathException:
+            # For JsonPath keys, a __del__ should use the
+            # key that is originally provided
+            return super().__delitem__(key)
 
     def _transform_key(self, key):
+        prov_key = self.fields_provenances.get(key)
+        if prov_key is not None:
+            if prov_key.startswith("$"):
+                raise JsonPathException()
+            return prov_key
         if key in self.data:
             return key
-        prov_key = self.fields_provenances.get(key)
-        if prov_key is None:
-            return key
-        if prov_key.startswith("$"):
-            raise JsonPathException()
-        return prov_key
 
     def _fetch_expr(self, prov_key):
         if prov_key in self._expr_cache:
