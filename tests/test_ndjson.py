@@ -194,3 +194,15 @@ def test_ndjson_import_with_shortnames_in_schema(here, engine, hr_schema, dbsess
         "verblijfsobjecten_identificatie": "01001",
         "verblijfsobjecten_volgnummer": 1,
     }
+
+
+def test_provenance_for_original_fieldnames(here, engine, woonplaatsen_schema, dbsession):
+    """ prove """
+    ndjson_path = here / "files" / "data" / "woonplaatsen.ndjson"
+    importer = NDJSONImporter(woonplaatsen_schema, engine)
+    importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
+    importer.load_file(ndjson_path)
+    records = [dict(r) for r in engine.execute("SELECT * from baggob_woonplaatsen ORDER BY id")]
+    assert len(records) == 2
+    assert records[0]["heeft_dossier_id"] == "GV12"
+    assert records[1]["heeft_dossier_id"] is None
