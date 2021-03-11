@@ -212,6 +212,7 @@ class Dataset(models.Model):
             name=to_snake_case(schema.id),
             schema_data=schema.json_data(),
             auth=_serialize_claims(schema),
+            url_prefix=schema.url_prefix,
         )
 
     def save_for_schema(self, schema: DatasetSchema):
