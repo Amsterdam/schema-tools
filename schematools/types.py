@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import json
 from collections import UserDict
-from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, Union
+from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, TypeVar, Union
 
 import jsonschema
 
 from schematools import RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
+
+ST = TypeVar("ST", bound="SchemaType")
 
 
 class SchemaType(UserDict):
@@ -31,6 +33,10 @@ class SchemaType(UserDict):
 
     def json_data(self) -> Dict[str, Any]:
         return self.data
+
+    @classmethod
+    def from_dict(cls, obj: Dict[str, Any]) -> ST:
+        return cls(obj)
 
 
 class DatasetType(UserDict):
@@ -163,7 +169,7 @@ class DatasetSchema(SchemaType):
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
         # Map Arrays into tables.
-        from schematools.utils import to_snake_case, get_through_table_name
+        from schematools.utils import get_through_table_name, to_snake_case
 
         snakecased_fieldname = to_snake_case(field.name)
         sub_table_id = get_through_table_name(len(self.id) + 1, table.name, snakecased_fieldname)
@@ -190,7 +196,7 @@ class DatasetSchema(SchemaType):
     def build_through_table(
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
-        from schematools.utils import to_snake_case, get_through_table_name
+        from schematools.utils import get_through_table_name, to_snake_case
 
         # Build the through_table for n-m relation
         # For relations, we have to use the real ids of the tables
