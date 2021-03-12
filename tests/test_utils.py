@@ -13,6 +13,8 @@ def test_toCamelCase():
     assert toCamelCase("TestNameMagic") == "testNameMagic"
     assert toCamelCase("test_name_magic") == "testNameMagic"
     assert toCamelCase("numbers_33_in_the_middle_44") == "numbers33InTheMiddle44"
+    # mind the lower case "i" after "33". It should be made upper case
+    assert toCamelCase("numbers33inTheMiddle44") == "numbers33InTheMiddle44"
     assert toCamelCase("per_jaar_per_m2") == "perJaarPerM2"
 
 

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from io import StringIO
 import json
 import re
-from typing import Dict, Final, Pattern
+from typing import Dict, Final, Match, Pattern
 
 import requests
 from cachetools.func import lru_cache, ttl_cache
@@ -16,7 +15,7 @@ RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
 )
 
 
-@ttl_cache(ttl=16)  # type: ignore
+@ttl_cache(ttl=16)
 def schema_defs_from_url(schemas_url, dataset_name=None) -> Dict[str, types.DatasetSchema]:
     """Fetch all schema definitions from a remote file (or single dataset if specified).
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
@@ -39,7 +38,7 @@ def schema_def_from_url(schemas_url, dataset_name):
     )
 
 
-@ttl_cache(ttl=16)  # type: ignore
+@ttl_cache(ttl=16)
 def profile_defs_from_url(profiles_url) -> Dict[str, types.ProfileSchema]:
     """Fetch all profile definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
@@ -117,32 +116,69 @@ def schema_fetch_url_file(schema_url_file):
     return schema_location
 
 
-@lru_cache(maxsize=500)  # type: ignore
-def toCamelCase(name: str) -> str:
+_CAMEL_CASE_REPLACE_PAT: Final[Pattern[str]] = re.compile(
+    r"""
+    (?:_|\s)+   # Find word boundaries by looking for underscore and whitespace characters, they
+                # will be discarded (not captured)
+    (.)         # Capture first letter of word on word boundary
+    |           # OR
+    (\d+)       # Capture a number
+    (?:_|\s)*   # Optionally followed by underscore and whitespace characters (to be discarded)
+    (.)         # Capture first letter of word on word boundary
+    """,
+    re.VERBOSE,
+)
+
+
+@lru_cache(maxsize=500)
+def toCamelCase(ident: str) -> str:
+    """Convert an identifier to camelCase format.
+
+    Word boundaries are determined by:
+    - numbers
+    - underscore characters
+    - whitespace characters (this violates the concept of identifiers,
+      but we handle it nevertheless)
+
+    A camelCased identifier, when it starts with a letter, it will start with a lower cased letter.
+
+    Examples:
+
+        >>> toCamelCase("dataset_table_schema")
+        'datasetTableSchema'
+        >>> toCamelCase("dataset table schema")
+        'datasetTableSchema'
+        >>> toCamelCase("fu_33_bar")
+        'fu33Bar'
+        >>> toCamelCase("fu_33bar")
+        'fu33Bar'
+        >>> toCamelCase("fu_33Bar")
+        'fu33Bar'
+        >>> toCamelCase("33_fu_bar")
+        '33FuBar'
+
+    Args:
+        ident: The identifier to be converted
+
+    Returns:
+        The identifier in camelCase format
+
     """
-    Unify field/column/dataset name from Space separated/Snake Case/Camel case
-    to camelCase.
-    """
-    out = StringIO()
-    next_upper = False
-    first = True
 
-    for char in name:
-        if char == "_" or char.isspace():
-            next_upper = True
-            continue
-        if first:
-            char = char.lower()
-            first = False
-        elif next_upper:
-            char = char.upper()
-            next_upper = False
-        out.write(char)
+    def replacement(m: Match) -> str:
+        # As we use the OR operator in the regular expression with capture groups on both sides,
+        # we will always have at least one capture group that results in `None`. We filter those
+        # out in the generator expression. Even though a captured group sometimes represents a
+        # number (as a string), we still call `upper()` on it. That's faster than another
+        # explicit test.
+        return "".join(s.upper() for s in m.groups() if s)
 
-    return out.getvalue()
+    result = _CAMEL_CASE_REPLACE_PAT.sub(replacement, ident)
+    # The first letter of camelCase identifier is always lower case
+    return result[0].lower() + result[1:]
 
 
-@lru_cache(maxsize=500)  # type: ignore
+@lru_cache(maxsize=500)
 def to_snake_case(name):
     """
     Convert field/column/dataset name from Space separated/Snake Case/Camel case
