@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Dict, Final, Match, Pattern
+from pathlib import Path
+from typing import Any, Dict, Final, Match, Optional, Pattern, Type, Union, cast
 
 import requests
 from cachetools.func import lru_cache, ttl_cache
 from string_utils import slugify
 
-from . import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
+from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
+from schematools.types import ST, DatasetSchema, ProfileSchema
 
 RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
@@ -16,41 +18,44 @@ RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
 
 
 @ttl_cache(ttl=16)
-def schema_defs_from_url(schemas_url, dataset_name=None) -> Dict[str, types.DatasetSchema]:
+def schema_defs_from_url(
+    schemas_url: str, dataset_name: Optional[str] = None
+) -> Dict[str, DatasetSchema]:
     """Fetch all schema definitions from a remote file (or single dataset if specified).
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
     if dataset_name:
-        return def_from_url(
+        schema = def_from_url(
             base_url=schemas_url,
-            data_type=types.DatasetSchema,
+            data_type=DatasetSchema,
             dataset_name=dataset_name,
         )
+        return {dataset_name: schema}
 
-    return defs_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
+    return defs_from_url(base_url=schemas_url, data_type=DatasetSchema)
 
 
-def schema_def_from_url(schemas_url, dataset_name):
+def schema_def_from_url(schemas_url: str, dataset_name: str) -> DatasetSchema:
     return def_from_url(
         base_url=schemas_url,
-        data_type=types.DatasetSchema,
+        data_type=DatasetSchema,
         dataset_name=dataset_name,
     )
 
 
 @ttl_cache(ttl=16)
-def profile_defs_from_url(profiles_url) -> Dict[str, types.ProfileSchema]:
+def profile_defs_from_url(profiles_url: str) -> Dict[str, ProfileSchema]:
     """Fetch all profile definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """
-    return defs_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
+    return defs_from_url(base_url=profiles_url, data_type=ProfileSchema)
 
 
-def defs_from_url(base_url, data_type):
+def defs_from_url(base_url: str, data_type: Type[ST]) -> Dict[str, ST]:
     """Fetch all schema definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup = {}
+    schema_lookup: Dict[str, ST] = {}
     if not base_url.endswith("/"):
         base_url = f"{base_url}/"
 
@@ -62,18 +67,17 @@ def defs_from_url(base_url, data_type):
         for dataset_name, dataset_path in response_data.items():
             response = connection.get(f"{base_url}{dataset_path}")
             response.raise_for_status()
-            response_data = response.json()
 
             schema_lookup[dataset_name] = data_type.from_dict(response.json())
 
     return schema_lookup
 
 
-def def_from_url(base_url, data_type, dataset_name):
+def def_from_url(base_url: str, data_type: Type[ST], dataset_name: str) -> ST:
     """Fetch schema definitions from a remote file for a single dataset
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup = {}
+    schema_lookup: Dict[str, ST] = {}
     if not base_url.endswith("/"):
         base_url = f"{base_url}/"
 
@@ -88,32 +92,32 @@ def def_from_url(base_url, data_type, dataset_name):
     return schema_lookup[dataset_name]
 
 
-def schema_def_from_file(filename) -> Dict[str, types.DatasetSchema]:
+def schema_def_from_file(filename: Union[Path, str]) -> Dict[str, DatasetSchema]:
     """Read schema definitions from a file on local drive."""
     with open(filename, "r") as file_handler:
         schema_info = json.load(file_handler)
-        return {schema_info["id"]: types.DatasetSchema.from_dict(schema_info)}
+        return {schema_info["id"]: DatasetSchema.from_dict(schema_info)}
 
 
-def profile_def_from_file(filename) -> Dict[str, types.DatasetSchema]:
+def profile_def_from_file(filename: Union[Path, str]) -> Dict[str, DatasetSchema]:
     """Read a profile from a file on local drive."""
     with open(filename, "r") as file_handler:
         schema_info = json.load(file_handler)
-        return {schema_info["name"]: types.DatasetSchema.from_dict(schema_info)}
+        return {schema_info["name"]: DatasetSchema.from_dict(schema_info)}
 
 
-def schema_fetch_url_file(schema_url_file):
+def schema_fetch_url_file(schema_url_file: str) -> Dict[str, Any]:
     """Return schemadata from URL or File"""
 
     if not schema_url_file.startswith("http"):
         with open(schema_url_file) as f:
-            schema_location = json.load(f)
+            schema_data = json.load(f)
     else:
         response = requests.get(schema_url_file)
         response.raise_for_status()
-        schema_location = response.json()
+        schema_data = response.json()
 
-    return schema_location
+    return cast(Dict[str, Any], schema_data)
 
 
 _CAMEL_CASE_REPLACE_PAT: Final[Pattern[str]] = re.compile(
@@ -179,7 +183,7 @@ def toCamelCase(ident: str) -> str:
 
 
 @lru_cache(maxsize=500)
-def to_snake_case(name):
+def to_snake_case(name: str) -> str:
     """
     Convert field/column/dataset name from Space separated/Snake Case/Camel case
     to snake_case.
