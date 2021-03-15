@@ -127,8 +127,8 @@ class DynamicModel(models.Model):
     # but this ensures the names don't conflict with fields from the schema.
 
     @classmethod
-    def get_dataset(cls) -> DatasetSchema:
-        """Give access to the original dataset that this model is a part of."""
+    def get_dataset_schema(cls) -> DatasetSchema:
+        """Give access to the original dataset schema that this model is a part of."""
         return cls._table_schema._parent_schema
 
     @classmethod

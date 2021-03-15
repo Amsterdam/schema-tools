@@ -17,7 +17,7 @@ def read(filename: Union[Path, str]) -> str:
 
 setup(
     name="amsterdam-schema-tools",
-    version="0.17.9",
+    version="0.17.10",
     url="https://github.com/amsterdam/schema-tools",
     license="Mozilla Public 2.0",
     author="Amsterdam Data en Informatie",
