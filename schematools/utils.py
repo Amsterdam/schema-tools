@@ -146,6 +146,8 @@ def toCamelCase(ident: str) -> str:
 
     A camelCased identifier, when it starts with a letter, it will start with a lower cased letter.
 
+    Empty strings are not allowed. They will raise an :exc:`ValueError` exception.
+
     Examples:
 
         >>> toCamelCase("dataset_table_schema")
@@ -162,10 +164,13 @@ def toCamelCase(ident: str) -> str:
         '33FuBar'
 
     Args:
-        ident: The identifier to be converted
+        ident: The identifier to be converted.
 
     Returns:
-        The identifier in camelCase format
+        The identifier in camelCase format.
+
+    Raises:
+        ValueError: If ``indent`` is an empty string.
 
     """
 
@@ -177,6 +182,8 @@ def toCamelCase(ident: str) -> str:
         # explicit test.
         return "".join(s.upper() for s in m.groups() if s)
 
+    if ident == "":
+        raise ValueError("Parameter `ident` cannot be an empty string.")
     result = _CAMEL_CASE_REPLACE_PAT.sub(replacement, ident)
     # The first letter of camelCase identifier is always lower case
     return result[0].lower() + result[1:]

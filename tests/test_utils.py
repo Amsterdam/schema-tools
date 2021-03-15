@@ -1,3 +1,5 @@
+import pytest
+
 from schematools.utils import to_snake_case, toCamelCase
 
 
@@ -16,6 +18,9 @@ def test_toCamelCase():
     # mind the lower case "i" after "33". It should be made upper case
     assert toCamelCase("numbers33inTheMiddle44") == "numbers33InTheMiddle44"
     assert toCamelCase("per_jaar_per_m2") == "perJaarPerM2"
+
+    with pytest.raises(ValueError):
+        toCamelCase("")
 
 
 def test_to_snake_case():
