@@ -128,7 +128,7 @@ class DynamicModel(models.Model):
 
     @classmethod
     def get_dataset_schema(cls) -> DatasetSchema:
-        """Give access to the original dataset that this model is a part of."""
+        """Give access to the original dataset schema that this model is a part of."""
         return cls._table_schema._parent_schema
 
     @classmethod
