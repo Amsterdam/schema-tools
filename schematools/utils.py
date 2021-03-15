@@ -190,14 +190,25 @@ def toCamelCase(ident: str) -> str:
 
 
 @lru_cache(maxsize=500)
-def to_snake_case(name: str) -> str:
+def to_snake_case(ident: str) -> str:
+    """Convert an identifier to snake_case format.
+
+    Empty strings are not allowed. They will raise an :exc:`ValueError` exception.
+
+    Args:
+        ident: The identifier to be converted.
+
+    Returns:
+        The identifier in snake_case foramt.
+
+    Raises:
+        ValueError: If ``ident`` is an empty string.
     """
-    Convert field/column/dataset name from Space separated/Snake Case/Camel case
-    to snake_case.
-    """
+    if ident == "":
+        raise ValueError("Parameter `ident` cannot be an empty string.")
     # Convert to field name, avoiding snake_case to snake_case issues.
     # Also preserve RELATION_INDICATOR in names (RELATION_INDICATOR are used for object relations)
-    name_parts = [toCamelCase(part) for part in name.split(RELATION_INDICATOR)]
+    name_parts = [toCamelCase(part) for part in ident.split(RELATION_INDICATOR)]
     return RELATION_INDICATOR.join(
         slugify(RE_CAMEL_CASE.sub(r" \1", part).strip(), separator="_") for part in name_parts
     )

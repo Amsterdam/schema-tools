@@ -38,3 +38,6 @@ def test_to_snake_case():
     assert to_snake_case("verlengingSluitingstijd1") == "verlenging_sluitingstijd_1"
     assert to_snake_case("numbers33inTheMiddle44") == "numbers_33_in_the_middle_44"
     assert to_snake_case("perJaarPerM2") == "per_jaar_per_m2"
+
+    with pytest.raises(ValueError):
+        to_snake_case("")
