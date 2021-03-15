@@ -17,6 +17,7 @@ from schematools.utils import to_snake_case, get_through_table_name
 from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
+    Dataset,
     DynamicModel,
     LooseRelationField,
     LooseRelationManyToManyField,
@@ -325,20 +326,20 @@ class FieldMaker:
 
 
 def schema_models_factory(
-    dataset: DatasetSchema, tables=None, base_app_name=None
+    dataset: Dataset, tables=None, base_app_name=None
 ) -> List[Type[DynamicModel]]:
     """Generate Django models from the data of the schema."""
     return [
-        model_factory(table=table, base_app_name=base_app_name)
-        for table in dataset.get_tables(include_nested=True, include_through=True)
+        model_factory(dataset=dataset, table=table, base_app_name=base_app_name)
+        for table in dataset.schema.get_tables(include_nested=True, include_through=True)
         if tables is None or table.id in tables
     ]
 
 
-def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[DynamicModel]:
+def model_factory(dataset: Dataset, table: DatasetTableSchema, base_app_name=None) -> Type[DynamicModel]:
     """Generate a Django model class from a JSON Schema definition."""
-    dataset = table._parent_schema
-    app_label = dataset.id
+    dataset_schema = dataset.schema
+    app_label = dataset_schema.id
     base_app_name = base_app_name or "dso_api.dynamic_api"
     module_name = f"{base_app_name}.{app_label}.models"
     model_name = to_snake_case(table.name)
@@ -371,7 +372,7 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
             init_kwargs = {}
 
         # Generate field object
-        kls, args, kwargs = FieldMaker(base_class, table, **init_kwargs)(field, dataset)
+        kls, args, kwargs = FieldMaker(base_class, table, **init_kwargs)(field, dataset_schema)
         if kls is None or kls is ObjectMarker:
             # Some fields are not mapped into classes
             continue
@@ -402,7 +403,8 @@ def model_factory(table: DatasetTableSchema, base_app_name=None) -> Type[Dynamic
         (DynamicModel,),
         {
             **fields,
-            "_dataset_schema": dataset,
+            "_dataset": dataset,
+            "_dataset_schema": dataset_schema,
             "_table_schema": table,
             "_display_field": display_field,
             "_is_temporal": is_temporal,
