@@ -259,7 +259,7 @@ class Dataset(models.Model):
             return
 
         new_definitions = {
-            to_snake_case(t.id): t for t in self.schema.get_tables(include_nested=True)
+            to_snake_case(t.name): t for t in self.schema.get_tables(include_nested=True)
         }
         new_names = set(new_definitions.keys())
         existing_models = {t.name: t for t in self.tables.all()}
