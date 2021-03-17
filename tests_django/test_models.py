@@ -79,7 +79,7 @@ def test_model_factory_sub_objects(parkeervakken_dataset):
 
 
 @pytest.mark.django_db
-def test_model_factory_temporary_1_n_relation(ggwgebieden_dataset, gebieden_dataset):
+def test_model_factory_temporary_1_n_relation(ggwgebieden_dataset):
     """Prove that extra relation fields are added to temporary relation"""
     model_dict = {
         cls._meta.model_name: cls

@@ -58,14 +58,14 @@ def profile_brk_read_full():
 
 
 @pytest.fixture()
-def brk_schema_json() -> dict:
+def kadastralobjecten_schema_json() -> dict:
     path = TEST_FILES_FOLDER / "kadastraleobjecten.json"
     return json.loads(path.read_text())
 
 
 @pytest.fixture()
-def brk_dataset(brk_schema_json) -> Dataset:
-    return Dataset.objects.create(name="brk", schema_data=brk_schema_json)
+def kadastralobjecten_dataset(kadastralobjecten_schema_json) -> Dataset:
+    return Dataset.objects.create(name="brk", schema_data=kadastralobjecten_schema_json)
 
 
 @pytest.fixture()
@@ -122,89 +122,60 @@ def incorrect_auth_profile(rf, brp_r_profile):
 @pytest.fixture()
 def afval_dataset(afval_schema: DatasetSchema) -> Dataset:
     """Create Afvalwegingen dataset."""
-    return Dataset.objects.create(
-        name="afvalwegingen",
-        schema_data=afval_schema.data,
-        enable_db=True,
-    )
+    return Dataset.create_for_schema(afval_schema)
+
+
+@pytest.fixture()
+def brk_dataset(brk_schema: DatasetSchema) -> Dataset:
+    """Create full BRK virtual Databset."""
+    dataset = Dataset.create_for_schema(brk_schema)
+    dataset.enable_db = False
+    dataset.save()
+    return dataset
 
 @pytest.fixture()
 def gebieden_dataset(gebieden_schema: DatasetSchema) -> Dataset:
-    """Create gebieden dataset."""
-    model, _ = Dataset.objects.get_or_create(
-        name=gebieden_schema.id,
-        schema_data=gebieden_schema.data,
-        enable_db=True,
-    )
-    return model
+    """Create gebieden dataset. DO NOT USE TOGETHER WITH ggwgebieden_dataset."""
+    return Dataset.create_for_schema(gebieden_schema)
 
 
 @pytest.fixture()
 def ggwgebieden_dataset(ggwgebieden_schema: DatasetSchema) -> Dataset:
-    """Create GGW Gebieden dataset."""
-    return Dataset.objects.create(
-        name=ggwgebieden_schema.id,
-        schema_data=ggwgebieden_schema.data,
-        enable_db=True,
-    )
+    """Create ggwgebieden dataset. DO NOT USE TOGETHER WITH gebieden_dataset."""
+    return Dataset.create_for_schema(ggwgebieden_schema)
 
 
 @pytest.fixture()
 def hr_dataset(hr_schema: DatasetSchema) -> Dataset:
     """Create HR dataset."""
-    return Dataset.objects.create(
-        name=hr_schema.id,
-        schema_data=hr_schema.data,
-        enable_db=True,
-    )
+    return Dataset.create_for_schema(hr_schema)
 
 
 @pytest.fixture()
 def meetbouten_dataset(meetbouten_schema: DatasetSchema) -> Dataset:
     """Create Meetbouten dataset."""
-    model, _ = Dataset.objects.get_or_create(
-        name=meetbouten_schema.id,
-        schema_data=meetbouten_schema.data,
-        enable_db=True,
-    )
-    return model
+    return Dataset.create_for_schema(meetbouten_schema)
 
 
 @pytest.fixture()
 def meldingen_dataset(meldingen_schema: DatasetSchema) -> Dataset:
     """Create Meldingen dataset."""
-    return Dataset.objects.create(
-        name=meldingen_schema.id,
-        schema_data=meldingen_schema.data,
-        enable_db=True,
-    )
+    return Dataset.create_for_schema(meldingen_schema)
 
 
 @pytest.fixture()
 def parkeervakken_dataset(parkeervakken_schema: DatasetSchema) -> Dataset:
     """Create Parkeervakken dataset."""
-    return Dataset.objects.create(
-        name=parkeervakken_schema.id,
-        schema_data=parkeervakken_schema.data,
-        enable_db=True,
-    )
+    return Dataset.create_for_schema(parkeervakken_schema)
 
 
 @pytest.fixture()
 def verblijfsobjecten_dataset(verblijfsobjecten_schema: DatasetSchema) -> Dataset:
     """Create Verblijfsobjecten dataset."""
-    return Dataset.objects.create(
-        name=verblijfsobjecten_schema.id,
-        schema_data=verblijfsobjecten_schema.data,
-        enable_db=True,
-    )
+    return Dataset.create_for_schema(verblijfsobjecten_schema)
 
 
 @pytest.fixture()
 def woningbouwplannen_dataset(woningbouwplannen_schema: DatasetSchema) -> Dataset:
     """Create Woning Bouw Plannen dataset."""
-    return Dataset.objects.create(
-        name=woningbouwplannen_schema.id,
-        schema_data=woningbouwplannen_schema.data,
-        enable_db=True,
-    )
+    return Dataset.create_for_schema(woningbouwplannen_schema)
