@@ -234,7 +234,7 @@ def shorten_name(db_table_name: str) -> str:
     return db_table_name[: MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX)]
 
 
-def get_dataset_prefix_from_path(dataset_path, dataset_id):
+def get_dataset_prefix_from_path(dataset_path: str, dataset_id: str) -> str:
     """ Extract dataset prefix from dataset path """
     dataset_parts = dataset_path.split("/")[:-1]
     if dataset_parts[-1] == dataset_id:

@@ -49,7 +49,7 @@ def test_get_dataset_prefix_from_path():
     - belastingen/reclame => belastingen
     - bag/bag => ""  # AKA old behaviour
     """
-    assert get_dataset_prefix_from_path("belastingen/precario/terrassen/terrassen", "terrassen") == "belastingen/precario"
-    assert get_dataset_prefix_from_path("belastingen/precario/terrassen", "terrassen") == "belastingen/precario"
-    assert get_dataset_prefix_from_path("belastingen/reclame", "reclame") == "belastingen"
-    assert get_dataset_prefix_from_path("bag/bag", "bag") == ""
+    assert get_dataset_prefix_from_path("belastingen/precario/terrassen/terrassen.json", "terrassen") == "belastingen/precario"
+    assert get_dataset_prefix_from_path("belastingen/precario/terrassen.json", "terrassen") == "belastingen/precario"
+    assert get_dataset_prefix_from_path("belastingen/reclame.json", "reclame") == "belastingen"
+    assert get_dataset_prefix_from_path("bag/bag.json", "bag") == ""
