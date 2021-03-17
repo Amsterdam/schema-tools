@@ -20,6 +20,11 @@ pytest_plugins = ["tests.fixtures"]
 # https://github.com/toirl/pytest-sqlalchemy/blob/master/pytest_sqlalchemy.py
 
 
+@pytest.fixture()
+def here():
+    return HERE
+
+
 @pytest.fixture(scope="session")
 def db_url():
     """Get the DATABASE_URL, prepend test_ to it."""
