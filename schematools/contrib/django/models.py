@@ -133,6 +133,7 @@ class DynamicModel(models.Model):
 
     @classmethod
     def get_dataset_id(cls) -> str:
+        """Give access to the original dataset ID that this model is part of."""
         return cls._dataset.schema.id
 
     @classmethod
