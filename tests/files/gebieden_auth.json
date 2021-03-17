@@ -1,6 +1,6 @@
 {
   "type": "dataset",
-  "id": "gebieden",
+  "id": "gebieden_auth",
   "title": "gebieden",
   "auth": "LEVEL/A",
   "status": "beschikbaar",

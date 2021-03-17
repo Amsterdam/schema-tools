@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from schematools.types import DatasetSchema
 from schematools.contrib.django.auth_backend import RequestProfile
 from schematools.contrib.django.models import Dataset, Profile
 
@@ -116,3 +117,94 @@ def incorrect_auth_profile(rf, brp_r_profile):
     incorrect_request.is_authorized_for = lambda *scopes: "BRP/R" in set(scopes)
     auth_profile = RequestProfile(incorrect_request)
     return auth_profile
+
+
+@pytest.fixture()
+def afval_dataset(afval_schema: DatasetSchema) -> Dataset:
+    """Create Afvalwegingen dataset."""
+    return Dataset.objects.create(
+        name="afvalwegingen",
+        schema_data=afval_schema.data,
+        enable_db=True,
+    )
+
+@pytest.fixture()
+def gebieden_dataset(gebieden_schema: DatasetSchema) -> Dataset:
+    """Create gebieden dataset."""
+    model, _ = Dataset.objects.get_or_create(
+        name=gebieden_schema.id,
+        schema_data=gebieden_schema.data,
+        enable_db=True,
+    )
+    return model
+
+
+@pytest.fixture()
+def ggwgebieden_dataset(ggwgebieden_schema: DatasetSchema) -> Dataset:
+    """Create GGW Gebieden dataset."""
+    return Dataset.objects.create(
+        name=ggwgebieden_schema.id,
+        schema_data=ggwgebieden_schema.data,
+        enable_db=True,
+    )
+
+
+@pytest.fixture()
+def hr_dataset(hr_schema: DatasetSchema) -> Dataset:
+    """Create HR dataset."""
+    return Dataset.objects.create(
+        name=hr_schema.id,
+        schema_data=hr_schema.data,
+        enable_db=True,
+    )
+
+
+@pytest.fixture()
+def meetbouten_dataset(meetbouten_schema: DatasetSchema) -> Dataset:
+    """Create Meetbouten dataset."""
+    model, _ = Dataset.objects.get_or_create(
+        name=meetbouten_schema.id,
+        schema_data=meetbouten_schema.data,
+        enable_db=True,
+    )
+    return model
+
+
+@pytest.fixture()
+def meldingen_dataset(meldingen_schema: DatasetSchema) -> Dataset:
+    """Create Meldingen dataset."""
+    return Dataset.objects.create(
+        name=meldingen_schema.id,
+        schema_data=meldingen_schema.data,
+        enable_db=True,
+    )
+
+
+@pytest.fixture()
+def parkeervakken_dataset(parkeervakken_schema: DatasetSchema) -> Dataset:
+    """Create Parkeervakken dataset."""
+    return Dataset.objects.create(
+        name=parkeervakken_schema.id,
+        schema_data=parkeervakken_schema.data,
+        enable_db=True,
+    )
+
+
+@pytest.fixture()
+def verblijfsobjecten_dataset(verblijfsobjecten_schema: DatasetSchema) -> Dataset:
+    """Create Verblijfsobjecten dataset."""
+    return Dataset.objects.create(
+        name=verblijfsobjecten_schema.id,
+        schema_data=verblijfsobjecten_schema.data,
+        enable_db=True,
+    )
+
+
+@pytest.fixture()
+def woningbouwplannen_dataset(woningbouwplannen_schema: DatasetSchema) -> Dataset:
+    """Create Woning Bouw Plannen dataset."""
+    return Dataset.objects.create(
+        name=woningbouwplannen_schema.id,
+        schema_data=woningbouwplannen_schema.data,
+        enable_db=True,
+    )
