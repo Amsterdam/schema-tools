@@ -87,6 +87,11 @@ class DatasetSchema(SchemaType):
         return self.get("description")
 
     @property
+    def url_prefix(self) -> str:
+        """Dataset URL prefix"""
+        return self.get("url_prefix")
+
+    @property
     def identifier(self):
         """Which fields acts as identifier. (default is Django "pk" field)"""
         return self.get("identifier", "pk")

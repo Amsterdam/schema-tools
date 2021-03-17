@@ -109,6 +109,7 @@ class DynamicModel(models.Model):
     """Base class to tag and detect dynamically generated models."""
 
     #: Overwritten by subclasses / factory
+    _dataset: Dataset = None
     _table_schema: DatasetTableSchema = None
     _display_field = None
 
@@ -125,20 +126,25 @@ class DynamicModel(models.Model):
 
     # These classmethods could have been a 'classproperty',
     # but this ensures the names don't conflict with fields from the schema.
+    @classmethod
+    def get_dataset(cls) -> Dataset:
+        """Give access to the original dataset that this models is part of."""
+        return cls._dataset
+
+    @classmethod
+    def get_dataset_id(cls) -> str:
+        """Give access to the original dataset ID that this model is part of."""
+        return cls._dataset.schema.id
 
     @classmethod
     def get_dataset_schema(cls) -> DatasetSchema:
         """Give access to the original dataset schema that this model is a part of."""
-        return cls._table_schema._parent_schema
+        return cls._dataset.schema
 
     @classmethod
     def table_schema(cls) -> DatasetTableSchema:
         """Give access to the original table_schema that this model implements."""
         return cls._table_schema
-
-    @classmethod
-    def get_dataset_id(cls) -> str:
-        return cls._table_schema.dataset.id
 
     @classmethod
     def get_table_id(cls) -> str:
@@ -212,6 +218,7 @@ class Dataset(models.Model):
             name=to_snake_case(schema.id),
             schema_data=schema.json_data(),
             auth=_serialize_claims(schema),
+            url_prefix=schema.url_prefix,
         )
 
     def save_for_schema(self, schema: DatasetSchema):
@@ -303,7 +310,7 @@ class Dataset(models.Model):
         if not self.enable_db:
             return []
         else:
-            return schema_models_factory(self.schema)
+            return schema_models_factory(self)
 
 
 class DatasetTable(models.Model):

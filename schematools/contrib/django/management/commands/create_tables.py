@@ -41,7 +41,7 @@ def create_tables(
         if not dataset.enable_db or dataset.name in to_be_skipped:
             continue  # in case create_tables() is called by import_schemas
 
-        models.extend(schema_models_factory(dataset.schema, base_app_name="dso_api.dynamic_api"))
+        models.extend(schema_models_factory(dataset, base_app_name="dso_api.dynamic_api"))
 
     # Create all tables
     with connection.schema_editor() as schema_editor:
