@@ -89,7 +89,7 @@ class DatasetSchema(SchemaType):
     @property
     def url_prefix(self) -> str:
         """Dataset URL prefix"""
-        return self.get("url_prefix")
+        return self.get("url_prefix", "")
 
     @property
     def identifier(self):

@@ -38,7 +38,7 @@ def test_get_table_permissions(correct_auth_profile, brp_dataset):
 
 
 @pytest.mark.django_db
-def test_has_perm_dataset(rf, profile_medewerker, profile_brk_read, brk_dataset):
+def test_has_perm_dataset(rf, profile_medewerker, profile_brk_read, kadastralobjecten_dataset):
     """Check that user who is authorized for all authorization checks can access data"""
     request = rf.get("/")
 
@@ -51,7 +51,7 @@ def test_has_perm_dataset(rf, profile_medewerker, profile_brk_read, brk_dataset)
 
 @pytest.mark.django_db
 def test_has_perm_dataset_field_two_profiles(
-    rf, profile_medewerker, profile_brk_read, profile_brk_read_full, brk_dataset
+    rf, profile_medewerker, profile_brk_read, profile_brk_read_full, kadastralobjecten_dataset
 ):
     """Checks that profiles combine for a given user.
     And that he can access data accordingly, while regular medeweker not."""
@@ -74,7 +74,7 @@ def test_has_perm_dataset_field_two_profiles(
 
 
 @pytest.mark.django_db
-def test_has_perm_dataset_field_read_profile(rf, profile_brk_read_full, brk_dataset):
+def test_has_perm_dataset_field_read_profile(rf, profile_brk_read_full, kadastralobjecten_dataset):
     """Check that user with one profile can access data, while regular medeweker not."""
     request = rf.get("/")
 
@@ -93,7 +93,7 @@ def test_has_perm_dataset_field_read_profile(rf, profile_brk_read_full, brk_data
 
 @pytest.mark.django_db
 def test_profile_field_inheritance_two_profiles(
-    rf, profile_brk_read, profile_brk_read_full, brk_dataset
+    rf, profile_brk_read, profile_brk_read_full, kadastralobjecten_dataset
 ):
     """Tests that profiles field permissions inherit properly"""
 
@@ -113,7 +113,7 @@ def test_profile_field_inheritance_two_profiles(
 
 @pytest.mark.django_db
 def test_profile_field_inheritance_from_dataset(
-    rf, profile_brk_read, profile_brk_read_full, brk_dataset
+    rf, profile_brk_read, profile_brk_read_full, kadastralobjecten_dataset
 ):
     """Tests dataset permissions overrule lower profile permissions"""
 
