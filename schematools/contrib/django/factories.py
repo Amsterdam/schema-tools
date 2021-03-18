@@ -8,7 +8,7 @@ from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
 
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
-from schematools.utils import get_through_table_name, to_snake_case
+from schematools.utils import get_rel_table_identifier, to_snake_case
 
 from .models import (
     FORMAT_MODELS_LOOKUP,
@@ -122,8 +122,8 @@ class RelationMaker:
 
     def _make_through_classname(self, dataset_id, field_name):
         snakecased_fieldname = to_snake_case(field_name)
-        through_table_id = get_through_table_name(
-            len(dataset_id) + 1, self.table.name, snakecased_fieldname
+        through_table_id = get_rel_table_identifier(
+            len(dataset_id) + 1, self.table.id, snakecased_fieldname
         )
         # dso-api expects the dataset_id separated from the table_id by a point
         return f"{dataset_id}.{through_table_id}"
@@ -340,7 +340,7 @@ def model_factory(
     app_label = dataset_schema.id
     base_app_name = base_app_name or "dso_api.dynamic_api"
     module_name = f"{base_app_name}.{app_label}.models"
-    model_name = to_snake_case(table.name)
+    model_name = to_snake_case(table.id)
     display_field = to_snake_case(table.display_field) if table.display_field else None
     is_temporal = table.is_temporal
 

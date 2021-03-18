@@ -219,16 +219,20 @@ def to_snake_case(ident: str) -> str:
     )
 
 
-def get_through_table_name(prefix_length: int, table_name: str, through_name: str) -> str:
-    """Create through table name from table_name and an extra fieldname.
+def get_rel_table_identifier(
+    prefix_length: int, table_identifier: str, through_identifier: str
+) -> str:
+    """Create identifier for related table (FK or M2M) from table_identifier and an extra fieldname.
     Take length of prefix (dataset.id) into account, postgresql has maxsize for tablenames."""
-    through_table_name = f"{table_name}_{through_name}"
-    return through_table_name[: MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX) - prefix_length]
+    through_table_name = f"{table_identifier}_{through_identifier}"
+    return through_table_name
+    # return through_table_name[: MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX) - prefix_length]
 
 
-def shorten_name(db_table_name: str) -> str:
+def shorten_name(db_table_name: str, with_postfix=False) -> str:
     """ Utility function to shorten names to safe length for postgresql """
-    return db_table_name[: MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX)]
+    max_length = MAX_TABLE_NAME_LENGTH - int(with_postfix) * len(TMP_TABLE_POSTFIX)
+    return db_table_name[:max_length]
 
 
 def get_dataset_prefix_from_path(dataset_path: str, dataset_id: str) -> str:

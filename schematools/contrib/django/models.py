@@ -266,7 +266,7 @@ class Dataset(models.Model):
             return
 
         new_definitions = {
-            to_snake_case(t.name): t for t in self.schema.get_tables(include_nested=True)
+            to_snake_case(t.id): t for t in self.schema.get_tables(include_nested=True)
         }
         new_names = set(new_definitions.keys())
         existing_models = {t.name: t for t in self.tables.all()}
@@ -373,7 +373,7 @@ class DatasetTable(models.Model):
 
     def save_for_schema(self, table: DatasetTableSchema):
         """Save changes to the dataset table."""
-        self.name = to_snake_case(table.name)
+        self.name = to_snake_case(table.id)
         self.db_table = table.db_name()
         self.auth = _serialize_claims(table)
         self.display_field = to_snake_case(table.display_field) if table.display_field else None
@@ -386,7 +386,7 @@ class DatasetTable(models.Model):
         is_creation = not self._state.adding
         self.save()
 
-        new_definitions = {to_snake_case(f.name): f for f in table.fields}
+        new_definitions = {to_snake_case(f.id): f for f in table.fields}
         new_names = set(new_definitions.keys())
         existing_fields = {f.name: f for f in self.fields.all()} if is_creation else {}
         existing_names = set(existing_fields.keys())
@@ -433,7 +433,7 @@ class DatasetField(models.Model):
 
     def save_for_schema(self, field: DatasetFieldSchema):
         """Update the field with the provided schema data."""
-        self.name = to_snake_case(field.name)
+        self.name = to_snake_case(field.id)
         self.auth = _serialize_claims(field)
         self.save()
 
