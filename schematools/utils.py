@@ -20,7 +20,7 @@ RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
 @ttl_cache(ttl=16)
 def schema_defs_from_url(
     schemas_url: str, dataset_name: Optional[str] = None
-) -> Dict[str, DatasetSchema]:
+) -> Dict[str, types.DatasetSchema]:
     """Fetch all schema definitions from a remote file (or single dataset if specified).
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
@@ -35,7 +35,7 @@ def schema_defs_from_url(
     return defs_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
 
 
-def schema_def_from_url(schemas_url: str, dataset_name: str) -> DatasetSchema:
+def schema_def_from_url(schemas_url: str, dataset_name: str) -> types.DatasetSchema:
     return def_from_url(
         base_url=schemas_url,
         data_type=types.DatasetSchema,
@@ -44,7 +44,7 @@ def schema_def_from_url(schemas_url: str, dataset_name: str) -> DatasetSchema:
 
 
 @ttl_cache(ttl=16)
-def profile_defs_from_url(profiles_url: str) -> Dict[str, ProfileSchema]:
+def profile_defs_from_url(profiles_url: str) -> Dict[str, types.ProfileSchema]:
     """Fetch all profile definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """
@@ -81,11 +81,9 @@ def def_from_url(base_url: str, data_type: Type[types.ST], dataset_id: str) -> t
     """Fetch schema definitions from a remote file for a single dataset
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup: Dict[str, ST] = {}
+    schema_lookup: Dict[str, types.ST] = {}
     if not base_url.endswith("/"):
         base_url = f"{base_url}/"
-
-    dataset_path = f"{dataset_id}/{dataset_id}"
 
     with requests.Session() as connection:
         index_response = connection.get(f"{base_url}index.json")
@@ -100,14 +98,14 @@ def def_from_url(base_url: str, data_type: Type[types.ST], dataset_id: str) -> t
     return schema_lookup[dataset_id]
 
 
-def schema_def_from_file(filename: Union[Path, str]) -> Dict[str, DatasetSchema]:
+def schema_def_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetSchema]:
     """Read schema definitions from a file on local drive."""
     with open(filename, "r") as file_handler:
         schema_info = json.load(file_handler)
         return {schema_info["id"]: types.DatasetSchema.from_dict(schema_info)}
 
 
-def profile_def_from_file(filename: Union[Path, str]) -> Dict[str, DatasetSchema]:
+def profile_def_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetSchema]:
     """Read a profile from a file on local drive."""
     with open(filename, "r") as file_handler:
         schema_info = json.load(file_handler)
