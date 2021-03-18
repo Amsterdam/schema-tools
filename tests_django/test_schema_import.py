@@ -11,8 +11,8 @@ def test_import_schema(here):
     call_command("import_schemas", *args)
     assert models.Dataset.objects.count() == 1
     assert models.Dataset.objects.first().name == "hr"
-    assert models.DatasetTable.objects.count() == 3
-    assert models.DatasetTable.objects.filter(name="activiteiten").count() == 1
+    assert models.DatasetTable.objects.count() == 4
+    assert models.DatasetTable.objects.filter(name="maatschappelijkeactiviteiten").count() == 1
 
 
 @pytest.mark.django_db

@@ -74,9 +74,29 @@ def test_model_factory_sub_objects(parkeervakken_dataset):
         )
     }
     assert "parkeervakken_regimes" in model_dict
+
     fields_dict = {f.name: f for f in model_dict["parkeervakken_regimes"]._meta.fields}
     assert "parent" in fields_dict
     assert isinstance(fields_dict["parent"], models.ForeignKey)
+
+
+@pytest.mark.django_db
+def test_model_factory_sub_objects_for_shortened_names(hr_dataset, verblijfsobjecten_dataset):
+    """Prove that subobjects also work for shortened names in the schema"""
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(hr_dataset, base_app_name="dso_api.dynamic_api")
+    }
+
+    # Check a relation where the fieldname is intact and one where fieldname is shortened
+    for fieldname in (
+        "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_maatschappelijke_activiteit",
+        "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming",
+    ):
+        assert fieldname in model_dict
+        fields_dict = {f.name: f for f in model_dict[fieldname]._meta.fields}
+        assert "parent" in fields_dict
+        assert isinstance(fields_dict["parent"], models.ForeignKey)
 
 
 @pytest.mark.django_db
@@ -153,23 +173,23 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_dataset, 
     assert isinstance(buurten_as_scalar_field.remote_field.through, ModelBase)
 
 
-@pytest.mark.django_db
-def test_table_name_creation_n_m_relation(brk_dataset, verblijfsobjecten_dataset):
-    """Prove that through table name is looking at instance method db_name
-    of the datasettableschema class to define it's name.
-    Note: Adjust this test after db_name is getting value from Amsterdam schema
-    specification.
-    """
-    model_dict = {
-        cls._meta.model_name: cls
-        for cls in schema_models_factory(brk_dataset, base_app_name="dso_api.dynamic_api")
-    }
-    # The through table is created
-    # beware! the letter 't' is missing in the table name on purpose
-    # currently the table name is maxed to 63 karakters minus 4 karakters
-    # (because of the temp table which adds the postfix _new to the table name)
-    through_table_name = "kadastraleobjecten_heeft_een_relatie_met_verblijfsobjec"
-    assert through_table_name in model_dict
+# @pytest.mark.django_db
+# def test_table_name_creation_n_m_relation(brk_dataset, verblijfsobjecten_dataset):
+#     """Prove that through table name is looking at instance method db_name
+#     of the datasettableschema class to define it's name.
+#     Note: Adjust this test after db_name is getting value from Amsterdam schema
+#     specification.
+#     """
+#     model_dict = {
+#         cls._meta.model_name: cls
+#         for cls in schema_models_factory(brk_dataset, base_app_name="dso_api.dynamic_api")
+#     }
+#     # The through table is created
+#     # beware! the letter 't' is missing in the table name on purpose
+#     # currently the table name is maxed to 63 karakters minus 4 karakters
+#     # (because of the temp table which adds the postfix _new to the table name)
+#     through_table_name = "kadastraleobjecten_heeft_een_relatie_met_verblijfsobjec"
+#     assert through_table_name in model_dict
 
 
 @pytest.mark.django_db
@@ -183,11 +203,12 @@ def test_table_shortname(hr_dataset, verblijfsobjecten_dataset):
         cls._meta.model_name: cls
         for cls in schema_models_factory(hr_dataset, base_app_name="dso_api.dynamic_api")
     }
-    model_names = {
-        "activiteiten",
-        "activiteiten_sbi_maatschappelijk",
-        "activiteiten_heeft_sbi_activiteiten_voor_onderneming",
-        "activiteiten_verblijfsobjecten",
+    db_table_names = {
+        "hr_activiteiten",
+        "hr_activiteiten_sbi_maatschappelijk",
+        "hr_activiteiten_heeft_sbi_activiteiten_voor_onderneming",
+        "hr_activiteiten_verblijfsobjecten",
+        "hr_activiteiten_wordt_uitgeoefend_in_commerciele_vestiging",
     }
 
-    assert model_names == set(model_dict.keys())
+    assert db_table_names == set(m._meta.db_table for m in model_dict.values())

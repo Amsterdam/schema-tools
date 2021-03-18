@@ -174,10 +174,13 @@ class DatasetSchema(SchemaType):
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
         # Map Arrays into tables.
-        from schematools.utils import get_through_table_name, to_snake_case
+        from schematools.utils import get_rel_table_identifier, to_snake_case
 
-        snakecased_fieldname = to_snake_case(field.name)
-        sub_table_id = get_through_table_name(len(self.id) + 1, table.name, snakecased_fieldname)
+        snakecased_field_id = to_snake_case(field.id)
+        if "commerci" in table.id:
+            breakpoint()
+
+        sub_table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
         sub_table_schema = {
             "id": sub_table_id,
             "originalID": field.name,
@@ -196,12 +199,17 @@ class DatasetSchema(SchemaType):
                 },
             },
         }
+        if field.has_shortname or table.has_shortname:
+            snakecased_fieldname = to_snake_case(field.name)
+            sub_table_schema["shortname"] = get_rel_table_identifier(
+                len(self.id) + 1, table.name, snakecased_fieldname
+            )
         return DatasetTableSchema(sub_table_schema, _parent_schema=self, nested_table=True)
 
     def build_through_table(
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
-        from schematools.utils import get_through_table_name, to_snake_case
+        from schematools.utils import get_rel_table_identifier, to_snake_case
 
         # Build the through_table for n-m relation
         # For relations, we have to use the real ids of the tables
@@ -212,7 +220,7 @@ class DatasetSchema(SchemaType):
             to_snake_case(part) for part in field.nm_relation.split(":")[:2]
         ]
         snakecased_fieldname = to_snake_case(field.name)
-        table_id = get_through_table_name(len(self.id) + 1, table.name, snakecased_fieldname)
+        table_id = get_rel_table_identifier(len(self.id) + 1, table.name, snakecased_fieldname)
 
         sub_table_schema = {
             "id": table_id,
@@ -294,6 +302,10 @@ class DatasetTableSchema(SchemaType):
     @property
     def name(self) -> Optional[str]:
         return self.get("shortname", self.id)
+
+    @property
+    def has_shortname(self) -> bool:
+        return self.get("shortname") is not None
 
     @property
     def dataset(self) -> Optional[DatasetSchema]:
@@ -435,9 +447,9 @@ class DatasetTableSchema(SchemaType):
         NB. self.name could have been changed by a 'shortname' in the schema.
         """
 
-        from schematools.utils import to_snake_case
+        from schematools.utils import to_snake_case, shorten_name
 
-        return to_snake_case(f"{self.dataset.id}_{self.name}")
+        return shorten_name(to_snake_case(f"{self.dataset.id}_{self.name}"), with_postfix=True)
 
     def get_fk_fields(self) -> Iterator[str]:
         """Generates fields names that contain a 1:N relation to a parent table"""
@@ -488,6 +500,10 @@ class DatasetFieldSchema(DatasetType):
     def name(self) -> Optional[str]:
         """ If there is a 'shortname' in the field schema, it overrides the name """
         return self.get("shortname", self._id)
+
+    @property
+    def has_shortname(self) -> bool:
+        return self.get("shortname") is not None
 
     @property
     def description(self) -> Optional[str]:

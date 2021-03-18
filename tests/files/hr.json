@@ -52,6 +52,19 @@
             },
             "description": "De omschrijving van de activiteiten die de onderneming uitoefent."
           },
+          "wordtUitgeoefendInCommercieleVestiging": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "bronwaarde": {
+                  "type": "integer"
+                }
+              }
+            },
+            "$comment": "relation hr:vestigingen",
+            "description": "Een vestiging is gebouw of een complex van gebouwen waar duurzame uitoefening van activiteiten van een Onderneming of Rechtspersoon plaatsvindt."
+          },
           "heeftEenRelatieMetVerblijfsobject": {
             "type": "array",
             "shortname": "verblijfsobjecten",
