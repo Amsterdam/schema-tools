@@ -7,12 +7,8 @@ from django.conf import settings
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
 
-from schematools.types import (
-    DatasetFieldSchema,
-    DatasetSchema,
-    DatasetTableSchema,
-)
-from schematools.utils import to_snake_case, get_through_table_name
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
+from schematools.utils import get_through_table_name, to_snake_case
 
 from .models import (
     FORMAT_MODELS_LOOKUP,
@@ -336,7 +332,9 @@ def schema_models_factory(
     ]
 
 
-def model_factory(dataset: Dataset, table: DatasetTableSchema, base_app_name=None) -> Type[DynamicModel]:
+def model_factory(
+    dataset: Dataset, table: DatasetTableSchema, base_app_name=None
+) -> Type[DynamicModel]:
     """Generate a Django model class from a JSON Schema definition."""
     dataset_schema = dataset.schema
     app_label = dataset_schema.id

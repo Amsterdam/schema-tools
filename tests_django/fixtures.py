@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from schematools.types import DatasetSchema
 from schematools.contrib.django.auth_backend import RequestProfile
 from schematools.contrib.django.models import Dataset, Profile
+from schematools.types import DatasetSchema
 
 TEST_FILES_FOLDER = Path(__file__).parent.parent / "tests" / "files"
 
@@ -132,6 +132,7 @@ def brk_dataset(brk_schema: DatasetSchema) -> Dataset:
     dataset.enable_db = False
     dataset.save()
     return dataset
+
 
 @pytest.fixture()
 def gebieden_dataset(gebieden_schema: DatasetSchema) -> Dataset:

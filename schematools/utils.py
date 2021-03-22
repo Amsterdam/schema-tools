@@ -9,8 +9,7 @@ import requests
 from cachetools.func import lru_cache, ttl_cache
 from string_utils import slugify
 
-from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
-from schematools import types
+from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
 
 RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
@@ -69,8 +68,8 @@ def defs_from_url(base_url: str, data_type: Type[types.ST]) -> Dict[str, types.S
             response.raise_for_status()
             response_data = response.json()
             response_data["url_prefix"] = get_dataset_prefix_from_path(
-                dataset_path=dataset_path,
-                dataset_id=response_data["id"])
+                dataset_path=dataset_path, dataset_id=response_data["id"]
+            )
 
             schema_lookup[dataset_id] = data_type.from_dict(response_data)
 

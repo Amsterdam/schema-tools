@@ -33,9 +33,9 @@ def test_model_factory_fields(afval_dataset):
     assert meta.app_label == afval_dataset.schema.id
 
     table_with_id_as_string = afval_dataset.schema.tables[1]
-    model_cls = model_factory(dataset=afval_dataset,
-                              table=table_with_id_as_string,
-                              base_app_name="dso_api.dynamic_api")
+    model_cls = model_factory(
+        dataset=afval_dataset, table=table_with_id_as_string, base_app_name="dso_api.dynamic_api"
+    )
     meta = model_cls._meta
     assert meta.get_field("id").primary_key
     assert isinstance(meta.get_field("id"), UnlimitedCharField)
@@ -44,7 +44,6 @@ def test_model_factory_fields(afval_dataset):
 @pytest.mark.django_db
 def test_model_factory_relations(afval_dataset):
     """Prove that relations between models can be resolved"""
-    afval_schema = afval_dataset.schema
     models = {
         cls._meta.model_name: cls
         for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
@@ -70,7 +69,9 @@ def test_model_factory_sub_objects(parkeervakken_dataset):
     """Prove that subobjects between models lead to extra child model"""
     model_dict = {
         cls._meta.model_name: cls
-        for cls in schema_models_factory(parkeervakken_dataset, base_app_name="dso_api.dynamic_api")
+        for cls in schema_models_factory(
+            parkeervakken_dataset, base_app_name="dso_api.dynamic_api"
+        )
     }
     assert "parkeervakken_regimes" in model_dict
     fields_dict = {f.name: f for f in model_dict["parkeervakken_regimes"]._meta.fields}

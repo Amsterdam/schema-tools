@@ -42,6 +42,7 @@ def test_to_snake_case():
     with pytest.raises(ValueError):
         to_snake_case("")
 
+
 def test_get_dataset_prefix_from_path():
     """Confirm that dataset prefix can be extracted from URLs such asL
     - belastingen/precario/terrassen/terrassen => belastingen/precario
@@ -49,7 +50,13 @@ def test_get_dataset_prefix_from_path():
     - belastingen/reclame => belastingen
     - bag/bag => ""  # AKA old behaviour
     """
-    assert get_dataset_prefix_from_path("belastingen/precario/terrassen/terrassen.json", "terrassen") == "belastingen/precario"
-    assert get_dataset_prefix_from_path("belastingen/precario/terrassen.json", "terrassen") == "belastingen/precario"
+    assert (
+        get_dataset_prefix_from_path("belastingen/precario/terrassen/terrassen.json", "terrassen")
+        == "belastingen/precario"
+    )
+    assert (
+        get_dataset_prefix_from_path("belastingen/precario/terrassen.json", "terrassen")
+        == "belastingen/precario"
+    )
     assert get_dataset_prefix_from_path("belastingen/reclame.json", "reclame") == "belastingen"
     assert get_dataset_prefix_from_path("bag/bag.json", "bag") == ""
