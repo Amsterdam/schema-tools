@@ -173,29 +173,10 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_dataset, 
     assert isinstance(buurten_as_scalar_field.remote_field.through, ModelBase)
 
 
-# @pytest.mark.django_db
-# def test_table_name_creation_n_m_relation(brk_dataset, verblijfsobjecten_dataset):
-#     """Prove that through table name is looking at instance method db_name
-#     of the datasettableschema class to define it's name.
-#     Note: Adjust this test after db_name is getting value from Amsterdam schema
-#     specification.
-#     """
-#     model_dict = {
-#         cls._meta.model_name: cls
-#         for cls in schema_models_factory(brk_dataset, base_app_name="dso_api.dynamic_api")
-#     }
-#     # The through table is created
-#     # beware! the letter 't' is missing in the table name on purpose
-#     # currently the table name is maxed to 63 karakters minus 4 karakters
-#     # (because of the temp table which adds the postfix _new to the table name)
-#     through_table_name = "kadastraleobjecten_heeft_een_relatie_met_verblijfsobjec"
-#     assert through_table_name in model_dict
-
-
 @pytest.mark.django_db
 def test_table_shortname(hr_dataset, verblijfsobjecten_dataset):
     """Prove that the shortnames definition for tables and fields
-    are showing up in the Django model definitions.
+    are showing up in the Django db_table definitions.
     We changed the table name to 'activiteiten'.
     And used a shortname for a nested and for a relation field.
     """
