@@ -177,9 +177,6 @@ class DatasetSchema(SchemaType):
         from schematools.utils import get_rel_table_identifier, to_snake_case
 
         snakecased_field_id = to_snake_case(field.id)
-        if "commerci" in table.id:
-            breakpoint()
-
         sub_table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
         sub_table_schema = {
             "id": sub_table_id,
@@ -199,6 +196,10 @@ class DatasetSchema(SchemaType):
                 },
             },
         }
+
+        # When shortnames are in use for table or field
+        # we need to add a shortname to the dynamically generated
+        # schema definition.
         if field.has_shortname or table.has_shortname:
             snakecased_fieldname = to_snake_case(field.name)
             sub_table_schema["shortname"] = get_rel_table_identifier(
@@ -219,8 +220,10 @@ class DatasetSchema(SchemaType):
         right_dataset, right_table = [
             to_snake_case(part) for part in field.nm_relation.split(":")[:2]
         ]
+
         snakecased_fieldname = to_snake_case(field.name)
-        table_id = get_rel_table_identifier(len(self.id) + 1, table.name, snakecased_fieldname)
+        snakecased_field_id = to_snake_case(field.id)
+        table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
 
         sub_table_schema = {
             "id": table_id,
@@ -243,6 +246,14 @@ class DatasetSchema(SchemaType):
                 },
             },
         }
+
+        # When shortnames are in use for table or field
+        # we need to add a shortname to the dynamically generated
+        # schema definition.
+        if field.has_shortname or table.has_shortname:
+            sub_table_schema["shortname"] = get_rel_table_identifier(
+                len(self.id) + 1, table.name, snakecased_fieldname
+            )
 
         # Only for object type relations we can add the fields of the
         # relation to the schema
