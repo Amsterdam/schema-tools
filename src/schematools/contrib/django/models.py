@@ -1,3 +1,15 @@
+"""The Django models for Amsterdam Schema data.
+
+When models are generated with :func:`~schematools.contrib.django.factories.model_factory`,
+they all inherit from :class:`~schematools.contrib.django.models.DynamicModel` to have
+a common interface.
+
+When the schema data is imported, the models
+:class:`~schematools.contrib.django.models.Dataset`,
+:class:`~schematools.contrib.django.models.DatasetTable`,
+:class:`~schematools.contrib.django.models.DatasetField` and
+:class:`~schematools.contrib.django.models.Profile` are all filled.
+"""
 from __future__ import annotations
 
 import json
@@ -455,10 +467,13 @@ class Profile(models.Model):
 
     def get_permissions(self) -> Dict[str, str]:
         """
-        Get Flattened permissions per profile in form:
-        {dataset} = "permission"
-        {dataset}:{table} = "permission"
-        {dataset}:{table}:{field} = "permission"
+        Get Flattened permissions per profile in form::
+
+        {
+            "{dataset}": "permission",
+            "{dataset}:{table}": = "permission",
+            "{dataset}:{table}:{field}": = "permission"
+        }
         """
 
         permissions = {}
@@ -480,6 +495,7 @@ class Profile(models.Model):
         return permissions
 
     def get_scopes(self):
+        """The auth scopes for this profile"""
         try:
             return json.loads(self.scopes.replace("'", '"'))
         except ValueError:
