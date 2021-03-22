@@ -142,7 +142,7 @@ class PsqlIdentifierLengthValidator(Validator):
             # There already is a `db_name` property however it truncates the inferred
             # table name to prevent exceeding the PostgreSQL limit. Hence it cannot
             # be used for validation purposes.
-            table_name = to_snake_case("_".join((self.dataset.id, table.id)))
+            table_name = to_snake_case("_".join((self.dataset.id, table.name)))
             if (length := len(table_name)) > MAX_TABLE_NAME_LENGTH:
                 excess = length - MAX_TABLE_NAME_LENGTH
                 yield ValidationError(
