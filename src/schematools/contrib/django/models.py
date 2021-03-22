@@ -53,7 +53,7 @@ class ObjectMarker:
     pass
 
 
-def fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> Dict[str, Any]:
+def _fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> Dict[str, Any]:
     return {"srid": CRS.from_string(dataset.data["crs"]).srid}
 
 
@@ -72,35 +72,35 @@ JSON_TYPE_TO_DJANGO = {
     "/definitions/schema": (UnlimitedCharField, None),
     "https://geojson.org/schema/Geometry.json": (
         gis_models.GeometryField,
-        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/Point.json": (
         gis_models.PointField,
-        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/MultiPoint.json": (
         gis_models.MultiPointField,
-        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/Polygon.json": (
         gis_models.PolygonField,
-        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/MultiPolygon.json": (
         gis_models.MultiPolygonField,
-        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/LineString.json": (
         gis_models.LineStringField,
-        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/MultiLineString.json": (
         gis_models.MultiLineStringField,
-        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
     "https://geojson.org/schema/GeometryCollection.json": (
         gis_models.GeometryCollectionField,
-        {"value_getter": fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
     ),
 }
 
