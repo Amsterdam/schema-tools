@@ -1,6 +1,6 @@
 .PHONY: install
 install:
-	pip install -e '.[tests]'
+	pip install -e '.[tests,django]'
 	pip install pre-commit
 	pre-commit install
 
