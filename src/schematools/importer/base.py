@@ -10,7 +10,7 @@ from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Tab
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.types import DatasetSchema, DatasetTableSchema
-from schematools.utils import to_snake_case, shorten_name
+from schematools.utils import shorten_name, to_snake_case
 
 from . import fetch_col_type
 

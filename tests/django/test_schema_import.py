@@ -1,6 +1,7 @@
-from django.core.management import call_command
-from schematools.contrib.django import models
 import pytest
+from django.core.management import call_command
+
+from schematools.contrib.django import models
 
 
 @pytest.mark.django_db

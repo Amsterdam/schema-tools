@@ -1,14 +1,11 @@
 """Extra fixtures for ``schematools.contrib.django``"""
 import json
-from pathlib import Path
 
 import pytest
 
 from schematools.contrib.django.auth_backend import RequestProfile
 from schematools.contrib.django.models import Dataset, Profile
 from schematools.types import DatasetSchema
-
-TEST_FILES_FOLDER = Path(__file__).parent.parent / "tests" / "files"
 
 
 @pytest.fixture
@@ -58,8 +55,8 @@ def profile_brk_read_full():
 
 
 @pytest.fixture()
-def kadastralobjecten_schema_json() -> dict:
-    path = TEST_FILES_FOLDER / "kadastraleobjecten.json"
+def kadastralobjecten_schema_json(here) -> dict:
+    path = here / "files" / "kadastraleobjecten.json"
     return json.loads(path.read_text())
 
 
