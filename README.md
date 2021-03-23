@@ -66,4 +66,28 @@ It is also possible to read GOB events from a batch file with line-separeted eve
 
     schema import events <path-to-dataset> <path-to-file-with-events>
 
+## Schema Tools as a pre-commit hook
 
+Included in the project is a `pre-commit` hook
+that can validate schema files
+in a project such as [amsterdam-schema](https://github.com/Amsterdam/amsterdam-schema)
+
+To configure it
+extend the `.pre-commit-config.yaml`
+in the project with the schema file defintions as follows:
+
+```yaml
+  - repo: https://github.com/Amsterdam/schema-tools
+    rev: v0.18.1
+    hooks:
+      - id: validate-schema
+        args: ['https://schemas.data.amsterdam.nl/schema@v1.1.1#']
+        exclude: 'datasets/index.json$'
+```
+
+`args` is a one element list
+containing the URL to the Amsterdam Meta Schema.
+
+`validate-schema` will only process `json` files.
+However not all `json` files are Amsterdam schema files.
+To exclude files or directories use `exclude` with pattern.
