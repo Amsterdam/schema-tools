@@ -294,6 +294,19 @@ class DatasetSchema(SchemaType):
 class DatasetTableSchema(SchemaType):
     """The table within a dataset.
     This table definition follows the JSON Schema spec.
+
+    This class has an `id` property (inherited from `SchemaType`) to uniquely
+    address this dataset-table in the scope of the `DatasetSchema`.
+    This `id` is used in lots of places in the dynamic model generation in Django.
+
+    There is also a `name` attribute, that is used for the autogeneration
+    of tablenames that are used in postgreSQL.
+
+    This `name` attribute is equal to the `id`, unless there is a `shortname`
+    defined. In that case `name` is equal to the `shortname`.
+
+    The `shortname` has been added for practical purposes, because there is a hard
+    limitation on the length of tablenames in databases like postgreSQL.
     """
 
     def __init__(
@@ -455,7 +468,7 @@ class DatasetTableSchema(SchemaType):
 
     def db_name(self) -> str:
         """Returns the tablename for the database, prefixed with the schemaname.
-        NB. self.name could have been changed by a 'shortname' in the schema.
+        NB. `self.name` could have been changed by a 'shortname' in the schema.
         """
 
         from schematools.utils import to_snake_case, shorten_name
@@ -474,7 +487,22 @@ class DatasetTableSchema(SchemaType):
 
 
 class DatasetFieldSchema(DatasetType):
-    """ A single field (column) in a table """
+    """A single field (column) in a table
+
+    This class has an `id` property (inherited from `SchemaType`) to uniquely
+    address this datasetfield-schema in the scope of the `DatasetTableSchema`.
+    This `id` is used in lots of places in the dynamic model generation in Django.
+
+    There is also a `name` attribute, that is used for the autogeneration
+    of tablenames that are used in postgreSQL.
+
+    This `name` attribute is equal to the `id`, unless there is a `shortname`
+    defined. In that case `name` is equal to the `shortname`.
+
+    The `shortname` has been added for practical purposes, because there is a hard
+    limitation on the length of column- and tablenames in databases like postgreSQL.
+
+    """
 
     def __init__(
         self,
