@@ -91,3 +91,16 @@ containing the URL to the Amsterdam Meta Schema.
 `validate-schema` will only process `json` files.
 However not all `json` files are Amsterdam schema files.
 To exclude files or directories use `exclude` with pattern.
+
+`pre-commit` depends on properly tagged revisions of its hooks.
+Hence we should take care to, not only bump version numbers
+on updates to this package,
+but also commit a tag with the version number.
+This is automated by means of the `tbump` tool.
+Bumping a version from 0.18.1 to 0.18.2
+and generating the appropriate git commits/tags
+is as easy as running:
+
+```console
+$ tbump 0.18.2
+```
