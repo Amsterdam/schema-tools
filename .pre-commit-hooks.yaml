@@ -1,0 +1,6 @@
+- id: validate-schema
+  name: Validate Schema
+  description: Validate Amsterdam Schema files
+  entry: schema batch-validate
+  language: python
+  types: ["json"]

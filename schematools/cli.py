@@ -1,5 +1,7 @@
 import json
 import sys
+from collections import defaultdict
+from typing import Any, DefaultDict, Dict, List, Tuple
 
 import click
 import jsonschema
@@ -287,6 +289,25 @@ def diff():
     pass
 
 
+def _fetch_json(location: str) -> Dict[str, Any]:
+    """Fetch JSON from file or URL.
+
+    Args:
+        location: a file name or an URL
+
+    Returns:
+        JSON data as a dictionary.
+    """
+    if not location.startswith("http"):
+        with open(location) as f:
+            json_obj = json.load(f)
+    else:
+        response = requests.get(location)
+        response.raise_for_status()
+        json_obj = response.json()
+    return json_obj
+
+
 @schema.command()
 @option_schema_url
 @argument_schema_location
@@ -302,23 +323,13 @@ def validate(schema_url: str, schema_location: str, meta_schema_url: str) -> Non
     META_SCHEMA_URL is the url where the metaschema for amsterdam schema definitions can be found.
     """
 
-    def _fetch_json(location):
-        if not location.startswith("http"):
-            with open(location) as f:
-                json_obj = json.load(f)
-        else:
-            response = requests.get(location)
-            response.raise_for_status()
-            json_obj = response.json()
-        return json_obj
-
-    schema = _fetch_json(meta_schema_url)
+    meta_schema = _fetch_json(meta_schema_url)
     dataset = _get_dataset_schema(schema_url, schema_location)
 
     structural_errors = False
     try:
         click.echo("Structural validation: ", nl=False)
-        jsonschema.validate(instance=dataset.json_data(), schema=schema)
+        jsonschema.validate(instance=dataset.json_data(), schema=meta_schema)
     except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
         structural_errors = True
         click.echo(f"\n{e!s}", err=True)
@@ -335,6 +346,46 @@ def validate(schema_url: str, schema_location: str, meta_schema_url: str) -> Non
         click.echo("success!")
 
     if structural_errors or semantic_errors:
+        sys.exit(1)
+
+
+@schema.command()
+@click.argument("meta_schema_url")
+@click.argument("schema_files", nargs=-1)
+def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
+    """Batch validate schema's.
+
+    This command was tailored so that it could be run from a pre-commit hook. As a result,
+    the order and type of its arguments differ from other `schema` sub-commands.
+
+    It will perform both structural and semantic validation of the schema's.
+
+    \b
+    META_SCHEMA_URL: the URL to the Amsterdam meta schema
+    SCHEMA_FILES: one or more schema files to be validated
+    """
+    meta_schema = _fetch_json(meta_schema_url)
+    errors: DefaultDict[str, List[str]] = defaultdict(list)
+    for schema in schema_files:
+        try:
+            dataset = DatasetSchema.from_file(schema)
+        except ValueError as ve:
+            errors[schema].append(str(ve))
+            # No sense in continuing if we can't read the schema file.
+            break
+        try:
+            jsonschema.validate(instance=dataset.json_data(), schema=meta_schema)
+        except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
+            errors[schema].append(f"{struct_error.message}: ({', '.join(struct_error.path)})")
+
+        validator = Validator(dataset=dataset)
+        for sem_error in validator.run_all():
+            errors[schema].append(str(sem_error))
+    if errors:
+        width = len(max(errors.keys()))
+        for schema, error_messages in errors.items():
+            for err_msg in error_messages:
+                print(f"{schema:>{width}}: {err_msg}")
         sys.exit(1)
 
 
