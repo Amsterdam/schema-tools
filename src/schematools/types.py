@@ -471,7 +471,7 @@ class DatasetTableSchema(SchemaType):
         NB. `self.name` could have been changed by a 'shortname' in the schema.
         """
 
-        from schematools.utils import to_snake_case, shorten_name
+        from schematools.utils import shorten_name, to_snake_case
 
         return shorten_name(to_snake_case(f"{self.dataset.id}_{self.name}"), with_postfix=True)
 

@@ -1,5 +1,7 @@
+import json
 import os
 from pathlib import Path
+from typing import Callable
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -10,10 +12,49 @@ from sqlalchemy import MetaData
 from sqlalchemy.orm import Session
 
 from schematools.importer.base import metadata
+from schematools.types import DatasetSchema, ProfileSchema
 
 HERE = Path(__file__).parent
 
-pytest_plugins = ["tests.fixtures"]
+
+def pytest_configure():
+    import environ
+    from django.conf import settings
+
+    env = environ.Env()
+    databases = {
+        "default": env.db_url(
+            "DATABASE_URL",
+            default="postgresql://dataservices:insecure@localhost:5415/dataservices",
+            engine="django.contrib.gis.db.backends.postgis",
+        ),
+    }
+    databases["default"]["NAME"] += "_django"  # avoid duplication with sqlalchemy tests
+    settings.configure(
+        DEBUG=True,
+        INSTALLED_APPS=[
+            "django.contrib.auth",
+            "django.contrib.contenttypes",
+            "django.contrib.staticfiles",
+            "django.contrib.gis",
+            "django.contrib.postgres",
+            "schematools.contrib.django",
+        ],
+        DATABASES=databases,
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+            }
+        },
+        CSRF_COOKIE_SECURE=False,
+        SESSION_COOKIE_SECURE=False,
+        SECRET_KEY="PYTEST",
+        PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"],
+        SCHEMA_URL=env.str("SCHEMA_URL", "https://schemas.data.amsterdam.nl/datasets/"),
+        SCHEMA_DEFS_URL=env.str("SCHEMA_DEFS_URL", "https://schemas.data.amsterdam.nl/schema"),
+        AMSTERDAM_SCHEMA={"geosearch_disabled_datasets": []},
+    )
+
 
 # fixtures engine and dbengine provided by pytest-sqlalchemy,
 # automatically discovered by pytest via setuptools entry-points.
@@ -130,3 +171,99 @@ def schemas_mock(requests_mock: Mocker, schema_url):
             content=fh.read(),
         )
     yield requests_mock
+
+
+@pytest.fixture()
+def schema_json(here) -> Callable[[str], dict]:
+    def _json_fetcher(filename) -> dict:
+        path = here / "files" / filename
+        return json.loads(path.read_text())
+
+    return _json_fetcher
+
+
+@pytest.fixture()
+def afval_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("afval.json"))
+
+
+@pytest.fixture()
+def meetbouten_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("meetbouten.json"))
+
+
+@pytest.fixture()
+def parkeervakken_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("parkeervakken.json"))
+
+
+@pytest.fixture()
+def gebieden_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("gebieden.json"))
+
+
+@pytest.fixture()
+def bouwblokken_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("bouwblokken.json"))
+
+
+@pytest.fixture()
+def gebieden_schema_auth(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("gebieden_auth.json"))
+
+
+@pytest.fixture()
+def gebieden_schema_auth_list(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("gebieden_auth_list.json"))
+
+
+@pytest.fixture()
+def ggwgebieden_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("ggwgebieden.json"))
+
+
+@pytest.fixture()
+def stadsdelen_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("stadsdelen.json"))
+
+
+@pytest.fixture()
+def verblijfsobjecten_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("verblijfsobjecten.json"))
+
+
+@pytest.fixture()
+def kadastraleobjecten_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("kadastraleobjecten.json"))
+
+
+@pytest.fixture()
+def meldingen_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("meldingen.json"))
+
+
+@pytest.fixture()
+def woonplaatsen_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("woonplaatsen.json"))
+
+
+@pytest.fixture()
+def woningbouwplannen_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("woningbouwplannen.json"))
+
+
+@pytest.fixture()
+def brp_r_profile_schema(here) -> ProfileSchema:
+    """A downloaded profile schema definition"""
+    path = here / "files/profiles/BRP_R.json"
+    return ProfileSchema.from_file(path)
+
+
+@pytest.fixture()
+def brk_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("brk.json"))
+
+
+@pytest.fixture()
+def hr_schema(schema_json) -> DatasetSchema:
+    return DatasetSchema.from_dict(schema_json("hr.json"))
