@@ -71,7 +71,9 @@ def test_index_creation(engine, db_schema):
 
 
 def test_index_troughtables_creation(engine, db_schema):
-    """Prove that many-to-many table indexes are created based on schema specificiation """
+    """Prove that many-to-many table indexes are created based on schema specification.
+    A NM relation with a very long name has deliberatly added. The truncation of index
+    names should avoid failing tests."""
 
     test_data = {
         "type": "dataset",
@@ -107,6 +109,17 @@ def test_index_troughtables_creation(engine, db_schema):
                         "beginGeldigheid": {"type": "string", "format": "date-time"},
                         "eindGeldigheid": {"type": "string", "format": "date-time"},
                         "heeftOnderzoeken": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "identificatie": {"type": "string"},
+                                    "volgnummer": {"type": "integer"},
+                                },
+                            },
+                            "relation": "TEST:test_2",
+                        },
+                        "lang456789012345678901234567890123456789verylongtail": {
                             "type": "array",
                             "items": {
                                 "type": "object",
@@ -171,9 +184,7 @@ def test_index_troughtables_creation(engine, db_schema):
             conn = create_engine(engine.url, client_encoding="UTF-8")
             meta_data = MetaData(bind=conn, reflect=True)
             metadata_inspector = inspect(meta_data.bind)
-            indexes = metadata_inspector.get_indexes(
-                f"{parent_schema['id']}_{table['id']}", schema=None
-            )
+            indexes = metadata_inspector.get_indexes(table.db_name(), schema=None)
 
             for index in indexes:
                 indexes_name.append(index["name"])
@@ -351,4 +362,4 @@ def test_size_of_index_name(engine, db_schema):
             for index in indexes:
                 indexes_name.append(index["name"])
             for index_name in indexes_name:
-                assert len(index_name) <= (MAX_TABLE_NAME_LENGTH + len(TABLE_INDEX_POSTFIX))
+                assert len(index_name) <= (MAX_TABLE_NAME_LENGTH - len(TABLE_INDEX_POSTFIX))
