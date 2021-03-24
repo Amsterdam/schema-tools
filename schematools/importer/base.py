@@ -391,7 +391,7 @@ def table_factory(
 
         try:
             if field.is_array_of_objects:
-                sub_table_id = shorten_name(f"{db_table_name}_{field_name}")
+                sub_table_id = shorten_name(f"{db_table_name}_{field_name}", with_postfix=True)
 
                 if field.is_nested_table:
                     # When the identifier is compound, we can assume
@@ -587,15 +587,14 @@ def index_factory(
 
             # create the Index objects
             if through_tables:
-                table_id = f"{dataset_table._parent_schema.id}_{table.id}"
+                table_id = table.db_name()
 
                 try:
                     table_object = metadata.tables[table_id]
 
                 except KeyError:
                     logger.log_error(
-                        f"Unable to create Indexes {dataset_table._parent_schema.id}_{table.id}."
-                        f"Table not found in DB."
+                        f"Unable to create Indexes {table_id}." f"Table not found in DB."
                     )
                     continue
 
