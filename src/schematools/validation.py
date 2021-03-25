@@ -5,7 +5,7 @@ that allows us to perform semantic validation
 on a given JSON schema.
 
 Semantic validation is different from structural validation,
-as performed by the :module:`jsonschema`,
+as performed by the :mod:`jsonschema`,
 in that it takes into account the implied logic behind a JSON schema.
 For instance,
 we might indicate that what identifies a table
@@ -119,9 +119,9 @@ class Validator:
         """Run all registered validators.
 
         Yields:
-            :class:`ValidationError`s if any.
+            :class:`ValidationError`\s if any.
 
-        """
+        """  # noqa: W605
         for validator_cls in self._registry:
             validator_inst = validator_cls(dataset=self.dataset)
             yield from validator_inst.validate()
