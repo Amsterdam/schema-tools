@@ -18,7 +18,7 @@ from .db import (
     fetch_schema_from_relational_schema,
     fetch_table_names,
 )
-from .events import EventsProcessor
+from .events.partial import EventsProcessor
 from .exceptions import ParserError
 from .importer.base import BaseImporter
 from .importer.geojson import GeoJSONImporter

@@ -115,6 +115,16 @@ def local_metadata(engine):
     _meta.drop_all(bind=engine)
 
 
+@pytest.fixture(scope="session")
+def salogger():
+    """Enable logging for sqlalchemy, useful for debugging."""
+    import logging
+
+    logging.basicConfig()
+    logger = logging.getLogger("sqlalchemy.engine")
+    logger.setLevel(logging.DEBUG)
+
+
 @pytest.fixture()
 def schemas_mock(requests_mock: Mocker, schema_url):
     """Mock the requests to import schemas.

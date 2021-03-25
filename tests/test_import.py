@@ -50,7 +50,9 @@ def test_skip_duplicate_keys_in_db_during_import_with_duplicate_in_next_batch(
     importer.load_file(ndjson_path)
 
 
-def test_numeric_datatype_scale(here, engine, woningbouwplannen_schema, dbsession):
+def test_numeric_datatype_scale(
+    here, engine, woningbouwplannen_schema, gebieden_schema, dbsession
+):
     """Prove that when multipleOf is used in schema,
     it's value is used to set the scale of the numeric datatype"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
@@ -72,7 +74,9 @@ def test_numeric_datatype_scale(here, engine, woningbouwplannen_schema, dbsessio
     assert record[0]["numeric_scale"] == 4
 
 
-def test_invalid_numeric_datatype_scale(here, engine, woningbouwplannen_schema, dbsession):
+def test_invalid_numeric_datatype_scale(
+    here, engine, woningbouwplannen_schema, gebieden_schema, dbsession
+):
     """Prove that when invaldi multipleOf i.e. 0.000 is used in schema,
     the datatype is in that case just plain numeric without scale"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
@@ -98,7 +102,7 @@ def test_invalid_numeric_datatype_scale(here, engine, woningbouwplannen_schema, 
     assert not record[1]["numeric_scale"]
 
 
-def test_biginteger_datatype(here, engine, woningbouwplannen_schema, dbsession):
+def test_biginteger_datatype(here, engine, woningbouwplannen_schema, gebieden_schema, dbsession):
     """Prove that when biginter is used as datatype in schema, the datatype
     in the database is set to datatype int(8) instead of int(4)"""
     importer = BaseImporter(woningbouwplannen_schema, engine)

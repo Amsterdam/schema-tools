@@ -49,6 +49,7 @@ class DatasetType(UserDict):
 
 class DatasetSchema(SchemaType):
     """The schema of a dataset.
+
     This is a collection of JSON Schema's within a single file.
     """
 
@@ -173,7 +174,7 @@ class DatasetSchema(SchemaType):
 
     @property
     def nested_tables(self) -> List[DatasetTableSchema]:
-        """Access list of nested tables"""
+        """Access list of nested tables."""
         tables = []
         for table in self.tables:
             for field in table.fields:
@@ -183,7 +184,7 @@ class DatasetSchema(SchemaType):
 
     @property
     def through_tables(self) -> List[DatasetTableSchema]:
-        """Access list of through_tables (for n-m relations) """
+        """Access list of through_tables, for n-m relations."""
         tables = []
         for table in self.tables:
             for field in table.fields:
@@ -212,7 +213,7 @@ class DatasetSchema(SchemaType):
                 "required": ["id", "schema"],
                 "properties": {
                     "id": {"type": "integer/autoincrement", "description": ""},
-                    "schema": {"$ref": "/definitions/schema"},
+                    "schema": {"$ref": "#/definitions/schema"},
                     "parent": {"type": "integer", "relation": f"{self.id}:{table.id}"},
                     **field["items"]["properties"],
                 },
@@ -232,17 +233,26 @@ class DatasetSchema(SchemaType):
     def build_through_table(
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
-        from schematools.utils import get_rel_table_identifier, to_snake_case
+        from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
 
         # Build the through_table for n-m relation
         # For relations, we have to use the real ids of the tables
         # and not the shortnames
-        left_dataset = to_snake_case(self.id)
-        left_table = to_snake_case(table.id)
-        right_dataset, right_table = [
-            to_snake_case(part) for part in field.nm_relation.split(":")[:2]
+        left_dataset_id = to_snake_case(self.id)
+        left_table_id = to_snake_case(table.id)
+
+        # Both relation types can have a through table,
+        # For FK relations, an extra through_table is created when
+        # the table is temporal, to store the extra temporal information.
+        relation = field.nm_relation
+        if relation is None and table.is_temporal:
+            relation = field.relation
+        right_dataset_id, right_table_id = [
+            to_snake_case(part) for part in relation.split(":")[:2]
         ]
 
+        # XXX maybe not logical to snakecase the fieldname here.
+        # this is still schema-land.
         snakecased_fieldname = to_snake_case(field.name)
         snakecased_field_id = to_snake_case(field.id)
         table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
@@ -256,14 +266,14 @@ class DatasetSchema(SchemaType):
                 "additionalProperties": False,
                 "required": ["schema"],
                 "properties": {
-                    "schema": {"$ref": "/definitions/schema"},
-                    left_table: {
-                        "type": "integer",
-                        "relation": f"{left_dataset}:{left_table}",
+                    "schema": {"$ref": "#/definitions/schema"},
+                    left_table_id: {
+                        "type": "string",
+                        "relation": f"{left_dataset_id}:{left_table_id}",
                     },
                     snakecased_fieldname: {
-                        "type": "integer",
-                        "relation": f"{right_dataset}:{right_table}",
+                        "type": "string",
+                        "relation": f"{right_dataset_id}:{right_table_id}",
                     },
                 },
             },
@@ -279,8 +289,32 @@ class DatasetSchema(SchemaType):
 
         # Only for object type relations we can add the fields of the
         # relation to the schema
+        # if field.is_through_table:
         if field.is_array_of_objects:
-            sub_table_schema["schema"]["properties"].update(field["items"]["properties"])
+            if field.is_object:
+                properties = field["properties"]
+            else:
+                properties = field["items"]["properties"]
+            target_table = table.dataset.get_dataset_schema(right_dataset_id).get_table_by_id(
+                right_table_id, include_nested=False, include_through=False
+            )
+            target_identifier_fields = set(target_table.identifier)
+            # Prefix the fields for the target side of the relation
+            extra_fields = {}
+            for sub_field_id, sub_field in properties.items():
+                if field.has_shortname:
+                    sub_field["shortname"] = toCamelCase(f"{field.name}_{sub_field_id}")
+                if sub_field_id in target_identifier_fields:
+                    sub_field_id = toCamelCase(f"{field.id}_{sub_field_id}")
+                extra_fields[sub_field_id] = sub_field
+
+            # Also add the fields for the source side of the relation
+            for sub_field_schema in table.get_fields_by_id(table.identifier):
+                # if source table has shortname, add shortname
+                sub_field_id = toCamelCase(f"{table.id}_{sub_field_schema.id}")
+                extra_fields[sub_field_id] = sub_field_schema.data
+
+            sub_table_schema["schema"]["properties"].update(extra_fields)
 
         return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
 
@@ -485,7 +519,7 @@ class DatasetTableSchema(SchemaType):
 
     @property
     def is_through_table(self) -> bool:
-        """Indicates if table is an intersection table (n:m relation table) or base table"""
+        """Indicate if table is an intersection table (n:m relation table) or base table."""
         return self.through_table
 
     @property
@@ -641,6 +675,11 @@ class DatasetFieldSchema(DatasetType):
         return self.get("type") == "object"
 
     @property
+    def is_scalar(self) -> bool:
+        """Tell whether the field is a scalar."""
+        return self.get("type") not in {"object", "array"}
+
+    @property
     def is_temporal(self) -> bool:
         """Tell whether the field is added, because it has temporal charateristics """
         return self._temporal
@@ -684,6 +723,7 @@ class DatasetFieldSchema(DatasetType):
         if relation is not None or nm_relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
 
+        # XXX Only add identificatie/volgnummer, not geldigheid fields
         for id_, spec in properties.items():
             field_id = f"{field_name_prefix}{id_}"
             yield DatasetFieldSchema(
@@ -761,7 +801,12 @@ class DatasetFieldSchema(DatasetType):
         """
         Checks if field is a possible through table.
         """
-        return self.is_array and self.nm_relation is not None
+        return (
+            self.is_array
+            and self.nm_relation is not None
+            or self._parent_table.is_temporal
+            and self.relation is not None
+        )
 
     @property
     def auth(self) -> Optional[str]:
