@@ -159,7 +159,9 @@ def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema
     assert records[1]["status_code"] is None
 
 
-def test_ndjson_import_with_shortnames_in_schema(here, engine, hr_schema, dbsession):
+def test_ndjson_import_with_shortnames_in_schema(
+    here, engine, hr_schema, verblijfsobjecten_schema, dbsession
+):
     """ Prove that data for schemas with shortnames for tables/fields is imported correctly. """
     ndjson_path = here / "files" / "data" / "hr.ndjson"
     importer = NDJSONImporter(hr_schema, engine)

@@ -27,6 +27,7 @@ def test_model_factory_fields(afval_dataset) -> None:
         "geometry",
     }
     assert meta.get_field("id").primary_key
+
     assert isinstance(meta.get_field("cluster_id"), models.ForeignKey)
     assert isinstance(meta.get_field("eigenaar_naam"), UnlimitedCharField)
     assert isinstance(meta.get_field("datum_creatie"), models.DateField)
@@ -197,8 +198,8 @@ def test_model_factory_temporary_n_m_relation(ggwgebieden_dataset):
     through_table_field_names = {
         "ggwgebieden",
         "bestaatuitbuurten",
-        "identificatie",
-        "volgnummer",
+        "bestaatuitbuurten_identificatie",
+        "bestaatuitbuurten_volgnummer",
     }
     fields_dict = {f.name: f for f in model_dict[through_table_name]._meta.fields}
 

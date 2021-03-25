@@ -27,7 +27,7 @@ MODEL_CREATION_COUNTER = 1
 
 
 class RelationMaker:
-    """ Superclass to generate info for relation fields """
+    """Superclass to generate info for relation fields."""
 
     def __init__(
         self,

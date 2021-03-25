@@ -64,6 +64,14 @@
               },
               "volgnummer": {
                 "type": "integer"
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date"
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date"
               }
             },
             "relation": "gebieden:buurten",
@@ -383,6 +391,14 @@
                 },
                 "volgnummer": {
                   "type": "integer"
+                },
+                "beginGeldigheid": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "eindGeldigheid": {
+                  "type": "string",
+                  "format": "date"
                 }
               }
             },

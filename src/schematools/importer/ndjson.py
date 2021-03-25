@@ -42,7 +42,7 @@ class NDJSONImporter(BaseImporter):
                 jsonpath_provenance_info.append(field.name)
             if field.is_geo:
                 geo_fields.append(field.name)
-            if field.is_through_table:
+            if field.is_through_table and field.nm_relation is not None:
                 nm_relation_field_info.append(field)
             if field.is_nested_table:
                 nested_field_info.append(field)
@@ -111,7 +111,6 @@ class NDJSONImporter(BaseImporter):
                     sub_rows[sub_table_id] = nested_row_records
 
                 for nm_field in nm_relation_field_info:
-                    nm_relation_field_name = nm_field.name
                     values = row[nm_field.id]
                     if values is not None:
                         if not isinstance(values, list):
@@ -136,7 +135,7 @@ class NDJSONImporter(BaseImporter):
                             to_fk = value
                             if nm_field.is_through_table:
                                 through_field_names = [
-                                    f.name.split(RELATION_INDICATOR)[-1]
+                                    f.id.split(RELATION_INDICATOR)[-1]
                                     for f in nm_field.sub_fields
                                     if not f.is_temporal
                                 ]

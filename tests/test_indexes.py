@@ -119,7 +119,7 @@ def test_index_troughtables_creation(engine, db_schema):
                                     "volgnummer": {"type": "integer"},
                                 },
                             },
-                            "relation": "TEST:test_2",
+                            "relation": "test:test_2",
                         },
                         "lang456789012345678901234567890123456789verylongtail": {
                             "type": "array",
@@ -130,7 +130,7 @@ def test_index_troughtables_creation(engine, db_schema):
                                     "volgnummer": {"type": "integer"},
                                 },
                             },
-                            "relation": "TEST:test_2",
+                            "relation": "test:test_2",
                         },
                     },
                     "mainGeometry": "geometrie",
