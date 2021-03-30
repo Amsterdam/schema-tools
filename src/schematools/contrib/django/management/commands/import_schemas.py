@@ -82,10 +82,31 @@ class Command(BaseCommand):
             self.stdout.write(f"  Created {name}")
         else:
             self.stdout.write(f"  Updated {name}")
+
             if dataset.is_default_version != schema.is_default_version:
-                # Change dataset name
-                dataset.name = Dataset.name_from_schema(schema)
-                dataset.is_default_version = schema.is_default_version
+                self.perform_version_update(dataset, schema)
+
             dataset.save_for_schema(schema)
 
         return None
+
+    def perform_version_update(self, dataset: Dataset, schema: DatasetSchema) -> Dataset:
+        """
+        Perform dataset version update, including changes to dataset tables.
+        """
+        if not dataset.is_default_version:
+            # Dataset is currently not default. Can not be safely renamed.
+            if schema.is_default_version:
+                # Dataset is promoted to default. We need to rename current default,
+                #  if it was not done yet.
+                try:
+                    current_default = Dataset.objects.get(name=Dataset.name_from_schema(schema))
+                except Dataset.DoesNotExist:
+                    pass
+                else:
+                    # Update current default dataset name to expected name.
+                    current_default.name = to_snake_case(f"{schema.id}_{current_default.version}")
+                    current_default.save()
+
+        dataset.name = Dataset.name_from_schema(schema)
+        dataset.is_default_version = schema.is_default_version
