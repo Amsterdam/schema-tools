@@ -68,7 +68,7 @@ def defs_from_url(base_url: str, data_type: Type[types.ST]) -> Dict[str, types.S
             response.raise_for_status()
             response_data = response.json()
             response_data["url_prefix"] = get_dataset_prefix_from_path(
-                dataset_path=dataset_path, dataset_id=response_data["id"]
+                dataset_path=dataset_path, dataset_data=response_data
             )
 
             schema_lookup[dataset_id] = data_type.from_dict(response_data)
@@ -229,15 +229,21 @@ def get_rel_table_identifier(
     # return through_table_name[: MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX) - prefix_length]
 
 
-def shorten_name(db_table_name: str, with_postfix=False) -> str:
+def shorten_name(db_table_name: str, with_postfix: bool = False) -> str:
     """ Utility function to shorten names to safe length for postgresql """
     max_length = MAX_TABLE_NAME_LENGTH - int(with_postfix) * len(TMP_TABLE_POSTFIX)
     return db_table_name[:max_length]
 
 
-def get_dataset_prefix_from_path(dataset_path: str, dataset_id: str) -> str:
-    """ Extract dataset prefix from dataset path """
+def get_dataset_prefix_from_path(dataset_path: str, dataset_data: dict) -> str:
+    """
+    Extract dataset prefix from dataset path.
+    """
+    version = dataset_data.get("version")
+    if version:
+        dataset_path = dataset_path.split(version)[0]
+
     dataset_parts = dataset_path.split("/")[:-1]
-    if dataset_parts[-1] == dataset_id:
+    if dataset_parts[-1] == dataset_data["id"]:
         dataset_parts.pop()
     return "/".join(dataset_parts)

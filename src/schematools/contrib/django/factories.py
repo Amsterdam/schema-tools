@@ -238,12 +238,12 @@ class FieldMaker:
     def __init__(
         self,
         field_cls: Type[models.Field],
-        table: DatasetTableSchema,
+        table_schema: DatasetTableSchema,
         value_getter: Callable[[DatasetSchema], Dict[str, Any]] = None,
         **kwargs,
     ):
         self.field_cls = field_cls
-        self.table = table
+        self.table = table_schema
         self.value_getter = value_getter
         self.kwargs = kwargs
         self.modifiers = [getattr(self, an) for an in dir(self) if an.startswith("handle_")]
@@ -370,27 +370,28 @@ def schema_models_factory(
 ) -> List[Type[DynamicModel]]:
     """Generate Django models from the data of the schema."""
     return [
-        model_factory(dataset=dataset, table=table, base_app_name=base_app_name)
+        model_factory(dataset=dataset, table_schema=table, base_app_name=base_app_name)
         for table in dataset.schema.get_tables(include_nested=True, include_through=True)
         if tables is None or table.id in tables
     ]
 
 
 def model_factory(
-    dataset: Dataset, table: DatasetTableSchema, base_app_name: Optional[str] = None
+    dataset: Dataset, table_schema: DatasetTableSchema, base_app_name: Optional[str] = None
 ) -> Type[DynamicModel]:
     """Generate a Django model class from a JSON Schema definition."""
     dataset_schema = dataset.schema
     app_label = dataset_schema.id
     base_app_name = base_app_name or "dso_api.dynamic_api"
     module_name = f"{base_app_name}.{app_label}.models"
-    model_name = to_snake_case(table.id)
-    display_field = to_snake_case(table.display_field) if table.display_field else None
-    is_temporal = table.is_temporal
+    display_field = (
+        to_snake_case(table_schema.display_field) if table_schema.display_field else None
+    )
+    is_temporal = table_schema.is_temporal
 
     # Generate fields
     fields = {}
-    for field in table.fields:
+    for field in table_schema.fields:
         type_ = field.type
         # skip schema field for now
         if type_.endswith("definitions/schema"):
@@ -406,7 +407,7 @@ def model_factory(
             base_class, init_kwargs = JSON_TYPE_TO_DJANGO[type_]
         except KeyError as e:
             raise RuntimeError(
-                f"Unable to parse {table.id}: field '{field.name}'"
+                f"Unable to parse {table_schema.id}: field '{field.name}'"
                 f" has unsupported type: {type_}."
             ) from e
 
@@ -414,7 +415,9 @@ def model_factory(
             init_kwargs = {}
 
         # Generate field object
-        kls, args, kwargs = FieldMaker(base_class, table, **init_kwargs)(field, dataset_schema)
+        kls, args, kwargs = FieldMaker(base_class, table_schema, **init_kwargs)(
+            field, dataset_schema
+        )
         if kls is None or kls is ObjectMarker:
             # Some fields are not mapped into classes
             continue
@@ -432,22 +435,21 @@ def model_factory(
         (),
         {
             "managed": False,
-            "db_table": table.db_name(),
+            "db_table": table_schema.db_name(),
             "app_label": app_label,
-            "verbose_name": table.id.title(),
-            "ordering": [to_snake_case(fn) for fn in table.identifier],
+            "verbose_name": table_schema.id.title(),
+            "ordering": [to_snake_case(fn) for fn in table_schema.identifier],
         },
     )
 
-    # Generate the model
     model_class = ModelBase(
-        model_name,
+        table_schema.model_name(),
         (DynamicModel,),
         {
             **fields,
             "_dataset": dataset,
             "_dataset_schema": dataset_schema,
-            "_table_schema": table,
+            "_table_schema": table_schema,
             "_display_field": display_field,
             "_is_temporal": is_temporal,
             "CREATION_COUNTER": MODEL_CREATION_COUNTER,  # for debugging recreation

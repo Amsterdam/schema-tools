@@ -2,7 +2,8 @@
   "id": "meetbouten",
   "type": "dataset",
   "status": "beschikbaar",
-  "version": "2",
+  "version": "2.0.0",
+  "default_version": "2.0.0",
   "crs": "EPSG:28992",
   "tables": [
     {

@@ -97,6 +97,22 @@ class DatasetSchema(SchemaType):
         return self.get("identifier", "pk")
 
     @property
+    def version(self):
+        """Dataset Schema Version"""
+        return self.get("version", None)
+
+    @property
+    def default_version(self):
+        """Default version for this schema"""
+        return self.get("default_version", self.version)
+
+    @property
+    def is_default_version(self):
+        """Is this Default Dataset version.
+        Defaults to True, in order to stay backwards compatible."""
+        return self.default_version == self.version
+
+    @property
     def auth(self):
         """Auth of the dataset (if set)"""
         return self.get("auth")
@@ -466,6 +482,16 @@ class DatasetTableSchema(SchemaType):
         """Indicates if table is an nested table"""
         return self.nested_table
 
+    def model_name(self) -> str:
+        """Returns model name for this table. Including version number, if needed."""
+
+        from schematools.utils import to_snake_case
+
+        model_name = self.id
+        if self.dataset.version is not None and not self.dataset.is_default_version:
+            model_name = f"{model_name}_{self.dataset.version}"
+        return to_snake_case(model_name)
+
     def db_name(self) -> str:
         """Returns the tablename for the database, prefixed with the schemaname.
         NB. `self.name` could have been changed by a 'shortname' in the schema.
@@ -473,7 +499,16 @@ class DatasetTableSchema(SchemaType):
 
         from schematools.utils import shorten_name, to_snake_case
 
-        return shorten_name(to_snake_case(f"{self.dataset.id}_{self.name}"), with_postfix=True)
+        table_name_parts = [self.dataset.id, self.name]
+        if self.dataset.version is not None:
+            is_default_table = (
+                self.dataset.version.split(".")[0] == self.dataset.default_version.split(".")[0]
+            )
+            if not is_default_table:
+                major, _minor, _patch = self.dataset.version.split(".")
+                table_name_parts = [self.dataset.id, major, self.name]
+        table_name = "_".join(table_name_parts)
+        return shorten_name(to_snake_case(table_name), with_postfix=True)
 
     def get_fk_fields(self) -> Iterator[str]:
         """Generates fields names that contain a 1:N relation to a parent table"""

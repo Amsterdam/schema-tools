@@ -3,7 +3,7 @@ import pytest
 from schematools.utils import get_dataset_prefix_from_path, to_snake_case, toCamelCase
 
 
-def test_toCamelCase():
+def test_toCamelCase() -> None:
     """Confirm that:
     - space separated name is converted to camelCase
     - PascalCase results in camelCase
@@ -23,7 +23,7 @@ def test_toCamelCase():
         toCamelCase("")
 
 
-def test_to_snake_case():
+def test_to_snake_case() -> None:
     """Confirm that:
     - space separated name converted to snake_case
     - camelCase converted to snake_case
@@ -43,20 +43,68 @@ def test_to_snake_case():
         to_snake_case("")
 
 
-def test_get_dataset_prefix_from_path():
+def test_get_dataset_prefix_from_path() -> None:
     """Confirm that dataset prefix can be extracted from URLs such asL
     - belastingen/precario/terrassen/terrassen => belastingen/precario
     - belastingen/precario/terrassen => belastingen/precario
-    - belastingen/reclame => belastingen
-    - bag/bag => ""  # AKA old behaviour
+    - belastingen/terrassen => belastingen
+    - terrassen/terrassen => ""  # AKA old behaviour
     """
+    dataset = {"id": "terrassen", "version": "0.0.1"}
     assert (
-        get_dataset_prefix_from_path("belastingen/precario/terrassen/terrassen.json", "terrassen")
+        get_dataset_prefix_from_path(
+            dataset_path="belastingen/precario/terrassen/terrassen.json", dataset_data=dataset
+        )
         == "belastingen/precario"
     )
     assert (
-        get_dataset_prefix_from_path("belastingen/precario/terrassen.json", "terrassen")
+        get_dataset_prefix_from_path(
+            dataset_path="belastingen/precario/terrassen.json", dataset_data=dataset
+        )
         == "belastingen/precario"
     )
-    assert get_dataset_prefix_from_path("belastingen/reclame.json", "reclame") == "belastingen"
-    assert get_dataset_prefix_from_path("bag/bag.json", "bag") == ""
+    assert (
+        get_dataset_prefix_from_path(
+            dataset_path="belastingen/terrassen.json", dataset_data=dataset
+        )
+        == "belastingen"
+    )
+    assert (
+        get_dataset_prefix_from_path(dataset_path="terrassen/terrassen.json", dataset_data=dataset)
+        == ""
+    )
+
+
+def test_get_dataset_prefix_from_path_with_versioning() -> None:
+    """Confirm that dataset prefix can be extracted from URLs such asL
+    - belastingen/precario/1.0.0/terrassen/terrassen => belastingen/precario
+    - belastingen/precario/1.0.0/terrassen => belastingen/precario
+    - belastingen/1.0.0/terrassen => belastingen
+    - terrassen/1.0.0/terrassen => ""  # AKA old behaviour
+    """
+    dataset = {"id": "terrassen", "version": "1.0.0"}
+    assert (
+        get_dataset_prefix_from_path(
+            dataset_path="belastingen/precario/1.0.0/terrassen/terrassen.json",
+            dataset_data=dataset,
+        )
+        == "belastingen/precario"
+    )
+    assert (
+        get_dataset_prefix_from_path(
+            dataset_path="belastingen/precario/1.0.0/terrassen.json", dataset_data=dataset
+        )
+        == "belastingen/precario"
+    )
+    assert (
+        get_dataset_prefix_from_path(
+            dataset_path="belastingen/1.0.0/terrasen.json", dataset_data=dataset
+        )
+        == "belastingen"
+    )
+    assert (
+        get_dataset_prefix_from_path(
+            dataset_path="terrassen/1.0.0/terrassen.json", dataset_data=dataset
+        )
+        == ""
+    )

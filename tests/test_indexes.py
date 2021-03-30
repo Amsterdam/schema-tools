@@ -81,6 +81,7 @@ def test_index_troughtables_creation(engine, db_schema):
         "title": "TEST",
         "status": "niet_beschikbaar",
         "version": "0.0.1",
+        "is_default_version": "true",
         "crs": "EPSG:28992",
         "identifier": "identificatie",
         "temporal": {
