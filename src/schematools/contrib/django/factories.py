@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Tuple, Type
+from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type
 from urllib.parse import urlparse
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
@@ -22,6 +23,7 @@ from .models import (
 )
 
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
+MODEL_CREATION_COUNTER = 1
 
 
 class RelationMaker:
@@ -322,8 +324,49 @@ class FieldMaker:
         return field_cls, args, kwargs
 
 
+def remove_dynamic_models() -> None:
+    """Erase model caches for dynamically generated models.
+    This completely removes the models from the Django app registry.
+
+    If your own code also holds references to models, these need to be removed separately.
+    The :func:`is_dangling_model` function allows to check whether a model originated
+    from a previous factory invocation.
+    """
+    virtual_apps = [
+        name
+        for name, config in apps.app_configs.items()
+        if isinstance(config, app_config.VirtualAppConfig)
+    ]
+    for app_label in virtual_apps:
+        del apps.all_models[app_label]
+        del apps.app_configs[app_label]
+
+    # See if there are dynamic models registered in other apps, erase them too.
+    for app_label, app_models in apps.all_models.items():
+        dynamic_models = [
+            name for name, model in app_models.items() if issubclass(model, DynamicModel)
+        ]
+        for model_name in dynamic_models:
+            del app_models[model_name]
+            del apps.app_configs[app_label].models[model_name]
+
+    # This also clears FK caches of other models that may have foreign keys:
+    apps.clear_cache()
+
+    # Allow code to detect whether a model is still alive despite having cleared all caches.
+    global MODEL_CREATION_COUNTER
+    MODEL_CREATION_COUNTER += 1
+
+
+def is_dangling_model(model: Type[DynamicModel]) -> bool:
+    """Tell whether the model should have been removed, as everything reloaded."""
+    return model.CREATION_COUNTER < MODEL_CREATION_COUNTER
+
+
 def schema_models_factory(
-    dataset: Dataset, tables=None, base_app_name=None
+    dataset: Dataset,
+    tables: Optional[Collection[str]] = None,
+    base_app_name: Optional[str] = None,
 ) -> List[Type[DynamicModel]]:
     """Generate Django models from the data of the schema."""
     return [
@@ -334,7 +377,7 @@ def schema_models_factory(
 
 
 def model_factory(
-    dataset: Dataset, table: DatasetTableSchema, base_app_name=None
+    dataset: Dataset, table: DatasetTableSchema, base_app_name: Optional[str] = None
 ) -> Type[DynamicModel]:
     """Generate a Django model class from a JSON Schema definition."""
     dataset_schema = dataset.schema
@@ -407,6 +450,7 @@ def model_factory(
             "_table_schema": table,
             "_display_field": display_field,
             "_is_temporal": is_temporal,
+            "CREATION_COUNTER": MODEL_CREATION_COUNTER,  # for debugging recreation
             "__module__": module_name,
             "Meta": meta_cls,
         },

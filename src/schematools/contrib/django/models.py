@@ -121,6 +121,7 @@ class DynamicModel(models.Model):
     """Base class to tag and detect dynamically generated models."""
 
     #: Overwritten by subclasses / factory
+    CREATION_COUNTER = None
     _dataset: Dataset = None
     _table_schema: DatasetTableSchema = None
     _display_field = None
