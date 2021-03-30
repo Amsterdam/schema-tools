@@ -382,7 +382,7 @@ def model_factory(
     """Generate a Django model class from a JSON Schema definition."""
     dataset_schema = dataset.schema
     app_label = dataset_schema.id
-    base_app_name = base_app_name or "schematools.contrib.django"
+    base_app_name = base_app_name or "dso_api.dynamic_api"
     module_name = f"{base_app_name}.{app_label}.models"
     model_name = to_snake_case(table.id)
     display_field = to_snake_case(table.display_field) if table.display_field else None
