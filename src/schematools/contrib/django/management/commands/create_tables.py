@@ -1,5 +1,5 @@
 import re
-from typing import Iterable
+from typing import Iterable, List, Optional
 
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, router, transaction
@@ -26,8 +26,12 @@ class Command(BaseCommand):
 
 
 def create_tables(
-    command: BaseCommand, datasets: Iterable[Dataset], allow_unmanaged=False, skip=None
-):  # noqa:C901
+    command: BaseCommand,
+    datasets: Iterable[Dataset],
+    allow_unmanaged: bool = False,
+    base_app_name: Optional[str] = None,
+    skip: Optional[List[str]] = None,
+) -> None:  # noqa:C901
     """Create tables for all updated datasets.
     This is a separate function to allow easy reuse.
     """
@@ -41,7 +45,7 @@ def create_tables(
         if not dataset.enable_db or dataset.name in to_be_skipped:
             continue  # in case create_tables() is called by import_schemas
 
-        models.extend(schema_models_factory(dataset, base_app_name="dso_api.dynamic_api"))
+        models.extend(schema_models_factory(dataset, base_app_name=base_app_name))
 
     # Create all tables
     with connection.schema_editor() as schema_editor:
