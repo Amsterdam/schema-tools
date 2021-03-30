@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from django.conf import settings
 from django.core.management import BaseCommand
+from django.db.models import Q
 
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetSchema
@@ -62,16 +63,29 @@ class Command(BaseCommand):
 
     def import_schema(self, name: str, schema: DatasetSchema) -> Optional[Dataset]:
         """Import a single dataset schema."""
+
+        created = False
         try:
-            dataset = Dataset.objects.get(name=to_snake_case(schema.id))
+            dataset = Dataset.objects.get(name=Dataset.name_from_schema(schema))
         except Dataset.DoesNotExist:
-            dataset = Dataset.create_for_schema(schema)
+            try:
+                # try getting default dataset by name and version
+                dataset = Dataset.objects.filter(Q(version=None) | Q(version=schema.version)).get(
+                    name=to_snake_case(schema.id)
+                )
+            except Dataset.DoesNotExist:
+                # Give up, Create new dataset
+                dataset = Dataset.create_for_schema(schema)
+                created = True
+
+        if created:
             self.stdout.write(f"  Created {name}")
-            return dataset
         else:
-            updated = dataset.save_for_schema(schema)
-            if updated:
-                self.stdout.write(f"  Updated {name}")
-                return dataset
+            self.stdout.write(f"  Updated {name}")
+            if dataset.is_default_version != schema.is_default_version:
+                # Change dataset name
+                dataset.name = Dataset.name_from_schema(schema)
+                dataset.is_default_version = schema.is_default_version
+            dataset.save_for_schema(schema)
 
         return None

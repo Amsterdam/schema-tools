@@ -227,11 +227,17 @@ class Dataset(models.Model):
         )
 
     @classmethod
-    def create_for_schema(cls, schema: DatasetSchema) -> Dataset:
-        """Create the schema based on the Amsterdam Schema JSON input"""
+    def name_from_schema(cls, schema: DatasetSchema) -> str:
+        """Generate dataset name from schema"""
         name = to_snake_case(schema.id)
         if schema.version and not schema.is_default_version:
             name = to_snake_case(f"{name}_{schema.version}")
+        return name
+
+    @classmethod
+    def create_for_schema(cls, schema: DatasetSchema) -> Dataset:
+        """Create the schema based on the Amsterdam Schema JSON input"""
+        name = cls.name_from_schema(schema)
 
         return cls.objects.create(
             name=name,
@@ -246,11 +252,9 @@ class Dataset(models.Model):
         """Update this model with schema data"""
         self.schema_data = schema.json_data()
         self.auth = _serialize_claims(schema)
-        # update default version configuration, if needed.
-        self.is_default_version = schema.is_default_version
 
         if self.schema_data_changed():
-            self.save(update_fields=["schema_data", "auth"])
+            self.save(update_fields=["schema_data", "auth", "is_default_version"])
             return True
         else:
             return False
@@ -348,7 +352,7 @@ class DatasetTable(models.Model):
     # Exposed metadata from the jsonschema, so other utils can query these
     auth = models.CharField(max_length=250, blank=True, null=True)
     enable_geosearch = models.BooleanField(default=True)
-    db_table = models.CharField(max_length=100, unique=True)
+    db_table = models.CharField(max_length=100)
     display_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
