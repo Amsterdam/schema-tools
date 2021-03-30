@@ -62,9 +62,7 @@ def create_tables(
             # - model is managed (not by default)
             # - user overrides this (e.g. developer)
             # - create table for latest version of this dataset group
-            model = list(reversed(sorted(models_group, key=lambda model: model._dataset.version)))[
-                0
-            ]
+            model = max(models_group, key=lambda model: model._dataset.version)
 
             router_allows = router.allow_migrate_model(model._meta.app_label, model)
             if not router_allows:

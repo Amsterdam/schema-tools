@@ -80,17 +80,20 @@ class Command(BaseCommand):
 
         if created:
             self.stdout.write(f"  Created {name}")
+            return dataset
         else:
             self.stdout.write(f"  Updated {name}")
 
             if dataset.is_default_version != schema.is_default_version:
-                self.perform_version_update(dataset, schema)
+                self.update_dataset_version(dataset, schema)
 
-            dataset.save_for_schema(schema)
+            updated = dataset.save_for_schema(schema)
+            if updated:
+                return dataset
 
         return None
 
-    def perform_version_update(self, dataset: Dataset, schema: DatasetSchema) -> Dataset:
+    def update_dataset_version(self, dataset: Dataset, schema: DatasetSchema) -> Dataset:
         """
         Perform dataset version update, including changes to dataset tables.
         """
