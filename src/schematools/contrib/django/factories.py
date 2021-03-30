@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
 
+from schematools.contrib.django import app_config
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 from schematools.utils import get_rel_table_identifier, to_snake_case
 
@@ -396,7 +397,7 @@ def model_factory(
     )
 
     # Generate the model
-    return ModelBase(
+    model_class = ModelBase(
         model_name,
         (DynamicModel,),
         {
@@ -410,3 +411,5 @@ def model_factory(
             "Meta": meta_cls,
         },
     )
+    app_config.register_model(app_label, model_class)
+    return model_class
