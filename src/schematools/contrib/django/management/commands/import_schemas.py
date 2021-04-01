@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from django.conf import settings
 from django.core.management import BaseCommand
+from django.db.models import Q
 
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetSchema
@@ -62,16 +63,53 @@ class Command(BaseCommand):
 
     def import_schema(self, name: str, schema: DatasetSchema) -> Optional[Dataset]:
         """Import a single dataset schema."""
+
+        created = False
         try:
-            dataset = Dataset.objects.get(name=to_snake_case(schema.id))
+            dataset = Dataset.objects.get(name=Dataset.name_from_schema(schema))
         except Dataset.DoesNotExist:
-            dataset = Dataset.create_for_schema(schema)
+            try:
+                # try getting default dataset by name and version
+                dataset = Dataset.objects.filter(Q(version=None) | Q(version=schema.version)).get(
+                    name=to_snake_case(schema.id)
+                )
+            except Dataset.DoesNotExist:
+                # Give up, Create new dataset
+                dataset = Dataset.create_for_schema(schema)
+                created = True
+
+        if created:
             self.stdout.write(f"  Created {name}")
             return dataset
         else:
+            self.stdout.write(f"  Updated {name}")
+
+            if dataset.is_default_version != schema.is_default_version:
+                self.update_dataset_version(dataset, schema)
+
             updated = dataset.save_for_schema(schema)
             if updated:
-                self.stdout.write(f"  Updated {name}")
                 return dataset
 
         return None
+
+    def update_dataset_version(self, dataset: Dataset, schema: DatasetSchema) -> Dataset:
+        """
+        Perform dataset version update, including changes to dataset tables.
+        """
+        if not dataset.is_default_version:
+            # Dataset is currently not default. Can not be safely renamed.
+            if schema.is_default_version:
+                # Dataset is promoted to default. We need to rename current default,
+                #  if it was not done yet.
+                try:
+                    current_default = Dataset.objects.get(name=Dataset.name_from_schema(schema))
+                except Dataset.DoesNotExist:
+                    pass
+                else:
+                    # Update current default dataset name to expected name.
+                    current_default.name = to_snake_case(f"{schema.id}_{current_default.version}")
+                    current_default.save()
+
+        dataset.name = Dataset.name_from_schema(schema)
+        dataset.is_default_version = schema.is_default_version

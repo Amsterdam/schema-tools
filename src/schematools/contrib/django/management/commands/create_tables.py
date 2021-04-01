@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from typing import Iterable, List, Optional
 
 from django.core.management import BaseCommand, CommandError
@@ -41,20 +42,28 @@ def create_tables(
     # First create all models. This allows Django to resolve  model relations.
     models = []
     to_be_skipped = set(skip if skip is not None else [])
+
     for dataset in datasets:
         if not dataset.enable_db or dataset.name in to_be_skipped:
             continue  # in case create_tables() is called by import_schemas
 
         models.extend(schema_models_factory(dataset, base_app_name=base_app_name))
 
+    # Grouping multiple versions of same model by table name
+    models_by_table = defaultdict(list)
+    for model in models:
+        models_by_table[model._meta.db_table].append(model)
+
     # Create all tables
     with connection.schema_editor() as schema_editor:
-        for model in models:
+        for db_table_name, models_group in models_by_table.items():
             # Only create tables if migration is allowed
             # - router allows it (not some external database)
             # - model is managed (not by default)
             # - user overrides this (e.g. developer)
-            db_table_name = model._meta.db_table
+            # - create table for latest version of this dataset group
+            model = max(models_group, key=lambda model: model._dataset.version)
+
             router_allows = router.allow_migrate_model(model._meta.app_label, model)
             if not router_allows:
                 command.stdout.write(f"  Skipping externally managed table: {db_table_name}")

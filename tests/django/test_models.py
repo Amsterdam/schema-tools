@@ -4,11 +4,15 @@ from django.db.models.base import ModelBase
 from django_postgres_unlimited_varchar import UnlimitedCharField
 
 from schematools.contrib.django.factories import model_factory, schema_models_factory
-from schematools.contrib.django.models import LooseRelationField, LooseRelationManyToManyField
+from schematools.contrib.django.models import (
+    Dataset,
+    LooseRelationField,
+    LooseRelationManyToManyField,
+)
 
 
 @pytest.mark.django_db
-def test_model_factory_fields(afval_dataset):
+def test_model_factory_fields(afval_dataset) -> None:
     """Prove that the fields from the schema will be generated"""
     table = afval_dataset.schema.tables[0]
     model_cls = model_factory(afval_dataset, table, base_app_name="dso_api.dynamic_api")
@@ -34,11 +38,76 @@ def test_model_factory_fields(afval_dataset):
 
     table_with_id_as_string = afval_dataset.schema.tables[1]
     model_cls = model_factory(
-        dataset=afval_dataset, table=table_with_id_as_string, base_app_name="dso_api.dynamic_api"
+        dataset=afval_dataset,
+        table_schema=table_with_id_as_string,
+        base_app_name="dso_api.dynamic_api",
     )
     meta = model_cls._meta
     assert meta.get_field("id").primary_key
     assert isinstance(meta.get_field("id"), UnlimitedCharField)
+
+
+@pytest.mark.django_db
+def test_model_factory_table_name_no_versions(afval_dataset):
+    """Prove that relations between models can be resolved"""
+    models = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
+    }
+    Containers = models["containers"]
+    assert Containers._meta.db_table == "afvalwegingen_containers"
+
+
+@pytest.mark.django_db
+def test_model_factory_table_name_default_version(afval_schema):
+    """Prove that default dataset gets no version in table name"""
+    afval_schema.data["default_version"] = "1.0.1"
+    afval_schema.data["version"] = "1.0.1"
+    afval_dataset = Dataset.create_for_schema(afval_schema)
+
+    models = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
+    }
+    assert "containers" in models.keys()
+    assert "containers_1_0_1" not in models.keys()
+    Containers = models["containers"]
+    assert Containers._meta.db_table == "afvalwegingen_containers"
+
+
+@pytest.mark.django_db
+def test_model_factory_table_name_non_default_version_similar_major(afval_schema):
+    """Prove that dataset with same major version as default
+    is not getting version in table name"""
+    afval_schema.data["default_version"] = "1.0.1"
+    afval_schema.data["version"] = "1.1.1"
+    afval_dataset = Dataset.create_for_schema(afval_schema)
+
+    models = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
+    }
+    assert "containers_1_1_1" in models.keys()
+    assert "containers" not in models.keys()
+    Containers = models["containers_1_1_1"]
+    assert Containers._meta.db_table == "afvalwegingen_containers"
+
+
+@pytest.mark.django_db
+def test_model_factory_table_name_non_default_version(afval_schema):
+    """Prove that non default datasets getting major version in table name"""
+    afval_schema.data["default_version"] = "0.1.1"
+    afval_schema.data["version"] = "1.0.1"
+    afval_dataset = Dataset.create_for_schema(afval_schema)
+
+    models = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
+    }
+    assert "containers" not in models.keys()
+    assert "containers_1_0_1" in models.keys()
+    Containers = models["containers_1_0_1"]
+    assert Containers._meta.db_table == "afvalwegingen_1_containers"
 
 
 @pytest.mark.django_db
@@ -193,3 +262,19 @@ def test_table_shortname(hr_dataset, verblijfsobjecten_dataset):
     }
 
     assert db_table_names == set(m._meta.db_table for m in model_dict.values())
+
+
+@pytest.mark.django_db
+def test_save_for_schema_updates_is_default_version(afval_schema):
+    """
+    Prove that `Dataset.save_for_schema` will update `is_default_version`
+    according to schema definition.
+    """
+    afval_dataset = Dataset.create_for_schema(afval_schema)
+
+    assert afval_dataset.is_default_version
+
+    afval_schema["default_version"] = "2.0.1"
+    afval_dataset.save_for_schema(afval_schema)
+
+    assert not afval_dataset.is_default_version

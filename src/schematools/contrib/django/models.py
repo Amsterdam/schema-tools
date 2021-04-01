@@ -122,14 +122,14 @@ class DynamicModel(models.Model):
 
     #: Overwritten by subclasses / factory
     CREATION_COUNTER = None
-    _dataset: Dataset = None
-    _table_schema: DatasetTableSchema = None
+    _dataset: Dataset = None  # type: ignore[assignment]
+    _table_schema: DatasetTableSchema = None  # type: ignore[assignment]
     _display_field = None
 
     class Meta:
         abstract = True
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self._display_field:
             return str(getattr(self, self._display_field))
         else:
@@ -196,6 +196,8 @@ class Dataset(models.Model):
 
     name = models.CharField(_("Name"), unique=True, max_length=50)
     schema_data = JSONField(_("Amsterdam Schema Contents"))
+    version = models.CharField(_("Schema Version"), blank=True, null=True, max_length=250)
+    is_default_version = models.BooleanField(_("Default version"), default=False)
 
     # Settings for publishing the schema:
     enable_api = models.BooleanField(default=True)
@@ -225,13 +227,25 @@ class Dataset(models.Model):
         )
 
     @classmethod
+    def name_from_schema(cls, schema: DatasetSchema) -> str:
+        """Generate dataset name from schema"""
+        name = to_snake_case(schema.id)
+        if schema.version and not schema.is_default_version:
+            name = to_snake_case(f"{name}_{schema.version}")
+        return name
+
+    @classmethod
     def create_for_schema(cls, schema: DatasetSchema) -> Dataset:
         """Create the schema based on the Amsterdam Schema JSON input"""
+        name = cls.name_from_schema(schema)
+
         return cls.objects.create(
-            name=to_snake_case(schema.id),
+            name=name,
             schema_data=schema.json_data(),
             auth=_serialize_claims(schema),
             url_prefix=schema.url_prefix,
+            version=schema.version,
+            is_default_version=schema.is_default_version,
         )
 
     def save_for_schema(self, schema: DatasetSchema):
@@ -240,7 +254,7 @@ class Dataset(models.Model):
         self.auth = _serialize_claims(schema)
 
         if self.schema_data_changed():
-            self.save(update_fields=["schema_data", "auth"])
+            self.save(update_fields=["schema_data", "auth", "is_default_version"])
             return True
         else:
             return False
@@ -338,7 +352,7 @@ class DatasetTable(models.Model):
     # Exposed metadata from the jsonschema, so other utils can query these
     auth = models.CharField(max_length=250, blank=True, null=True)
     enable_geosearch = models.BooleanField(default=True)
-    db_table = models.CharField(max_length=100, unique=True)
+    db_table = models.CharField(max_length=100)
     display_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
@@ -356,15 +370,15 @@ class DatasetTable(models.Model):
         return self.name
 
     @classmethod
-    def _get_field_values(cls, table):
+    def _get_field_values(cls, table_schema):
         ret = {
-            "display_field": table.display_field,
+            "display_field": table_schema.display_field,
             "geometry_field": None,
             "geometry_field_type": None,
-            "is_temporal": table.is_temporal,
+            "is_temporal": table_schema.is_temporal,
         }
 
-        for field in table.fields:
+        for field in table_schema.fields:
             # Take the first geojson field as geometry field
             if not ret["geometry_field"] and field.type.startswith(GEOJSON_PREFIX):
                 ret["geometry_field"] = field.name
@@ -375,31 +389,33 @@ class DatasetTable(models.Model):
         return ret
 
     @classmethod
-    def create_for_schema(cls, dataset: Dataset, table: DatasetTableSchema) -> DatasetTable:
+    def create_for_schema(cls, dataset: Dataset, table_schema: DatasetTableSchema) -> DatasetTable:
         """Create a DatasetTable object based on the Amsterdam Schema table spec.
 
         (The table spec contains a JSON-schema for all fields).
         """
         instance = cls(dataset=dataset)
-        instance.save_for_schema(table)
+        instance.save_for_schema(table_schema)
         return instance
 
-    def save_for_schema(self, table: DatasetTableSchema):
-        """Save changes to the dataset table."""
-        self.name = to_snake_case(table.id)
-        self.db_table = table.db_name()
-        self.auth = _serialize_claims(table)
-        self.display_field = to_snake_case(table.display_field) if table.display_field else None
-        self.enable_geosearch = (
-            table.dataset.id not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
+    def save_for_schema(self, table_schema: DatasetTableSchema):
+        """Save changes to the dataset table schema."""
+        self.name = to_snake_case(table_schema.id)
+        self.db_table = table_schema.db_name()
+        self.auth = _serialize_claims(table_schema)
+        self.display_field = (
+            to_snake_case(table_schema.display_field) if table_schema.display_field else None
         )
-        for field, value in self._get_field_values(table).items():
+        self.enable_geosearch = (
+            table_schema.dataset.id not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
+        )
+        for field, value in self._get_field_values(table_schema).items():
             setattr(self, field, value)
 
         is_creation = not self._state.adding
         self.save()
 
-        new_definitions = {to_snake_case(f.id): f for f in table.fields}
+        new_definitions = {to_snake_case(f.id): f for f in table_schema.fields}
         new_names = set(new_definitions.keys())
         existing_fields = {f.name: f for f in self.fields.all()} if is_creation else {}
         existing_names = set(existing_fields.keys())
