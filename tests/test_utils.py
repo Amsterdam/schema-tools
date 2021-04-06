@@ -76,7 +76,7 @@ def test_get_dataset_prefix_from_path() -> None:
 
 
 def test_get_dataset_prefix_from_path_with_versioning() -> None:
-    """Confirm that dataset prefix can be extracted from URLs such asL
+    """Confirm that dataset prefix can be extracted from URLs such as:
     - belastingen/precario/1.0.0/terrassen/terrassen => belastingen/precario
     - belastingen/precario/1.0.0/terrassen => belastingen/precario
     - belastingen/1.0.0/terrassen => belastingen
@@ -107,4 +107,24 @@ def test_get_dataset_prefix_from_path_with_versioning() -> None:
             dataset_path="terrassen/1.0.0/terrassen.json", dataset_data=dataset
         )
         == ""
+    )
+
+
+def test_get_dataset_prefix_from_path_with_camel_case_id() -> None:
+    """Confirm that dataset prefix can be extracted from URLs when dataset id is camelCase:
+    - beheerkaart_cbs_grid/beheerkaart_cbs_grid.json => ""
+    - kaarten/beheerkaart_cbs_grid.json
+    """
+    dataset = {"id": "beheerkaartCbsGrid", "version": "0.0.1"}
+    assert (
+        get_dataset_prefix_from_path(
+            dataset_path="beheerkaart_cbs_grid/beheerkaart_cbs_grid.json", dataset_data=dataset
+        )
+        == ""
+    )
+    assert (
+        get_dataset_prefix_from_path(
+            dataset_path="kaarten/beheerkaart_cbs_grid.json", dataset_data=dataset
+        )
+        == "kaarten"
     )
