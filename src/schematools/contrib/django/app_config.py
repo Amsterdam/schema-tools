@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from types import ModuleType
 from typing import Dict, Optional, Type
 
@@ -17,7 +18,7 @@ class VirtualAppConfig(apps_config.AppConfig):
     Virtual App Config, allowing to add models for datasets on the fly.
     """
 
-    def __init__(self, apps: Apps, app_name: str, app_module: str):
+    def __init__(self, apps: Apps, app_name: str, app_module: ModuleType):
         super().__init__(app_name, app_module)
         # Make django think that App is initiated already.
         self.models: Dict[str, Type[models.Model]] = dict()
@@ -56,7 +57,8 @@ def register_model(dataset_id: str, model: Type[models.Model]) -> None:
     except KeyError:
         # Insert a new virtual "app_label" into the Django app registry,
         # so foreign key relations can be resolved. based on the dataset id.
-        app_config = VirtualAppConfig(apps, dataset_id, app_module=__file__)
+        app_module = sys.modules[__name__]
+        app_config = VirtualAppConfig(apps, dataset_id, app_module=app_module)
         apps.app_configs[dataset_id] = app_config
 
     app_config.register_model(model)
