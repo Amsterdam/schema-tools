@@ -110,7 +110,8 @@ class Command(BaseCommand):
                     # Update current default dataset name to expected name.
                     if current_default.version:
                         current_default.name = to_snake_case(
-                            f"{schema.id}_{current_default.version}")
+                            f"{schema.id}_{current_default.version}"
+                        )
 
                         current_default.save()
 
