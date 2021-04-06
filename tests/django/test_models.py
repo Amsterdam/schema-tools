@@ -262,19 +262,3 @@ def test_table_shortname(hr_dataset, verblijfsobjecten_dataset):
     }
 
     assert db_table_names == set(m._meta.db_table for m in model_dict.values())
-
-
-@pytest.mark.django_db
-def test_save_for_schema_updates_is_default_version(afval_schema):
-    """
-    Prove that `Dataset.save_for_schema` will update `is_default_version`
-    according to schema definition.
-    """
-    afval_dataset = Dataset.create_for_schema(afval_schema)
-
-    assert afval_dataset.is_default_version
-
-    afval_schema["default_version"] = "2.0.1"
-    afval_dataset.save_for_schema(afval_schema)
-
-    assert not afval_dataset.is_default_version
