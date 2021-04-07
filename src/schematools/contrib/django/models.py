@@ -21,9 +21,10 @@ from typing import Any, Dict, List, Optional, Tuple, Type
 from django.apps import apps
 from django.conf import settings
 from django.contrib.gis.db import models as gis_models
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.core.cache import cache
 from django.db import models, transaction
+from django.db.models import JSONField
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
