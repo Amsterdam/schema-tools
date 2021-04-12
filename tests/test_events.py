@@ -65,12 +65,27 @@ def test_event_process_1n_relation_insert(here, tconn, local_metadata, gebieden_
     assert len(records) == 1
     assert records[0]["ligt_in_buurt_id"] == "03630000000707.2"
 
+    # The FK relation also has a junction table, to store extra information
+    # about the relation
     through_records = [
         dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken_ligt_in_buurt")
     ]
 
     assert len(through_records) == 1
     assert through_records[0]["ligt_in_buurt_id"] == "03630000000707.2"
+
+    available_columns = {
+        "bouwblokken_id",
+        "ligt_in_buurt_id",
+        "bouwblokken_identificatie",
+        "bouwblokken_volgnummer",
+        "ligt_in_buurt_identificatie",
+        "ligt_in_buurt_volgnummer",
+        "begin_geldigheid",
+        "eind_geldigheid",
+    }
+
+    assert set(through_records[0].keys()) == available_columns
 
 
 def test_event_process_1n_relation_delete(here, tconn, local_metadata, gebieden_schema):

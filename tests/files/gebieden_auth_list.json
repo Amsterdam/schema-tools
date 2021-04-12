@@ -134,6 +134,47 @@
           }
         }
       }
+    },
+    {
+      "id": "wijken",
+      "type": "table",
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "mainGeometry": "geometrie",
+        "identifier": ["identificatie", "volgnummer"],
+        "required": ["schema", "identificatie", "volgnummer"],
+        "display": "id",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "identificatie": {
+            "type": "string",
+            "description": "Unieke identificatie van het object."
+          },
+          "volgnummer": {
+            "type": "integer",
+            "description": "Uniek volgnummer van de toestand van het object."
+          },
+          "beginGeldigheid": {
+            "type": "string",
+            "format": "date",
+            "description": "De datum waarop het object is gecreëerd."
+          },
+          "eindGeldigheid": {
+            "type": "string",
+            "format": "date",
+            "description": "De datum waarop het object is komen te vervallen."
+          },
+          "geometrie": {
+            "$ref": "https://geojson.org/schema/Polygon.json",
+            "description": "Geometrische beschrijving van een object."
+          }
+        }
+      }
     }
   ]
 }
