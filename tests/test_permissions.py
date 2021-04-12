@@ -324,6 +324,7 @@ class TestReadPermissions:
         importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
         importer.load_file(ndjson_path)
         importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
+        importer.generate_db_objects("wijken", truncate=True, ind_extra_index=False)
 
         # dataset 2: meetbouten
         ndjson_path = here / "files" / "data" / "meetbouten.ndjson"

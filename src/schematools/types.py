@@ -233,6 +233,45 @@ class DatasetSchema(SchemaType):
     def build_through_table(
         self, table: DatasetTableSchema, field: DatasetFieldSchema
     ) -> DatasetTableSchema:
+        """Build the through table.
+
+        The through tables are not defined separately in a schema.
+        The fact that a M2M relation needs an extra table is an implementation aspect.
+        However, the through (aka. junction) table schema is needed for the
+        dyanamic model generation and for data-importing.
+
+        FK relations also have an additional through table, because the temporal information
+        of the relation needs to be stored somewhere.
+
+        For relations with an object-type definition of the relation, the
+        fields for the source and target side of the relation are stored separately
+        in the through table. E.g. for a M2M relation like this:
+
+          "bestaatUitBuurten": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "identificatie": {
+                  "type": "string"
+                },
+                "volgnummer": {
+                  "type": "integer"
+                }
+              }
+            },
+            "relation": "gebieden:buurten",
+            "description": "De buurten waaruit het object bestaat."
+          }
+
+        The through table has the following fields:
+            - ggwgebieden_id
+            - buurten_id
+            - ggwgebieden_identificatie
+            - ggwgebieden_volgnummer
+            - bestaat_uit_buurten_identificatie
+            - bestaat_uit_buurten_volgnummer
+        """
         from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
 
         # Build the through_table for n-m relation
@@ -287,21 +326,26 @@ class DatasetSchema(SchemaType):
                 len(self.id) + 1, table.name, snakecased_fieldname
             )
 
-        # Only for object type relations we can add the fields of the
-        # relation to the schema
-        # if field.is_through_table:
-        if field.is_array_of_objects:
+        # Get the schema of the target table, to be able to get the
+        # identifier fields.
+        target_table = table.dataset.get_dataset_schema(right_dataset_id).get_table_by_id(
+            right_table_id, include_nested=False, include_through=False
+        )
+
+        # For both types of through tables (M2M and FK), we add extra fields
+        # to the table (see docstring).
+        if field.is_through_table:
             if field.is_object:
-                properties = field["properties"]
+                properties = field.get("properties", {})
+            elif field.is_array_of_objects:
+                properties = field["items"].get("properties", {})
             else:
-                properties = field["items"]["properties"]
-            target_table = table.dataset.get_dataset_schema(right_dataset_id).get_table_by_id(
-                right_table_id, include_nested=False, include_through=False
-            )
+                properties = {}
             target_identifier_fields = set(target_table.identifier)
             # Prefix the fields for the target side of the relation
             extra_fields = {}
             for sub_field_id, sub_field in properties.items():
+                # if source table has shortname, add shortname
                 if field.has_shortname:
                     sub_field["shortname"] = toCamelCase(f"{field.name}_{sub_field_id}")
                 if sub_field_id in target_identifier_fields:
@@ -309,10 +353,10 @@ class DatasetSchema(SchemaType):
                 extra_fields[sub_field_id] = sub_field
 
             # Also add the fields for the source side of the relation
-            for sub_field_schema in table.get_fields_by_id(table.identifier):
-                # if source table has shortname, add shortname
-                sub_field_id = toCamelCase(f"{table.id}_{sub_field_schema.id}")
-                extra_fields[sub_field_id] = sub_field_schema.data
+            if table.has_compound_key:
+                for sub_field_schema in table.get_fields_by_id(table.identifier):
+                    sub_field_id = toCamelCase(f"{table.id}_{sub_field_schema.id}")
+                    extra_fields[sub_field_id] = sub_field_schema.data
 
             sub_table_schema["schema"]["properties"].update(extra_fields)
 
@@ -701,8 +745,9 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def sub_fields(self) -> Iterator[DatasetFieldSchema]:
-        """Returns the sub fields for a nested structure. For a
-        nested object, fields are based on its properties,
+        """Return the sub fields for a nested structure.
+
+        For a nested object, fields are based on its properties,
         for an array of objects, fields are based on the properties of
         the "items" field.
         """
