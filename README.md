@@ -78,11 +78,15 @@ in the project with the schema file defintions as follows:
 
 ```yaml
   - repo: https://github.com/Amsterdam/schema-tools
-    rev: v0.18.1
+    rev: v0.20.2
     hooks:
       - id: validate-schema
         args: ['https://schemas.data.amsterdam.nl/schema@v1.1.1#']
-        exclude: 'datasets/index.json$'
+        exclude: |
+            (?x)^(
+                schema.+|             # exclude meta schemas
+                datasets/index.json
+            )$
 ```
 
 `args` is a one element list
