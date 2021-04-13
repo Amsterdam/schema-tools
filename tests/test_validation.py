@@ -1,5 +1,6 @@
 from __future__ import annotations
-from collections import Callable
+
+from collections.abc import Callable
 
 import pytest
 
