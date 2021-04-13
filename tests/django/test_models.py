@@ -10,6 +10,8 @@ from schematools.contrib.django.models import (
     LooseRelationManyToManyField,
 )
 
+pytestmark = pytest.mark.filterwarnings("ignore::RuntimeWarning")
+
 
 @pytest.mark.django_db
 def test_model_factory_fields(afval_dataset) -> None:

@@ -56,7 +56,8 @@ def test_index_creation(engine, db_schema):
         importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
         conn = create_engine(engine.url, client_encoding="UTF-8")
-        meta_data = MetaData(bind=conn, reflect=True)
+        meta_data = MetaData(bind=conn)
+        meta_data.reflect()
         metadata_inspector = inspect(meta_data.bind)
         indexes = metadata_inspector.get_indexes(
             f"{parent_schema['id']}_{table['id']}", schema=None
@@ -183,7 +184,8 @@ def test_index_troughtables_creation(engine, db_schema):
         for table in dataset_table.get_through_tables_by_id():
 
             conn = create_engine(engine.url, client_encoding="UTF-8")
-            meta_data = MetaData(bind=conn, reflect=True)
+            meta_data = MetaData(bind=conn)
+            meta_data.reflect()
             metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(table.db_name(), schema=None)
 
@@ -267,7 +269,8 @@ def test_fk_index_creation(engine, db_schema):
             importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
             conn = create_engine(engine.url, client_encoding="UTF-8")
-            meta_data = MetaData(bind=conn, reflect=True)
+            meta_data = MetaData(bind=conn)
+            meta_data.reflect()
             metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(
                 f"{parent_schema['id']}_{table['id']}", schema=None
@@ -353,7 +356,8 @@ def test_size_of_index_name(engine, db_schema):
             importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
             conn = create_engine(engine.url, client_encoding="UTF-8")
-            meta_data = MetaData(bind=conn, reflect=True)
+            meta_data = MetaData(bind=conn)
+            meta_data.reflect()
             metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(
                 f"{parent_schema['id']}_{table['id']}", schema=None
