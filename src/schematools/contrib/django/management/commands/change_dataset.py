@@ -57,8 +57,12 @@ class Command(BaseCommand):
         )
         parser.add_argument("--url-prefix", help="Set a prefix for the API URL.")
         parser.add_argument("--auth", help="Assign OAuth roles.")
-        parser.add_argument("--ordering", type=int, help="Set the ordering of the dataset")
-        parser.add_argument("--endpoint-url")
+        parser.add_argument("--ordering", type=int, help="Set the ordering of the dataset.")
+        parser.add_argument(
+            "--endpoint-url",
+            help="Set the endpoint URL template. "
+            "The template must contain a {table_id} replacement field.",
+        )
 
     def handle(self, *args, **options):
         name = options.pop("dataset")
@@ -68,13 +72,21 @@ class Command(BaseCommand):
             available = ", ".join(sorted(Dataset.objects.values_list("name", flat=True)))
             raise CommandError(f"Dataset not found: {name}.\nAvailable are: {available}") from None
 
-        # Validate illogical combinations
-        if options.get("endpoint_url"):
+        # Validate endpoint_url.
+        endpoint_url = options.get("endpoint_url")
+        if endpoint_url is not None:
             if options.get("enable_db"):
                 raise CommandError("Can't use --endpoint-url with --enable-db")
 
             if dataset.enable_db:
                 options["enable_db"] = False
+
+            if not endpoint_url.endswith("/"):
+                raise CommandError("--endpoint-url argument must have a trailing slash")
+            if "{table_id}" not in endpoint_url:
+                raise CommandError(
+                    "--endpoint-url argument must have a {table_id} replacement field"
+                )
 
         changed = False
         if options.get("enable_geosearch") is not None:
