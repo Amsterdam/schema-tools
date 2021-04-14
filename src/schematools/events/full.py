@@ -6,9 +6,8 @@ import logging
 from collections import defaultdict
 from typing import Dict, List, Optional
 
-from sqlalchemy import Column, ForeignKey, Integer, MetaData, String, Table
+from sqlalchemy import Column, MetaData, Table
 
-from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.importer import fetch_col_type, get_table_name
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case, toCamelCase
@@ -312,69 +311,8 @@ def tables_factory(
             if field.type.endswith("#/definitions/schema"):
                 continue
             field_name = to_snake_case(field.name)
-            sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]
-            sub_columns = []
 
             try:
-
-                if field.is_array_of_objects:
-                    continue
-
-                    if field.is_nested_table:
-                        # We assume parent has an id field, Django needs it
-                        fk_column = f"{db_table_name}.id"
-                        sub_columns = [
-                            Column("id", Integer, primary_key=True),
-                            Column("parent_id", ForeignKey(fk_column, ondelete="CASCADE")),
-                        ]
-
-                    elif field.is_through_table:
-                        # We need a 'through' table for the n-m relation
-                        # these tables have a event_id as PK
-                        # And two FK fields for both sides of the relation
-                        # containing a concatenation of two fields
-                        # usually identificatie and volgnummer
-                        sub_columns = [
-                            Column(
-                                f"{dataset_table.id}_id",
-                                String,
-                                index=True,
-                            ),
-                            Column(
-                                f"{field_name}_id",
-                                String,
-                                index=True,
-                            ),
-                        ]
-                        # And the field(s) for the left side of the relation
-                        # if this left table has a compound key
-                        # Alternative would be to move this to sub_fields method in
-                        # the types module.
-                        if dataset_table.has_compound_key:
-                            for id_field in dataset_table.get_fields_by_id(
-                                dataset_table.identifier
-                            ):
-                                sub_columns.append(
-                                    Column(
-                                        f"{dataset_table.id}_{to_snake_case(id_field.name)}",
-                                        fetch_col_type(id_field),
-                                    )
-                                )
-
-                    for sub_field in field.sub_fields:
-                        sub_columns.append(
-                            Column(
-                                f"{to_snake_case(sub_field.name)}",
-                                fetch_col_type(sub_field),
-                            )
-                        )
-
-                    sub_tables[sub_table_id] = Table(
-                        sub_table_id, metadata, *sub_columns, extend_existing=True
-                    )
-
-                    continue
-
                 col_type = fetch_col_type(field)
             except KeyError:
                 raise NotImplementedError(
