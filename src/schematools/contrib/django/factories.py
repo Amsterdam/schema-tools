@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
 
-from schematools.contrib.django import app_config
+from schematools.contrib.django import app_config, signals
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 from schematools.utils import get_rel_table_identifier, to_snake_case
 
@@ -349,6 +349,9 @@ def remove_dynamic_models() -> None:
         for model_name in dynamic_models:
             del app_models[model_name]
             del apps.app_configs[app_label].models[model_name]
+
+    # Allow other apps to clear their caches too
+    signals.dynamic_models_removed.send(sender=None)
 
     # This also clears FK caches of other models that may have foreign keys:
     apps.clear_cache()
