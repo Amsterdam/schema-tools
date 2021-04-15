@@ -537,11 +537,11 @@ def import_schema(db_url, schema_url, schema_location):
 def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
-        click.echo(f"Reading schema from {schema_location}")
+        click.echo(f"Reading schema from {schema_location}", err=True)
         return DatasetSchema.from_file(schema_location)
     else:
         # Read the schema from the online repository.
-        click.echo(f"Reading schemas from {schema_url}")
+        click.echo(f"Reading schemas from {schema_url}", err=True)
         try:
             return schema_def_from_url(schema_url, schema_location)
         except KeyError:
