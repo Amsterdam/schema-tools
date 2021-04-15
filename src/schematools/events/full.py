@@ -1,18 +1,15 @@
-"""Modul implementing an event processor, that processes full events."""
+"""Module implementing an event processor, that processes full events."""
 from __future__ import annotations
 
 import json
 import logging
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from sqlalchemy import Column, MetaData, Table
-
-from schematools.importer import fetch_col_type, get_table_name
+from schematools.events import metadata
+from schematools.events.factories import tables_factory
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case, toCamelCase
-
-metadata = MetaData()
 
 # Enable the sqlalchemy logger to debug SQL related issues
 # logging.basicConfig()
@@ -44,7 +41,7 @@ class DataSplitter:
 
     def __init__(
         self, events_processor: EventsProcessor, dataset_id: str, table_id: str, event_data: dict
-    ):
+    ) -> None:
         """Construct the DataSplitter."""
         self.events_processor = events_processor
         self.dataset_id = dataset_id
@@ -86,7 +83,7 @@ class DataSplitter:
         """
         return self.row_data
 
-    def _handle_fk(self, field_id, field_data, relation: str):
+    def _handle_fk(self, field_id: str, field_data: dict, relation: str):
         """Handle FK relation."""
         # shortcut: we assume only volgnummer/identificatie
         # maybe we should follow the relation and determine these fields
@@ -128,7 +125,7 @@ class DataSplitter:
         id_value = ".".join(str(part) for part in id_part_values.values())
         return (f"{snaked_source_table}_id", id_value, id_part_values)
 
-    def _handle_junction_table(self, field_id, field_data, nm_relation):
+    def _handle_junction_table(self, field_id: str, field_data: dict, nm_relation):
         """Handle NM relation."""
         snaked_field_id = to_snake_case(field_id)
         target_identifier_fields = self._fetch_target_identifier_fields(nm_relation)
@@ -205,11 +202,11 @@ class EventsProcessor:
     def __init__(
         self,
         datasets: List[DatasetSchema],
-        srid,
-        connection,
+        srid: str,
+        connection: str,
         local_metadata=None,
         truncate=False,
-    ):
+    ) -> None:
         """Construct the event processor."""
         self.datasets: Dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
         self.srid = srid
@@ -234,12 +231,13 @@ class EventsProcessor:
                     if field.is_geo:
                         self.geo_fields[dataset_id][table_id].append(field.name)
 
-    def process_row(self, event_id, event_meta, event_data, id_value=None):
+    def process_row(self, event_id: str, event_meta: dict, event_data: dict) -> None:
         """Process one row of data.
 
-        This method can also be called from a nested relation that is embedded
-        in a row. In that case, this method will be called with an existing id_value.
-        This is the id_value for the 'surrounding' record.
+        Args:
+            event_id: Id of the event (Kafka id)
+            event_meta: Metadata about the event
+            event_data: Data containing the fields of the event
         """
         event_type = event_meta["event_type"]
         db_operation_name, needs_select = EVENT_TYPE_MAPPINGS[event_type]
@@ -268,12 +266,12 @@ class EventsProcessor:
         # now process the relations (if any)
         data_splitter.update_relations()
 
-    def process_event(self, event_id, event_meta, event_data):
+    def process_event(self, event_id: str, event_meta: dict, event_data: dict):
         """Do inserts/updates/deletes."""
         self.process_row(event_id, event_meta, event_data)
 
-    def load_events_from_file(self, events_path):
-        """Load event, primarily used for testing."""
+    def load_events_from_file(self, events_path: str):
+        """Load events from a file, primarily used for testing."""
         with open(events_path) as ef:
             for line in ef:
                 if line.strip():
@@ -285,52 +283,3 @@ class EventsProcessor:
                         event_meta,
                         event_data,
                     )
-
-
-def tables_factory(
-    dataset: DatasetSchema,
-    metadata: Optional[MetaData] = None,
-) -> Dict[str, Table]:
-    """Generate the SQLAlchemy Table objects to work with the JSON Schema.
-
-    :param dataset: The Amsterdam Schema definition of the dataset
-    :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
-
-    The returned tables are keyed on the name of the dataset and table.
-    SA Table objects are also created for the NM-relation tables.
-    """
-    tables = defaultdict(dict)
-    metadata = metadata or MetaData()
-
-    for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
-        db_table_name = get_table_name(dataset_table)
-        table_id = dataset_table.id
-        columns = []
-        sub_tables = {}
-        for field in dataset_table.fields:
-            if field.type.endswith("#/definitions/schema"):
-                continue
-            field_name = to_snake_case(field.name)
-
-            try:
-                col_type = fetch_col_type(field)
-            except KeyError:
-                raise NotImplementedError(
-                    f'Import failed at "{field.name}": {dict(field)!r}\n'
-                    f"Field type '{field.type}' is not implemented."
-                ) from None
-
-            col_kwargs = {"nullable": not field.required}
-            if field.is_primary:
-                col_kwargs["primary_key"] = True
-                col_kwargs["nullable"] = False
-                col_kwargs["autoincrement"] = False
-
-            id_postfix = "_id" if field.relation else ""
-
-            columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
-
-        tables[table_id] = Table(db_table_name, metadata, *columns, extend_existing=True)
-        tables.update(**sub_tables)
-
-    return tables

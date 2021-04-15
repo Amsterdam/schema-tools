@@ -20,6 +20,7 @@ JSON_TYPE_TO_PG = {
     "object": String,
     "boolean": Boolean,
     "integer": BigInteger,
+    "integer/autoincrement": BigInteger,
     "number": Float,
     "array": ARRAY(String),
     "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id": String,
@@ -63,10 +64,7 @@ def numeric_datatype_scale(scale_=None):
 
 def fetch_col_type(field):
     col_type = JSON_TYPE_TO_PG[field.type]
-    # XXX no walrus until we can go to python 3.8 (airflow needs 3.7)
-    # if (field_format := field.format) is not None:
-    field_format = field.format
-    if field_format is not None:
+    if (field_format := field.format) is not None:
         return FORMAT_MODELS_LOOKUP[field_format]
     # TODO: format takes precedence over multipleof
     # if there is an use case that both can apply for a field definition

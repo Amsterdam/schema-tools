@@ -1,4 +1,3 @@
-import json
 import sys
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Tuple
@@ -7,33 +6,34 @@ import click
 import jsonschema
 import requests
 from deepdiff import DeepDiff
+from json_encoder import json
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from schematools.validation import Validator
-
-from .db import (
+from schematools.db import (
     create_meta_table_data,
     create_meta_tables,
     fetch_schema_from_relational_schema,
     fetch_table_names,
 )
-from .events.partial import EventsProcessor
-from .exceptions import ParserError
-from .importer.base import BaseImporter
-from .importer.geojson import GeoJSONImporter
-from .importer.ndjson import NDJSONImporter
-from .introspect.db import introspect_db_schema
-from .introspect.geojson import introspect_geojson_files
-from .maps import create_mapfile
-from .permissions import (
+from schematools.events.export import export_events
+from schematools.events.partial import EventsProcessor
+from schematools.exceptions import ParserError
+from schematools.importer.base import BaseImporter
+from schematools.importer.geojson import GeoJSONImporter
+from schematools.importer.ndjson import NDJSONImporter
+from schematools.introspect.db import introspect_db_schema
+from schematools.introspect.geojson import introspect_geojson_files
+from schematools.maps import create_mapfile
+from schematools.permissions import (
     apply_schema_and_profile_permissions,
     introspect_permissions,
     revoke_permissions,
 )
-from .provenance.create import ProvenaceIteration
-from .types import DatasetSchema, SchemaType
-from .utils import schema_def_from_url, schema_defs_from_url, schema_fetch_url_file
+from schematools.provenance.create import ProvenaceIteration
+from schematools.types import DatasetSchema, SchemaType
+from schematools.utils import schema_def_from_url, schema_defs_from_url, schema_fetch_url_file
+from schematools.validation import Validator
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
 DEFAULT_PROFILE_URL = "https://schemas.data.amsterdam.nl/profiles/"
@@ -113,7 +113,13 @@ def schema():
 
 @schema.group("import")
 def import_():
-    """Subcommand to import data"""
+    """Subcommand to import data."""
+    pass
+
+
+@schema.group("export")
+def export():
+    """Subcommand to export data."""
     pass
 
 
@@ -576,7 +582,7 @@ def create_tables(schema_url, db_url):
 @option_db_url
 @option_schema_url
 def create_all_objects(schema_url, db_url):
-    """Execute SQLalchemy Index (Identifier fields) and Table objects"""
+    """Execute SQLalchemy Index (Identifier fields) and Table objects."""
     data = schema_fetch_url_file(schema_url)
     engine = _get_engine(db_url)
     parent_schema = SchemaType(data)
@@ -591,7 +597,9 @@ def create_all_objects(schema_url, db_url):
 @option_schema_url
 @click.argument("diff_schema_url")
 def diff_schemas(schema_url, diff_schema_url):
-    """Shows diff for two sets of schemas. The left-side schemas location is
+    """Show diff for two sets of schemas.
+
+    The left-side schemas location is
     defined in SCHEMA_URL (or via --schema-url), the right-side schemas location
     has to be on the command-line.
 
@@ -602,6 +610,32 @@ def diff_schemas(schema_url, diff_schema_url):
     schemas = schema_defs_from_url(schema_url)
     diff_schemas = schema_defs_from_url(diff_schema_url)
     click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
+
+
+@export.command("events")
+@option_db_url
+@option_schema_url
+@argument_schema_location
+@click.option("--additional-schemas", "-a", multiple=True)
+@click.argument("dataset_id")
+@click.argument("table_id")
+def export_events_for(
+    db_url, schema_url, schema_location, additional_schemas, dataset_id, table_id
+):
+    """Export events from postgres."""
+    engine = _get_engine(db_url)
+    dataset_schemas = [
+        _get_dataset_schema(
+            schema_url,
+            schema_location,
+        )
+    ]
+    for schema in additional_schemas:
+        dataset_schemas.append(_get_dataset_schema(schema_url, schema))
+    # Run as a transaction
+    with engine.begin() as connection:
+        for row in export_events(dataset_schemas, dataset_id, table_id, connection):
+            print(json.dumps(row))
 
 
 if __name__ == "__main__":
