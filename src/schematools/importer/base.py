@@ -378,6 +378,7 @@ def table_factory(
     """
     if db_table_name is None:
         db_table_name = dataset_table.db_name()
+    db_table_description = dataset_table.description
 
     metadata = metadata or MetaData()
     sub_tables = {}
@@ -387,6 +388,7 @@ def table_factory(
         if field.type.endswith("#/definitions/schema"):
             continue
         field_name = to_snake_case(field.name)
+        field_description = field.description
         sub_columns = []
 
         try:
@@ -461,10 +463,12 @@ def table_factory(
             col_kwargs["autoincrement"] = False
 
         id_postfix = "_id" if field.relation else ""
-        columns.append(Column(f"{field_name}{id_postfix}", col_type, **col_kwargs))
+        columns.append(
+            Column(f"{field_name}{id_postfix}", col_type, comment=field_description, **col_kwargs)
+        )
 
     return {
-        db_table_name: Table(db_table_name, metadata, *columns),
+        db_table_name: Table(db_table_name, metadata, comment=db_table_description, *columns),
         **sub_tables,
     }
 

@@ -115,3 +115,42 @@ def test_biginteger_datatype(here, engine, woningbouwplannen_schema, dbsession):
     record = results.fetchone()
     assert record.data_type == "bigint"
     assert record.numeric_precision == 64
+
+
+def test_add_column_comment(here, engine, woningbouwplannen_schema, dbsession):
+    """Prove that a column comment is added as defined in the schema as field description"""
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=False)
+    results = engine.execute(
+        """
+        SELECT pgd.description
+        FROM pg_catalog.pg_statio_all_tables as st
+        INNER JOIN pg_catalog.pg_description pgd on (pgd.objoid=st.relid)
+        INNER JOIN information_schema.columns c on (pgd.objsubid=c.ordinal_position
+        AND  c.table_schema=st.schemaname and c.table_name=st.relname)
+        WHERE table_name  = 'woningbouwplannen_woningbouwplan'
+        AND column_name = 'projectnaam';
+    """
+    )
+    record = results.fetchone()
+    assert record.description == "Naam van het project"
+
+
+def test_add_table_comment(here, engine, woningbouwplannen_schema, dbsession):
+    """Prove that a table comment is added as defined in the schema as table description"""
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=False)
+    results = engine.execute(
+        """
+        SELECT obj_description('public.woningbouwplannen_woningbouwplan'::regclass) as description;
+    """
+    )
+    record = results.fetchone()
+    assert (
+        record.description == "De aantallen vormen de planvoorraad. "
+        "Dit zijn niet de aantallen die definitief worden gerealiseerd. "
+        "Ervaring leert dat een deel van de planvoorraad wordt opgeschoven. "
+        "Niet alle woningbouw initiatieven doorlopen de verschillende plaberumfasen. "
+        "Met name kleinere particuliere projecten worden in de regel pas toegevoegd aan "
+        "de monitor zodra er een intentieovereenkomst of afsprakenbrief is getekend."
+    )
