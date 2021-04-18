@@ -353,6 +353,11 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema
 
     @property
+    def description(self) -> Optional[DatasetSchema]:
+        """The description of the table as stated in the schema."""
+        return self.get("description")
+
+    @property
     def fields(self) -> Iterator[DatasetFieldSchema]:
         required = set(self["schema"]["required"])
         for id_, spec in self["schema"]["properties"].items():
