@@ -1,3 +1,5 @@
+"""Cli tools."""
+
 import sys
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Tuple
@@ -17,7 +19,7 @@ from schematools.db import (
     fetch_table_names,
 )
 from schematools.events.export import export_events
-from schematools.events.partial import EventsProcessor
+from schematools.events.full import EventsProcessor
 from schematools.exceptions import ParserError
 from schematools.importer.base import BaseImporter
 from schematools.importer.geojson import GeoJSONImporter
@@ -81,7 +83,7 @@ argument_role = click.argument(
 
 
 def _get_engine(db_url, pg_schemas=None):
-    """Initialize the SQLAlchemy engine, and report click errors"""
+    """Initialize the SQLAlchemy engine, and report click errors."""
     kwargs = {}
     if pg_schemas is not None:
         csearch_path = ",".join(pg_schemas + ["public"])
@@ -504,19 +506,26 @@ def import_geojson(db_url, schema_url, schema_location, table_name, geojson_path
 @option_db_url
 @option_schema_url
 @argument_schema_location
+@click.option("--additional-schemas", "-a", multiple=True)
 @click.argument("events_path")
 @click.option("-t", "--truncate-table", default=False, is_flag=True)
-def import_events(db_url, schema_url, schema_location, events_path, truncate_table):
+def import_events(
+    db_url, schema_url, schema_location, additional_schemas, events_path, truncate_table
+):
     """Import an events file into a table."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(
-        schema_url,
-        schema_location,
-    )
-    srid = dataset_schema["crs"].split(":")[-1]
+    dataset_schemas = [
+        _get_dataset_schema(
+            schema_url,
+            schema_location,
+        )
+    ]
+    for schema in additional_schemas:
+        dataset_schemas.append(_get_dataset_schema(schema_url, schema))
+    srid = dataset_schemas[0]["crs"].split(":")[-1]
     # Run as a transaction
     with engine.begin() as connection:
-        importer = EventsProcessor([dataset_schema], srid, connection, truncate=truncate_table)
+        importer = EventsProcessor(dataset_schemas, srid, connection, truncate=truncate_table)
         importer.load_events_from_file(events_path)
 
 
@@ -634,8 +643,8 @@ def export_events_for(
         dataset_schemas.append(_get_dataset_schema(schema_url, schema))
     # Run as a transaction
     with engine.begin() as connection:
-        for row in export_events(dataset_schemas, dataset_id, table_id, connection):
-            print(json.dumps(row))
+        for event in export_events(dataset_schemas, dataset_id, table_id, connection):
+            click.echo(event)
 
 
 if __name__ == "__main__":
