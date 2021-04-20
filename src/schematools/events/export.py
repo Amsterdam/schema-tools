@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from geoalchemy2.shape import to_shape
+from json_encoder import json
 from sqlalchemy import Table
 from sqlalchemy.engine import Connection
 
@@ -105,9 +106,13 @@ def export_events(datasets, dataset_id: str, table_id: str, connection: Connecti
     )
     for r in connection.execute(tables[dataset_id][table_id].select()):
         row = dict(r)
+        meta = {"event_type": "ADD", "dataset_id": dataset_id, "table_id": table_id}
+        id_ = ".".join(str(row[f]) for f in dataset_table.identifier)
+        event_parts = [f"{dataset_id}.{table_id}.{id_}", json.dumps(meta)]
         main_geometry = dataset_table.main_geometry
         geom = row.get(main_geometry)
         row[main_geometry] = f"SRID={geom.srid};{to_shape(geom).wkt}"
         row.update(fetch_1n_embeds(row, complex_fields_info))
         row.update(fetch_nm_embeds(row, table_id, nm_embed_rows, complex_fields_info))
-        yield row
+        event_parts.append(json.dumps(row))
+        yield "|".join(event_parts)
