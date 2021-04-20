@@ -4,7 +4,7 @@ from typing import Dict, Optional
 
 from sqlalchemy import Column, MetaData, Table
 
-from schematools.importer import fetch_col_type, get_table_name
+from schematools.importer import fetch_col_type
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
 
@@ -26,11 +26,12 @@ def tables_factory(
     metadata = metadata or MetaData()
 
     for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
-        db_table_name = get_table_name(dataset_table)
+        db_table_name = dataset_table.db_name()
         table_id = dataset_table.id
         columns = []
         for field in dataset_table.fields:
-            if field.type.endswith("#/definitions/schema") or field.is_through_table:
+            # Exclude nested and nm_relation fields (is_array check)
+            if field.type.endswith("#/definitions/schema") or field.is_array:
                 continue
             field_name = to_snake_case(field.name)
 
