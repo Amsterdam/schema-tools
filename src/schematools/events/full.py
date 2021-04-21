@@ -6,6 +6,8 @@ import logging
 from collections import defaultdict
 from typing import Dict, List
 
+from sqlalchemy.engine import Connection
+
 from schematools.events import metadata
 from schematools.events.factories import tables_factory
 from schematools.types import DatasetSchema
@@ -137,13 +139,14 @@ class DataSplitter:
             return
 
         nm_rows = []
+
         for row_data in field_data:
             nm_row_data = {}
 
             # relation fields for source side
             # XXX add support for shortnames!
             for sub_field_schema in self.dataset_table.get_fields_by_id(
-                self.dataset_table.identifier
+                tuple(self.dataset_table.identifier)
             ):
                 sub_field_id = f"{self.table_id}_{sub_field_schema.id}"
                 nm_row_data[sub_field_id] = id_part_values[sub_field_schema.id]
@@ -174,17 +177,18 @@ class DataSplitter:
         """
         conn = self.events_processor.conn
 
-        for snaked_field_id, nm_row_data in self.junction_table_rows.items():
+        with conn.begin():
+            for snaked_field_id, nm_row_data in self.junction_table_rows.items():
 
-            snaked_source_table_id = to_snake_case(self.table_id)
-            junction_table_id = f"{snaked_source_table_id}_{snaked_field_id}"
-            sa_table = self.events_processor.tables[self.dataset_id][junction_table_id]
-            source_id, source_id_value, _ = self._fetch_source_id_info()
+                snaked_source_table_id = to_snake_case(self.table_id)
+                junction_table_id = f"{snaked_source_table_id}_{snaked_field_id}"
+                sa_table = self.events_processor.tables[self.dataset_id][junction_table_id]
+                source_id, source_id_value, _ = self._fetch_source_id_info()
 
-            source_id_column = getattr(sa_table.c, source_id)
-            conn.execute(sa_table.delete().where(source_id_column == source_id_value))
-            if nm_row_data:
-                conn.execute(sa_table.insert(), nm_row_data)
+                source_id_column = getattr(sa_table.c, source_id)
+                conn.execute(sa_table.delete().where(source_id_column == source_id_value))
+                if nm_row_data:
+                    conn.execute(sa_table.insert(), nm_row_data)
 
 
 class EventsProcessor:
@@ -203,7 +207,7 @@ class EventsProcessor:
         self,
         datasets: List[DatasetSchema],
         srid: str,
-        connection: str,
+        connection: Connection,
         local_metadata=None,
         truncate=False,
     ) -> None:
@@ -222,7 +226,8 @@ class EventsProcessor:
                 if not table.exists():
                     table.create()
                 elif truncate:
-                    self.conn.execute(table.delete())
+                    with self.conn.begin():
+                        self.conn.execute(table.delete())
                 # self.has_compound_key = dataset_table.has_compound_key
                 # skip the generated nm tables
                 if table_id not in base_tables_ids:
@@ -249,7 +254,7 @@ class EventsProcessor:
 
         for field_name in self.geo_fields[dataset_id][table_id]:
             geo_value = row.get(field_name)
-            if geo_value is not None:
+            if geo_value is not None and not row[field_name].startswith("SRID"):
                 row[field_name] = f"SRID={self.srid};{geo_value}"
 
         identifier = self.datasets[dataset_id].get_table_by_id(table_id).identifier
@@ -261,7 +266,8 @@ class EventsProcessor:
         if needs_select:
             # XXX Can we assume 'id' is always available?
             db_operation = db_operation.where(table.c.id == id_value)
-        self.conn.execute(db_operation, row)
+        with self.conn.begin():
+            self.conn.execute(db_operation, row)
 
         # now process the relations (if any)
         data_splitter.update_relations()

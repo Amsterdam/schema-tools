@@ -524,7 +524,7 @@ def import_events(
         dataset_schemas.append(_get_dataset_schema(schema_url, schema))
     srid = dataset_schemas[0]["crs"].split(":")[-1]
     # Run as a transaction
-    with engine.begin() as connection:
+    with engine.connect() as connection:
         importer = EventsProcessor(dataset_schemas, srid, connection, truncate=truncate_table)
         importer.load_events_from_file(events_path)
 
