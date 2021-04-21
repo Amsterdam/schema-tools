@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import json
 from collections import UserDict
-from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, Tuple, TypeVar, Union
 
 import jsonschema
+from methodtools import lru_cache
 
 from schematools import RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
@@ -155,6 +156,7 @@ class DatasetSchema(SchemaType):
             tables += self.through_tables
         return tables
 
+    @lru_cache()
     def get_table_by_id(
         self, table_id: str, include_nested: bool = True, include_through: bool = True
     ) -> DatasetTableSchema:
@@ -354,7 +356,7 @@ class DatasetSchema(SchemaType):
 
             # Also add the fields for the source side of the relation
             if table.has_compound_key:
-                for sub_field_schema in table.get_fields_by_id(table.identifier):
+                for sub_field_schema in table.get_fields_by_id(tuple(table.identifier)):
                     sub_field_id = toCamelCase(f"{table.id}_{sub_field_schema.id}")
                     extra_fields[sub_field_id] = sub_field_schema.data
 
@@ -461,18 +463,25 @@ class DatasetTableSchema(SchemaType):
         if self.has_compound_key:
             yield DatasetFieldSchema(_id="id", _parent_table=self, _required=True, type="string")
 
-    def get_fields_by_id(self, field_ids: List[str]) -> Iterator[DatasetFieldSchema]:
-        for field in self.fields:
-            if field.id in set(field_ids):
-                yield field
+    @lru_cache()
+    def get_fields_by_id(self, field_ids: Tuple[str]) -> Iterator[DatasetFieldSchema]:
+        """Get the fields based on the ids of the fields.
 
+        args:
+            field_ids: The ids of the fields.
+            NB. This needs to be a tuple, lru_cache only works on immutable arguments.
+        """
+        return [field for field in self.fields if field.id in set(field_ids)]
+
+    @lru_cache()
     def get_field_by_id(self, field_id) -> Optional[DatasetFieldSchema]:
+        """Get a fields based on the ids of the field."""
         for field_schema in self.fields:
             if field_schema.id == field_id:
                 return field_schema
 
     def get_through_tables_by_id(self) -> List[DatasetTableSchema]:
-        """Access list of through_tables (for n-m relations) for a single base table """
+        """Access list of through_tables (for n-m relations) for a single base table."""
         tables = []
         for field in self.fields:
             if field.is_through_table:
