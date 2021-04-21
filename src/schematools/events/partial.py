@@ -498,7 +498,7 @@ def tables_factory(
                         # the types module.
                         if dataset_table.has_compound_key:
                             for id_field in dataset_table.get_fields_by_id(
-                                dataset_table.identifier
+                                tuple(dataset_table.identifier)
                             ):
                                 sub_columns.append(
                                     Column(
