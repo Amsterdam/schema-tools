@@ -12,12 +12,20 @@ from .create_tables import create_tables
 
 
 class Command(BaseCommand):
-    help = "Import all known Amsterdam schema files."
+    help = """Import Amsterdam schema files.
+
+    import_schemas imports all schemas from $SCHEMA_URL,
+    unless schema files/URLs are given as positional arguments.
+    """
     requires_system_checks = False
 
     def add_arguments(self, parser):
         parser.add_argument("schema", nargs="*", help="Local schema files to import")
-        parser.add_argument("--schema-url", default=settings.SCHEMA_URL)
+        parser.add_argument(
+            "--schema-url",
+            default=settings.SCHEMA_URL,
+            help=f"Schema URL (default: {settings.SCHEMA_URL})",
+        )
         parser.add_argument("--create-tables", dest="create_tables", action="store_true")
         parser.add_argument("--no-create-tables", dest="create_tables", action="store_false")
         parser.set_defaults(create_tables=False)
