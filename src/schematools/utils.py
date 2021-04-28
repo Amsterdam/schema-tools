@@ -18,7 +18,9 @@ RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
 
 @ttl_cache(ttl=16)
 def schema_defs_from_url(
-    schemas_url: str, dataset_name: Optional[str] = None
+    schemas_url: str,
+    dataset_name: Optional[str] = None,
+    prefetch_related: Optional[bool] = False,
 ) -> Dict[str, types.DatasetSchema]:
     """Fetch all schema definitions from a remote file (or single dataset if specified).
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
@@ -28,17 +30,23 @@ def schema_defs_from_url(
             base_url=schemas_url,
             data_type=types.DatasetSchema,
             dataset_id=dataset_name,
+            prefetch_related=prefetch_related,
         )
         return {dataset_name: schema}
 
     return defs_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
 
 
-def schema_def_from_url(schemas_url: str, dataset_name: str) -> types.DatasetSchema:
+def schema_def_from_url(
+    schemas_url: str,
+    dataset_name: str,
+    prefetch_related: Optional[bool] = False,
+) -> types.DatasetSchema:
     return def_from_url(
         base_url=schemas_url,
         data_type=types.DatasetSchema,
         dataset_id=dataset_name,
+        prefetch_related=prefetch_related,
     )
 
 
@@ -76,11 +84,17 @@ def defs_from_url(base_url: str, data_type: Type[types.ST]) -> Dict[str, types.S
     return schema_lookup
 
 
-def def_from_url(base_url: str, data_type: Type[types.ST], dataset_id: str) -> types.ST:
-    """Fetch schema definitions from a remote file for a single dataset
+def def_from_url(
+    base_url: str,
+    data_type: Type[types.ST],
+    dataset_id: str,
+    prefetch_related: Optional[bool] = False,
+) -> types.ST:
+    """Fetch schema definitions from a remote file for a single dataset.
+
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup: Dict[str, types.ST] = {}
+    # schema_lookup: Dict[str, types.ST] = {}
     if not base_url.endswith("/"):
         base_url = f"{base_url}/"
 
@@ -92,9 +106,18 @@ def def_from_url(base_url: str, data_type: Type[types.ST], dataset_id: str) -> t
         response = connection.get(f"{base_url}{index[dataset_id]}")
         response.raise_for_status()
 
-        schema_lookup[dataset_id] = data_type.from_dict(response.json())
+        dataset_schema = data_type.from_dict(response.json())
 
-    return schema_lookup[dataset_id]
+    # For this recursive call, we set prefetch_related=False
+    # to avoid deep/endless recursion
+    # The result of def_from_url does not need to be stored,
+    # because is it cached on the DatasetSchema instances.
+    if prefetch_related:
+        for ds_id in dataset_schema.related_dataset_schema_ids:
+            def_from_url(base_url, data_type, ds_id, prefetch_related=False)
+
+    return dataset_schema
+    # return schema_lookup[dataset_id]
 
 
 def schema_def_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetSchema]:
@@ -226,6 +249,7 @@ def get_rel_table_identifier(
     Take length of prefix (dataset.id) into account, postgresql has maxsize for tablenames."""
     through_table_name = f"{table_identifier}_{through_identifier}"
     return through_table_name
+
     # return through_table_name[: MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX) - prefix_length]
 
 

@@ -10,7 +10,10 @@ if TYPE_CHECKING:
 
 class DatasetCollection(metaclass=Singleton):
     """Holding class for a collection of datasets.
+
     This can hold a cache of datasets that have already been collected.
+    This class is a singleton class, so every DatasetSchema can have
+    a reference to it, without creating redundancy.
     """
 
     def __init__(self) -> None:
