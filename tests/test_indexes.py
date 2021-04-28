@@ -368,3 +368,73 @@ def test_size_of_index_name(engine, db_schema):
                 indexes_name.append(index["name"])
             for index_name in indexes_name:
                 assert len(index_name) <= (MAX_TABLE_NAME_LENGTH - len(TABLE_INDEX_POSTFIX))
+
+
+def test_index_creation_db_schema(engine, db_schema):
+    """Prove that identifier index is created based on DB schema specificiation """
+
+    test_data = {
+        "type": "dataset",
+        "id": "test",
+        "title": "test table",
+        "status": "beschikbaar",
+        "description": "test table",
+        "version": "0.0.1",
+        "crs": "EPSG:28992",
+        "tables": [
+            {
+                "id": "test_db_schema",
+                "type": "table",
+                "schema": {
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "additionalProperties": "false",
+                    "required": ["schema", "id"],
+                    "display": "id",
+                    "identifier": ["col1", "col2"],
+                    "properties": {
+                        "schema": {
+                            "$ref": (
+                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                "#/definitions/schema"
+                            )
+                        },
+                        "id": {"type": "integer"},
+                        "geometry": {"$ref": "https://geojson.org/schema/Geometry.json"},
+                        "col1": {"type": "string"},
+                        "col2": {"type": "string"},
+                        "col3": {"type": "string"},
+                    },
+                },
+            }
+        ],
+    }
+
+    data = test_data
+    parent_schema = SchemaType(data)
+    dataset_schema = DatasetSchema(parent_schema)
+    ind_index_exists = False
+
+    for table in data["tables"]:
+        importer = BaseImporter(dataset_schema, engine)
+        # create DB schema
+        engine.execute("CREATE SCHEMA IF NOT EXISTS schema_foo_bar;")
+        # the generate_table and create index
+        importer.generate_db_objects(
+            table["id"], "schema_foo_bar", ind_tables=True, ind_extra_index=True
+        )
+
+        conn = create_engine(engine.url, client_encoding="UTF-8")
+        meta_data = MetaData(bind=conn)
+        meta_data.reflect()
+        metadata_inspector = inspect(meta_data.bind)
+        indexes = metadata_inspector.get_indexes(
+            f"{parent_schema['id']}_{table['id']}", schema="schema_foo_bar"
+        )
+        indexes_name = []
+
+        for index in indexes:
+            indexes_name.append(index["name"])
+        if any("identifier_idx" in i for i in indexes_name):
+            ind_index_exists = True
+        assert ind_index_exists

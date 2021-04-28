@@ -171,15 +171,26 @@ class BaseImporter:
 
     def generate_db_objects(
         self,
-        table_name,
-        db_table_name=None,
-        truncate=False,
-        ind_tables=True,
-        ind_extra_index=True,
+        table_name: str,
+        db_schema_name: Optional[str] = None,
+        db_table_name: Optional[str] = None,
+        truncate: bool = False,
+        ind_tables: bool = True,
+        ind_extra_index: bool = True,
     ):
         """Generate the tablemodels and tables and / or index on identifier
         as specified in the JSON data schema. As default both table and index
         creation are set to True.
+
+        Args:
+            table_name (str): Name of the table as defined in the id in the JSON schema defintion.
+            db_schema_name (str): Name of the database schema where table should be
+                created/present. Defaults to None (== public).
+            db_table_name (type, optional): Name of the table as defined in the database.
+                Defaults to None.
+            truncate (bool, optional): Indication to truncate table. Defaults to False.
+            ind_tables (bool, optional): Indication to create table. Defaults to True.
+            ind_extra_index (bool, optional): Indication to create indexes. Defaults to True.
         """
 
         if ind_tables or ind_extra_index:
@@ -195,6 +206,7 @@ class BaseImporter:
             # Get a table to import into
             self.tables = table_factory(
                 self.dataset_table,
+                db_schema_name=db_schema_name,
                 metadata=metadata,
                 db_table_name=self.db_table_name,
             )
@@ -209,13 +221,14 @@ class BaseImporter:
                 self.indexes = index_factory(
                     self.dataset_table,
                     ind_extra_index,
+                    db_schema_name=db_schema_name,
                     metadata=metadata,
                     db_table_name=self.db_table_name,
                     logger=[],
                 )
                 metadata_inspector = inspect(metadata.bind)
                 self.prepare_extra_index(
-                    self.indexes, metadata_inspector, metadata.bind, logger=[]
+                    self.indexes, metadata_inspector, db_schema_name, metadata.bind, logger=[]
                 )
             except exc.NoInspectionAvailable:
                 pass
@@ -279,7 +292,7 @@ class BaseImporter:
                 elif truncate:
                     self.engine.execute(table.delete())
 
-    def prepare_extra_index(self, indexes, inspector, engine, logger=None):
+    def prepare_extra_index(self, indexes, inspector, db_schema_name, engine, logger=None):
         """Create extra indexes on identifiers columns in base tables
         and identifier columns in n:m tables, if not exists"""
 
@@ -292,7 +305,7 @@ class BaseImporter:
         # get current DB indexes on table
         current_db_indexes = set()
         for table in target_table_name:
-            db_indexes = inspector.get_indexes(table, schema=None)
+            db_indexes = inspector.get_indexes(table, schema=db_schema_name)
             for current_db_index in db_indexes:
                 current_db_indexes.add(current_db_index["name"])
 
@@ -365,13 +378,16 @@ class LogfileLogger(CliLogger):
 def table_factory(
     dataset_table: DatasetTableSchema,
     metadata: Optional[MetaData] = None,
-    db_table_name=None,
+    db_table_name: str = None,
+    db_schema_name: str = None,
 ) -> Dict[str, Table]:
     """Generate one or more SQLAlchemy Table objects to work with the JSON Schema
 
     :param dataset_table: The Amsterdam Schema definition of the table
     :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
     :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
+    :param db_schema_name: Optional database schema name, which is otherwise None
+        and defaults to public.
 
     The returned tables are keyed on the name of the table. The same goes for the incoming data,
     so during creation or records, the data can be associated with the correct table.
@@ -468,7 +484,9 @@ def table_factory(
         )
 
     return {
-        db_table_name: Table(db_table_name, metadata, comment=db_table_description, *columns),
+        db_table_name: Table(
+            db_table_name, metadata, comment=db_table_description, schema=db_schema_name, *columns
+        ),
         **sub_tables,
     }
 
@@ -477,14 +495,17 @@ def index_factory(
     dataset_table: DatasetTableSchema,
     ind_extra_index: bool,
     metadata: Optional[MetaData] = None,
-    db_table_name=None,
-    logger=None,
+    db_table_name: Optional[str] = None,
+    db_schema_name: Optional[str] = None,
+    logger: Optional[LogfileLogger] = None,
 ) -> Dict[str, Index]:
     """Generate one or more SQLAlchemy Index objects to work with the JSON Schema
 
     :param dataset_table: The Amsterdam Schema definition of the table
     :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
     :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
+    :param db_schema_name: Optional database schema name, which is otherwise None
+        and defaults to public.
 
     Identifier index:
     In the JSON Schema definition of the table, an identifier arry may be definied.
@@ -509,7 +530,17 @@ def index_factory(
     index = {}
     metadata = metadata or MetaData()
     logger = LogfileLogger(logger) if logger else CliLogger()
-    table_object = metadata.tables[dataset_table.db_name()]
+    table_object = (
+        f"{db_schema_name}.{dataset_table.db_name()}"
+        if db_schema_name
+        else dataset_table.db_name()
+    )
+
+    try:
+        table_object = metadata.tables[table_object]
+    except KeyError as ex:
+        logger.log_error(f"{table_object} cannot be found.", repr(ex))
+
     indexes_to_create = []
 
     def make_hash_value(index_name):
