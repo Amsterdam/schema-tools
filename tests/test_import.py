@@ -154,3 +154,32 @@ def test_add_table_comment(here, engine, woningbouwplannen_schema, dbsession):
         "Met name kleinere particuliere projecten worden in de regel pas toegevoegd aan "
         "de monitor zodra er een intentieovereenkomst of afsprakenbrief is getekend."
     )
+
+
+def test_create_table_db_schema(here, engine, woningbouwplannen_schema, dbsession):
+    """Prove that a table is created in given DB schema."""
+    engine.execute("CREATE SCHEMA IF NOT EXISTS schema_foo_bar;")
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects(
+        "woningbouwplan", "schema_foo_bar", ind_tables=True, ind_extra_index=False
+    )
+    results = engine.execute(
+        """
+        SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan'
+    """
+    )
+    record = results.fetchone()
+    assert record.schemaname == "schema_foo_bar"
+
+
+def test_create_table_no_db_schema(here, engine, woningbouwplannen_schema, dbsession):
+    """Prove that a table is created in DB schema public if no DB schema is given."""
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects("woningbouwplan", None, ind_tables=True, ind_extra_index=False)
+    results = engine.execute(
+        """
+        SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan'
+    """
+    )
+    record = results.fetchone()
+    assert record.schemaname == "public"
