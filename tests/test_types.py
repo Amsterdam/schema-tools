@@ -31,3 +31,9 @@ def test_profile(brp_r_profile_schema):
         ["bsn", "lastname"],
         ["postcode", "lastname"],
     ]
+
+
+def test_fetching_of_related_schema_ids(here):
+    """Prove that ids of related dataset schemas are properly collected."""
+    schema = DatasetSchema.from_file(here / "files" / "multirelation.json")
+    assert set(schema.related_dataset_schema_ids) == {"target", "secondtarget"}

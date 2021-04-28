@@ -392,6 +392,27 @@ class DatasetSchema(SchemaType):
     def temporal(self):
         return self.fetch_temporal()
 
+    @property
+    def related_dataset_schema_ids(self):
+        """Fetch a list or related schema ids.
+
+        When a dataset has relations,
+        it needs to build up tables on the fly with the information
+        in the associated table. This property calculates the dataset_schema_ids
+        that are needed, so the users of this dataset can preload these
+        datasets.
+
+        We also collect the FK relation that possibly do not have temporal
+        characteristics. However, we cannot know this for sure if not also the
+        target dataset of a relation has been loaded.
+        """
+        for table in self.tables:
+            for field in table.fields:
+                a_relation = field.relation or field.nm_relation
+                if a_relation is not None:
+                    dataset_id, table_id = a_relation.split(":")
+                    yield dataset_id
+
 
 class DatasetTableSchema(SchemaType):
     """The table within a dataset.
@@ -557,7 +578,7 @@ class DatasetTableSchema(SchemaType):
 
     @property
     def relations(self):
-        """Fetch list of additional (backwards or N-N) relations
+        """Fetch list of additional (backwards or N-N) relations.
 
         This is a dictionary of names for existing forward relations
         in other tables with either the 'embedded' or 'summary'
@@ -854,7 +875,11 @@ class DatasetFieldSchema(DatasetType):
     def is_through_table(self) -> bool:
         """
         Checks if field is a possible through table.
+
+        XXX: What if source is not temporal, but target is temporal?
+        Do we have a through table in that case?
         """
+
         return (
             self.is_array
             and self.nm_relation is not None
