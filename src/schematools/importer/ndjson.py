@@ -73,14 +73,13 @@ class NDJSONImporter(BaseImporter):
                             # Ignore temporal fields
                             if sub_field.is_temporal:
                                 continue
-                            full_sub_field_name = sub_field.name
-                            sub_field_name = full_sub_field_name.split(RELATION_INDICATOR)[1]
+                            sub_field_id = sub_field.id.split(RELATION_INDICATOR)[1]
                             if relation_field_value is None:
                                 sub_field_value = None
                             else:
-                                sub_field_value = relation_field_value[sub_field_name]
+                                sub_field_value = relation_field_value[sub_field_id]
                                 fk_value_parts.append(sub_field_value)
-                            row[full_sub_field_name] = sub_field_value
+                            row[sub_field.name] = sub_field_value
                         # empty fk_value_parts leads to None value
                         relation_field_value = ".".join((str(p) for p in fk_value_parts) or None)
                     row[f"{relation_field_name}_id"] = relation_field_value

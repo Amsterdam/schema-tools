@@ -172,6 +172,9 @@ def test_ndjson_import_with_shortnames_in_schema(
     records = [dict(r) for r in engine.execute("SELECT * from hr_activiteiten")]
     assert len(records) == 1
     assert records[0]["kvknummer"] == "90004213"
+    assert records[0]["gevestigd_in_identificatie"] == "01002"
+    assert records[0]["gevestigd_in_volgnummer"] == 3
+    assert records[0]["gevestigd_in_id"] == "01002.3"
 
     records = [
         dict(r) for r in engine.execute("SELECT * from hr_activiteiten_sbi_maatschappelijk")
