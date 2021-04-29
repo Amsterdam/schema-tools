@@ -410,7 +410,10 @@ def table_factory(
 
         try:
             if field.is_array_of_objects:
-                sub_table_id = shorten_name(f"{db_table_name}_{field_name}", with_postfix=True)
+                with_postfix = db_table_name is None
+                sub_table_id = shorten_name(
+                    f"{db_table_name}_{field_name}", with_postfix=with_postfix
+                )
 
                 if field.is_nested_table:
                     # When the identifier is compound, we can assume
