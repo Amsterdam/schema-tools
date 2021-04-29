@@ -82,6 +82,21 @@
             "relation": "baggob:verblijfsobjecten",
             "description": "Relatie naar verblijfsobject",
             "$comment": "This is a fictional relation, added for testing purposes"
+          },
+          "isGevestigdInVerblijfsobject": {
+            "type": "object",
+            "shortname": "gevestigdIn",
+            "properties": {
+              "identificatie": {
+                "type": "string"
+              },
+              "volgnummer": {
+                "type": "integer"
+              }
+            },
+            "relation": "baggob:verblijfsobjecten",
+            "description": "Relatie naar verblijfsobject",
+            "$comment": "This is a fictional relation, added for testing purposes"
           }
         }
       }
