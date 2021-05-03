@@ -73,6 +73,7 @@ def test_index_creation(engine, db_schema):
 
 def test_index_troughtables_creation(engine, db_schema):
     """Prove that many-to-many table indexes are created based on schema specification.
+
     A NM relation with a very long name has deliberatly added. The truncation of index
     names should avoid failing tests."""
 
@@ -199,7 +200,7 @@ def test_index_troughtables_creation(engine, db_schema):
 
 
 def test_fk_index_creation(engine, db_schema):
-    """Prove that index is created on 1:N relational columns based on schema specificiation"""
+    """Prove that index is created on 1:N relational columns based on schema specificiation."""
 
     test_data = {
         "type": "dataset",
@@ -285,8 +286,10 @@ def test_fk_index_creation(engine, db_schema):
 
 
 def test_size_of_index_name(engine, db_schema):
-    """Prove that the size of the index name not exceeds then the size
-    for Postgres database object names as defined in MAX_TABLE_NAME_LENGTH plus TABLE_INDEX_POSTFIX
+    """Prove that the size of the index name does not get too long.
+
+    It should not exeed the size for Postgres database object names
+    as defined in MAX_TABLE_NAME_LENGTH plus TABLE_INDEX_POSTFIX.
     """
 
     test_data = {
