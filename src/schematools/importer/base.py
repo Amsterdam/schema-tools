@@ -199,8 +199,6 @@ class BaseImporter:
             # Collect provenance info for easy re-use
             self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
             self.db_table_name = db_table_name
-            if db_table_name is None:
-                self.db_table_name = self.dataset_table.db_name()
             # Bind the metadata
             metadata.bind = self.engine
             # Get a table to import into
@@ -208,8 +206,11 @@ class BaseImporter:
                 self.dataset_table,
                 db_schema_name=db_schema_name,
                 metadata=metadata,
-                db_table_name=self.db_table_name,
+                db_table_name=db_table_name,
             )
+
+        if db_table_name is None:
+            self.db_table_name = self.dataset_table.db_name()
 
         if ind_tables:
             self.prepare_tables(self.tables, truncate=truncate)
@@ -392,6 +393,7 @@ def table_factory(
     The returned tables are keyed on the name of the table. The same goes for the incoming data,
     so during creation or records, the data can be associated with the correct table.
     """
+    with_postfix = db_table_name is None
     if db_table_name is None:
         db_table_name = dataset_table.db_name()
 
@@ -410,7 +412,7 @@ def table_factory(
 
         try:
             if field.is_array_of_objects:
-                with_postfix = db_table_name is None
+
                 sub_table_id = shorten_name(
                     f"{db_table_name}_{field_name}", with_postfix=with_postfix
                 )
