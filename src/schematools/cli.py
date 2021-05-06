@@ -18,6 +18,7 @@ from schematools.db import (
     fetch_schema_from_relational_schema,
     fetch_table_names,
 )
+from schematools.events.consumer import consume_events
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
 from schematools.exceptions import ParserError
@@ -134,6 +135,12 @@ def show():
 @schema.group()
 def permissions():
     """Show existing metadata"""
+    pass
+
+
+@schema.group()
+def kafka():
+    """Subcommand to consume or produce kafka events."""
     pass
 
 
@@ -523,7 +530,7 @@ def import_events(
     for schema in additional_schemas:
         dataset_schemas.append(_get_dataset_schema(schema_url, schema))
     srid = dataset_schemas[0]["crs"].split(":")[-1]
-    # Run as a transaction
+    # Create connection, do not start a transaction.
     with engine.connect() as connection:
         importer = EventsProcessor(dataset_schemas, srid, connection, truncate=truncate_table)
         importer.load_events_from_file(events_path)
@@ -645,6 +652,30 @@ def export_events_for(
     with engine.begin() as connection:
         for event in export_events(dataset_schemas, dataset_id, table_id, connection):
             click.echo(event)
+
+
+@kafka.command()
+@option_db_url
+@option_schema_url
+@argument_schema_location
+@click.option("--additional-schemas", "-a", multiple=True)
+@click.option("--topics", "-t", multiple=True)
+@click.option("--truncate-table", default=False, is_flag=True)
+def consume(db_url, schema_url, schema_location, additional_schemas, topics, truncate_table):
+    """Consume kafka events."""
+    engine = _get_engine(db_url)
+    dataset_schemas = [
+        _get_dataset_schema(
+            schema_url,
+            schema_location,
+        )
+    ]
+    for schema in additional_schemas:
+        dataset_schemas.append(_get_dataset_schema(schema_url, schema))
+    srid = dataset_schemas[0]["crs"].split(":")[-1]
+    # Create connection, do not start a transaction.
+    with engine.connect() as connection:
+        consume_events(dataset_schemas, srid, connection, topics, truncate=truncate_table)
 
 
 if __name__ == "__main__":
