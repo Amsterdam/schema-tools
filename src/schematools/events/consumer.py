@@ -32,10 +32,8 @@ def _fetch_consumer_params():
         "auto.offset.reset",
     ):
         if (env_name := _to_env_name(name)) is not None:
-            try:
+            if env_name in os.environ:
                 params[name] = os.environ[env_name]
-            except KeyError:
-                logger.exception("Missing environment variable: %s", env_name)
     return params
 
 
