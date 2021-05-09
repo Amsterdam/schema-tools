@@ -183,3 +183,23 @@ def test_create_table_no_db_schema(here, engine, woningbouwplannen_schema, dbses
     )
     record = results.fetchone()
     assert record.schemaname == "public"
+
+
+def test_create_table_temp_name(engine, woningbouwplannen_schema):
+    """Prove that a table is created in DB schema with temporary name
+    as definied in a dictionary."""
+    table_temp_name = {"woningbouwplannen_woningbouwplan": "foo_bar"}
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects(
+        "woningbouwplan",
+        db_table_temp_name=table_temp_name,
+        ind_tables=True,
+        ind_extra_index=False,
+    )
+    results = engine.execute(
+        """
+        SELECT tablename FROM pg_tables WHERE tablename = 'foo_bar'
+    """
+    )
+    record = results.fetchone()
+    assert record.tablename == "foo_bar"
