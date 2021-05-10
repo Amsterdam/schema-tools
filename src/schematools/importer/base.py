@@ -174,7 +174,6 @@ class BaseImporter:
         table_name: str,
         db_schema_name: Optional[str] = None,
         db_table_name: Optional[str] = None,
-        db_table_temp_name: Optional[Dict] = None,
         truncate: bool = False,
         ind_tables: bool = True,
         ind_extra_index: bool = True,
@@ -190,8 +189,6 @@ class BaseImporter:
             db_table_name: Name of the table as defined in the database.
                 Defaults to None.
             truncate: Indication to truncate table. Defaults to False.
-            db_table_temp_name: Temporary table name when creating table based on
-                schema definition.
             ind_tables: Indication to create table. Defaults to True.
             ind_extra_index: Indication to create indexes. Defaults to True.
         """
@@ -212,7 +209,6 @@ class BaseImporter:
                 db_schema_name=db_schema_name,
                 metadata=metadata,
                 db_table_name=self.db_table_name,
-                db_table_temp_name=db_table_temp_name,
             )
 
         if ind_tables:
@@ -229,7 +225,6 @@ class BaseImporter:
                     metadata=metadata,
                     db_table_name=self.db_table_name,
                     logger=[],
-                    db_table_temp_name=db_table_temp_name,
                 )
                 metadata_inspector = inspect(metadata.bind)
                 self.prepare_extra_index(
@@ -380,26 +375,11 @@ class LogfileLogger(CliLogger):
         self.logger.info("Done")
 
 
-def lookup_temporary_table_name(db_table_temp_name: Dict, db_table_name: str) -> str:
-    """Look up the temporary table name to create table based schema definition.
-
-    Args:
-        db_table_temp_name: Temporary table name to create for table
-        db_table_name: Table name as defined in schema defintion
-
-    Returns:
-         The temporay table name specified for table.
-         If not found, it defaults to the defined table name in schema.
-    """
-    return db_table_temp_name.get(db_table_name, db_table_name)
-
-
 def table_factory(
     dataset_table: DatasetTableSchema,
     metadata: Optional[MetaData] = None,
     db_table_name: Optional[str] = None,
     db_schema_name: Optional[str] = None,
-    db_table_temp_name: Optional[Dict] = {},
 ) -> Dict[str, Table]:
     """Generate one or more SQLAlchemy Table objects to work with the JSON Schema
 
@@ -408,18 +388,12 @@ def table_factory(
     :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
     :param db_schema_name: Optional database schema name, which is otherwise None
         and defaults to public.
-    :param db_table_temp_name: Dictionary of table name and the temporary name counter part, so
-        it can be used to create tables with the structure as defined in the data schema
-        but use a temporary name for the table. I.e. [table_name]_new
 
     The returned tables are keyed on the name of the table. The same goes for the incoming data,
     so during creation or records, the data can be associated with the correct table.
     """
     if db_table_name is None:
         db_table_name = dataset_table.db_name()
-
-    if db_table_temp_name:
-        db_table_name = lookup_temporary_table_name(db_table_temp_name, db_table_name)
 
     db_table_description = dataset_table.description
 
@@ -525,7 +499,6 @@ def index_factory(
     db_table_name: Optional[str] = None,
     db_schema_name: Optional[str] = None,
     logger: Optional[LogfileLogger] = None,
-    db_table_temp_name: Optional[Dict] = {},
 ) -> Dict[str, Index]:
     """Generate one or more SQLAlchemy Index objects to work with the JSON Schema
 
@@ -534,10 +507,6 @@ def index_factory(
     :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
     :param db_schema_name: Optional database schema name, which is otherwise None
         and defaults to public.
-    :param db_table_temp_name: Dictionary of table name and the temporary name counter part, so
-        it can be used to create tables with the structure as defined in the data schema
-        but use a temporary name for the table. I.e. [table_name]_new
-
 
     Identifier index:
     In the JSON Schema definition of the table, an identifier arry may be definied.
@@ -565,9 +534,6 @@ def index_factory(
 
     if db_table_name is None:
         db_table_name = dataset_table.db_name()
-
-    if db_table_temp_name:
-        db_table_name = lookup_temporary_table_name(db_table_temp_name, db_table_name)
 
     table_object = f"{db_schema_name}.{db_table_name}" if db_schema_name else db_table_name
 
