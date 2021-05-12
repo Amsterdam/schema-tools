@@ -1,22 +1,26 @@
 """Kafka consumer."""
+from __future__ import annotations
+
 import json
 import logging
 import os
 
-from confluent_kafka import Consumer
+from confluent_kafka import Consumer, Message
+from sqlalchemy.engine import Connection
 
 from schematools.events.full import EventsProcessor
+from schematools.types import DatasetSchema
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def _to_env_name(name):
+def _to_env_name(name: str) -> str:
     """Convert param name to env var name."""
     return name.replace(".", "_").upper()
 
 
-def _fetch_consumer_params():
+def _fetch_consumer_params() -> dict:
     """Create the parameters for the consumer.
 
     A parameter is only included, if the associated env. var is available.
@@ -37,7 +41,13 @@ def _fetch_consumer_params():
     return params
 
 
-def consume_events(dataset_schemas, srid, connection, topics, truncate=False):
+def consume_events(
+    dataset_schemas: list[DatasetSchema],
+    srid: str,
+    connection: Connection,
+    topics: tuple(str),
+    truncate: bool = False,
+):
     """Consume events.
 
     Main entry point for this module.
@@ -60,7 +70,7 @@ def consume_events(dataset_schemas, srid, connection, topics, truncate=False):
 
     importer = EventsProcessor(dataset_schemas, srid, connection, truncate=truncate)
     logger.debug("Created importer")
-    # Subscribe to topic
+    # Subscribe to topic, confluent_kafka explictly needs a list
     consumer.subscribe(list(topics))
     logger.debug("Starting consuming..")
     # Process messages
@@ -84,7 +94,7 @@ def consume_events(dataset_schemas, srid, connection, topics, truncate=False):
         consumer.close()
 
 
-def process_message(importer, msg):
+def process_message(importer: EventsProcessor, msg: Message):
     """Process a message."""
     headers = msg.headers() or {}
     # Convert list of tuples to dict

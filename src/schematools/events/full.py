@@ -13,7 +13,7 @@ from schematools.events.factories import tables_factory
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case, toCamelCase
 
-# Enable the sqlalchemy logger to debug SQL related issues
+# Enable the sqlalchemy logger by uncommenting the following 2 lines to debug SQL related issues
 # logging.basicConfig()
 # logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
@@ -44,7 +44,15 @@ class DataSplitter:
     def __init__(
         self, events_processor: EventsProcessor, dataset_id: str, table_id: str, event_data: dict
     ) -> None:
-        """Construct the DataSplitter."""
+        """Construct the DataSplitter.
+
+        Args:
+            events_processor: reference to the EventsProcessor, usually,
+                this is a backref. where the EventsProcessor is instantiating the DataSplitter
+            dataset_id: identifier of the dataset
+            table_id: identifier of the table
+            event_data: the actual event data
+        """
         self.events_processor = events_processor
         self.dataset_id = dataset_id
         self.table_id = table_id
@@ -87,8 +95,6 @@ class DataSplitter:
 
     def _handle_fk(self, field_id: str, field_data: dict, relation: str):
         """Handle FK relation."""
-        # shortcut: we assume only volgnummer/identificatie
-        # maybe we should follow the relation and determine these fields
         fk_row_data = {}
         snaked_field_id = to_snake_case(field_id)
         target_identifier_fields = self._fetch_target_identifier_fields(relation)
@@ -171,7 +177,7 @@ class DataSplitter:
         """Perform SQL calls to update the relations.
 
         Update is performed by first deleting all records pointing
-        to the source table, and the re-inserting those records.
+        to the source table, and then re-inserting those records.
 
         Assertion is that GOB always provides fully populated records.
         """
@@ -199,7 +205,7 @@ class EventsProcessor:
     Once initialised, the process_event() method is able to
     process incoming events.
     The database actions are done using SQLAlchemy Core. So,
-    a helper function tables_factory() is used to created the
+    a helper function `tables_factory()` is used to created the
     SA Tables that are needed during the processing of the events.
     """
 
@@ -211,7 +217,18 @@ class EventsProcessor:
         local_metadata=None,
         truncate=False,
     ) -> None:
-        """Construct the event processor."""
+        """Construct the event processor.
+
+        Args:
+            datasets: list of DatasetSchema instances. Usually dataset tables
+                have relations to tables.
+                If these target tables are in different datasets,
+                these dataset also need to be provided.
+            srid: coordinate system
+            local_metadata: SQLAlchemy metadata object, only needs to be provided
+                in unit tests.
+            truncate: indicates if the relational tables need to be truncated
+        """
         self.datasets: Dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
         self.srid = srid
         self.conn = connection

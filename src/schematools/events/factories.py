@@ -13,21 +13,21 @@ def tables_factory(
     dataset: DatasetSchema,
     metadata: Optional[MetaData] = None,
 ) -> Dict[str, Table]:
-    """Generate the SQLAlchemy Table objects to work with the JSON Schema.
+    """Generate the SQLAlchemy Table objects base on a `DatasetSchema` definition.
 
     Params:
         dataset: The Amsterdam Schema definition of the dataset
         metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
 
     The returned tables are keyed on the name of the dataset and table.
-    SA Table objects are also created for the NM-relation tables.
+    SA Table objects are also created for the junction tables that are needed for relations.
     """
     tables = defaultdict(dict)
     metadata = metadata or MetaData()
 
     for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
-        db_table_name = dataset_table.db_name()
-        table_id = dataset_table.id
+        db_table_name: str = dataset_table.db_name()
+        table_id: str = dataset_table.id
         columns = []
         for field in dataset_table.fields:
             # Exclude nested and nm_relation fields (is_array check)
