@@ -514,10 +514,7 @@ class Profile(models.Model):
 
     def get_scopes(self):
         """The auth scopes for this profile"""
-        try:
-            return json.loads(self.scopes.replace("'", '"'))
-        except ValueError:
-            return []
+        return json.loads(self.scopes.replace("'", '"'))
 
     @classmethod
     def create_for_schema(cls, profile_schema: ProfileSchema) -> Profile:
