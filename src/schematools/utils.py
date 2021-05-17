@@ -20,7 +20,7 @@ RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
 def schema_defs_from_url(
     schemas_url: str,
     dataset_name: Optional[str] = None,
-    prefetch_related: Optional[bool] = False,
+    prefetch_related: bool = False,
 ) -> Dict[str, types.DatasetSchema]:
     """Fetch all schema definitions from a remote file (or single dataset if specified).
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
@@ -40,7 +40,7 @@ def schema_defs_from_url(
 def schema_def_from_url(
     schemas_url: str,
     dataset_name: str,
-    prefetch_related: Optional[bool] = False,
+    prefetch_related: bool = False,
 ) -> types.DatasetSchema:
     return def_from_url(
         base_url=schemas_url,
@@ -117,7 +117,6 @@ def def_from_url(
             def_from_url(base_url, data_type, ds_id, prefetch_related=False)
 
     return dataset_schema
-    # return schema_lookup[dataset_id]
 
 
 def schema_def_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetSchema]:

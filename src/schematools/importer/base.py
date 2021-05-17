@@ -444,9 +444,7 @@ def table_factory(
                     # And the field(s) for the left side of the relation
                     # if this left table has a compound key
                     if dataset_table.has_compound_key:
-                        for id_field in dataset_table.get_fields_by_id(
-                            tuple(dataset_table.identifier)
-                        ):
+                        for id_field in dataset_table.get_fields_by_id(*dataset_table.identifier):
                             sub_columns.append(
                                 Column(
                                     f"{dataset_table.id}_{to_snake_case(id_field.name)}",

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from collections import UserDict
-from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, Set, TypeVar, Union
 
 import jsonschema
 from methodtools import lru_cache
@@ -356,7 +356,7 @@ class DatasetSchema(SchemaType):
 
             # Also add the fields for the source side of the relation
             if table.has_compound_key:
-                for sub_field_schema in table.get_fields_by_id(tuple(table.identifier)):
+                for sub_field_schema in table.get_fields_by_id(*table.identifier):
                     sub_field_id = toCamelCase(f"{table.id}_{sub_field_schema.id}")
                     extra_fields[sub_field_id] = sub_field_schema.data
 
@@ -485,14 +485,15 @@ class DatasetTableSchema(SchemaType):
             yield DatasetFieldSchema(_id="id", _parent_table=self, _required=True, type="string")
 
     @lru_cache()
-    def get_fields_by_id(self, field_ids: Tuple[str]) -> Iterator[DatasetFieldSchema]:
+    def get_fields_by_id(self, *field_ids: str) -> Iterator[DatasetFieldSchema]:
         """Get the fields based on the ids of the fields.
 
         args:
             field_ids: The ids of the fields.
             NB. This needs to be a tuple, lru_cache only works on immutable arguments.
         """
-        return [field for field in self.fields if field.id in set(field_ids)]
+        field_ids_set: Set[str] = set(field_ids)
+        return [field for field in self.fields if field.id in field_ids_set]
 
     @lru_cache()
     def get_field_by_id(self, field_id) -> Optional[DatasetFieldSchema]:
@@ -880,11 +881,8 @@ class DatasetFieldSchema(DatasetType):
         Do we have a through table in that case?
         """
 
-        return (
-            self.is_array
-            and self.nm_relation is not None
-            or self._parent_table.is_temporal
-            and self.relation is not None
+        return (self.is_array and self.nm_relation is not None) or (
+            self._parent_table.is_temporal and self.relation is not None
         )
 
     @property

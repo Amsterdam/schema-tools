@@ -152,7 +152,7 @@ class DataSplitter:
             # relation fields for source side
             # XXX add support for shortnames!
             for sub_field_schema in self.dataset_table.get_fields_by_id(
-                tuple(self.dataset_table.identifier)
+                *self.dataset_table.identifier
             ):
                 sub_field_id = f"{self.table_id}_{sub_field_schema.id}"
                 nm_row_data[sub_field_id] = id_part_values[sub_field_schema.id]
