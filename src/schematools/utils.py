@@ -88,7 +88,7 @@ def def_from_url(
     base_url: str,
     data_type: Type[types.ST],
     dataset_id: str,
-    prefetch_related: Optional[bool] = False,
+    prefetch_related: bool = False,
 ) -> types.ST:
     """Fetch schema definitions from a remote file for a single dataset.
 
