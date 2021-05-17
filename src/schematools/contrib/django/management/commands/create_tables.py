@@ -43,6 +43,12 @@ def create_tables(
     models = []
     to_be_skipped = set(skip if skip is not None else [])
 
+    # Because datasets are related, we need to 'prewarm'
+    # the datasets cache (the DatasetSchema.dataset_collection)
+    # by accessing the `Dataset.schema` attribute.
+    for dataset in datasets:
+        dataset.schema
+
     for dataset in datasets:
         if not dataset.enable_db or dataset.name in to_be_skipped:
             continue  # in case create_tables() is called by import_schemas
