@@ -125,7 +125,7 @@ class NDJSONImporter(BaseImporter):
 
                             if dataset_table.has_compound_key:
                                 for id_field in dataset_table.get_fields_by_id(
-                                    tuple(dataset_table.identifier)
+                                    *dataset_table.identifier
                                 ):
                                     through_row_record[
                                         f"{dataset_table.name}_{to_snake_case(id_field.name)}"
