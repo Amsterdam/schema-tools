@@ -390,6 +390,7 @@ def model_factory(
     display_field = (
         to_snake_case(table_schema.display_field) if table_schema.display_field else None
     )
+
     is_temporal = table_schema.is_temporal
 
     # Generate fields

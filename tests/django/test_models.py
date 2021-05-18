@@ -262,3 +262,16 @@ def test_table_shortname(hr_dataset, verblijfsobjecten_dataset):
     }
 
     assert db_table_names == set(m._meta.db_table for m in model_dict.values())
+
+
+@pytest.mark.django_db
+def test_nested_objects_should_never_be_temporal(verblijfsobjecten_dataset):
+    """Prove that a nested object is not marked as temporal."""
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            verblijfsobjecten_dataset, base_app_name="dso_api.dynamic_api"
+        )
+    }
+
+    assert not model_dict["verblijfsobjecten_gebruiksdoel"].is_temporal()
