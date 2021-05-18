@@ -200,6 +200,7 @@ class DatasetSchema(SchemaType):
             "type": "table",
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
+                "isTemporal": False,
                 "type": "object",
                 "additionalProperties": False,
                 "parentTableID": table.id,
