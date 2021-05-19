@@ -87,6 +87,11 @@ class DatasetSchema(SchemaType):
         return self.get("description")
 
     @property
+    def license(self) -> Optional[str]:
+        """The license of the table as stated in the schema."""
+        return self.get("license")
+
+    @property
     def url_prefix(self) -> str:
         """Dataset URL prefix"""
         return self.get("url_prefix", "")
