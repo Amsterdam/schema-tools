@@ -18,7 +18,6 @@ from schematools.db import (
     fetch_schema_from_relational_schema,
     fetch_table_names,
 )
-from schematools.events.consumer import consume_events
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
 from schematools.exceptions import ParserError
@@ -663,6 +662,9 @@ def export_events_for(
 @click.option("--truncate-table", default=False, is_flag=True)
 def consume(db_url, schema_url, schema_location, additional_schemas, topics, truncate_table):
     """Consume kafka events."""
+    # Late import, to prevent dependency on confluent-kafka for every cli user
+    from schematools.events.consumer import consume_events
+
     engine = _get_engine(db_url)
     dataset_schemas = [
         _get_dataset_schema(
