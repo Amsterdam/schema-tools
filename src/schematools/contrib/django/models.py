@@ -166,24 +166,22 @@ class DynamicModel(models.Model):
         return cls._table_schema.id
 
     @classmethod
-    def has_parent_table(cls):
-        """
-        Check if table is sub table for another table.
-        """
+    def has_parent_table(cls) -> bool:
+        """Check if table is sub table for another table."""
         return cls._table_schema.has_parent_table or cls._table_schema.is_through_table
 
     @classmethod
-    def has_display_field(cls):
+    def has_display_field(cls) -> bool:
         """Tell whether a display field is configured."""
         return cls._display_field is not None
 
     @classmethod
-    def get_display_field(cls):
+    def get_display_field(cls) -> Optional[str]:
         """Return the name of the display field, for usage by Django models."""
         return cls._display_field
 
     @classmethod
-    def is_temporal(cls):
+    def is_temporal(cls) -> bool:
         """Indicates if this model has temporary characteristics."""
         return cls._is_temporal
 
@@ -570,6 +568,7 @@ class LooseRelationField(models.CharField):
 
     @property
     def related_model(self):
+        """Add ``related_model`` like all other Django relational fields do."""
         dataset_name, table_name, *_ = [to_snake_case(part) for part in self.relation.split(":")]
         return apps.all_models[dataset_name][table_name]
 

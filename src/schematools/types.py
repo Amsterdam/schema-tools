@@ -354,7 +354,7 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema
 
     @property
-    def description(self) -> Optional[DatasetSchema]:
+    def description(self) -> Optional[str]:
         """The description of the table as stated in the schema."""
         return self.get("description")
 
