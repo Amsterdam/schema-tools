@@ -126,6 +126,7 @@ class DynamicModel(models.Model):
     _dataset: Dataset = None  # type: ignore[assignment]
     _table_schema: DatasetTableSchema = None  # type: ignore[assignment]
     _display_field = None
+    _is_temporal = None
 
     class Meta:
         abstract = True
