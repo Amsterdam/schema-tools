@@ -257,6 +257,7 @@ class FieldMaker:
         **kwargs,
     ) -> TypeAndSignature:
         kwargs["primary_key"] = field.is_primary
+        kwargs["help_text"] = field.description or ""  # also used by OpenAPI spec
         if not field.is_primary and field.nm_relation is None:
             # Primary can not be Null
             kwargs["null"] = not field.required
