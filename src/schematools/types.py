@@ -692,7 +692,7 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def name(self) -> Optional[str]:
-        """ If there is a 'shortname' in the field schema, it overrides the name """
+        """Table name, for display purposes only."""
         return self.get("shortname", self._id)
 
     @property
