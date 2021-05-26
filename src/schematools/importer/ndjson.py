@@ -80,8 +80,8 @@ class NDJSONImporter(BaseImporter):
                                 sub_field_value = relation_field_value[sub_field_id]
                                 fk_value_parts.append(sub_field_value)
                             row[sub_field.name] = sub_field_value
-                        # empty fk_value_parts leads to None value
-                        relation_field_value = ".".join((str(p) for p in fk_value_parts) or None)
+                        # empty fk_value_parts should result in None value
+                        relation_field_value = ".".join([str(p) for p in fk_value_parts]) or None
                     row[f"{relation_field_name}_id"] = relation_field_value
                     del row[rel_field.id]
 
