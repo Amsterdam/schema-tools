@@ -323,6 +323,14 @@ class Dataset(models.Model):
 
         return DatasetSchema.from_dict(self.schema_data)
 
+    @cached_property
+    def has_geometry_fields(self) -> bool:
+        return any(
+            field.is_geo
+            for table in self.schema.tables
+            for field in table.fields
+        )
+
     def schema_data_changed(self):
         """Check whether the schema_data attribute changed"""
         return (
