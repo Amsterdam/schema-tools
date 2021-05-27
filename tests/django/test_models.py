@@ -244,6 +244,15 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_dataset, 
 
 
 @pytest.mark.django_db
+def test_dataset_has_geometry_fields(afval_dataset, hr_dataset):
+    """Prove that has_geometry_fields property is true if
+    and only if a geometry field exists
+    """
+    assert afval_dataset.has_geometry_fields
+    assert not hr_dataset.has_geometry_fields
+
+
+@pytest.mark.django_db
 def test_table_shortname(hr_dataset, verblijfsobjecten_dataset):
     """Prove that the shortnames definition for tables and fields
     are showing up in the Django db_table definitions.
