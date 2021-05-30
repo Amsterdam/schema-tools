@@ -7,6 +7,7 @@ from typing import Any, Dict, Final, Match, Optional, Pattern, Type, Union, cast
 
 import requests
 from cachetools.func import lru_cache, ttl_cache
+from more_ds.network.url import URL
 from string_utils import slugify
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
@@ -18,7 +19,7 @@ RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
 
 @ttl_cache(ttl=16)
 def schema_defs_from_url(
-    schemas_url: str,
+    schemas_url: Union[URL, str],
     dataset_name: Optional[str] = None,
     prefetch_related: bool = False,
 ) -> Dict[str, types.DatasetSchema]:
@@ -38,7 +39,7 @@ def schema_defs_from_url(
 
 
 def schema_def_from_url(
-    schemas_url: str,
+    schemas_url: Union[URL, str],
     dataset_name: str,
     prefetch_related: bool = False,
 ) -> types.DatasetSchema:
@@ -51,28 +52,27 @@ def schema_def_from_url(
 
 
 @ttl_cache(ttl=16)
-def profile_defs_from_url(profiles_url: str) -> Dict[str, types.ProfileSchema]:
+def profile_defs_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.ProfileSchema]:
     """Fetch all profile definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """
     return defs_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
 
 
-def defs_from_url(base_url: str, data_type: Type[types.ST]) -> Dict[str, types.ST]:
+def defs_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Dict[str, types.ST]:
     """Fetch all schema definitions from a remote file.
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
     schema_lookup: Dict[str, types.ST] = {}
-    if not base_url.endswith("/"):
-        base_url = f"{base_url}/"
+    base_url = URL(base_url)
 
     with requests.Session() as connection:
-        response = connection.get(f"{base_url}index.json")
+        response = connection.get(base_url / "index.json")
         response.raise_for_status()
         response_data = response.json()
 
         for dataset_id, dataset_path in response_data.items():
-            response = connection.get(f"{base_url}{dataset_path}")
+            response = connection.get(base_url / dataset_path)
             response.raise_for_status()
             response_data = response.json()
             response_data["url_prefix"] = get_dataset_prefix_from_path(
@@ -85,7 +85,7 @@ def defs_from_url(base_url: str, data_type: Type[types.ST]) -> Dict[str, types.S
 
 
 def def_from_url(
-    base_url: str,
+    base_url: Union[URL, str],
     data_type: Type[types.ST],
     dataset_id: str,
     prefetch_related: bool = False,
@@ -95,15 +95,14 @@ def def_from_url(
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
     # schema_lookup: Dict[str, types.ST] = {}
-    if not base_url.endswith("/"):
-        base_url = f"{base_url}/"
+    base_url = URL(base_url)
 
     with requests.Session() as connection:
-        index_response = connection.get(f"{base_url}index.json")
+        index_response = connection.get(base_url / "index.json")
         index_response.raise_for_status()
         index = index_response.json()
 
-        response = connection.get(f"{base_url}{index[dataset_id]}")
+        response = connection.get(base_url / index[dataset_id])
         response.raise_for_status()
 
         dataset_schema = data_type.from_dict(response.json())
@@ -133,7 +132,7 @@ def profile_def_from_file(filename: Union[Path, str]) -> Dict[str, types.Dataset
         return {schema_info["name"]: types.DatasetSchema.from_dict(schema_info)}
 
 
-def schema_fetch_url_file(schema_url_file: str) -> Dict[str, Any]:
+def schema_fetch_url_file(schema_url_file: Union[URL, str]) -> Dict[str, Any]:
     """Return schemadata from URL or File"""
 
     if not schema_url_file.startswith("http"):
