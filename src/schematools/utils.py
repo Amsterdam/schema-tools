@@ -24,6 +24,7 @@ def schema_defs_from_url(
     prefetch_related: bool = False,
 ) -> Dict[str, types.DatasetSchema]:
     """Fetch all schema definitions from a remote file (or single dataset if specified).
+
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
     if dataset_name:
@@ -43,6 +44,7 @@ def schema_def_from_url(
     dataset_name: str,
     prefetch_related: bool = False,
 ) -> types.DatasetSchema:
+    """Fetch schema definition from a remote file."""
     return def_from_url(
         base_url=schemas_url,
         data_type=types.DatasetSchema,
@@ -54,6 +56,7 @@ def schema_def_from_url(
 @ttl_cache(ttl=16)
 def profile_defs_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.ProfileSchema]:
     """Fetch all profile definitions from a remote file.
+
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """
     return defs_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
@@ -61,6 +64,7 @@ def profile_defs_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.Prof
 
 def defs_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Dict[str, types.ST]:
     """Fetch all schema definitions from a remote file.
+
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
     schema_lookup: Dict[str, types.ST] = {}
@@ -105,13 +109,13 @@ def def_from_url(
         response = connection.get(base_url / index[dataset_id])
         response.raise_for_status()
 
-        dataset_schema = data_type.from_dict(response.json())
+        dataset_schema: types.ST = data_type.from_dict(response.json())
 
     # For this recursive call, we set prefetch_related=False
     # to avoid deep/endless recursion
     # The result of def_from_url does not need to be stored,
     # because is it cached on the DatasetSchema instances.
-    if prefetch_related:
+    if prefetch_related and isinstance(dataset_schema, types.DatasetSchema):
         for ds_id in dataset_schema.related_dataset_schema_ids:
             def_from_url(base_url, data_type, ds_id, prefetch_related=False)
 
@@ -133,8 +137,7 @@ def profile_def_from_file(filename: Union[Path, str]) -> Dict[str, types.Dataset
 
 
 def schema_fetch_url_file(schema_url_file: Union[URL, str]) -> Dict[str, Any]:
-    """Return schemadata from URL or File"""
-
+    """Return schemadata from URL or File."""
     if not schema_url_file.startswith("http"):
         with open(schema_url_file) as f:
             schema_data = json.load(f)
@@ -174,7 +177,7 @@ def toCamelCase(ident: str) -> str:
 
     Empty strings are not allowed. They will raise an :exc:`ValueError` exception.
 
-    Examples:
+    Examples::
 
         >>> toCamelCase("dataset_table_schema")
         'datasetTableSchema'
@@ -243,8 +246,10 @@ def to_snake_case(ident: str) -> str:
 def get_rel_table_identifier(
     prefix_length: int, table_identifier: str, through_identifier: str
 ) -> str:
-    """Create identifier for related table (FK or M2M) from table_identifier and an extra fieldname.
-    Take length of prefix (dataset.id) into account, postgresql has maxsize for tablenames."""
+    """Create identifier for related table (FK or M2M) from table_identifier and extra fieldname.
+
+    Take length of prefix (dataset.id) into account, postgresql has maxsize for tablenames.
+    """
     through_table_name = f"{table_identifier}_{through_identifier}"
     return through_table_name
 
@@ -252,15 +257,13 @@ def get_rel_table_identifier(
 
 
 def shorten_name(db_table_name: str, with_postfix: bool = False) -> str:
-    """ Utility function to shorten names to safe length for postgresql """
+    """Shorten names to safe length for postgresql."""
     max_length = MAX_TABLE_NAME_LENGTH - int(with_postfix) * len(TMP_TABLE_POSTFIX)
     return db_table_name[:max_length]
 
 
 def get_dataset_prefix_from_path(dataset_path: str, dataset_data: dict) -> str:
-    """
-    Extract dataset prefix from dataset path.
-    """
+    """Extract dataset prefix from dataset path."""
     version = dataset_data.get("version")
     if version:
         dataset_path = dataset_path.split(version)[0]
