@@ -1,10 +1,11 @@
+"""Create GRANT statements to give roles very specific access to the database."""
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
-from .types import DatasetSchema
-from .utils import to_snake_case
+from schematools.types import DatasetSchema
+from schematools.utils import to_snake_case
 
 PUBLIC_SCOPE = "OPENBAAR"
 

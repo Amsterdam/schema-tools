@@ -27,7 +27,7 @@ from schematools.importer.ndjson import NDJSONImporter
 from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
 from schematools.maps import create_mapfile
-from schematools.permissions import (
+from schematools.permissions.db import (
     apply_schema_and_profile_permissions,
     introspect_permissions,
     revoke_permissions,
