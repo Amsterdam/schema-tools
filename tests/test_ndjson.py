@@ -70,6 +70,35 @@ def test_ndjson_import_nm_compound_keys(
     assert records[0].keys() == columns
 
 
+def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_schema, dbsession):
+    ndjson_path = here / "files" / "data" / "ggwgebieden-with-geldigheid.ndjson"
+    importer = NDJSONImporter(gebieden_schema, engine)
+    importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
+    importer.load_file(ndjson_path)
+    records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden")]
+    assert len(records) == 1
+    # An "id" should have been generated, concat of the compound key fields
+    assert "id" in records[0]
+    assert records[0]["id"] == "03630950000000.1"
+    records = [
+        dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten")
+    ]
+    assert len(records) == 3
+    # Also the temporal fields are present in the database
+    columns = {
+        "ggwgebieden_id",
+        "bestaatuitbuurten_id",
+        "ggwgebieden_volgnummer",
+        "ggwgebieden_identificatie",
+        "bestaatuitbuurten_identificatie",
+        "bestaatuitbuurten_volgnummer",
+        "begin_geldigheid",
+        "eind_geldigheid",
+    }
+
+    assert records[0].keys() == columns
+
+
 def test_ndjson_import_nm_compound_selfreferencing_keys(
     here, engine, kadastraleobjecten_schema, dbsession
 ):

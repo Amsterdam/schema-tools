@@ -774,6 +774,30 @@ class DatasetFieldSchema(DatasetType):
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
 
+    def get_dimension_fieldnames_for_relation(
+        self, relation: str, nm_relation: str
+    ) -> Dict[str, List[str]]:
+        """Gets the dimension fieldnames."""
+        if relation is None and nm_relation is None:
+            return {}
+
+        dataset_id, table_id = (relation or nm_relation).split(":")
+        dataset_schema = self._parent_table.get_dataset_schema(dataset_id)
+        if dataset_schema is None:
+            return {}
+        try:
+            dataset_table = dataset_schema.get_table_by_id(
+                table_id, include_nested=False, include_through=False
+            )
+        except ValueError:
+            # If we cannot get the table, we ignore the exception
+            # and we do not return fields
+            return {}
+        if not dataset_table.is_temporal:
+            return {}
+
+        return dataset_table.temporal.get("dimensions", {})
+
     @property
     def sub_fields(self) -> Iterator[DatasetFieldSchema]:
         """Return the sub fields for a nested structure.
@@ -799,7 +823,8 @@ class DatasetFieldSchema(DatasetType):
         if relation is not None or nm_relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
 
-        # XXX Only add identificatie/volgnummer, not geldigheid fields
+        # get dimension fieldnames, combine in one set
+        # no prefix if in set
         for id_, spec in properties.items():
             field_id = f"{field_name_prefix}{id_}"
             yield DatasetFieldSchema(
