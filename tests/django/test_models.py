@@ -124,7 +124,7 @@ def test_model_factory_relations(afval_dataset):
 
 
 @pytest.mark.django_db
-def test_model_factory_n_m_relations(meetbouten_dataset, gebieden_dataset):
+def test_model_factory_n_m_relations(gebieden_dataset, meetbouten_dataset):
     """Prove that n-m relations between models can be resolved"""
     model_dict = {
         cls._meta.model_name: cls
@@ -151,7 +151,7 @@ def test_model_factory_sub_objects(parkeervakken_dataset):
 
 
 @pytest.mark.django_db
-def test_model_factory_sub_objects_for_shortened_names(hr_dataset, verblijfsobjecten_dataset):
+def test_model_factory_sub_objects_for_shortened_names(verblijfsobjecten_dataset, hr_dataset):
     """Prove that subobjects also work for shortened names in the schema"""
     model_dict = {
         cls._meta.model_name: cls

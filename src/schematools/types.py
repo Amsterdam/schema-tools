@@ -407,7 +407,7 @@ class DatasetSchema(SchemaType):
         target dataset of a relation has been loaded.
         """
         for table in self.tables:
-            for field in table.fields:
+            for field in table.get_fields(include_sub_fields=False):
                 a_relation = field.relation or field.nm_relation
                 if a_relation is not None:
                     dataset_id, table_id = a_relation.split(":")
@@ -464,17 +464,17 @@ class DatasetTableSchema(SchemaType):
         """The description of the table as stated in the schema."""
         return self.get("description")
 
-    @property
-    def fields(self) -> Iterator[DatasetFieldSchema]:
+    def get_fields(self, include_sub_fields=False) -> Iterator[DatasetFieldSchema]:
         required = set(self["schema"]["required"])
         for id_, spec in self["schema"]["properties"].items():
             field_schema = DatasetFieldSchema(
                 _id=id_, _parent_table=self, _required=(id_ in required), **spec
             )
+
             # Add extra fields for relations of type object
             # These fields are added to identify the different
             # components of a compound FK to a another table
-            if field_schema.relation is not None and field_schema.is_object:
+            if field_schema.relation is not None and field_schema.is_object and include_sub_fields:
                 for subfield_schema in field_schema.sub_fields:
                     yield subfield_schema
             yield field_schema
@@ -483,6 +483,10 @@ class DatasetTableSchema(SchemaType):
         # XXX we should check for an existing "id" field, avoid collisions
         if self.has_compound_key:
             yield DatasetFieldSchema(_id="id", _parent_table=self, _required=True, type="string")
+
+    @property
+    def fields(self) -> Iterator[DatasetFieldSchema]:
+        yield from self.get_fields(include_sub_fields=True)
 
     @lru_cache()
     def get_fields_by_id(self, *field_ids: str) -> Iterator[DatasetFieldSchema]:
@@ -823,10 +827,14 @@ class DatasetFieldSchema(DatasetType):
         if relation is not None or nm_relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
 
-        # get dimension fieldnames, combine in one set
-        # no prefix if in set
+        combined_dimension_fieldnames: Set[str] = set()
+        for (_dimension, field_names) in self.get_dimension_fieldnames_for_relation(
+            relation, nm_relation
+        ).items():
+            combined_dimension_fieldnames |= set(field_names)
+
         for id_, spec in properties.items():
-            field_id = f"{field_name_prefix}{id_}"
+            field_id = id_ if id_ in combined_dimension_fieldnames else f"{field_name_prefix}{id_}"
             yield DatasetFieldSchema(
                 _id=field_id,
                 _parent_table=self._parent_table,
