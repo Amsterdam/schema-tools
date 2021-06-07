@@ -87,16 +87,16 @@ def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_s
     # Also the temporal fields are present in the database
     columns = {
         "ggwgebieden_id",
-        "bestaatuitbuurten_id",
+        "bestaat_uit_buurten_id",
         "ggwgebieden_volgnummer",
         "ggwgebieden_identificatie",
-        "bestaatuitbuurten_identificatie",
-        "bestaatuitbuurten_volgnummer",
+        "bestaat_uit_buurten_identificatie",
+        "bestaat_uit_buurten_volgnummer",
         "begin_geldigheid",
         "eind_geldigheid",
     }
 
-    assert records[0].keys() == columns
+    assert set(records[0].keys()) == columns
 
 
 def test_ndjson_import_nm_compound_selfreferencing_keys(

@@ -40,14 +40,14 @@
                 "type": "string"
               }
             },
-            "relation": "target:tableintarget"
+            "relation": "gebieden:buurten"
           },
           "hasNMRelation": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "relation": "secondtarget:tableintarget"
+            "relation": "meetbouten:metingen"
           }
         }
       }

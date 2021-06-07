@@ -1,7 +1,7 @@
 from schematools.types import DatasetSchema
 
 
-def test_geo_and_id_when_configured(here):
+def test_geo_and_id_when_configured(here, gebieden_schema):
     schema = DatasetSchema.from_file(here / "files" / "meetbouten.json")
     table = schema.get_table_by_id("meetbouten")
     assert table.identifier == ["nummer"]
@@ -36,4 +36,4 @@ def test_profile(brp_r_profile_schema):
 def test_fetching_of_related_schema_ids(here):
     """Prove that ids of related dataset schemas are properly collected."""
     schema = DatasetSchema.from_file(here / "files" / "multirelation.json")
-    assert set(schema.related_dataset_schema_ids) == {"target", "secondtarget"}
+    assert set(schema.related_dataset_schema_ids) == {"gebieden", "meetbouten"}
