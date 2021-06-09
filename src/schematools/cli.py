@@ -228,7 +228,7 @@ def permissions_revoke(db_url, role):
 def permissions_apply(
     db_url,
     schema_url,
-    profile_url,  # NoQA
+    profile_url,
     schema_filename,
     profile_filename,
     pg_schema,
@@ -325,8 +325,11 @@ def _fetch_json(location: str) -> Dict[str, Any]:
 @schema.command()
 @option_schema_url
 @argument_schema_location
+@click.option("--additional-schemas", "-a", multiple=True)
 @click.argument("meta_schema_url")
-def validate(schema_url: str, schema_location: str, meta_schema_url: str) -> None:
+def validate(
+    schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
+) -> None:
     """Validate a JSON file against the amsterdam schema meta schema.
     schema_location can be a url or a filesystem path.
 
@@ -339,6 +342,9 @@ def validate(schema_url: str, schema_location: str, meta_schema_url: str) -> Non
 
     meta_schema = _fetch_json(meta_schema_url)
     dataset = _get_dataset_schema(schema_url, schema_location)
+
+    for schema in additional_schemas:
+        _get_dataset_schema(schema_url, schema)
 
     structural_errors = False
     try:
