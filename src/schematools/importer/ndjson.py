@@ -133,20 +133,27 @@ class NDJSONImporter(BaseImporter):
                             # check is_through_table, add rows if needed
                             to_fk = value
                             if nm_field.is_through_table:
-                                through_field_names = [
-                                    f.id.split(RELATION_INDICATOR)[-1]
+                                through_field_metas = [
+                                    (f.id.split(RELATION_INDICATOR)[-1], f.is_temporal)
                                     for f in nm_field.sub_fields
-                                    if not f.is_temporal
                                 ]
-                                to_fk = ".".join(str(value[fn]) for fn in through_field_names)
-                                for through_field_name in through_field_names:
+                                to_fk = ".".join(
+                                    str(value[fn])
+                                    for fn, is_temporal in through_field_metas
+                                    if not is_temporal
+                                )
+                                for through_field_name, is_temporal in through_field_metas:
+                                    through_field_prefix = (
+                                        "" if is_temporal else f"{nm_field.name}_"
+                                    )
                                     full_through_field_name = to_snake_case(
-                                        f"{nm_field.name}_{through_field_name}"
+                                        f"{through_field_prefix}{through_field_name}"
                                     )
                                     through_row_record[full_through_field_name] = value[
                                         through_field_name
                                     ]
                             through_row_record[f"{field_name}_id"] = to_fk
+
                             through_row_records.append(through_row_record)
 
                         sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]

@@ -1,9 +1,11 @@
+import datetime
+
 import pytest
 
 from schematools.importer.ndjson import NDJSONImporter
 
 
-def test_ndjson_import_nm(here, engine, meetbouten_schema, dbsession):
+def test_ndjson_import_nm(here, engine, meetbouten_schema, gebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "metingen.ndjson"
     importer = NDJSONImporter(meetbouten_schema, engine)
     importer.generate_db_objects("metingen", truncate=True, ind_extra_index=False)
@@ -80,6 +82,7 @@ def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_s
     # An "id" should have been generated, concat of the compound key fields
     assert "id" in records[0]
     assert records[0]["id"] == "03630950000000.1"
+
     records = [
         dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten")
     ]
@@ -94,6 +97,17 @@ def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_s
         "bestaat_uit_buurten_volgnummer",
         "begin_geldigheid",
         "eind_geldigheid",
+    }
+
+    assert records[0] == {
+        "ggwgebieden_id": "03630950000000.1",
+        "bestaat_uit_buurten_id": "03630023753960.1",
+        "ggwgebieden_identificatie": "03630950000000",
+        "ggwgebieden_volgnummer": 1,
+        "bestaat_uit_buurten_identificatie": "03630023753960",
+        "bestaat_uit_buurten_volgnummer": 1,
+        "begin_geldigheid": datetime.date(2019, 1, 12),
+        "eind_geldigheid": None,
     }
 
     assert set(records[0].keys()) == columns

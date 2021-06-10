@@ -840,6 +840,7 @@ class DatasetFieldSchema(DatasetType):
                 _parent_table=self._parent_table,
                 _parent_field=self,
                 _required=(id_ in required),
+                _temporal=(id_ in combined_dimension_fieldnames),
                 **spec,
             )
 
