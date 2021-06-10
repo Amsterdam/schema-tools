@@ -196,7 +196,6 @@ class DatasetSchema(SchemaType):
             "type": "table",
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
-                "isTemporal": False,
                 "type": "object",
                 "additionalProperties": False,
                 "parentTableID": table.id,
@@ -352,34 +351,6 @@ class DatasetSchema(SchemaType):
 
         return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
 
-    def fetch_temporal(
-        self, field_modifier: Optional[Callable] = None
-    ) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
-        """The original implementation of 'temporal' already does
-        a to_snake_case, however, we also need a version that
-        leaves the fields in camelcase.
-        """
-        from schematools.utils import to_snake_case
-
-        if field_modifier is None:
-            field_modifier = to_snake_case
-
-        temporal_configuration = self.get("temporal", None)
-        if temporal_configuration is None:
-            return None
-
-        for key, [start_field, end_field] in temporal_configuration.get("dimensions", {}).items():
-            temporal_configuration["dimensions"][key] = [
-                field_modifier(start_field),
-                field_modifier(end_field),
-            ]
-
-        return temporal_configuration
-
-    @property
-    def temporal(self):
-        return self.fetch_temporal()
-
     @property
     def related_dataset_schema_ids(self):
         """Fetch a list or related schema ids.
@@ -512,14 +483,38 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema.get_dataset_schema(dataset_id)
 
     @property
-    def temporal(self) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
-        """Return the temporal info from the dataset schema"""
-        return self._parent_schema.fetch_temporal(field_modifier=lambda x: x)
+    def use_dimension_fields(self) -> bool:
+        """Indication if schema has to add extra dimension fields
+        for relations
+        """
+        return self._parent_schema.use_dimension_fields
+
+    @property
+    def temporal(
+        self, field_modifier: Optional[Callable] = None
+    ) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
+        """Return the temporal info"""
+        from schematools.utils import to_snake_case
+
+        if field_modifier is None:
+            field_modifier = to_snake_case
+
+        temporal_configuration = self["schema"].get("temporal", None)
+        if temporal_configuration is None:
+            return None
+
+        for key, [start_field, end_field] in temporal_configuration.get("dimensions", {}).items():
+            temporal_configuration["dimensions"][key] = [
+                field_modifier(start_field),
+                field_modifier(end_field),
+            ]
+
+        return temporal_configuration
 
     @property
     def is_temporal(self) -> bool:
         """Indicates if this is a table with temporal charateristics"""
-        return self["schema"].get("isTemporal", self.temporal is not None)
+        return "temporal" in self["schema"]
 
     @property
     def main_geometry(self):
