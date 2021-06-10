@@ -7,12 +7,6 @@
   "crs": "EPSG:28992",
   "auth": "BRK/RSN",
   "identifier": "identificatie",
-  "temporal": {
-    "identifier": "volgnummer",
-    "dimensions": {
-      "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-    }
-  },
   "tables": [
     {
       "id": "kadastraleobjecten",
@@ -25,6 +19,12 @@
         "identifier": ["identificatie", "volgnummer"],
         "required": ["schema", "id", "identificatie", "volgnummer"],
         "display": "identificatie",
+        "temporal": {
+          "identifier": "volgnummer",
+          "dimensions": {
+            "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+          }
+        },
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -202,6 +202,12 @@
         "identifier": ["identificatie", "volgnummer"],
         "required": ["schema", "id", "identificatie", "volgnummer"],
         "display": "id",
+        "temporal": {
+          "identifier": "volgnummer",
+          "dimensions": {
+            "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+          }
+        },
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -301,7 +307,6 @@
         "identifier": "identificatie",
         "required": ["schema", "identificatie"],
         "display": "identificatie",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -597,6 +602,12 @@
         "identifier": ["identificatie", "volgnummer"],
         "required": ["schema", "volgnummer", "identificatie"],
         "display": "identificatie",
+        "temporal": {
+          "identifier": "volgnummer",
+          "dimensions": {
+            "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+          }
+        },
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -705,7 +716,6 @@
         "identifier": "id",
         "required": ["schema", "id", "identificatie"],
         "display": "identificatie",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -779,6 +789,12 @@
         "identifier": ["identificatie", "volgnummer"],
         "required": ["schema", "identificatie", "volgnummer"],
         "display": "id",
+        "temporal": {
+          "identifier": "volgnummer",
+          "dimensions": {
+            "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+          }
+        },
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -875,7 +891,6 @@
         "identifier": "identificatie",
         "required": ["schema", "identificatie"],
         "display": "identificatie",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -1010,7 +1025,6 @@
         "identifier": "code",
         "required": ["schema", "code", "identificatie"],
         "display": "code",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -1055,7 +1069,6 @@
         "identifier": "identificatie",
         "required": ["schema", "identificatie"],
         "display": "identificatie",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -1097,7 +1110,6 @@
         "identifier": "id",
         "required": ["schema", "id"],
         "display": "id",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -1125,7 +1137,6 @@
         "identifier": "identificatie",
         "required": ["schema", "identificatie"],
         "display": "identificatie",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -1167,7 +1178,6 @@
         "identifier": "identificatie",
         "required": ["schema", "identificatie"],
         "display": "identificatie",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -1205,7 +1215,6 @@
         "identifier": "identificatie",
         "required": ["schema", "identificatie"],
         "display": "identificatie",
-        "isTemporal": false,
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"

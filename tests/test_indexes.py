@@ -6,8 +6,7 @@ from schematools.types import DatasetSchema, SchemaType
 
 
 def test_index_creation(engine, db_schema):
-    """Prove that identifier index is created based on schema specificiation """
-
+    """Prove that identifier index is created based on schema specificiation."""
     test_data = {
         "type": "dataset",
         "id": "test",
@@ -75,8 +74,8 @@ def test_index_troughtables_creation(engine, db_schema):
     """Prove that many-to-many table indexes are created based on schema specification.
 
     A NM relation with a very long name has deliberatly added. The truncation of index
-    names should avoid failing tests."""
-
+    names should avoid failing tests.
+    """
     test_data = {
         "type": "dataset",
         "id": "test",
@@ -86,10 +85,6 @@ def test_index_troughtables_creation(engine, db_schema):
         "is_default_version": "true",
         "crs": "EPSG:28992",
         "identifier": "identificatie",
-        "temporal": {
-            "identifier": "volgnummer",
-            "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
-        },
         "tables": [
             {
                 "id": "test_1",
@@ -100,6 +95,10 @@ def test_index_troughtables_creation(engine, db_schema):
                     "identifier": ["identificatie", "volgnummer"],
                     "required": ["schema", "id", "identificatie", "volgnummer"],
                     "display": "id",
+                    "temporal": {
+                        "identifier": "volgnummer",
+                        "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
+                    },
                     "properties": {
                         "schema": {
                             "$ref": (
@@ -146,6 +145,10 @@ def test_index_troughtables_creation(engine, db_schema):
                     "identifier": ["identificatie", "volgnummer"],
                     "required": ["schema", "id", "identificatie", "volgnummer"],
                     "display": "id",
+                    "temporal": {
+                        "identifier": "volgnummer",
+                        "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
+                    },
                     "properties": {
                         "schema": {
                             "$ref": (
@@ -201,7 +204,6 @@ def test_index_troughtables_creation(engine, db_schema):
 
 def test_fk_index_creation(engine, db_schema):
     """Prove that index is created on 1:N relational columns based on schema specificiation."""
-
     test_data = {
         "type": "dataset",
         "id": "test",
@@ -291,7 +293,6 @@ def test_size_of_index_name(engine, db_schema):
     It should not exeed the size for Postgres database object names
     as defined in MAX_TABLE_NAME_LENGTH plus TABLE_INDEX_POSTFIX.
     """
-
     test_data = {
         "type": "dataset",
         "id": "test",
@@ -374,7 +375,7 @@ def test_size_of_index_name(engine, db_schema):
 
 
 def test_index_creation_db_schema2(engine, stadsdelen_schema):
-    """Prove that indexes are created within given database schema on table"""
+    """Prove that indexes are created within given database schema on table."""
     # create DB schema
     engine.execute("CREATE SCHEMA IF NOT EXISTS schema_foo_bar;")
     importer = BaseImporter(stadsdelen_schema, engine)
