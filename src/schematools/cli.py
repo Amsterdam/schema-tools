@@ -325,7 +325,13 @@ def _fetch_json(location: str) -> Dict[str, Any]:
 @schema.command()
 @option_schema_url
 @argument_schema_location
-@click.option("--additional-schemas", "-a", multiple=True)
+@click.option(
+    "--additional-schemas",
+    "-a",
+    multiple=True,
+    help="Id of a dataset schema that will be preloaded. "
+    "To be used mainly for schemas that are related to the schema that is being validated.",
+)
 @click.argument("meta_schema_url")
 def validate(
     schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
@@ -343,6 +349,9 @@ def validate(
     meta_schema = _fetch_json(meta_schema_url)
     dataset = _get_dataset_schema(schema_url, schema_location)
 
+    # The additional schemas are fetched, but the result is not used
+    # because the only reason to fetch the additional schemas is to have those schemas
+    # available in the cache that is part of the DatasetSchema class
     for schema in additional_schemas:
         _get_dataset_schema(schema_url, schema)
 
