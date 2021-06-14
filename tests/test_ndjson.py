@@ -35,12 +35,8 @@ def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbse
     assert records[0]["merk_omschrijving"] == "De meetbout"
 
 
-@pytest.mark.parametrize("use_dimension_fields", (False, True))
-def test_ndjson_import_nm_compound_keys(
-    here, engine, ggwgebieden_schema, dbsession, use_dimension_fields
-):
+def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "ggwgebieden.ndjson"
-    ggwgebieden_schema.use_dimension_fields = use_dimension_fields
     importer = NDJSONImporter(ggwgebieden_schema, engine)
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
@@ -62,12 +58,6 @@ def test_ndjson_import_nm_compound_keys(
         "bestaatuitbuurten_identificatie",
         "bestaatuitbuurten_volgnummer",
     }
-
-    if use_dimension_fields:
-        columns |= {
-            "begin_geldigheid",
-            "eind_geldigheid",
-        }
 
     assert records[0].keys() == columns
 
