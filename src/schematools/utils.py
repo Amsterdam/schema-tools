@@ -269,6 +269,7 @@ def get_dataset_prefix_from_path(dataset_path: str, dataset_data: dict) -> str:
         dataset_path = dataset_path.split(version)[0]
 
     dataset_parts = dataset_path.split("/")[:-1]
-    if to_snake_case(dataset_parts[-1]) == to_snake_case(dataset_data["id"]):
-        dataset_parts.pop()
+    if len(dataset_parts):
+        if to_snake_case(dataset_parts[-1]) == to_snake_case(dataset_data["id"]):
+            dataset_parts.pop()
     return "/".join(dataset_parts)
