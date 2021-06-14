@@ -807,8 +807,13 @@ class DatasetFieldSchema(DatasetType):
         """Return the sub fields for a nested structure.
 
         For a nested object, fields are based on its properties,
-        for an array of objects, fields are based on the properties of
-        the "items" field.
+        for an array of objects, fields are based on the properties
+        of the "items" field.
+
+        When subfields are added as part of an nm-relation
+        those subfields will be prefixed with the name of the relation field.
+        However, this is not the case for the so-called `dimension` fields
+        of a temporal relation (e.g. `beginGeldigheid` and `eindGeldigheid`).
         """
         field_name_prefix = ""
         if self.is_object:
