@@ -13,11 +13,15 @@ class Command(BaseCommand):
     help = "Import all known profiles from Amsterdam schema files."
     requires_system_checks = False
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser) -> None:
         parser.add_argument("profile", nargs="*", help="Local profile files to import")
-        parser.add_argument("--schema-url", default=settings.PROFILES_URL)
+        parser.add_argument(
+            "--schema-url",
+            default=settings.PROFILES_URL,
+            help=f"Schema URL (default: {settings.PROFILES_URL})",
+        )
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options) -> None:
         if options["profile"]:
             profiles = self.import_from_files(options["profile"])
         else:
@@ -29,17 +33,18 @@ class Command(BaseCommand):
         else:
             self.stdout.write("No new profiles imported.")
 
-    def import_from_files(self, profile_files) -> List[Profile]:
+    def import_from_files(self, profile_files: List[str]) -> List[Profile]:
         profiles = []
         for filename in profile_files:
             self.stdout.write(f"Loading profile from {filename}")
             schema = ProfileSchema.from_file(filename)
             profile = self.import_schema(schema.name, schema)
-            profiles.append(profile)
+            if profile is not None:
+                profiles.append(profile)
 
         return profiles
 
-    def import_from_url(self, schema_url) -> List[Profile]:
+    def import_from_url(self, schema_url: str) -> List[Profile]:
         """Import all schema definitions from an URL"""
         self.stdout.write(f"Loading profiles from {schema_url}")
         profiles = []

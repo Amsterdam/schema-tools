@@ -128,3 +128,16 @@ def test_get_dataset_prefix_from_path_with_camel_case_id() -> None:
         )
         == "kaarten"
     )
+
+
+def test_get_dataset_prefix_from_path_using_filename() -> None:
+    """Confirm that dataset prefix can be extracted from URLs when dataset_path is filename
+    - beheerkaart_cbs_grid.json => ""
+    """
+    dataset = {"id": "beheerkaartCbsGrid", "version": "0.0.1"}
+    assert (
+        get_dataset_prefix_from_path(
+            dataset_path="beheerkaart_cbs_grid.json", dataset_data=dataset
+        )
+        == ""
+    )
