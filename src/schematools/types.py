@@ -72,7 +72,7 @@ class DatasetSchema(SchemaType):
 
     @classmethod
     def from_dict(cls, obj: Dict[str, Any]) -> DatasetSchema:
-        """ Parses given dict and validates the given schema """
+        """Parses given dict and validates the given schema"""
         if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Schema file")
 
@@ -516,7 +516,7 @@ class DatasetTableSchema(SchemaType):
         return self["schema"].get("display", None)
 
     def get_dataset_schema(self, dataset_id):
-        """Return another datasets """
+        """Return another datasets"""
         return self._parent_schema.get_dataset_schema(dataset_id)
 
     @property
@@ -528,12 +528,12 @@ class DatasetTableSchema(SchemaType):
 
     @property
     def temporal(self) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
-        """Return the temporal info from the dataset schema """
+        """Return the temporal info from the dataset schema"""
         return self._parent_schema.fetch_temporal(field_modifier=lambda x: x)
 
     @property
     def is_temporal(self) -> bool:
-        """Indicates if this is a table with temporal charateristics """
+        """Indicates if this is a table with temporal charateristics"""
         return self["schema"].get("isTemporal", self.temporal is not None)
 
     @property
@@ -756,7 +756,7 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def is_temporal(self) -> bool:
-        """Tell whether the field is added, because it has temporal charateristics """
+        """Tell whether the field is added, because it has temporal charateristics"""
         return self._temporal
 
     @property
@@ -766,7 +766,7 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def provenance(self) -> Optional[str]:
-        """ Get the provenance info, if available, or None"""
+        """Get the provenance info, if available, or None"""
         return self.get("provenance")
 
     @property
@@ -892,7 +892,7 @@ class DatasetFieldSchema(DatasetType):
 
 
 class DatasetRow(DatasetType):
-    """ An actual instance of data """
+    """An actual instance of data"""
 
     def validate(self, schema: DatasetSchema):
         table = schema.get_table_by_id(self["table"])
@@ -910,7 +910,7 @@ class ProfileSchema(SchemaType):
 
     @classmethod
     def from_dict(cls, obj: Dict[str, Any]):
-        """ Parses given dict and validates the given schema """
+        """Parses given dict and validates the given schema"""
         return cls(obj)
 
     @property

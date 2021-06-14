@@ -45,7 +45,7 @@ class Data(str):
 
 @dataclass
 class FeatureClass:
-    """ Used for rendering a feature """
+    """Used for rendering a feature"""
 
     name: typing.Optional[str] = None
     expression: typing.Optional[str] = None

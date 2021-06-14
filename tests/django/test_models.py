@@ -185,7 +185,7 @@ def test_model_factory_temporary_1_n_relation(ggwgebieden_dataset):
 
 @pytest.mark.django_db
 def test_model_factory_temporary_n_m_relation(ggwgebieden_dataset):
-    """Prove that through table is created for n_m relation """
+    """Prove that through table is created for n_m relation"""
     model_dict = {
         cls._meta.model_name: cls
         for cls in schema_models_factory(ggwgebieden_dataset, base_app_name="dso_api.dynamic_api")

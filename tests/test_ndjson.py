@@ -139,7 +139,7 @@ def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
 
 
 def test_inactive_relation_that_are_commented_out(here, engine, stadsdelen_schema, dbsession):
-    """ Prove that relations that are commented out in the schema are flattened to strings """
+    """Prove that relations that are commented out in the schema are flattened to strings"""
     ndjson_path = here / "files" / "data" / "stadsdelen.ndjson"
     importer = NDJSONImporter(stadsdelen_schema, engine)
     importer.generate_db_objects("stadsdelen", truncate=True, ind_extra_index=False)
@@ -150,7 +150,7 @@ def test_inactive_relation_that_are_commented_out(here, engine, stadsdelen_schem
 
 
 def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema, dbsession):
-    """ Prove that missing fields in jsonpath provenance fields do not crash """
+    """Prove that missing fields in jsonpath provenance fields do not crash"""
     ndjson_path = here / "files" / "data" / "woonplaatsen.ndjson"
     importer = NDJSONImporter(woonplaatsen_schema, engine)
     importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
@@ -163,7 +163,7 @@ def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema
 def test_ndjson_import_with_shortnames_in_schema(
     here, engine, hr_schema, verblijfsobjecten_schema, dbsession
 ):
-    """ Prove that data for schemas with shortnames for tables/fields is imported correctly. """
+    """Prove that data for schemas with shortnames for tables/fields is imported correctly."""
     ndjson_path = here / "files" / "data" / "hr.ndjson"
     importer = NDJSONImporter(hr_schema, engine)
     importer.generate_db_objects(

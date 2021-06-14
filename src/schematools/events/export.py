@@ -77,7 +77,7 @@ def collect_nm_embed_rows(
     tables: Dict[str, Dict[str, Table]],
     complex_fields_metadata: List[ComplexFieldAttrs],
     connection: Connection,
-) -> Dict[str:Any]:
+) -> Dict[str, Any]:
     """Fetch row info as list of embeddable objects."""
     nm_embeds = defaultdict(lambda: defaultdict(list))
     for field_metadata in complex_fields_metadata:

@@ -22,7 +22,7 @@ def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsess
 
 
 def test_skip_duplicate_keys_in_batch_during_import(here, engine, bouwblokken_schema, dbsession):
-    """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
+    """Prove that the ndjson, which has a duplicate record, does not lead to an exception"""
     ndjson_path = here / "files" / "data" / "gebieden-duplicate-id.ndjson"
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
@@ -32,7 +32,7 @@ def test_skip_duplicate_keys_in_batch_during_import(here, engine, bouwblokken_sc
 def test_skip_duplicate_keys_in_db_during_import_with_existing_value(
     here, engine, bouwblokken_schema, dbsession
 ):
-    """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
+    """Prove that the ndjson, which has a duplicate record, does not lead to an exception"""
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
@@ -42,7 +42,7 @@ def test_skip_duplicate_keys_in_db_during_import_with_existing_value(
 def test_skip_duplicate_keys_in_db_during_import_with_duplicate_in_next_batch(
     here, engine, bouwblokken_schema, dbsession
 ):
-    """ Prove that the ndjson, which has a duplicate record, does not lead to an exception """
+    """Prove that the ndjson, which has a duplicate record, does not lead to an exception"""
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)

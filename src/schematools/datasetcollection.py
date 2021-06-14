@@ -23,7 +23,7 @@ class DatasetCollection(metaclass=Singleton):
         self.datasets_cache[dataset.id] = dataset
 
     def get_dataset(self, dataset_id: str) -> DatasetSchema:
-        """ Gets a dataset by id, if not available, load the dataset """
+        """Gets a dataset by id, if not available, load the dataset"""
         try:
             return self.datasets_cache[dataset_id]
         except KeyError:

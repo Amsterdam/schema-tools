@@ -111,7 +111,7 @@ class BaseImporter:
         self.logger = LogfileLogger(logger) if logger else CliLogger()
 
     def fetch_fields_provenances(self, dataset_table):
-        """ Create mapping from provenance to camelcased fieldname """
+        """Create mapping from provenance to camelcased fieldname"""
         fields_provenances = {}
         for field in dataset_table.fields:
             # XXX no walrus until we can go to python 3.8 (airflow needs 3.7)
@@ -153,7 +153,7 @@ class BaseImporter:
             values_lookup.add(value)
 
     def create_pk_lookup(self, tables):
-        """ Generate a lookup to avoid primary_key clashes """
+        """Generate a lookup to avoid primary_key clashes"""
         for table_name, table in tables.items():
             if isinstance(table, Table):
                 pk_columns = inspect(table).primary_key.columns
@@ -240,7 +240,7 @@ class BaseImporter:
         batch_size=100,
         **kwargs,
     ):
-        """Import a file into the database table, returns the last record, if available """
+        """Import a file into the database table, returns the last record, if available"""
 
         if self.dataset_table is None:
             raise ValueError("Import needs to be initialized with table info")
@@ -579,7 +579,7 @@ def index_factory(
         index[db_table_name] = indexes_to_create
 
     def define_identifier_index():
-        """ creates index based on the 'identifier' specification in the Amsterdam schema """
+        """creates index based on the 'identifier' specification in the Amsterdam schema"""
 
         identifier_column_snaked = []
 

@@ -54,7 +54,7 @@ def test_provenance_result():
     }
 
     def count_num_of_levels(data):
-        """Always three levels: dataset, table and property, even if empty """
+        """Always three levels: dataset, table and property, even if empty"""
         if not data:
             return 1
 

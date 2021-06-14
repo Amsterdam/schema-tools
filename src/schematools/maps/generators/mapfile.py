@@ -35,7 +35,7 @@ class MapserviceLayerContext:
 
 
 class MapServiceContext:
-    """ Context for generating mapfiles from a amsterdam dataset """
+    """Context for generating mapfiles from a amsterdam dataset"""
 
     def __init__(self, dataset: DatasetSchema):
         self.dataset = dataset

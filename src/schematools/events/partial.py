@@ -248,7 +248,7 @@ class RelationHandler:
 
 
 class FKRelationHandler(RelationHandler):
-    """ Specialised subclass for FK relations """
+    """Specialised subclass for FK relations"""
 
     def set_query_info(self):
         super().set_query_info()
@@ -290,7 +290,7 @@ class FKRelationHandler(RelationHandler):
 
 
 class M2MRelationHandler(RelationHandler):
-    """ Specialised subclass for M2M relations """
+    """Specialised subclass for M2M relations"""
 
     def set_query_info(self):
         # Need the NM table
@@ -402,7 +402,7 @@ class EventsProcessor:
         self.conn.execute(db_operation, row)
 
     def process_event(self, source_id, event_meta, event_data, is_relation=False):
-        """ Do inserts/updates/deletes """
+        """Do inserts/updates/deletes"""
 
         if is_relation:
             try:
@@ -413,7 +413,7 @@ class EventsProcessor:
             self.process_row(source_id, event_meta, event_data)
 
     def load_events_from_file(self, events_path):
-        """ Helper method, primarily used for testing """
+        """Helper method, primarily used for testing"""
 
         with open(events_path) as ef:
             for line in ef:

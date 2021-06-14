@@ -20,7 +20,7 @@ This is done via `auth` parameter on each level respectively.
 
 
 ### Example of Table Level Authorization:
-    
+
     {
       "type": "dataset",
       "id": "brp",
@@ -36,7 +36,7 @@ This is done via `auth` parameter on each level respectively.
         }
       ]
     }
-    
+
 ### Example of Field Level Authorization:
 
     {
@@ -62,7 +62,7 @@ This is done via `auth` parameter on each level respectively.
         }
       ]
     }
-    
+
 All of above require `BRP/R` permission in order to access data.
 
 ## Additional Profile Authorization
@@ -160,7 +160,7 @@ Representations will be merged in favour of highest as well. Given 2 profiles wi
         }
       ]
     }
-    
+
     # profile configuration for BRP/RS
     {
       "name": "medewerker",
@@ -177,7 +177,7 @@ Representations will be merged in favour of highest as well. Given 2 profiles wi
         }
       }
     }
-    
+
     # profile configuration for BRP/RSN
     {
       "name": "medewerker+",
@@ -213,7 +213,7 @@ Requests with `BRP/RS` scope will see following fields in API output. NOTE: `BRP
       "id": 1,
       "bsn": "eabef034"
     }
-    
+
 Profile definition for `BRP/RSN` allows `bsn` field to be seen in plain text, therefore requests with `BRP/RSN` scope present will see plain text bsn:
 
     {

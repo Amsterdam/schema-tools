@@ -6,7 +6,7 @@ from schematools.types import DatasetSchema, SchemaType
 
 
 def test_index_creation(engine, db_schema):
-    """Prove that identifier index is created based on schema specificiation """
+    """Prove that identifier index is created based on schema specificiation"""
 
     test_data = {
         "type": "dataset",
