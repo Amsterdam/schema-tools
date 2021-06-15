@@ -490,14 +490,9 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema.use_dimension_fields
 
     @property
-    def temporal(
-        self, field_modifier: Optional[Callable] = None
-    ) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
+    def temporal(self) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
         """Return the temporal info"""
         from schematools.utils import to_snake_case
-
-        if field_modifier is None:
-            field_modifier = to_snake_case
 
         temporal_configuration = self["schema"].get("temporal", None)
         if temporal_configuration is None:
@@ -505,8 +500,8 @@ class DatasetTableSchema(SchemaType):
 
         for key, [start_field, end_field] in temporal_configuration.get("dimensions", {}).items():
             temporal_configuration["dimensions"][key] = [
-                field_modifier(start_field),
-                field_modifier(end_field),
+                to_snake_case(start_field),
+                to_snake_case(end_field),
             ]
 
         return temporal_configuration
