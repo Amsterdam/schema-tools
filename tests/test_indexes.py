@@ -89,16 +89,16 @@ def test_index_troughtables_creation(engine, db_schema):
             {
                 "id": "test_1",
                 "type": "table",
+                "temporal": {
+                    "identifier": "volgnummer",
+                    "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
+                },
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "identifier": ["identificatie", "volgnummer"],
                     "required": ["schema", "id", "identificatie", "volgnummer"],
                     "display": "id",
-                    "temporal": {
-                        "identifier": "volgnummer",
-                        "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
-                    },
                     "properties": {
                         "schema": {
                             "$ref": (
@@ -139,16 +139,16 @@ def test_index_troughtables_creation(engine, db_schema):
             {
                 "id": "test_2",
                 "type": "table",
+                "temporal": {
+                    "identifier": "volgnummer",
+                    "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
+                },
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
                     "identifier": ["identificatie", "volgnummer"],
                     "required": ["schema", "id", "identificatie", "volgnummer"],
                     "display": "id",
-                    "temporal": {
-                        "identifier": "volgnummer",
-                        "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
-                    },
                     "properties": {
                         "schema": {
                             "$ref": (
