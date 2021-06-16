@@ -85,7 +85,7 @@ class RelationMaker:
             raise ValueError(f"Cannot find temporal fields of table {related_table.id}")
 
         if field.is_array_of_objects:
-            properties = field.items["properties"]
+            properties = field.field_items["properties"]
         elif field.is_object:
             properties = field["properties"]
         else:

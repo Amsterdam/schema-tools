@@ -34,9 +34,14 @@ def schema_defs_from_url(
             dataset_id=dataset_name,
             prefetch_related=prefetch_related,
         )
-        return {dataset_name: schema}
+        return {dataset_name: cast(types.DatasetSchema, schema)}
 
-    return defs_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
+    return {
+        ds_name: cast(types.DatasetSchema, ds_schema)
+        for ds_name, ds_schema in defs_from_url(
+            base_url=schemas_url, data_type=types.DatasetSchema
+        ).items()
+    }
 
 
 def schema_def_from_url(
@@ -45,11 +50,14 @@ def schema_def_from_url(
     prefetch_related: bool = False,
 ) -> types.DatasetSchema:
     """Fetch schema definition from a remote file."""
-    return def_from_url(
-        base_url=schemas_url,
-        data_type=types.DatasetSchema,
-        dataset_id=dataset_name,
-        prefetch_related=prefetch_related,
+    return cast(
+        types.DatasetSchema,
+        def_from_url(
+            base_url=schemas_url,
+            data_type=types.DatasetSchema,
+            dataset_id=dataset_name,
+            prefetch_related=prefetch_related,
+        ),
     )
 
 
@@ -59,15 +67,22 @@ def profile_defs_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.Prof
 
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """
-    return defs_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
+    return {
+        p_name: cast(types.ProfileSchema, p_schema)
+        for p_name, p_schema in defs_from_url(
+            base_url=profiles_url, data_type=types.ProfileSchema
+        ).items()
+    }
 
 
-def defs_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Dict[str, types.ST]:
+def defs_from_url(
+    base_url: Union[URL, str], data_type: Type[types.SchemaType]
+) -> Dict[str, types.SchemaType]:
     """Fetch all schema definitions from a remote file.
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup: Dict[str, types.ST] = {}
+    schema_lookup: Dict[str, types.SchemaType] = {}
     base_url = URL(base_url)
 
     with requests.Session() as connection:
@@ -93,7 +108,7 @@ def def_from_url(
     data_type: Type[types.ST],
     dataset_id: str,
     prefetch_related: bool = False,
-) -> types.ST:
+) -> types.SchemaType:
     """Fetch schema definitions from a remote file for a single dataset.
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
@@ -109,7 +124,7 @@ def def_from_url(
         response = connection.get(base_url / index[dataset_id])
         response.raise_for_status()
 
-        dataset_schema: types.ST = data_type.from_dict(response.json())
+        dataset_schema: types.SchemaType = data_type.from_dict(response.json())
 
     # For this recursive call, we set prefetch_related=False
     # to avoid deep/endless recursion
@@ -129,11 +144,11 @@ def schema_def_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetS
         return {schema_info["id"]: types.DatasetSchema.from_dict(schema_info)}
 
 
-def profile_def_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetSchema]:
+def profile_def_from_file(filename: Union[Path, str]) -> Dict[str, types.ProfileSchema]:
     """Read a profile from a file on local drive."""
     with open(filename, "r") as file_handler:
         schema_info = json.load(file_handler)
-        return {schema_info["name"]: types.DatasetSchema.from_dict(schema_info)}
+        return {schema_info["name"]: types.ProfileSchema.from_dict(schema_info)}
 
 
 def schema_fetch_url_file(schema_url_file: Union[URL, str]) -> Dict[str, Any]:
