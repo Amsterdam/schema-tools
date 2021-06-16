@@ -484,13 +484,6 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema.get_dataset_schema(dataset_id)
 
     @property
-    def use_dimension_fields(self) -> bool:
-        """Indication if schema has to add extra dimension fields
-        for relations
-        """
-        return self._parent_schema.use_dimension_fields
-
-    @property
     def temporal(self) -> Optional[Temporal]:
         """The temporal property of a Table.
         Describes validity of objects for tables where
@@ -787,7 +780,7 @@ class DatasetFieldSchema(DatasetType):
         if not dataset_table.is_temporal:
             return {}
 
-        return dataset_table.temporal.get("dimensions", {})
+        return dataset_table.temporal.dimensions
 
     @property
     def sub_fields(self) -> Iterator[DatasetFieldSchema]:
@@ -835,40 +828,6 @@ class DatasetFieldSchema(DatasetType):
                 _temporal=(id_ in combined_dimension_fieldnames),
                 **spec,
             )
-
-        # Add temporal fields on the relation if the table is temporal
-        # and the use of dimension fields is enabled for the schema
-        if not self._parent_table.use_dimension_fields:
-            return
-        if relation is not None or nm_relation is not None:
-            dataset_id, table_id = (relation or nm_relation).split(
-                ":"
-            )  # XXX what about loose rels?
-            dataset_schema = self._parent_table.get_dataset_schema(dataset_id)
-            if dataset_schema is None:
-                return
-            try:
-                dataset_table = dataset_schema.get_table_by_id(
-                    table_id, include_nested=False, include_through=False
-                )
-            except ValueError:
-                # If we cannot get the table, we ignore the exception
-                # and we do not generate temporal fields
-                return
-            if nm_relation is not None:
-                field_name_prefix = ""
-            if dataset_table.is_temporal:
-                for dimension_fieldnames in dataset_table.temporal.dimensions.values():
-                    for dimension_fieldname in dimension_fieldnames:
-                        field_name = f"{field_name_prefix}{dimension_fieldname}"
-                        yield DatasetFieldSchema(
-                            _id=field_name,
-                            _parent_table=self._parent_table,
-                            _parent_field=self,
-                            _required=False,
-                            _temporal=True,
-                            **{"type": "string", "format": "date-time"},
-                        )
 
     @property
     def is_array(self) -> bool:
