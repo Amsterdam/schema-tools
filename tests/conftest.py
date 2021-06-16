@@ -48,7 +48,7 @@ def sqlalchemy_connect_url(request, db_url):
     return request.config.getoption("--sqlalchemy-connect-url") or db_url
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def db_schema(engine, sqlalchemy_keep_db):
     db_exists = sqlalchemy_utils.functions.database_exists(engine.url)
     if db_exists and not sqlalchemy_keep_db:
