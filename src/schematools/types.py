@@ -795,6 +795,8 @@ class DatasetFieldSchema(DatasetType):
         However, this is not the case for the so-called `dimension` fields
         of a temporal relation (e.g. `beginGeldigheid` and `eindGeldigheid`).
         """
+        from schematools.utils import toCamelCase
+
         field_name_prefix = ""
         if self.is_object:
             # Field has direct sub fields (type=object)
@@ -816,7 +818,9 @@ class DatasetFieldSchema(DatasetType):
         for (_dimension, field_names) in self.get_dimension_fieldnames_for_relation(
             relation, nm_relation
         ).items():
-            combined_dimension_fieldnames |= set(field_names)
+            combined_dimension_fieldnames |= set(
+                toCamelCase(fieldname) for fieldname in field_names
+            )
 
         for id_, spec in properties.items():
             field_id = id_ if id_ in combined_dimension_fieldnames else f"{field_name_prefix}{id_}"
