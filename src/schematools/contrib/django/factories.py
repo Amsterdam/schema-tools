@@ -71,7 +71,7 @@ class RelationMaker:
 
         # So, target-side of relation is temporal
         # Determine fieldnames used for temporal
-        sequence_identifier = related_table.temporal["identifier"]
+        sequence_identifier = related_table.temporal.identifier
         identifier = related_dataset.identifier
 
         # If temporal, this implicates that the type is not a scalar

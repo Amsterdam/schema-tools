@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import json
 from collections import UserDict
-from typing import Any, Callable, Dict, Iterator, List, NoReturn, Optional, Set, TypeVar, Union
+from dataclasses import dataclass, field
+from typing import Any, Dict, Iterator, List, NoReturn, Optional, Set, Tuple, TypeVar
 
 import jsonschema
 from methodtools import lru_cache
@@ -490,26 +491,41 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema.use_dimension_fields
 
     @property
-    def temporal(self) -> Optional[Dict[str, Union[str, Dict[str, List[str]]]]]:
-        """Return the temporal info"""
-        from schematools.utils import to_snake_case
+    def temporal(self) -> Optional[Temporal]:
+        """The temporal property of a Table.
+        Describes validity of objects for tables where
+        different versions of objects are valid over time.
 
-        temporal_configuration = self["schema"].get("temporal", None)
-        if temporal_configuration is None:
+        Temporal has an `identifier` property that refers to the attribute of objects in
+        the table that uniquely identifies a specific version of an object
+        from among other versions of the same object.
+
+        Temporal also has a `dimensions` property, which gives the attributes of
+        objects that determine for what (time)period an object is valid.
+        """
+
+        temporal_config = self.get("temporal")
+        if temporal_config is None:
             return None
 
-        for key, [start_field, end_field] in temporal_configuration.get("dimensions", {}).items():
-            temporal_configuration["dimensions"][key] = [
+        from schematools.utils import to_snake_case
+
+        if temporal_config.get("identifier") is None or temporal_config.get("dimensions") is None:
+            raise ValueError("Invalid temporal data")
+
+        dimensions = {}
+        for key, [start_field, end_field] in temporal_config.get("dimensions").items():
+            dimensions[key] = (
                 to_snake_case(start_field),
                 to_snake_case(end_field),
-            ]
+            )
 
-        return temporal_configuration
+        return Temporal(temporal_config.get("identifier"), dimensions)
 
     @property
     def is_temporal(self) -> bool:
-        """Indicates if this is a table with temporal charateristics"""
-        return "temporal" in self["schema"]
+        """Indicates if this is a table with temporal characteristics"""
+        return "temporal" in self
 
     @property
     def main_geometry(self):
@@ -820,6 +836,40 @@ class DatasetFieldSchema(DatasetType):
                 **spec,
             )
 
+        # Add temporal fields on the relation if the table is temporal
+        # and the use of dimension fields is enabled for the schema
+        if not self._parent_table.use_dimension_fields:
+            return
+        if relation is not None or nm_relation is not None:
+            dataset_id, table_id = (relation or nm_relation).split(
+                ":"
+            )  # XXX what about loose rels?
+            dataset_schema = self._parent_table.get_dataset_schema(dataset_id)
+            if dataset_schema is None:
+                return
+            try:
+                dataset_table = dataset_schema.get_table_by_id(
+                    table_id, include_nested=False, include_through=False
+                )
+            except ValueError:
+                # If we cannot get the table, we ignore the exception
+                # and we do not generate temporal fields
+                return
+            if nm_relation is not None:
+                field_name_prefix = ""
+            if dataset_table.is_temporal:
+                for dimension_fieldnames in dataset_table.temporal.dimensions.values():
+                    for dimension_fieldname in dimension_fieldnames:
+                        field_name = f"{field_name_prefix}{dimension_fieldname}"
+                        yield DatasetFieldSchema(
+                            _id=field_name,
+                            _parent_table=self._parent_table,
+                            _parent_field=self,
+                            _required=False,
+                            _temporal=True,
+                            **{"type": "string", "format": "date-time"},
+                        )
+
     @property
     def is_array(self) -> bool:
         """
@@ -976,3 +1026,36 @@ class ProfileTableSchema(DatasetType):
             ]
         """
         return self.get("mandatoryFilterSets", [])
+
+
+@dataclass
+class Temporal:
+    """The temporal property of a Table.
+    Describes validity of objects for tables where
+    different versions of objects are valid over time.
+
+    Attributes:
+        identifier (str):
+            The key to the property that uniquely identifies a specific
+            version of an object from among other versions of the same object.
+
+            This property combined with the fixed identifier forms a unique key for an object.
+
+            These identifier properties are non-contiguous increasing integers.
+            The latest version of an object will have the highest value for identifier.
+
+        dimensions Dict[Tuple[str]]:
+            Contains the attributes of objects that determine for what (time)period an object is valid.
+
+            Dimensions is of type dict.
+            A dimension is a tuple of the form "('valid_start', 'valid_end')",
+            describing a closed set along the dimension for which an object is valid.
+
+            Example:
+                With dimensions = {"time":('valid_start', 'valid_end')}
+                an_object will be valid on some_time if:
+                some_time >= an_object.valid_start and some_time <= an_object.valid_end
+    """
+
+    identifier: str
+    dimensions: Dict[Tuple[str]] = field(default_factory=dict)
