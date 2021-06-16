@@ -1,7 +1,5 @@
-import json
 import os
 from pathlib import Path
-from typing import Callable
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -150,96 +148,91 @@ def schemas_mock(requests_mock: Mocker, schema_url: URL) -> Mocker:
 
 
 @pytest.fixture()
-def schema_json(here) -> Callable[[str], dict]:
-    def _json_fetcher(filename) -> dict:
-        path = here / "files" / filename
-        return json.loads(path.read_text())
-
-    return _json_fetcher
+def afval_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/afval.json")
 
 
 @pytest.fixture()
-def afval_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("afval.json"))
+def meetbouten_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/meetbouten.json")
 
 
 @pytest.fixture()
-def meetbouten_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("meetbouten.json"))
+def parkeervakken_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/parkeervakken.json")
 
 
 @pytest.fixture()
-def parkeervakken_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("parkeervakken.json"))
+def gebieden_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/gebieden.json")
 
 
 @pytest.fixture()
-def gebieden_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("gebieden.json"))
+def bouwblokken_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/bouwblokken.json")
 
 
 @pytest.fixture()
-def bouwblokken_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("bouwblokken.json"))
+def gebieden_schema_auth(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/gebieden_auth.json")
 
 
 @pytest.fixture()
-def gebieden_schema_auth(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("gebieden_auth.json"))
+def gebieden_schema_auth_list(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/gebieden_auth_list.json")
 
 
 @pytest.fixture()
-def gebieden_schema_auth_list(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("gebieden_auth_list.json"))
+def ggwgebieden_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/ggwgebieden.json")
 
 
 @pytest.fixture()
-def ggwgebieden_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("ggwgebieden.json"))
+def stadsdelen_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/stadsdelen.json")
 
 
 @pytest.fixture()
-def stadsdelen_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("stadsdelen.json"))
+def verblijfsobjecten_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/verblijfsobjecten.json")
 
 
 @pytest.fixture()
-def verblijfsobjecten_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("verblijfsobjecten.json"))
+def kadastraleobjecten_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/kadastraleobjecten.json")
 
 
 @pytest.fixture()
-def kadastraleobjecten_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("kadastraleobjecten.json"))
+def meldingen_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/meldingen.json")
 
 
 @pytest.fixture()
-def meldingen_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("meldingen.json"))
+def woonplaatsen_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/woonplaatsen.json")
 
 
 @pytest.fixture()
-def woonplaatsen_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("woonplaatsen.json"))
+def woningbouwplannen_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/woningbouwplannen.json")
 
 
 @pytest.fixture()
-def woningbouwplannen_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("woningbouwplannen.json"))
+def woningbouwplannen_schema(here) -> DatasetSchema:
+    return ProfileSchema.from_file(here / "files/woningbouwplannen.json")
 
 
 @pytest.fixture()
 def brp_r_profile_schema(here) -> ProfileSchema:
     """A downloaded profile schema definition"""
-    path = here / "files/profiles/BRP_R.json"
-    return ProfileSchema.from_file(path)
+    return ProfileSchema.from_file(here / "files/profiles/BRP_R.json")
 
 
 @pytest.fixture()
-def brk_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("brk.json"))
+def brk_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/brk.json")
 
 
 @pytest.fixture()
-def hr_schema(schema_json) -> DatasetSchema:
-    return DatasetSchema.from_dict(schema_json("hr.json"))
+def hr_schema(here) -> DatasetSchema:
+    return DatasetSchema.from_file(here / "files/hr.json")
