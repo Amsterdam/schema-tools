@@ -426,6 +426,15 @@ class DatasetTableSchema(SchemaType):
         if not self["schema"].get("$schema", "").startswith("http://json-schema.org/"):
             raise ValueError("Invalid JSON-schema contents of table")
 
+    @classmethod
+    def from_dict(cls, obj: Dict[str, Any]) -> DatasetTableSchema:
+        """Create tableschema from a dict.
+
+        When this factory function is used, the _parent_schema argument is missing
+        and will be set to an empty DatasetSchema.
+        """
+        return cls(DatasetSchema({"id": "parent", "type": "dataset"}), obj)
+
     @property
     def name(self) -> str:
         return self.get("shortname", self.id)
@@ -678,6 +687,17 @@ class DatasetFieldSchema(DatasetType):
         self._parent_field = _parent_field
         self._required = _required
         self._temporal = _temporal
+
+    @classmethod
+    def from_dict(cls, obj: Dict[str, Any]) -> DatasetFieldSchema:
+        """Create fieldschema from a dict.
+
+        When this factory function is used, the _id and _parent_table arguments are missing
+        and will be set to the "id" of the obj argument and an empty DatasetSchema.
+        """
+        return cls(
+            obj["id"], DatasetTableSchema(DatasetSchema({"id": "parent", "type": "dataset"})), obj
+        )
 
     @property
     def table(self) -> DatasetTableSchema:
