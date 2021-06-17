@@ -15,8 +15,10 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import jsonschema
@@ -50,7 +52,7 @@ class SchemaType(UserDict):
         return self.data
 
     @classmethod
-    def from_dict(cls, obj: Dict[str, Any]) -> SchemaType:
+    def from_dict(cls: Type[ST], obj: Dict[str, Any]) -> ST:
         return cls(obj)
 
 
@@ -819,7 +821,7 @@ class DatasetFieldSchema(DatasetType):
         if not dataset_table.is_temporal:
             return {}
 
-        return dataset_table.temporal.dimensions
+        return cast(Dict[str, List[str]], dataset_table.temporal.dimensions)
 
     @property
     def sub_fields(self) -> Iterator[DatasetFieldSchema]:
