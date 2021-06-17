@@ -36,12 +36,7 @@ def schema_defs_from_url(
         )
         return {dataset_name: schema}
 
-    return {
-        ds_name: ds_schema
-        for ds_name, ds_schema in defs_from_url(
-            base_url=schemas_url, data_type=types.DatasetSchema
-        ).items()
-    }
+    return defs_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
 
 
 def schema_def_from_url(
@@ -64,12 +59,8 @@ def profile_defs_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.Prof
 
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """
-    return {
-        p_name: p_schema
-        for p_name, p_schema in defs_from_url(
-            base_url=profiles_url, data_type=types.ProfileSchema
-        ).items()
-    }
+
+    return defs_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
 
 
 def defs_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Dict[str, types.ST]:

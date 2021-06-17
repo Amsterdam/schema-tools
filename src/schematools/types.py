@@ -28,6 +28,7 @@ from schematools import RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
 
 ST = TypeVar("ST", bound="SchemaType")
+Json = Dict[str, Any]
 
 
 class SchemaType(UserDict):
@@ -39,20 +40,20 @@ class SchemaType(UserDict):
 
     @property
     def id(self) -> str:
-        return str(self["id"])
+        return cast(str, self["id"])
 
     @property
     def type(self) -> str:
-        return str(self["type"])
+        return cast(str, self["type"])
 
     def json(self) -> str:
         return json.dumps(self.data)
 
-    def json_data(self) -> Dict[str, Any]:
+    def json_data(self) -> Json:
         return self.data
 
     @classmethod
-    def from_dict(cls: Type[ST], obj: Dict[str, Any]) -> ST:
+    def from_dict(cls: Type[ST], obj: Json) -> ST:
         return cls(obj)
 
 
@@ -86,7 +87,7 @@ class DatasetSchema(SchemaType):
             return cls.from_dict(json.load(fh))
 
     @classmethod
-    def from_dict(cls, obj: Dict[str, Any]) -> DatasetSchema:
+    def from_dict(cls, obj: Json) -> DatasetSchema:
         """Parses given dict and validates the given schema"""
         if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Schema file")
@@ -145,7 +146,7 @@ class DatasetSchema(SchemaType):
     @property
     def tables(self) -> List[DatasetTableSchema]:
         """Access the tables within the file"""
-        return [DatasetTableSchema(self, i) for i in self["tables"]]
+        return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
 
     def get_tables(
         self,
@@ -233,7 +234,7 @@ class DatasetSchema(SchemaType):
             sub_table_schema["shortname"] = get_rel_table_identifier(
                 len(self.id) + 1, table.name, snakecased_fieldname
             )
-        return DatasetTableSchema(self, sub_table_schema, nested_table=True)
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self, nested_table=True)
 
     def build_through_table(
         self, table: DatasetTableSchema, field: DatasetFieldSchema
@@ -291,6 +292,11 @@ class DatasetSchema(SchemaType):
         relation = field.nm_relation
         if relation is None and table.is_temporal:
             relation = field.relation
+
+        # If the field is not a relation, that is an error and should not happen, bail out!
+        if relation is None:
+            raise ValueError(f"Field {field.id} for table {table.id} should be a relation!")
+
         right_dataset_id, right_table_id = [
             to_snake_case(part) for part in str(relation).split(":")[:2]
         ]
@@ -301,7 +307,7 @@ class DatasetSchema(SchemaType):
         snakecased_field_id = to_snake_case(field.id)
         table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
 
-        sub_table_schema: Dict[str, Any] = {
+        sub_table_schema: Json = {
             "id": table_id,
             "type": "table",
             "schema": {
@@ -367,7 +373,7 @@ class DatasetSchema(SchemaType):
 
             sub_table_schema["schema"]["properties"].update(extra_fields)
 
-        return DatasetTableSchema(self, sub_table_schema, through_table=True)
+        return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
 
     @property
     def related_dataset_schema_ids(self) -> Iterator[str]:
@@ -411,8 +417,8 @@ class DatasetTableSchema(SchemaType):
 
     def __init__(
         self,
-        _parent_schema: DatasetSchema,
         *args: Any,
+        _parent_schema: Optional[DatasetSchema] = None,
         nested_table: bool = False,
         through_table: bool = False,
         **kwargs: Any,
@@ -428,15 +434,6 @@ class DatasetTableSchema(SchemaType):
         if not self["schema"].get("$schema", "").startswith("http://json-schema.org/"):
             raise ValueError("Invalid JSON-schema contents of table")
 
-    @classmethod
-    def from_dict(cls, obj: Dict[str, Any]) -> DatasetTableSchema:
-        """Create tableschema from a dict.
-
-        When this factory function is used, the _parent_schema argument is missing
-        and will be set to an empty DatasetSchema.
-        """
-        return cls(DatasetSchema({"id": "parent", "type": "dataset"}), obj)
-
     @property
     def name(self) -> str:
         return self.get("shortname", self.id)
@@ -446,7 +443,7 @@ class DatasetTableSchema(SchemaType):
         return self.get("shortname") is not None
 
     @property
-    def dataset(self) -> DatasetSchema:
+    def dataset(self) -> Optional[DatasetSchema]:
         """The dataset that this table is part of."""
         return self._parent_schema
 
@@ -458,7 +455,11 @@ class DatasetTableSchema(SchemaType):
     def get_fields(self, include_sub_fields: bool = False) -> Iterator[DatasetFieldSchema]:
         required = set(self["schema"]["required"])
         for id_, spec in self["schema"]["properties"].items():
-            field_schema = DatasetFieldSchema(id_, self, _required=(id_ in required), **spec)
+            field_schema = DatasetFieldSchema(
+                _parent_table=self,
+                _required=(id_ in required),
+                **{**spec, "id": id_},
+            )
 
             # Add extra fields for relations of type object
             # These fields are added to identify the different
@@ -471,7 +472,7 @@ class DatasetTableSchema(SchemaType):
         # If compound key, add PK field
         # XXX we should check for an existing "id" field, avoid collisions
         if self.has_compound_key:
-            yield DatasetFieldSchema("id", self, _required=True, type="string")
+            yield DatasetFieldSchema(_parent_table=self, _required=True, type="string", id="id")
 
     @property
     def fields(self) -> Iterator[DatasetFieldSchema]:
@@ -499,19 +500,21 @@ class DatasetTableSchema(SchemaType):
     def get_through_tables_by_id(self) -> List[DatasetTableSchema]:
         """Access list of through_tables (for n-m relations) for a single base table."""
         tables = []
+        if self.dataset is None:
+            return []
         for field in self.fields:
             if field.is_through_table:
-                tables.append(self._parent_schema.build_through_table(table=self, field=field))
+                tables.append(self.dataset.build_through_table(table=self, field=field))
         return tables
 
     @property
-    def display_field(self) -> Optional[Any]:
+    def display_field(self) -> Optional[str]:
         """Tell which fields can be used as display field."""
-        return self["schema"].get("display", None)
+        return cast(Optional[str], self["schema"].get("display"))
 
     def get_dataset_schema(self, dataset_id: str) -> Optional[DatasetSchema]:
-        """Return another dataset"""
-        return self._parent_schema.get_dataset_schema(dataset_id)
+        """Return the associated parent datasetschema for this table."""
+        return self.dataset.get_dataset_schema(dataset_id) if self.dataset is not None else None
 
     @property
     def temporal(self) -> Optional[Temporal]:
@@ -576,7 +579,7 @@ class DatasetTableSchema(SchemaType):
             return False  # type: ignore[unreachable]
         return len(self.identifier) > 1
 
-    def validate(self, row: Dict[str, Any]) -> None:
+    def validate(self, row: Json) -> None:
         """Validate a record against the schema."""
         jsonschema.validate(row, self.data["schema"])
 
@@ -594,7 +597,7 @@ class DatasetTableSchema(SchemaType):
         return dict(self["schema"].get("additionalFilters", {}))
 
     @property
-    def relations(self) -> Dict[Any, Any]:
+    def relations(self) -> Dict[str, Dict[str, str]]:
         """Fetch list of additional (backwards or N-N) relations.
 
         This is a dictionary of names for existing forward relations
@@ -623,6 +626,10 @@ class DatasetTableSchema(SchemaType):
 
         from schematools.utils import to_snake_case
 
+        if self.dataset is None:
+            raise ValueError(
+                "Cannot obtain a model_name from a DatasetTableSchema without a parent dataset."
+            )
         model_name = self.id
         if self.dataset.version is not None and not self.dataset.is_default_version:
             model_name = f"{model_name}_{self.dataset.version}"
@@ -635,6 +642,10 @@ class DatasetTableSchema(SchemaType):
 
         from schematools.utils import shorten_name, to_snake_case
 
+        if self.dataset is None:
+            raise ValueError(
+                "Cannot obtain a db_name from a DatasetTableSchema without a parent dataset."
+            )
         table_name_parts = [self.dataset.id, self.name]
         if self.dataset.version is not None:
             is_default_table = (
@@ -649,7 +660,10 @@ class DatasetTableSchema(SchemaType):
     def get_fk_fields(self) -> Iterator[str]:
         """Generates fields names that contain a 1:N relation to a parent table"""
         fields_items = self["schema"]["properties"].items()
-        field_schema = (DatasetFieldSchema(_id, self, **spec) for _id, spec in fields_items)
+        field_schema = (
+            DatasetFieldSchema(_parent_table=self, **{**spec, "id": _id})
+            for _id, spec in fields_items
+        )
         for field in field_schema:
             if field.relation:
                 yield field.name
@@ -675,34 +689,22 @@ class DatasetFieldSchema(DatasetType):
 
     def __init__(
         self,
-        _id: str,
-        _parent_table: DatasetTableSchema,
         *args: Any,
+        _parent_table: Optional[DatasetTableSchema],
         _parent_field: Optional[DatasetFieldSchema] = None,
         _required: bool = False,
         _temporal: bool = False,
         **kwargs: Any,
     ) -> None:
+        self._id: str = kwargs.pop("id")
         super().__init__(*args, **kwargs)
-        self._id = _id
         self._parent_table = _parent_table
         self._parent_field = _parent_field
         self._required = _required
         self._temporal = _temporal
 
-    @classmethod
-    def from_dict(cls, obj: Dict[str, Any]) -> DatasetFieldSchema:
-        """Create fieldschema from a dict.
-
-        When this factory function is used, the _id and _parent_table arguments are missing
-        and will be set to the "id" of the obj argument and an empty DatasetSchema.
-        """
-        return cls(
-            obj["id"], DatasetTableSchema(DatasetSchema({"id": "parent", "type": "dataset"})), obj
-        )
-
     @property
-    def table(self) -> DatasetTableSchema:
+    def table(self) -> Optional[DatasetTableSchema]:
         """The table that this field is a part of"""
         return self._parent_table
 
@@ -718,7 +720,7 @@ class DatasetFieldSchema(DatasetType):
     @property
     def name(self) -> str:
         """Table name, for display purposes only."""
-        return str(self.get("shortname", self._id))
+        return cast(str, self.get("shortname", self._id))
 
     @property
     def has_shortname(self) -> bool:
@@ -747,6 +749,8 @@ class DatasetFieldSchema(DatasetType):
         For compound keys (table.identifier has > 1 item), an 'id'
         field is autogenerated.
         """
+        if self.table is None:
+            return False
         return self.name == "id" or [self.name] == self.table.identifier
 
     @property
@@ -795,7 +799,7 @@ class DatasetFieldSchema(DatasetType):
         return self.get("provenance")
 
     @property
-    def field_items(self) -> Optional[Dict[str, Any]]:
+    def field_items(self) -> Optional[Json]:
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
 
@@ -806,8 +810,11 @@ class DatasetFieldSchema(DatasetType):
         if relation is None and nm_relation is None:
             return {}
 
-        dataset_id, table_id = str(relation or nm_relation).split(":")
-        dataset_schema = self._parent_table.get_dataset_schema(dataset_id)
+        dataset_id, table_id = cast(str, relation or nm_relation).split(":")
+        if self.table is None:
+            return {}
+
+        dataset_schema = self.table.get_dataset_schema(dataset_id)
         if dataset_schema is None:
             return {}
         try:
@@ -868,12 +875,11 @@ class DatasetFieldSchema(DatasetType):
         for id_, spec in properties.items():
             field_id = id_ if id_ in combined_dimension_fieldnames else f"{field_name_prefix}{id_}"
             yield DatasetFieldSchema(
-                field_id,
-                self._parent_table,
+                _parent_table=self._parent_table,
                 _parent_field=self,
                 _required=(id_ in required),
                 _temporal=(id_ in combined_dimension_fieldnames),
-                **spec,
+                **{**spec, "id": field_id},
             )
 
     @property
@@ -914,7 +920,7 @@ class DatasetFieldSchema(DatasetType):
         """
 
         return (self.is_array and self.nm_relation is not None) or (
-            self._parent_table.is_temporal and self.relation is not None
+            self.table is not None and self.table.is_temporal and self.relation is not None
         )
 
     @property
@@ -941,7 +947,7 @@ class ProfileSchema(SchemaType):
             return cls.from_dict(json.load(fh))
 
     @classmethod
-    def from_dict(cls, obj: Dict[str, Any]) -> ProfileSchema:
+    def from_dict(cls, obj: Json) -> ProfileSchema:
         """Parses given dict and validates the given schema"""
         return cls(obj)
 
@@ -953,7 +959,7 @@ class ProfileSchema(SchemaType):
     @property
     def scopes(self) -> List[str]:
         """Scopes of Profile (if set)"""
-        return list(self.get("scopes", []))
+        return cast(list, self.get("scopes", []))
 
     @property
     def datasets(self) -> Dict[str, ProfileDatasetSchema]:
@@ -969,8 +975,8 @@ class ProfileDatasetSchema(DatasetType):
     def __init__(
         self,
         _id: str,
-        _parent_schema: Optional[ProfileSchema] = None,
-        data: Optional[Dict[str, Any]] = None,
+        _parent_schema: ProfileSchema,
+        data: Json,
     ) -> None:
         super().__init__(data)
         self._id = _id
@@ -1003,8 +1009,8 @@ class ProfileTableSchema(DatasetType):
     def __init__(
         self,
         _id: str,
-        _parent_schema: Optional[ProfileDatasetSchema] = None,
-        data: Optional[Dict[str, Any]] = None,
+        _parent_schema: ProfileDatasetSchema,
+        data: Json,
     ) -> None:
         super().__init__(data)
         self._id = _id
@@ -1030,7 +1036,7 @@ class ProfileTableSchema(DatasetType):
         return self.get("fields", {})
 
     @property
-    def mandatory_filtersets(self) -> List[Dict[str, Any]]:
+    def mandatory_filtersets(self) -> List[Json]:
         """Tell whether the listing can only be requested with certain inputs.
         E.g. an API user may only list data when they supply the lastname + birthdate.
 
