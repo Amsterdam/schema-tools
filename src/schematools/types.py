@@ -536,7 +536,7 @@ class DatasetTableSchema(SchemaType):
         if temporal_config.get("identifier") is None or temporal_config.get("dimensions") is None:
             raise ValueError("Invalid temporal data")
 
-        dimensions = {}
+        dimensions: Dict[str, Tuple[str, str]] = {}
         for key, [start_field, end_field] in temporal_config.get("dimensions").items():
             dimensions[key] = (
                 to_snake_case(start_field),
@@ -566,7 +566,7 @@ class DatasetTableSchema(SchemaType):
         # Convert identifier to a list, to be backwards compatible with older schemas
         if not isinstance(identifier, list):
             identifier = [identifier]
-        return list(identifier)  # mypy pleaser
+        return cast(list, identifier)  # mypy pleaser
 
     @property
     def has_compound_key(self) -> bool:
@@ -626,7 +626,7 @@ class DatasetTableSchema(SchemaType):
         model_name = self.id
         if self.dataset.version is not None and not self.dataset.is_default_version:
             model_name = f"{model_name}_{self.dataset.version}"
-        return str(to_snake_case(model_name))  # mypy pleaser
+        return cast(str, to_snake_case(model_name))  # mypy pleaser
 
     def db_name(self) -> str:
         """Returns the tablename for the database, prefixed with the schemaname.
@@ -801,7 +801,7 @@ class DatasetFieldSchema(DatasetType):
 
     def get_dimension_fieldnames_for_relation(
         self, relation: Optional[str], nm_relation: Optional[str]
-    ) -> Dict[str, List[str]]:
+    ) -> Dict[str, Tuple[str, str]]:
         """Gets the dimension fieldnames."""
         if relation is None and nm_relation is None:
             return {}
@@ -821,7 +821,9 @@ class DatasetFieldSchema(DatasetType):
         if not dataset_table.is_temporal:
             return {}
 
-        return cast(Dict[str, List[str]], dataset_table.temporal.dimensions)
+        # Seems that mypy cannot infer the type from the assignment
+        dimensions: Dict[str, Tuple[str, str]] = dataset_table.temporal.dimensions
+        return dimensions if dimensions is not None else {}
 
     @property
     def sub_fields(self) -> Iterator[DatasetFieldSchema]:
@@ -1072,4 +1074,4 @@ class Temporal:
     """
 
     identifier: str
-    dimensions: Dict[Tuple[str]] = field(default_factory=dict)
+    dimensions: Dict[str, Tuple[str, str]] = field(default_factory=dict)
