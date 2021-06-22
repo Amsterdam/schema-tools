@@ -120,10 +120,7 @@ class DataSplitter:
         dataset_id, table_id = relation.split(":")
         target_dataset = self.events_processor.datasets[dataset_id]
         target_dataset_table = target_dataset.get_table_by_id(table_id)
-        field_names = target_dataset_table.identifier
-        # Use step value to reverse list if needed
-        step = 1 if target_dataset.identifier == field_names[0] else -1
-        return target_dataset_table.identifier[::step]
+        return target_dataset_table.identifier
 
     def _fetch_source_id_info(self):
         # id info for source side of relation (for updates/deletes)
