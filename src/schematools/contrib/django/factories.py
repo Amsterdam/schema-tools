@@ -72,7 +72,8 @@ class RelationMaker:
         # So, target-side of relation is temporal
         # Determine fieldnames used for temporal
         sequence_identifier = related_table.temporal.identifier
-        identifier = related_dataset.identifier
+        # Table identifier is mandatory and always contains at least one field
+        identifier = related_table.identifier[0]
 
         # If temporal, this implicates that the type is not a scalar
         # but needs to be more complex (object) or array_of_objects
@@ -82,6 +83,7 @@ class RelationMaker:
         sequence_field = related_table.get_field_by_id(sequence_identifier)
         identifier_field = related_table.get_field_by_id(identifier)
         if sequence_field is None or identifier_field is None:
+
             raise ValueError(f"Cannot find temporal fields of table {related_table.id}")
 
         if field.is_array_of_objects:
