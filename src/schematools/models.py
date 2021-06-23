@@ -10,6 +10,7 @@ Base = declarative_base()
 class Dataset(Base):
     __tablename__ = "ams_schema_dataset"
     id = Column(String, primary_key=True)
+    path = Column(String)
     type = Column(String)
     title = Column(String)
     description = Column(String)

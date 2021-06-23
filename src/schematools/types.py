@@ -110,9 +110,9 @@ class DatasetSchema(SchemaType):
         return self.get("license")
 
     @property
-    def url_prefix(self) -> str:
-        """Dataset URL prefix"""
-        return self.get("url_prefix", "")
+    def path(self) -> str:
+        """Dataset URL path"""
+        return self.get("path", "")
 
     @property
     def identifier(self) -> str:
