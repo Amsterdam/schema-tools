@@ -152,6 +152,11 @@ class DynamicModel(models.Model):
         return cls._dataset.schema.id
 
     @classmethod
+    def get_dataset_path(cls) -> str:
+        """Give access to the api path this dataset should be published on."""
+        return cls._dataset.path
+
+    @classmethod
     def get_dataset_schema(cls) -> DatasetSchema:
         """Give access to the original dataset schema that this model is a part of."""
         return cls._dataset.schema
@@ -203,7 +208,7 @@ class Dataset(models.Model):
     enable_api = models.BooleanField(default=True)
     enable_db = models.BooleanField(default=True)
     endpoint_url = models.URLField(blank=True, null=True)
-    url_prefix = models.CharField(max_length=100, blank=True, validators=[URLPathValidator()])
+    path = models.TextField(unique=True, blank=False, validators=[URLPathValidator()])
     auth = models.CharField(_("Authorization"), blank=True, null=True, max_length=250)
     ordering = models.IntegerField(_("Ordering"), default=1)
 
@@ -235,15 +240,16 @@ class Dataset(models.Model):
         return name
 
     @classmethod
-    def create_for_schema(cls, schema: DatasetSchema) -> Dataset:
+    def create_for_schema(cls, schema: DatasetSchema, path: Optional[str] = None) -> Dataset:
         """Create the schema based on the Amsterdam Schema JSON input"""
         name = cls.name_from_schema(schema)
-
+        if path is None:
+            path = name
         return cls.objects.create(
             name=name,
             schema_data=schema.json_data(),
             auth=_serialize_claims(schema),
-            url_prefix=schema.url_prefix,
+            path=path,
             version=schema.version,
             is_default_version=schema.is_default_version,
         )
@@ -254,7 +260,7 @@ class Dataset(models.Model):
         self.auth = _serialize_claims(schema)
 
         if self.schema_data_changed():
-            self.save(update_fields=["schema_data", "auth", "is_default_version"])
+            self.save(update_fields=["schema_data", "auth", "is_default_version", "path"])
             return True
         else:
             return False
