@@ -23,7 +23,7 @@ class Command(BaseCommand):
         "enable_db",
         "endpoint_url",
         "ordering",
-        "url_prefix",
+        "path",
     )
 
     def add_arguments(self, parser):
