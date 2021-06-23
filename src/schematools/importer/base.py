@@ -6,6 +6,7 @@ from itertools import islice
 from typing import Dict, Optional
 
 from jsonpath_rw import parse
+from more_itertools import first
 from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Table, exc, inspect
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
@@ -22,7 +23,7 @@ def chunked(generator, size):
     # Based on more-itertools. islice returns results until 'size',
     # iter() repeatedly calls make_chunk until the '[]' sentinel is returned.
     gen = iter(generator)
-    make_chunk = lambda: list(islice(gen, size))  # NoQA
+    make_chunk = lambda: list(islice(gen, size))
     return iter(make_chunk, [])
 
 
@@ -610,24 +611,31 @@ def index_factory(
 
         for table in dataset_table.get_through_tables_by_id():
 
-            through_tables = {}
+            through_columns = []
             indexes_to_create = []
 
             # make a dictionary of the indexes to create
             if table.is_through_table:
-                through_tables["table"] = table.id
-                through_tables["properties"] = []
+                through_columns = []
 
+                # First collect the fields that are relations
+                relation_field_names = []
                 for field in table.fields:
                     if field.relation:
-                        through_tables["properties"].append(field.name + "_id")
+                        snakecased_fieldname = to_snake_case(field.name)
+                        relation_field_names.append(snakecased_fieldname)
+                        through_columns.append(f"{snakecased_fieldname}_id")
 
-                        if dataset_table.is_temporal:
-                            through_tables["properties"].append(field.name + "_identificatie")
-                            through_tables["properties"].append(field.name + "_volgnummer")
+                # Now check complementary field if they start with
+                # the name of the relation field
+                for field in table.fields:
+                    if not field.relation:
+                        snakecased_fieldname = to_snake_case(field.name)
+                        if snakecased_fieldname.startswith(tuple(relation_field_names)):
+                            through_columns.append(snakecased_fieldname)
 
             # create the Index objects
-            if through_tables:
+            if through_columns:
                 table_id = table.db_name()
 
                 try:
@@ -639,7 +647,7 @@ def index_factory(
                     )
                     continue
 
-                for column in through_tables["properties"]:
+                for column in through_columns:
                     index_name = table_id + "_" + column + TABLE_INDEX_POSTFIX
                     if len(index_name) > MAX_TABLE_NAME_LENGTH:
                         index_name = make_hash_value(index_name)
