@@ -7,6 +7,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
+from more_itertools import first
 
 from schematools.contrib.django import app_config, signals
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
@@ -73,7 +74,7 @@ class RelationMaker:
         # Determine fieldnames used for temporal
         sequence_identifier = related_table.temporal.identifier
         # Table identifier is mandatory and always contains at least one field
-        identifier = related_table.identifier[0]
+        identifier = first(related_table.identifier)
 
         # If temporal, this implicates that the type is not a scalar
         # but needs to be more complex (object) or array_of_objects
