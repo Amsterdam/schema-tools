@@ -1,6 +1,7 @@
 {
   "type": "dataset",
   "id": "validationTest",
+  "path": "validationTest",
   "title": "PsqlIdentifierLengthValidator Validation Test",
   "status": "beschikbaar",
   "description": "Schema for unit testing PsqlIdentifierLengthValidator",

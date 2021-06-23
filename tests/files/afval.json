@@ -1,5 +1,6 @@
 {
   "id": "afvalwegingen",
+  "path": "afvalwegingen",
   "type": "dataset",
   "title": "Afvalwegingen",
   "version": "0.0.1",
