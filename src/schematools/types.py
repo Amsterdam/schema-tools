@@ -26,6 +26,7 @@ from methodtools import lru_cache
 
 from schematools import RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
+from schematools.exceptions import SchemaObjectNotFound
 
 ST = TypeVar("ST", bound="SchemaType")
 Json = Dict[str, Any]
@@ -169,7 +170,7 @@ class DatasetSchema(SchemaType):
                 return table
 
         available = "', '".join([table["id"] for table in self["tables"]])
-        raise ValueError(
+        raise SchemaObjectNotFound(
             f"Table '{table_id}' does not exist "
             f"in schema '{self.id}', available are: '{available}'"
         )
@@ -486,12 +487,13 @@ class DatasetTableSchema(SchemaType):
         return [field for field in self.fields if field.id in field_ids_set]
 
     @lru_cache()  # type: ignore[misc]
-    def get_field_by_id(self, field_id: str) -> Optional[DatasetFieldSchema]:
+    def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
         """Get a fields based on the ids of the field."""
         for field_schema in self.fields:
             if field_schema.id == field_id:
                 return field_schema
-        return None
+
+        raise SchemaObjectNotFound(f"Field '{field_id}' does not exist in table '{self.id}'.")
 
     def get_through_tables_by_id(self) -> List[DatasetTableSchema]:
         """Access list of through_tables (for n-m relations) for a single base table."""

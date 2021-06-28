@@ -83,9 +83,6 @@ class RelationMaker:
 
         sequence_field = related_table.get_field_by_id(sequence_identifier)
         identifier_field = related_table.get_field_by_id(identifier)
-        if sequence_field is None or identifier_field is None:
-
-            raise ValueError(f"Cannot find temporal fields of table {related_table.id}")
 
         if field.is_array_of_objects:
             properties = field.field_items["properties"]
