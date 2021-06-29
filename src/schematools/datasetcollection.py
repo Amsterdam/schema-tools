@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import os
+from typing import TYPE_CHECKING, Optional
 
 from simple_singleton import Singleton
+
+from schematools.utils import schema_def_from_url
 
 if TYPE_CHECKING:
     from schematools.types import DatasetSchema
@@ -19,15 +22,33 @@ class DatasetCollection(metaclass=Singleton):
     def __init__(self) -> None:
         self.datasets_cache = {}
 
+    def _load_dataset(self, dataset_id: str) -> Optional[DatasetSchema]:
+        """Loads the dataset from SCHEMA_URL.
+
+        If SCHEMA_URL is not defined, return None.
+        """
+        try:
+            schemas_url = os.environ["SCHEMA_URL"]
+        except KeyError:
+            return None
+
+        return schema_def_from_url(schemas_url, dataset_id, prefetch_related=True)
+
     def add_dataset(self, dataset: DatasetSchema) -> None:
         self.datasets_cache[dataset.id] = dataset
 
     def get_dataset(self, dataset_id: str) -> DatasetSchema:
-        """Gets a dataset by id, if not available, load the dataset"""
+        """Gets a dataset by id from the cache.
+
+        If not available, load the dataset from the SCHEMA_URL location.
+        NB. Because dataset schemas are imported into the Postgresql database
+        by the DSO API, there is a chance that the dataset that is loaded from SCHEMA_URL
+        differs from the definition that is in de Postgresql database.
+        """
         try:
             return self.datasets_cache[dataset_id]
         except KeyError:
-            # Get the dataset from the SCHEMA_DEFS_URL
-            # Only things is that it can differ from the schema that is
-            # in the django db model.
-            raise ValueError(f"Dataset {dataset_id} is missing.") from None
+            dataset = self._load_dataset(dataset_id)
+            if dataset is None:
+                raise ValueError(f"Dataset {dataset_id} is missing.") from None
+            self.add_dataset(dataset)
