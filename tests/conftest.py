@@ -7,6 +7,7 @@ from urllib.parse import ParseResult, urlparse
 import pytest
 import sqlalchemy_utils
 from geoalchemy2 import Geometry  # NoQA, needed to make postgis work
+from more_ds.network.url import URL
 from requests_mock import Mocker
 from sqlalchemy import MetaData
 from sqlalchemy.orm import Session
@@ -62,7 +63,7 @@ def db_schema(engine, sqlalchemy_keep_db):
 
 @pytest.fixture()
 def schema_url():
-    return os.environ.get("SCHEMA_URL", "https://schemas.data.amsterdam.nl/datasets/")
+    return URL(os.environ.get("SCHEMA_URL", "https://schemas.data.amsterdam.nl/datasets/"))
 
 
 @pytest.fixture(scope="function")
@@ -126,17 +127,23 @@ def salogger():
 
 
 @pytest.fixture()
-def schemas_mock(requests_mock: Mocker, schema_url):
+def schemas_mock(requests_mock: Mocker, schema_url: URL) -> Mocker:
     """Mock the requests to import schemas.
 
     This allows to run "schema import schema afvalwegingen".
     """
     # `requests_mock` is a fixture from the requests_mock package
-    afvalwegingen_json = HERE / "files" / "afvalwegingen.json"
-    requests_mock.get(f"{schema_url}index.json", json={"afvalwegingen": "afvalwegingen"})
-    with open(afvalwegingen_json, "rb") as fh:
+    AFVALWEGINGEN_JSON = HERE / "files" / "afvalwegingen_sep_table.json"
+    CLUSTERS_JSON = HERE / "files" / "afvalwegingen_clusters-table.json"
+    requests_mock.get(schema_url / "index.json", json={"afvalwegingen": "afvalwegingen"})
+    with open(AFVALWEGINGEN_JSON, "rb") as fh:
         requests_mock.get(
-            f"{schema_url}afvalwegingen/dataset",
+            schema_url / "afvalwegingen/dataset",
+            content=fh.read(),
+        )
+    with open(CLUSTERS_JSON, "rb") as fh:
+        requests_mock.get(
+            schema_url / "afvalwegingen/afvalwegingen_clusters-table",
             content=fh.read(),
         )
     yield requests_mock
