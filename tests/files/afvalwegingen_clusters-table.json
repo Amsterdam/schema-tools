@@ -1,0 +1,56 @@
+{
+    "id": "clusters",
+    "type": "table",
+    "schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "schema"],
+      "display": "id",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "schema": {
+          "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+        },
+        "bag nummeraanduiding": {
+          "type": "string",
+          "$comment": "verblijfsobject is dekt niet de ligplaatsen en de standplaatsen (zie stelselpedia)",
+          "relation": "bag:nummeraanduiding"
+        },
+        "subcluster indicatie": {
+          "type": "boolean",
+          "description": "Subcluster"
+        },
+        "geometry": {
+          "$ref": "https://geojson.org/schema/Point.json",
+          "description": "Geometrie"
+        },
+        "datum opvoer cluster": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Datum opvoer cluster"
+        },
+        "datum wijziging": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Datum wijziging"
+        },
+        "datum ontstaan cluster": {
+          "type": "string",
+          "format": "date",
+          "description": "Datum onstaan cluster"
+        },
+        "datum einde cluster": {
+          "type": "string",
+          "format": "date",
+          "description": "Datum einde cluster"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status"
+        }
+      }
+    }
+  }
