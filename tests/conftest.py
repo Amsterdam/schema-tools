@@ -133,12 +133,10 @@ def schemas_mock(requests_mock: Mocker, schema_url):
     """
     # `requests_mock` is a fixture from the requests_mock package
     afvalwegingen_json = HERE / "files" / "afvalwegingen.json"
-    requests_mock.get(
-        f"{schema_url}index.json", json={"afvalwegingen": "afvalwegingen/afvalwegingen"}
-    )
+    requests_mock.get(f"{schema_url}index.json", json={"afvalwegingen": "afvalwegingen"})
     with open(afvalwegingen_json, "rb") as fh:
         requests_mock.get(
-            f"{schema_url}afvalwegingen/afvalwegingen",
+            f"{schema_url}afvalwegingen/dataset",
             content=fh.read(),
         )
     yield requests_mock

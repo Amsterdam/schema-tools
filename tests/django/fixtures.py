@@ -1,21 +1,29 @@
 import json
+from pathlib import Path
+from typing import Any
 
 import pytest
+from django.test import RequestFactory
 
 from schematools.contrib.django.auth_backend import RequestProfile
 from schematools.contrib.django.models import Dataset, Profile
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, ProfileSchema
+
+# Pytest decorators are untyped
+# mypy: allow-untyped-decorators
 
 
 @pytest.fixture
-def profile_medewerker():
+def profile_medewerker() -> Profile:
+    """Fixture for medewerker profile."""
     return Profile.objects.create(
         name="medewerker", scopes="['FP/MD']", schema_data={"datasets": {}}
     )
 
 
 @pytest.fixture
-def profile_brk_read():
+def profile_brk_read() -> Profile:
+    """Fixture for brk read only profile."""
     return Profile.objects.create(
         name="brk_read",
         scopes="['BRK/RO', 'ONLY/ENCODED']",
@@ -37,7 +45,8 @@ def profile_brk_read():
 
 
 @pytest.fixture
-def profile_brk_read_full():
+def profile_brk_read_full() -> Profile:
+    """Fixture for brk full access profile."""
     return Profile.objects.create(
         name="brk_read_full",
         scopes="['BRK/RO','BRK/RSN']",
@@ -54,41 +63,44 @@ def profile_brk_read_full():
 
 
 @pytest.fixture
-def kadastralobjecten_schema_json(here) -> dict:
+def kadastralobjecten_schema_json(here: Path) -> Any:
+    """Fixture for kadastraleobjecten schema."""
     path = here / "files" / "kadastraleobjecten.json"
     return json.loads(path.read_text())
 
 
 @pytest.fixture
-def kadastralobjecten_dataset(kadastralobjecten_schema_json) -> Dataset:
-    return Dataset.objects.create(name="brk", schema_data=kadastralobjecten_schema_json)
+def kadastralobjecten_dataset(kadastralobjecten_schema_json: dict) -> Dataset:
+    """Fixture for kadastraleobjecten dataset."""
+    return Dataset.objects.create(
+        name="brk", schema_data=kadastralobjecten_schema_json, path="brk"
+    )
 
 
 @pytest.fixture
-def brp_r_profile(brp_r_profile_schema) -> Profile:
+def brp_r_profile(brp_r_profile_schema: ProfileSchema) -> Profile:
     """The persistent database profile object based on a downlaoded schema definition."""
     return Profile.create_for_schema(brp_r_profile_schema)
 
 
 @pytest.fixture
-def brp_schema_json(here) -> dict:
-    """Fixture for the BRP dataset"""
+def brp_schema_json(here: Path) -> Any:
+    """Fixture for the BRP dataset."""
     path = here / "files/brp.json"
     return json.loads(path.read_text())
 
 
 @pytest.fixture
-def brp_dataset(brp_schema_json) -> Dataset:
+def brp_dataset(brp_schema_json: dict) -> Dataset:
     """Create a remote dataset."""
     return Dataset.objects.create(
-        name="brp",
-        schema_data=brp_schema_json,
-        enable_db=False,
+        name="brp", schema_data=brp_schema_json, enable_db=False, path="brp"
     )
 
 
 @pytest.fixture
-def correct_auth_profile(rf, brp_r_profile):
+def correct_auth_profile(rf: RequestFactory, brp_r_profile: Profile) -> RequestProfile:
+    """Fixture for corrrect auth profile request."""
     # Correct: both scope and mandatory query parameters in the request.
     correct_request = rf.get(
         "/",
@@ -102,7 +114,8 @@ def correct_auth_profile(rf, brp_r_profile):
 
 
 @pytest.fixture
-def incorrect_auth_profile(rf, brp_r_profile):
+def incorrect_auth_profile(rf: RequestFactory, brp_r_profile: Profile) -> RequestProfile:
+    """Fixture for incorrrect auth profile request."""
     # Incorrect: no queries are given, so no access is given.
     incorrect_request = rf.get(
         "/",
