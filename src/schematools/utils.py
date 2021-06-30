@@ -59,7 +59,6 @@ def profile_defs_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.Prof
 
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """
-
     return defs_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
 
 
@@ -77,15 +76,9 @@ def defs_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Dict[
         response_data = response.json()
 
         for dataset_id, dataset_path in response_data.items():
-            response = connection.get(base_url / dataset_path)
-            response.raise_for_status()
-            response_data = response.json()
-            response_data["url_prefix"] = get_dataset_prefix_from_path(
-                dataset_path=dataset_path, dataset_data=response_data
+            schema_lookup[dataset_id] = _def_from_url_with_connection(
+                connection, base_url, dataset_path, data_type
             )
-
-            schema_lookup[dataset_id] = data_type.from_dict(response_data)
-
     return schema_lookup
 
 
@@ -99,18 +92,15 @@ def def_from_url(
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    # schema_lookup: Dict[str, types.ST] = {}
     base_url = URL(base_url)
 
     with requests.Session() as connection:
         index_response = connection.get(base_url / "index.json")
         index_response.raise_for_status()
         index = index_response.json()
-
-        response = connection.get(base_url / index[dataset_id])
-        response.raise_for_status()
-
-        dataset_schema: types.ST = data_type.from_dict(response.json())
+        dataset_schema = _def_from_url_with_connection(
+            connection, base_url, index[dataset_id], data_type
+        )
 
     # For this recursive call, we set prefetch_related=False
     # to avoid deep/endless recursion
@@ -120,6 +110,26 @@ def def_from_url(
         for ds_id in dataset_schema.related_dataset_schema_ids:
             def_from_url(base_url, data_type, ds_id, prefetch_related=False)
 
+    return dataset_schema
+
+
+def _def_from_url_with_connection(
+    connection: requests.Session, base_url: URL, dataset_path: str, data_type: Type[types.ST]
+) -> types.ST:
+    """Fetch single dataset from url with connection."""
+    response = connection.get(base_url / dataset_path / "dataset")
+    response.raise_for_status()
+    response_data = response.json()
+    response_data["path"] = dataset_path
+
+    # Include referenced tables for datasets.
+    for i, table in enumerate(response_data["tables"]):
+        if ref := table.get("$ref"):
+            table_response = connection.get(base_url / dataset_path / ref)
+            table_response.raise_for_status()
+            response_data["tables"][i] = table_response.json()
+
+    dataset_schema: types.ST = data_type.from_dict(response_data)
     return dataset_schema
 
 
@@ -261,16 +271,3 @@ def shorten_name(db_table_name: str, with_postfix: bool = False) -> str:
     """Shorten names to safe length for postgresql."""
     max_length = MAX_TABLE_NAME_LENGTH - int(with_postfix) * len(TMP_TABLE_POSTFIX)
     return db_table_name[:max_length]
-
-
-def get_dataset_prefix_from_path(dataset_path: str, dataset_data: dict) -> str:
-    """Extract dataset prefix from dataset path."""
-    version = dataset_data.get("version")
-    if version:
-        dataset_path = dataset_path.split(version)[0]
-
-    dataset_parts = dataset_path.split("/")[:-1]
-    if len(dataset_parts):
-        if to_snake_case(dataset_parts[-1]) == to_snake_case(dataset_data["id"]):
-            dataset_parts.pop()
-    return "/".join(dataset_parts)
