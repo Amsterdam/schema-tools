@@ -158,15 +158,28 @@ def test_model_factory_sub_objects_for_shortened_names(verblijfsobjecten_dataset
         for cls in schema_models_factory(hr_dataset, base_app_name="dso_api.dynamic_api")
     }
 
+    # XXX Change: one field is now nested, the other is changed to a relation
     # Check a relation where the fieldname is intact and one where fieldname is shortened
-    for fieldname in (
-        "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_maatschappelijke_activiteit",
-        "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming",
-    ):
-        assert fieldname in model_dict
-        fields_dict = {f.name: f for f in model_dict[fieldname]._meta.fields}
-        assert "parent" in fields_dict
-        assert isinstance(fields_dict["parent"], models.ForeignKey)
+    fields_dict = {
+        f.name: f
+        for f in model_dict[
+            "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_maatschappelijke_activiteit"
+        ]._meta.fields
+    }
+
+    # Field is nested, should have a parent field
+    assert isinstance(fields_dict["parent"], models.ForeignKey)
+
+    fields_dict = {
+        f.name: f
+        for f in model_dict[
+            "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"
+        ]._meta.fields
+    }
+
+    # Field is a related, should have 2 FKs to both sides of the relation
+    assert isinstance(fields_dict["maatschappelijkeactiviteiten"], models.ForeignKey)
+    assert isinstance(fields_dict["sbi_voor_activiteit"], models.ForeignKey)
 
 
 @pytest.mark.django_db
@@ -253,7 +266,7 @@ def test_dataset_has_geometry_fields(afval_dataset, hr_dataset):
 
 
 @pytest.mark.django_db
-def test_table_shortname(hr_dataset, verblijfsobjecten_dataset):
+def test_table_shortname(verblijfsobjecten_dataset, hr_dataset):
     """Prove that the shortnames definition for tables and fields
     are showing up in the Django db_table definitions.
     We changed the table name to 'activiteiten'.
@@ -265,8 +278,9 @@ def test_table_shortname(hr_dataset, verblijfsobjecten_dataset):
     }
     db_table_names = {
         "hr_activiteiten",
+        "hr_sbiactiviteiten",
         "hr_activiteiten_sbi_maatschappelijk",
-        "hr_activiteiten_heeft_sbi_activiteiten_voor_onderneming",
+        "hr_activiteiten_sbi_voor_activiteit",
         "hr_activiteiten_verblijfsobjecten",
         "hr_activiteiten_wordt_uitgeoefend_in_commerciele_vestiging",
     }
