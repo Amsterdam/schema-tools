@@ -126,8 +126,8 @@ class RelationMaker:
         ]
         return f"{related_dataset}.{related_table}"
 
-    def _make_through_classname(self, dataset_id, field_name):
-        snakecased_fieldname = to_snake_case(field_name)
+    def _make_through_classname(self, dataset_id, field_id):
+        snakecased_fieldname = to_snake_case(field_id)
         through_table_id = get_rel_table_identifier(
             len(dataset_id) + 1, self.table.id, snakecased_fieldname
         )
@@ -220,7 +220,7 @@ class M2MRelationMaker(RelationMaker):
         snakecased_fieldname = to_snake_case(self.field.name)
         parent_table = to_snake_case(self.field._parent_table.id)
         kwargs["related_name"] = f"{snakecased_fieldname}_{parent_table}"
-        kwargs["through"] = self._make_through_classname(self.dataset.id, self.field.name)
+        kwargs["through"] = self._make_through_classname(self.dataset.id, self.field.id)
         kwargs["through_fields"] = (parent_table, snakecased_fieldname)
         return {**super().field_kwargs, **kwargs}
 

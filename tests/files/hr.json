@@ -29,7 +29,7 @@
           },
           "heeftSbiActiviteitenVoorMaatschappelijkeActiviteit": {
             "type": "array",
-            "shortname": "sbi_maatschappelijk",
+            "shortname": "sbiMaatschappelijk",
             "items": {
               "type": "object",
               "properties": {
@@ -41,15 +41,17 @@
             "description": "De omschrijving van de activiteiten die de maatschappelijke activiteit uitoefent."
           },
           "heeftSbiActiviteitenVoorOnderneming": {
+            "shortname": "sbiVoorActiviteit",
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "bronwaarde": {
+                "sbiActiviteitNummer": {
                   "type": "integer"
                 }
               }
             },
+            "relation": "hr:sbiactiviteiten",
             "description": "De omschrijving van de activiteiten die de onderneming uitoefent."
           },
           "wordtUitgeoefendInCommercieleVestiging": {
@@ -97,6 +99,28 @@
             "relation": "baggob:verblijfsobjecten",
             "description": "Relatie naar verblijfsobject",
             "$comment": "This is a fictional relation, added for testing purposes"
+          }
+        }
+      }
+    },
+    {
+      "id": "sbiactiviteiten",
+      "type": "table",
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/hr/sbiactiviteiten.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "identifier": "sbiActiviteitNummer",
+        "required": ["schema", "sbiActiviteitNummer"],
+        "display": "sbiActiviteitNummer",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "sbiActiviteitNummer": {
+            "type": "string",
+            "description": "Samenstelling van KvK-nummer en/of Vestigingsnummer of {BSN- of RSIN-nummer}"
           }
         }
       }
