@@ -11,7 +11,7 @@ from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Tab
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.types import DatasetSchema, DatasetTableSchema
-from schematools.utils import shorten_name, to_snake_case
+from schematools.utils import shorten_name, to_snake_case, toCamelCase
 
 from . import fetch_col_type
 
@@ -138,12 +138,13 @@ class BaseImporter:
     def deduplicate(self, table_name, table_records):
         this_batch_pk_values = set()
         pk_name = self.pk_colname_lookup.get(table_name)
+
         values_lookup = self.pk_values_lookup.get(table_name)
         for record in table_records:
             if pk_name is None:
                 yield record
                 continue
-            value = record[pk_name]
+            value = record[toCamelCase(pk_name)]
             if value not in values_lookup and value not in this_batch_pk_values:
                 yield record
             else:
@@ -408,6 +409,8 @@ def table_factory(
         if field.type.endswith("#/definitions/schema"):
             continue
         field_name = to_snake_case(field.name)
+        dataset_table_id = to_snake_case(dataset_table.id)
+        dataset_table_name = to_snake_case(dataset_table.name)
         field_description = field.description
         sub_columns = []
 
@@ -431,10 +434,11 @@ def table_factory(
                     ]
 
                 elif field.is_through_table:
+
                     # We need a 'through' table for the n-m relation
                     sub_columns = [
                         Column(
-                            f"{dataset_table.name}_id",
+                            f"{dataset_table_name}_id",
                             String,
                         ),
                         Column(
@@ -448,7 +452,7 @@ def table_factory(
                         for id_field in dataset_table.get_fields_by_id(*dataset_table.identifier):
                             sub_columns.append(
                                 Column(
-                                    f"{dataset_table.id}_{to_snake_case(id_field.name)}",
+                                    f"{dataset_table_id}_{to_snake_case(id_field.name)}",
                                     fetch_col_type(id_field),
                                 )
                             )
