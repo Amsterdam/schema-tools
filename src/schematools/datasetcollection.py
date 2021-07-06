@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Optional
 
 from simple_singleton import Singleton
 
-from schematools.utils import schema_def_from_url
-
 if TYPE_CHECKING:
     from schematools.types import DatasetSchema
 
@@ -27,6 +25,9 @@ class DatasetCollection(metaclass=Singleton):
 
         If SCHEMA_URL is not defined, return None.
         """
+        # Avoid circular import problem.
+        from schematools.utils import schema_def_from_url
+
         try:
             schemas_url = os.environ["SCHEMA_URL"]
         except KeyError:
