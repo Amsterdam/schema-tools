@@ -244,7 +244,7 @@ class Dataset(models.Model):
         """Create the schema based on the Amsterdam Schema JSON input"""
         name = cls.name_from_schema(schema)
         if path is None:
-            path = name
+            path = schema.get("path", name)
         return cls.objects.create(
             name=name,
             schema_data=schema.json_data(),
