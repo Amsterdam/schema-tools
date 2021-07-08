@@ -280,6 +280,7 @@ class DatasetSchema(SchemaType):
         # and not the shortnames
         left_dataset_id = to_snake_case(self.id)
         left_table_id = to_snake_case(table.id)
+        left_table_name = to_snake_case(table.name)
 
         # Both relation types can have a through table,
         # For FK relations, an extra through_table is created when
@@ -312,7 +313,7 @@ class DatasetSchema(SchemaType):
                 "required": ["schema"],
                 "properties": {
                     "schema": {"$ref": "#/definitions/schema"},
-                    left_table_id: {
+                    left_table_name: {
                         "type": "string",
                         "relation": f"{left_dataset_id}:{left_table_id}",
                     },

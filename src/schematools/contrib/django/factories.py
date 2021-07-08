@@ -218,10 +218,11 @@ class M2MRelationMaker(RelationMaker):
     def field_kwargs(self):
         kwargs = {}
         snakecased_fieldname = to_snake_case(self.field.name)
-        parent_table = to_snake_case(self.field._parent_table.id)
+        parent_table = to_snake_case(self.field._parent_table.name)
         kwargs["related_name"] = f"{snakecased_fieldname}_{parent_table}"
         kwargs["through"] = self._make_through_classname(self.dataset.id, self.field.id)
         kwargs["through_fields"] = (parent_table, snakecased_fieldname)
+
         return {**super().field_kwargs, **kwargs}
 
 

@@ -178,7 +178,7 @@ def test_model_factory_sub_objects_for_shortened_names(verblijfsobjecten_dataset
     }
 
     # Field is a related, should have 2 FKs to both sides of the relation
-    assert isinstance(fields_dict["maatschappelijkeactiviteiten"], models.ForeignKey)
+    assert isinstance(fields_dict["activiteiten"], models.ForeignKey)
     assert isinstance(fields_dict["sbi_voor_activiteit"], models.ForeignKey)
 
 
@@ -267,7 +267,7 @@ def test_dataset_has_geometry_fields(afval_dataset, hr_dataset):
 
 @pytest.mark.django_db
 def test_table_shortname(verblijfsobjecten_dataset, hr_dataset):
-    """Prove that the shortnames definition for tables and fields
+    """Prove that the shortnames definition for tables
     are showing up in the Django db_table definitions.
     We changed the table name to 'activiteiten'.
     And used a shortname for a nested and for a relation field.
@@ -286,6 +286,28 @@ def test_table_shortname(verblijfsobjecten_dataset, hr_dataset):
     }
 
     assert db_table_names == set(m._meta.db_table for m in model_dict.values())
+
+
+@pytest.mark.django_db
+def test_column_shortnames_in_nm_throughtables(verblijfsobjecten_dataset, hr_dataset):
+    """Prove that the shortnames definition for fields
+    are showing up in the Django db_table definitions.
+    We changed the table name to 'activiteiten'.
+    And used a shortname for a nested and for a relation field.
+    """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(hr_dataset, base_app_name="dso_api.dynamic_api")
+    }
+
+    db_colnames = {"activiteiten_id", "sbi_voor_activiteit_id"}
+    assert db_colnames == set(
+        f.db_column
+        for f in model_dict[
+            "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"
+        ]._meta.fields
+        if f.db_column is not None
+    )
 
 
 @pytest.mark.django_db
