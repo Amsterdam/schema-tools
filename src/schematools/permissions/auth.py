@@ -6,7 +6,7 @@ The other classes in this module ease to retrieval of permission objects.
 from __future__ import annotations
 
 from functools import wraps
-from typing import Callable, Iterable, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional
 
 import methodtools
 
@@ -98,7 +98,7 @@ class UserScopes:
 
     def __init__(
         self,
-        query_params: dict[str, ...],
+        query_params: Dict[str, ...],
         is_authorized_for: HasAllScopesFunc,
         all_profiles: Optional[Iterable[ProfileSchema]] = None,
     ):
