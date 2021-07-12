@@ -15,14 +15,12 @@ from __future__ import annotations
 import json
 import logging
 import re
-from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.gis.db import models as gis_models
 from django.contrib.postgres.fields import ArrayField
-from django.core.cache import cache
 from django.db import models, transaction
 from django.db.models import JSONField
 from django.utils.functional import cached_property
@@ -30,7 +28,13 @@ from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 
-from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema, ProfileSchema
+from schematools.types import (
+    DatasetFieldSchema,
+    DatasetSchema,
+    DatasetTableSchema,
+    ProfileSchema,
+    SchemaType,
+)
 from schematools.utils import to_snake_case
 
 from . import managers
@@ -39,7 +43,6 @@ from .validators import URLPathValidator
 logger = logging.getLogger(__name__)
 
 GEOJSON_PREFIX = "https://geojson.org/schema/"
-PROFILES_CACHE_KEY = "SCHEMATOOLS_AUTH_PROFILES"
 
 FORMAT_MODELS_LOOKUP = {
     "date": models.DateField,
@@ -248,7 +251,7 @@ class Dataset(models.Model):
         return cls.objects.create(
             name=name,
             schema_data=schema.json_data(),
-            auth=_serialize_claims(schema),
+            auth=" ".join(schema.auth),
             path=path,
             version=schema.version,
             is_default_version=schema.is_default_version,
@@ -257,7 +260,7 @@ class Dataset(models.Model):
     def save_for_schema(self, schema: DatasetSchema):
         """Update this model with schema data"""
         self.schema_data = schema.json_data()
-        self.auth = _serialize_claims(schema)
+        self.auth = " ".join(schema.auth)
 
         if self.schema_data_changed():
             self.save(update_fields=["schema_data", "auth", "is_default_version", "path"])
@@ -412,7 +415,7 @@ class DatasetTable(models.Model):
         """Save changes to the dataset table schema."""
         self.name = to_snake_case(table_schema.id)
         self.db_table = table_schema.db_name()
-        self.auth = _serialize_claims(table_schema)
+        self.auth = " ".join(table_schema.auth)
         self.display_field = (
             to_snake_case(table_schema.display_field) if table_schema.display_field else None
         )
@@ -473,7 +476,7 @@ class DatasetField(models.Model):
     def save_for_schema(self, field: DatasetFieldSchema):
         """Update the field with the provided schema data."""
         self.name = to_snake_case(field.id)
-        self.auth = _serialize_claims(field)
+        self.auth = " ".join(field.auth)
         self.save()
 
 
@@ -491,35 +494,6 @@ class Profile(models.Model):
             raise RuntimeError("Profile.schema_data is empty")
 
         return ProfileSchema.from_dict(self.schema_data)
-
-    def get_permissions(self) -> Dict[str, str]:
-        """
-        Get Flattened permissions per profile in form::
-
-        {
-            "{dataset}": "permission",
-            "{dataset}:{table}": = "permission",
-            "{dataset}:{table}:{field}": = "permission"
-        }
-        """
-
-        permissions = {}
-        for dataset_id, dataset_settings in self.schema.datasets.items():
-            dataset_key = generate_permission_key(dataset_id)
-            if dataset_settings.permissions:
-                permissions[dataset_key] = dataset_settings.permissions
-
-            for table_id, table_settings in dataset_settings.tables.items():
-                dataset_table_key = generate_permission_key(dataset_id, table_id)
-                if table_settings.permissions:
-                    permissions[dataset_table_key] = table_settings.permissions
-
-                for field_id, field_permission in table_settings.fields.items():
-                    permissions[
-                        generate_permission_key(dataset_id, table_id, field_id)
-                    ] = field_permission
-
-        return permissions
 
     def get_scopes(self):
         """The auth scopes for this profile"""
@@ -541,28 +515,6 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.name
-
-
-def _serialize_claims(schema_object) -> Optional[str]:
-    """Convert the schema/table/field auth claims to a string format"""
-    claims = schema_object.get("auth")
-    if not claims:
-        return None
-    elif isinstance(claims, str):
-        return claims
-    else:
-        return " ".join(claims)
-
-
-@lru_cache()
-def generate_permission_key(*args):
-    # As this function called many times, caching this gives huge performance wins.
-    # While the auth backend also caches, this cache also persists between requests.
-    return ":".join([to_snake_case(key) for key in args])
-
-
-def split_permission_key(key):
-    return key.split(":")
 
 
 class LooseRelationField(models.CharField):
@@ -606,17 +558,10 @@ class LooseRelationManyToManyField(models.ManyToManyField):
             return None
 
 
-def get_active_profiles():
-    profiles = cache.get(PROFILES_CACHE_KEY)
-    if profiles is None:
-        try:
-            profiles = list(Profile.objects.all())
-        except Exception:
-            # Return empty list and do not cache result.
-            profiles = []
-        else:
-            cache.set(PROFILES_CACHE_KEY, profiles)
-    return profiles
-
-
-get_active_profiles()
+def get_field_schema(model_field: models.Field) -> SchemaType:
+    """Provide access to the underlying amsterdam schema field that created the model field."""
+    if isinstance(model_field, models.ForeignObjectRel):
+        # created by 'related_name' setting
+        return model_field.remote_field.field_schema
+    else:
+        return model_field.field_schema

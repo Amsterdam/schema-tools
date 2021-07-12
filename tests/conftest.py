@@ -218,14 +218,33 @@ def woningbouwplannen_schema(here) -> DatasetSchema:
 
 
 @pytest.fixture()
-def woningbouwplannen_schema(here) -> DatasetSchema:
-    return ProfileSchema.from_file(here / "files/woningbouwplannen.json")
-
-
-@pytest.fixture()
 def brp_r_profile_schema(here) -> ProfileSchema:
     """A downloaded profile schema definition"""
     return ProfileSchema.from_file(here / "files/profiles/BRP_R.json")
+
+
+@pytest.fixture()
+def profile_brk_encoded_schema(here) -> ProfileSchema:
+    """A downloaded profile schema definition"""
+    return ProfileSchema.from_file(here / "files/profiles/BRK_encoded.json")
+
+
+@pytest.fixture()
+def profile_brk_read_id_schema(here) -> ProfileSchema:
+    return ProfileSchema.from_file(here / "files/profiles/BRK_RID.json")
+
+
+@pytest.fixture
+def profile_verkeer_medewerker_schema() -> ProfileSchema:
+    return ProfileSchema.from_dict(
+        {
+            "name": "verkeer_medewerker",
+            "scopes": ["FP/MD"],
+            "datasets": {
+                "verkeer": {},  # needed to be applied to a dataset.
+            },
+        }
+    )
 
 
 @pytest.fixture()

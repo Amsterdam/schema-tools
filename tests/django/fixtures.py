@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 from django.test import RequestFactory
 
-from schematools.contrib.django.auth_backend import RequestProfile
 from schematools.contrib.django.models import Dataset, Profile
 from schematools.types import DatasetSchema, ProfileSchema
 
@@ -14,66 +13,35 @@ from schematools.types import DatasetSchema, ProfileSchema
 
 
 @pytest.fixture
-def profile_medewerker() -> Profile:
+def profile_verkeer_medewerker(profile_verkeer_medewerker_schema) -> Profile:
     """Fixture for medewerker profile."""
-    return Profile.objects.create(
-        name="medewerker", scopes="['FP/MD']", schema_data={"datasets": {}}
-    )
+    return Profile.create_for_schema(profile_verkeer_medewerker_schema)
 
 
 @pytest.fixture
-def profile_brk_read() -> Profile:
+def profile_brk_encoded(profile_brk_encoded_schema) -> Profile:
     """Fixture for brk read only profile."""
-    return Profile.objects.create(
-        name="brk_read",
-        scopes="['BRK/RO', 'ONLY/ENCODED']",
-        schema_data={
-            "datasets": {
-                "brk": {
-                    "tables": {
-                        "kadastraleobjecten": {
-                            "fields": {
-                                "volgnummer": "encoded",
-                                "identificatie": "encoded",
-                            }
-                        }
-                    }
-                }
-            }
-        },
-    )
+    return Profile.create_for_schema(profile_brk_encoded_schema)
 
 
 @pytest.fixture
-def profile_brk_read_full() -> Profile:
+def profile_brk_read_id(profile_brk_read_id_schema) -> Profile:
     """Fixture for brk full access profile."""
-    return Profile.objects.create(
-        name="brk_read_full",
-        scopes="['BRK/RO','BRK/RSN']",
-        schema_data={
-            "datasets": {
-                "brk": {
-                    "tables": {
-                        "kadastraleobjecten": {"fields": {"id": "read", "volgnummer": "read"}}
-                    }
-                }
-            }
-        },
-    )
+    return Profile.create_for_schema(profile_brk_read_id_schema)
 
 
 @pytest.fixture
-def kadastralobjecten_schema_json(here: Path) -> Any:
+def kadastraleobjecten_schema_json(here: Path) -> Any:
     """Fixture for kadastraleobjecten schema."""
     path = here / "files" / "kadastraleobjecten.json"
     return json.loads(path.read_text())
 
 
 @pytest.fixture
-def kadastralobjecten_dataset(kadastralobjecten_schema_json: dict) -> Dataset:
+def kadastraleobjecten_dataset(kadastraleobjecten_schema_json: dict) -> Dataset:
     """Fixture for kadastraleobjecten dataset."""
     return Dataset.objects.create(
-        name="brk", schema_data=kadastralobjecten_schema_json, path="brk"
+        name="brk", path="brk", schema_data=kadastraleobjecten_schema_json
     )
 
 
@@ -96,36 +64,6 @@ def brp_dataset(brp_schema_json: dict) -> Dataset:
     return Dataset.objects.create(
         name="brp", schema_data=brp_schema_json, enable_db=False, path="brp"
     )
-
-
-@pytest.fixture
-def correct_auth_profile(rf: RequestFactory, brp_r_profile: Profile) -> RequestProfile:
-    """Fixture for corrrect auth profile request."""
-    # Correct: both scope and mandatory query parameters in the request.
-    correct_request = rf.get(
-        "/",
-        data={
-            "postcode": "1234AB",
-            "lastname": "Foobar",
-        },
-    )
-    correct_request.is_authorized_for = lambda *scopes: "BRP/R" in set(scopes)
-    return RequestProfile(correct_request)
-
-
-@pytest.fixture
-def incorrect_auth_profile(rf: RequestFactory, brp_r_profile: Profile) -> RequestProfile:
-    """Fixture for incorrrect auth profile request."""
-    # Incorrect: no queries are given, so no access is given.
-    incorrect_request = rf.get(
-        "/",
-        data={
-            "postcode": "1234AB",
-        },
-    )
-    incorrect_request.is_authorized_for = lambda *scopes: "BRP/R" in set(scopes)
-    auth_profile = RequestProfile(incorrect_request)
-    return auth_profile
 
 
 @pytest.fixture
