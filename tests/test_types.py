@@ -4,15 +4,15 @@ from schematools.types import DatasetSchema, Permission, PermissionLevel
 def test_permission_level_ordering() -> None:
     """Test whether enum ordering works based on the int values."""
     assert sorted(PermissionLevel._member_map_.values()) == [
-        PermissionLevel.none,
-        PermissionLevel.subobjects_only,
-        PermissionLevel.letters,
-        PermissionLevel.random,
-        PermissionLevel.encoded,
-        PermissionLevel.read,
+        PermissionLevel.NONE,
+        PermissionLevel.SUBOBJECTS_ONLY,
+        PermissionLevel.LETTERS,
+        PermissionLevel.RANDOM,
+        PermissionLevel.ENCODED,
+        PermissionLevel.READ,
         PermissionLevel.highest,  # alias for read
     ]
-    assert PermissionLevel.highest is PermissionLevel.read
+    assert PermissionLevel.highest is PermissionLevel.READ
     assert PermissionLevel.highest is max(PermissionLevel._member_map_.values())
 
 
@@ -43,8 +43,8 @@ def test_profile_schema(brp_r_profile_schema):
     brp = brp_r_profile_schema.datasets["brp"]
     table = brp.tables["ingeschrevenpersonen"]
 
-    assert table.permissions.level is PermissionLevel.read
-    assert table.fields["bsn"] == Permission(PermissionLevel.encoded)
+    assert table.permissions.level is PermissionLevel.READ
+    assert table.fields["bsn"] == Permission(PermissionLevel.ENCODED)
     assert table.mandatory_filtersets == [
         ["bsn", "lastname"],
         ["postcode", "lastname"],
