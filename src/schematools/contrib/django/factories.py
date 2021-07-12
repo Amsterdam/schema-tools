@@ -433,6 +433,7 @@ def model_factory(
         # Generate name, fix if needed.
         field_name = to_snake_case(field.name)
         model_field.name = field_name
+        model_field.field_schema = field  # avoid extra lookups.
         fields[field_name] = model_field
 
     # Generate Meta part

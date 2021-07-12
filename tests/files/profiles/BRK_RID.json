@@ -1,0 +1,16 @@
+{
+    "name": "brk_read_id",
+    "scopes": ["BRK/RID"],
+    "datasets": {
+        "brk": {
+            "tables": {
+                "kadastraleobjecten": {
+                    "fields": {
+                        "id": "read",
+                        "volgnummer": "read"
+                    }
+                }
+            }
+        }
+    }
+}

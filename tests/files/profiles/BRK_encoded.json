@@ -1,0 +1,16 @@
+{
+    "name": "brk_read",
+    "scopes": ["BRK/ENCODED"],
+    "datasets": {
+        "brk": {
+            "tables": {
+                "kadastraleobjecten": {
+                    "fields": {
+                        "volgnummer": "encoded",
+                        "identificatie": "encoded"
+                    }
+                }
+            }
+        }
+    }
+}

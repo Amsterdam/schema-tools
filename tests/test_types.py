@@ -1,4 +1,19 @@
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, Permission, PermissionLevel
+
+
+def test_permission_level_ordering() -> None:
+    """Test whether enum ordering works based on the int values."""
+    assert sorted(PermissionLevel._member_map_.values()) == [
+        PermissionLevel.none,
+        PermissionLevel.subobjects_only,
+        PermissionLevel.letters,
+        PermissionLevel.random,
+        PermissionLevel.encoded,
+        PermissionLevel.read,
+        PermissionLevel.highest,  # alias for read
+    ]
+    assert PermissionLevel.highest is PermissionLevel.read
+    assert PermissionLevel.highest is max(PermissionLevel._member_map_.values())
 
 
 def test_geo_and_id_when_configured(here, gebieden_schema):
@@ -19,14 +34,17 @@ def test_geo_and_id_when_not_configured(here):
     assert id_field.is_primary
 
 
-def test_profile(brp_r_profile_schema):
+def test_profile_schema(brp_r_profile_schema):
     """Prove that the profile files are properly read,
     and have their fields access the JSON data.
     """
-    assert brp_r_profile_schema.scopes == ["BRP/R"]
+    assert brp_r_profile_schema.scopes == {"BRP/R"}
 
     brp = brp_r_profile_schema.datasets["brp"]
     table = brp.tables["ingeschrevenpersonen"]
+
+    assert table.permissions.level is PermissionLevel.read
+    assert table.fields["bsn"] == Permission(PermissionLevel.encoded)
     assert table.mandatory_filtersets == [
         ["bsn", "lastname"],
         ["postcode", "lastname"],

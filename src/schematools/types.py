@@ -4,11 +4,14 @@ from __future__ import annotations
 import json
 from collections import UserDict
 from dataclasses import dataclass, field
+from enum import Enum
+from functools import cached_property, total_ordering
 from typing import (
-    AbstractSet,
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
+    FrozenSet,
     Iterator,
     List,
     NoReturn,
@@ -28,8 +31,11 @@ from schematools import RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
 from schematools.exceptions import SchemaObjectNotFound
 
+if TYPE_CHECKING:
+    from schematools.permissions import UserScopes
+
 ST = TypeVar("ST", bound="SchemaType")
-Json = Dict[str, Any]
+Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 
 
 class SchemaType(UserDict):
@@ -38,6 +44,9 @@ class SchemaType(UserDict):
 
     def __missing__(self, key: str) -> NoReturn:
         raise KeyError(f"No field named '{key}' exists in {self!r}")
+
+    def __hash__(self):
+        return id(self)  # allow usage in lru_cache()
 
     @property
     def id(self) -> str:
@@ -132,9 +141,9 @@ class DatasetSchema(SchemaType):
         return self.default_version == self.version
 
     @property
-    def auth(self) -> Optional[Union[str, List[str]]]:
+    def auth(self) -> FrozenSet[str]:
         """Auth of the dataset (if set)"""
-        return self.get("auth")
+        return _normalize_scopes(self.get("auth"))
 
     def get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
         return self.dataset_collection.get_dataset(dataset_id)
@@ -206,12 +215,13 @@ class DatasetSchema(SchemaType):
         sub_table_schema = {
             "id": sub_table_id,
             "originalID": field.name,
+            "parentTableID": table.id,
             "type": "table",
+            "auth": list(field.auth | table.auth),  # pass same auth rules as field has
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object",
                 "additionalProperties": False,
-                "parentTableID": table.id,
                 "required": ["id", "schema"],
                 "properties": {
                     "id": {"type": "integer/autoincrement", "description": ""},
@@ -587,7 +597,7 @@ class DatasetTableSchema(SchemaType):
 
     @property
     def has_parent_table(self) -> bool:
-        return "parentTableID" in self["schema"]
+        return "parentTableID" in self
 
     @property
     def filters(self) -> Dict[str, Dict[str, str]]:
@@ -605,9 +615,9 @@ class DatasetTableSchema(SchemaType):
         return dict(self["schema"].get("additionalRelations", {}))
 
     @property
-    def auth(self) -> Optional[Union[str, List[str]]]:
+    def auth(self) -> FrozenSet[str]:
         """Auth of the table (if set)"""
-        return self.get("auth")
+        return _normalize_scopes(self.get("auth"))
 
     @property
     def is_through_table(self) -> bool:
@@ -923,9 +933,9 @@ class DatasetFieldSchema(DatasetType):
         )
 
     @property
-    def auth(self) -> Optional[str]:
+    def auth(self) -> FrozenSet[str]:
         """Auth of the field, if available, or None"""
-        return self.get("auth")
+        return _normalize_scopes(self.get("auth"))
 
 
 class DatasetRow(DatasetType):
@@ -936,8 +946,107 @@ class DatasetRow(DatasetType):
         table.validate(self.data)
 
 
+@total_ordering
+class PermissionLevel(Enum):
+    """The various levels that can be provided on specific fields."""
+
+    # Higher values give higher preference. The numbers are arbitrary and for internal usage
+    # allowing to test test "read > encoded" for example.
+    read = 50
+    encoded = 40
+    random = 30
+    letters = 10
+    subobjects_only = 1  # allows to open a table only to access sub-fields
+    none = 0  # means no permission.
+
+    highest = read
+
+    @classmethod
+    def from_string(cls, value: Optional[str]) -> PermissionLevel:
+        """Cast the string value to a permission level object."""
+        if value is None:
+            return cls.none
+        elif "_" in value:
+            # Anything with an underscore is internal
+            raise ValueError("Invalid permission")
+        else:
+            return cls[value]
+
+    def __str__(self):
+        # Using the name as official value.
+        return self.name
+
+    def __bool__(self):
+        """The 'none' level is recognized as "NO PERMISSION"."""
+        # more direct then reading bool(self.value) as that goes through descriptors
+        return self is not PermissionLevel.none
+
+    def __lt__(self, other):
+        if not isinstance(other, PermissionLevel):
+            return NotImplemented
+
+        return self.value < other.value
+
+
+@dataclass(order=True)
+class Permission:
+    """The result of an authorisation check.
+    The extra fields in this dataclass are mainly provided for debugging purposes.
+    The dataclass can also be ordered; they get sorted by access level.
+    """
+
+    #: The permission level given by the profile
+    level: PermissionLevel
+
+    #: The extra parameter for the level (e.g. "letters:3")
+    sub_value: Optional[str] = None
+
+    #: Who authenticated this (added for easier debugging. typically tested against)
+    source: Optional[str] = field(default=None, compare=False)
+
+    def __post_init__(self):
+        if self.level is PermissionLevel.none:
+            # since profiles only grant permission,
+            # having no permission is always from the schema.
+            self.source = "schema"
+
+    @classmethod
+    def from_string(cls, value: Optional[str], source: Optional[str] = None) -> Permission:
+        """Cast the string value to a permission level object."""
+        if value is None:
+            return cls(PermissionLevel.none, source=source)
+
+        parts = value.split(":", 1)  # e.g. letters:3
+        return cls(
+            level=PermissionLevel.from_string(parts[0]),
+            sub_value=(parts[1] if len(parts) > 1 else None),
+            source=source,
+        )
+
+    def __bool__(self):
+        return bool(self.level)
+
+    def transform_function(self) -> Optional[Callable[[Json], Json]]:
+        """Adjust the value, when the permission level requires this.
+        This is needed for "letters:3", and things like "encoded".
+        """
+        if self.level is PermissionLevel.read:
+            return None
+        elif self.level is PermissionLevel.letters:
+            return lambda value: value[0 : int(self.sub_value)]
+        else:
+            raise NotImplementedError(f"Unsupported permission mode: {self.level}")
+
+
+Permission.none = Permission(level=PermissionLevel.none)
+
+
 class ProfileSchema(SchemaType):
-    """The complete profile object"""
+    """The complete profile object.
+
+    It contains the :attr:`scopes` that the user should match,
+    and definitions for various :attr:`datasets`.
+    """
 
     @classmethod
     def from_file(cls, filename: str) -> ProfileSchema:
@@ -956,12 +1065,13 @@ class ProfileSchema(SchemaType):
         return self.get("name")
 
     @property
-    def scopes(self) -> List[str]:
-        """Scopes of Profile (if set)"""
-        return cast(list, self.get("scopes", []))
+    def scopes(self) -> FrozenSet[str]:
+        """One of these scopes should match in order to activate the profile."""
+        return _normalize_scopes(self.get("scopes"))
 
-    @property
+    @cached_property
     def datasets(self) -> Dict[str, ProfileDatasetSchema]:
+        """The datasets that this profile provides additional access rules for."""
         return {
             id: ProfileDatasetSchema(id, self, data)
             for id, data in self.get("datasets", {}).items()
@@ -969,7 +1079,11 @@ class ProfileSchema(SchemaType):
 
 
 class ProfileDatasetSchema(DatasetType):
-    """A schema inside the profile dataset"""
+    """A schema inside the profile dataset.
+
+    It grants :attr:`permissions` to a dataset on a global level,
+    or more fine-grained permissions to specific :attr:`tables`.
+    """
 
     def __init__(
         self,
@@ -990,20 +1104,29 @@ class ProfileDatasetSchema(DatasetType):
         """The profile that this definition is part of."""
         return self._parent_schema
 
-    @property
-    def permissions(self) -> Optional[str]:
-        """Global permissions for the dataset"""
-        return self.get("permissions")
+    @cached_property
+    def permissions(self) -> Permission:
+        """Global permissions that are granted to the dataset. e.g. "read"."""
+        return Permission.from_string(
+            self.get("permissions"), source=f"profiles[{self._id}].dataset"
+        )
 
-    @property
+    @cached_property
     def tables(self) -> Dict[str, ProfileTableSchema]:
+        """The tables that this profile provides additional access rules for."""
         return {
             id: ProfileTableSchema(id, self, data) for id, data in self.get("tables", {}).items()
         }
 
 
 class ProfileTableSchema(DatasetType):
-    """A single table in the profile"""
+    """A single table in the profile.
+
+    This grants :attr:`permissions` to a specific table,
+    or more fine-grained permissions to specific :attr:`fields`.
+    When the :attr:`mandatory_filtersets` is defined, the table may only
+    be queried when a specific search query parameters are issued.
+    """
 
     def __init__(
         self,
@@ -1024,18 +1147,45 @@ class ProfileTableSchema(DatasetType):
         """The profile that this definition is part of."""
         return self._parent_schema
 
-    @property
-    def permissions(self) -> Optional[str]:
-        """Global permissions for the table"""
-        return self.get("permissions")
+    @cached_property
+    def permissions(self) -> Permission:
+        """Global permissions that are granted for the table, e.g. "read"."""
+        permissions = self.get("permissions")
+        source = (
+            f"profiles[{self._parent_schema.profile.name}].datasets"
+            f".{self._parent_schema.id}.tables.{self._id}"
+        )
+
+        if not permissions:
+            if self.get("fields"):
+                # There are no global permissions on the table, but some fields can be read.
+                # Hence this gives indirect permission to access the table.
+                # The return value expresses this, to avoid complex rules in the permission checks.
+                return Permission(PermissionLevel.subobjects_only, source=f"{source}.fields.*")
+
+            raise RuntimeError(
+                f"Profile table {source} is invalid: "
+                f"no permissions are given for the table or field."
+            )
+        else:
+            return Permission.from_string(permissions, source=source)
+
+    @cached_property
+    def fields(self) -> Dict[str, Permission]:
+        """The fields with their granted permission level.
+        This can be "read" or things like "letters:3".
+        """
+        source_table = (
+            f"profiles[{self._parent_schema.profile.name}].datasets"
+            f".{self._parent_schema.id}.tables.{self._id}"
+        )
+        return {
+            name: Permission.from_string(value, source=f"{source_table}.fields.{name}")
+            for name, value in self.get("fields", {}).items()
+        }
 
     @property
-    def fields(self) -> Dict[str, str]:
-        """The fields with their permission keys"""
-        return self.get("fields", {})
-
-    @property
-    def mandatory_filtersets(self) -> List[Json]:
+    def mandatory_filtersets(self) -> List[List[str]]:
         """Tell whether the listing can only be requested with certain inputs.
         E.g. an API user may only list data when they supply the lastname + birthdate.
 
@@ -1080,3 +1230,16 @@ class Temporal:
 
     identifier: str
     dimensions: Dict[str, Tuple[str, str]] = field(default_factory=dict)
+
+
+def _normalize_scopes(auth: Union[None, str, list, tuple]) -> FrozenSet[str]:
+    """Make sure the auth field has a consistent type"""
+    if not auth:
+        # Auth defined on schema
+        return frozenset()
+    elif isinstance(auth, (list, tuple, set)):
+        # Multiple scopes act choices (OR match).
+        return frozenset(auth)
+    else:
+        # Normalize single scope to set return type too.
+        return frozenset({auth})

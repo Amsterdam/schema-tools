@@ -1,11 +1,11 @@
 {
-    "name": "medewerker",
+    "name": "brp_medewerker",
     "scopes": ["BRP/R"],
     "datasets": {
         "brp": {
             "tables": {
                 "ingeschrevenpersonen": {
-                    "permisssions": "read",
+                    "permissions": "read",
                     "fields": {
                         "bsn": "encoded"
                     },
