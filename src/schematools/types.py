@@ -321,9 +321,12 @@ class DatasetSchema(SchemaType):
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["schema"],
+                "required": ["schema", "id"],
                 "properties": {
                     "schema": {"$ref": "#/definitions/schema"},
+                    "id": {
+                        "type": "string",
+                    },
                     left_table_name: {
                         "type": "string",
                         "relation": f"{left_dataset_id}:{left_table_id}",

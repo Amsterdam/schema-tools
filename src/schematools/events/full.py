@@ -160,12 +160,15 @@ class DataSplitter:
                 nm_row_data[f"{name_prefix}{fn}"] = fv
 
             # id for source side of relation
-            nm_row_data.update({snaked_source_table_id: id_value})
+            nm_row_data[snaked_source_table_id] = id_value
 
             # id for target side of relation
-            nm_row_data[f"{snaked_field_id}_id"] = ".".join(
-                (str(row_data[fn]) for fn in target_identifier_fields)
-            )
+            target_id_value = ".".join((str(row_data[fn]) for fn in target_identifier_fields))
+            nm_row_data[f"{snaked_field_id}_id"] = target_id_value
+
+            # PK field, needed by Django
+            nm_row_data["id"] = f"{id_value}{target_id_value}"
+
             nm_rows.append(nm_row_data)
 
         self.junction_table_rows[snaked_field_id] = nm_rows
