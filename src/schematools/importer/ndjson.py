@@ -153,6 +153,7 @@ class NDJSONImporter(BaseImporter):
                                     through_row_record[full_through_field_name] = value[
                                         through_field_name
                                     ]
+                            through_row_record["id"] = f"{from_fk}.{to_fk}"
                             through_row_record[f"{field_name}_id"] = to_fk
 
                             through_row_records.append(through_row_record)

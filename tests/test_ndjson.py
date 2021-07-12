@@ -51,6 +51,7 @@ def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsess
     assert len(records) == 3
     # Also the temporal fields are present in the database
     columns = {
+        "id",
         "ggwgebieden_id",
         "bestaatuitbuurten_id",
         "ggwgebieden_volgnummer",
@@ -79,6 +80,7 @@ def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_s
     assert len(records) == 3
     # Also the temporal fields are present in the database
     columns = {
+        "id",
         "ggwgebieden_id",
         "bestaat_uit_buurten_id",
         "ggwgebieden_volgnummer",
@@ -90,6 +92,7 @@ def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_s
     }
 
     assert records[0] == {
+        "id": "03630950000000.1.03630023753960.1",
         "ggwgebieden_id": "03630950000000.1",
         "bestaat_uit_buurten_id": "03630023753960.1",
         "ggwgebieden_identificatie": "03630950000000",
@@ -125,6 +128,7 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
     assert len(records) == 1
     assert sorted((n, v) for n, v in records[0].items()) == (
         [
+            ("id", "KAD.001.1.KAD.002.1"),
             ("is_ontstaan_uit_kadastraalobject_id", "KAD.002.1"),
             ("is_ontstaan_uit_kadastraalobject_identificatie", "KAD.002"),
             ("is_ontstaan_uit_kadastraalobject_volgnummer", "1"),
@@ -221,6 +225,7 @@ def test_ndjson_import_with_shortnames_in_schema(
     ]
     assert len(records) == 1
     assert records[0] == {
+        "id": "90004213.01131",
         "activiteiten_id": "90004213",
         "sbi_voor_activiteit_id": "01131",
         "sbi_voor_activiteit_sbi_activiteit_nummer": 1131,
@@ -229,6 +234,7 @@ def test_ndjson_import_with_shortnames_in_schema(
     records = [dict(r) for r in engine.execute("SELECT * from hr_activiteiten_verblijfsobjecten")]
     assert len(records) == 1
     assert records[0] == {
+        "id": "90004213.01001.1",
         "activiteiten_id": "90004213",
         "verblijfsobjecten_id": "01001.1",
         "verblijfsobjecten_identificatie": "01001",

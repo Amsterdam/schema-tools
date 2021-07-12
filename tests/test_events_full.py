@@ -75,6 +75,7 @@ def test_event_process_1n_relation_insert(here, tconn, local_metadata, gebieden_
     assert through_records[0]["ligt_in_buurt_id"] == "03630000000707.2"
 
     available_columns = {
+        "id",
         "bouwblokken_id",
         "ligt_in_buurt_id",
         "bouwblokken_identificatie",
@@ -125,6 +126,7 @@ def test_event_process_nm_relation_insert(
     assert records[0]["eind_geldigheid"] is None
 
     available_columns = {
+        "id",
         "ggwgebieden_id",
         "bestaat_uit_buurten_id",
         "ggwgebieden_identificatie",

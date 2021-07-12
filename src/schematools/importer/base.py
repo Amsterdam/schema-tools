@@ -7,7 +7,18 @@ from typing import Dict, Optional
 
 from jsonpath_rw import parse
 from more_itertools import first
-from sqlalchemy import Column, ForeignKey, Index, Integer, MetaData, String, Table, exc, inspect
+from sqlalchemy import (
+    Column,
+    ForeignKey,
+    Index,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    Text,
+    exc,
+    inspect,
+)
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.types import DatasetSchema, DatasetTableSchema
@@ -437,6 +448,10 @@ def table_factory(
 
                     # We need a 'through' table for the n-m relation
                     sub_columns = [
+                        Column(
+                            "id",
+                            Text,
+                        ),
                         Column(
                             f"{dataset_table_name}_id",
                             String,
