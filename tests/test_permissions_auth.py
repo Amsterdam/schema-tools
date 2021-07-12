@@ -69,7 +69,7 @@ class TestFieldAccess:
         table = brk_schema.get_table_by_id("kadastraleobjecten")
 
         auth_result = user_scopes.has_field_access(table.get_field_by_id("id"))
-        assert auth_result == Permission(PermissionLevel.read)
+        assert auth_result == Permission(PermissionLevel.READ)
 
     def test_profile_combines(
         self,
@@ -93,8 +93,8 @@ class TestFieldAccess:
         kadastraleobjecten_schema["auth"] = ["MAG/NIET"]
         table = kadastraleobjecten_schema.get_table_by_id("kadastraleobjecten")
 
-        can_read = Permission(PermissionLevel.read)
-        as_encoded = Permission(PermissionLevel.encoded)
+        can_read = Permission(PermissionLevel.READ)
+        as_encoded = Permission(PermissionLevel.ENCODED)
 
         assert user_scopes.has_field_access(table.get_field_by_id("id")) == can_read
         assert user_scopes.has_field_access(table.get_field_by_id("volgnummer")) == can_read
@@ -128,8 +128,8 @@ class TestFieldAccess:
         kadastraleobjecten_schema["auth"] = ["MAG/NIET"]  # monkeypatch schema
         table = kadastraleobjecten_schema.get_table_by_id("kadastraleobjecten")
 
-        can_read = Permission(PermissionLevel.read)
-        as_encoded = Permission(PermissionLevel.encoded)
+        can_read = Permission(PermissionLevel.READ)
+        as_encoded = Permission(PermissionLevel.ENCODED)
 
         assert user_scopes.has_field_access(table.get_field_by_id("id")) == can_read
         assert user_scopes.has_field_access(table.get_field_by_id("volgnummer")) == can_read
@@ -149,7 +149,7 @@ class TestFieldAccess:
         kadastraleobjecten_schema["auth"] = ["DATASET/SCOPE"]  # monkeypatch schema
         table = kadastraleobjecten_schema.get_table_by_id("kadastraleobjecten")
 
-        expect = Permission(PermissionLevel.read)
+        expect = Permission(PermissionLevel.READ)
         assert user_scopes.has_field_access(table.get_field_by_id("id")) == expect
         assert user_scopes.has_field_access(table.get_field_by_id("volgnummer")) == expect
         assert user_scopes.has_field_access(table.get_field_by_id("identificatie")) == expect

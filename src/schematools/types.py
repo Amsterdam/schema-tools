@@ -952,25 +952,25 @@ class PermissionLevel(Enum):
 
     # Higher values give higher preference. The numbers are arbitrary and for internal usage
     # allowing to test test "read > encoded" for example.
-    read = 50
-    encoded = 40
-    random = 30
-    letters = 10
-    subobjects_only = 1  # allows to open a table only to access sub-fields
-    none = 0  # means no permission.
+    READ = 50
+    ENCODED = 40
+    RANDOM = 30
+    LETTERS = 10
+    SUBOBJECTS_ONLY = 1  # allows to open a table only to access sub-fields
+    NONE = 0  # means no permission.
 
-    highest = read
+    highest = READ
 
     @classmethod
     def from_string(cls, value: Optional[str]) -> PermissionLevel:
         """Cast the string value to a permission level object."""
         if value is None:
-            return cls.none
+            return cls.NONE
         elif "_" in value:
             # Anything with an underscore is internal
             raise ValueError("Invalid permission")
         else:
-            return cls[value]
+            return cls[value.upper()]
 
     def __str__(self):
         # Using the name as official value.
@@ -979,7 +979,7 @@ class PermissionLevel(Enum):
     def __bool__(self):
         """The 'none' level is recognized as "NO PERMISSION"."""
         # more direct then reading bool(self.value) as that goes through descriptors
-        return self is not PermissionLevel.none
+        return self is not PermissionLevel.NONE
 
     def __lt__(self, other):
         if not isinstance(other, PermissionLevel):
@@ -1005,7 +1005,7 @@ class Permission:
     source: Optional[str] = field(default=None, compare=False)
 
     def __post_init__(self):
-        if self.level is PermissionLevel.none:
+        if self.level is PermissionLevel.NONE:
             # since profiles only grant permission,
             # having no permission is always from the schema.
             self.source = "schema"
@@ -1014,7 +1014,7 @@ class Permission:
     def from_string(cls, value: Optional[str], source: Optional[str] = None) -> Permission:
         """Cast the string value to a permission level object."""
         if value is None:
-            return cls(PermissionLevel.none, source=source)
+            return cls(PermissionLevel.NONE, source=source)
 
         parts = value.split(":", 1)  # e.g. letters:3
         return cls(
@@ -1030,15 +1030,15 @@ class Permission:
         """Adjust the value, when the permission level requires this.
         This is needed for "letters:3", and things like "encoded".
         """
-        if self.level is PermissionLevel.read:
+        if self.level is PermissionLevel.READ:
             return None
-        elif self.level is PermissionLevel.letters:
+        elif self.level is PermissionLevel.LETTERS:
             return lambda value: value[0 : int(self.sub_value)]
         else:
             raise NotImplementedError(f"Unsupported permission mode: {self.level}")
 
 
-Permission.none = Permission(level=PermissionLevel.none)
+Permission.none = Permission(level=PermissionLevel.NONE)
 
 
 class ProfileSchema(SchemaType):
@@ -1161,7 +1161,7 @@ class ProfileTableSchema(DatasetType):
                 # There are no global permissions on the table, but some fields can be read.
                 # Hence this gives indirect permission to access the table.
                 # The return value expresses this, to avoid complex rules in the permission checks.
-                return Permission(PermissionLevel.subobjects_only, source=f"{source}.fields.*")
+                return Permission(PermissionLevel.SUBOBJECTS_ONLY, source=f"{source}.fields.*")
 
             raise RuntimeError(
                 f"Profile table {source} is invalid: "

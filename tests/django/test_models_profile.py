@@ -11,5 +11,5 @@ def test_profile(brp_r_profile_schema):
     assert brp_r_profile.name == "brp_medewerker"
     assert brp_r_profile.scopes == {"BRP/R"}
 
-    perm = Permission(PermissionLevel.read)
+    perm = Permission(PermissionLevel.READ)
     assert brp_r_profile.schema.datasets["brp"].tables["ingeschrevenpersonen"].permissions == perm

@@ -262,7 +262,7 @@ class UserScopes:
                 # When we only find profiles that mention the field explicitly,
                 # that highest level will be returned instead.
                 table_permission = profile_table.permissions
-                if table_permission and table_permission.level > PermissionLevel.subobjects_only:
+                if table_permission and table_permission.level > PermissionLevel.SUBOBJECTS_ONLY:
                     permissions.append(table_permission)
                 continue
 
