@@ -104,12 +104,14 @@ class UserScopes:
         is_authorized_for: HasAllScopesFunc,
         all_profiles: Optional[Iterable[ProfileSchema]] = None,
     ):
-        """
-        :param query_params: The search query filter (e.g. request.GET).
-        :param is_authorized_for: A function that checks for authorization of scopes
-            For example ``request.is_authorized_for()`` from ``authorization_django``
-            or use :func:`create_scopes_check` as a substitute.
-        :param all_profiles: All profiles that need to be loaded.
+        """Initialize the user scopes object.
+
+        Args:
+            query_params: The search query filter (e.g. request.GET).
+            is_authorized_for: A function that checks for authorization of scopes
+                For example ``request.is_authorized_for()`` from ``authorization_django``
+                or use :func:`create_scopes_check` as a substitute.
+            all_profiles: All profiles that need to be loaded.
         """
         self._query_param_names = [param for param, value in query_params.items() if value]
         self._all_profiles = all_profiles
