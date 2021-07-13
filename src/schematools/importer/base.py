@@ -448,10 +448,7 @@ def table_factory(
 
                     # We need a 'through' table for the n-m relation
                     sub_columns = [
-                        Column(
-                            "id",
-                            Text,
-                        ),
+                        Column("id", Text, primary_key=True),
                         Column(
                             f"{dataset_table_name}_id",
                             String,
