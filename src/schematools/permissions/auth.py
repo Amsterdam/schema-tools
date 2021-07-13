@@ -40,7 +40,9 @@ def create_scopes_check(*user_scopes: str) -> HasAllScopesFunc:
 
 
 def abort_on_highest(func):
-    """Decorator to abort searching for permissions when the highest value was found."""
+    """Decorator to abort searching for permissions when the highest value was found.
+    This is an internal helper to make the permission search code DRY.
+    """
 
     @wraps(func)
     def _abort_on_highest(*args, **kwargs) -> Permission:
@@ -57,7 +59,7 @@ class HighestPermissionFound(Exception):
         self.permission = permission
 
 
-class PermissionBag:
+class PermissionCollection:
     """A helper class to ease collecting permissions from profile objects.
     This reduces the DRY code in permission searches, when used together with ``abort_on_highest``.
 
@@ -208,7 +210,7 @@ class UserScopes:
         """
         dataset_id = table.dataset.id
         table_id = table.id
-        permissions = PermissionBag()
+        permissions = PermissionCollection()
 
         for profile_dataset in self.get_active_profile_datasets(dataset_id):
             # If a profile defines "read" on the whole dataset, without explicitly
@@ -234,7 +236,7 @@ class UserScopes:
         but the field may state "encoded" as the level. Since a default is defined for the field,
         that's being used.
         """
-        permissions = PermissionBag()
+        permissions = PermissionCollection()
         field_id = field.id
         table_id = field.table.id
 
