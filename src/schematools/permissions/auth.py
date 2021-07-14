@@ -22,7 +22,6 @@ from schematools.types import (
 )
 
 HasAllScopesFunc = Callable[..., bool]  # can't describe func(*scopes: str) -> bool
-empty_dict = {}
 
 __all__ = (
     "UserScopes",
@@ -32,15 +31,17 @@ __all__ = (
 
 def create_scopes_check(*user_scopes: str) -> HasAllScopesFunc:
     """Create a function that tests whether the scopes are set.
+
     This function only needs to be used when features such as
     ``request.is_authorized_for(*scopes)`` from authorization_django are not available.
     """
-    user_scopes = set(user_scopes)  # can be empty
-    return lambda *needed: user_scopes.issuperset(needed)
+    user_scopes_set = set(user_scopes)  # can be empty
+    return lambda *needed: user_scopes_set.issuperset(needed)
 
 
-def abort_on_highest(func):
+def abort_on_highest(func: Callable[..., Permission]):
     """Decorator to abort searching for permissions when the highest value was found.
+
     This is an internal helper to make the permission search code DRY.
     """
 
@@ -61,8 +62,8 @@ class HighestPermissionFound(Exception):
 
 class PermissionCollection:
     """A helper class to ease collecting permissions from profile objects.
-    This reduces the DRY code in permission searches, when used together with ``abort_on_highest``.
 
+    This reduces the DRY code in permission searches, when used together with ``abort_on_highest``.
     It helps to find the highest permission level,
     and automatically aborts when the highest possible value is found.
     """
@@ -88,8 +89,8 @@ class PermissionCollection:
 
 class UserScopes:
     """A request-like object that tells what the current user may access.
-    This is the foundation for all permission checks.
 
+    This is the foundation for all permission checks.
     All ``has_...()`` functions are used for permission checks.
     Internally, these read the schema and profile data for the authorization matrix.
 
@@ -118,34 +119,40 @@ class UserScopes:
         self._is_authorized_for = is_authorized_for
 
     def add_query_params(self, params: List[str]):
-        """Tell that the request has extra (implicit) parameters that are satisfied, e.g. via the URL."""
+        """Tell that the request has extra (implicit) parameters that are satisfied.
+
+        For example, the detail URL of a resource already implicitly passes the
+        identifier of a resource. Hence, this parameter no longer needs to be given
+        found in any additional search filters or query string.
+        """
         self._query_param_names.extend(params)
 
-    @methodtools.lru_cache()
+    @methodtools.lru_cache()  # type: ignore[misc]
     def has_all_scopes(self, *needed_scopes: str) -> bool:
         """Check whether the request has all scopes.
-        Note: at ``__init__()``, this function receives an LRU-cache for performance.
+
+        This performs an AND check: all scopes should be present.
         """
         return self._is_authorized_for(*needed_scopes)
 
-    @methodtools.lru_cache()
+    @methodtools.lru_cache()  # type: ignore[misc]
     def has_any_scope(self, *needed_scopes: str) -> bool:
         """Check whether the request grants one of the given scopes.
+
         This performs an OR check: having one of the scopes gives access.
-        Note: at ``__init__()``, this function receives an LRU-cache for performance.
         """
         return not needed_scopes or any(
             self.has_all_scopes(needed_scope) for needed_scope in needed_scopes
         )
 
     def has_dataset_access(self, dataset: DatasetSchema) -> Permission:
-        """Tell whether a dataset can be accessed"""
+        """Tell whether a dataset can be accessed."""
         return self._has_dataset_auth_access(dataset) or self._has_dataset_profile_access(
             dataset.id
         )
 
     def has_table_access(self, table: DatasetTableSchema) -> Permission:
-        """Tell whether a table can be accessed, and return the permission level"""
+        """Tell whether a table can be accessed, and return the permission level."""
         # When the user has an "auth" scope, they may always enter.
         # Otherwise, the user can only enter when the required profile rules are satisfied,
         # which includes mandatory filtersets.
@@ -231,7 +238,7 @@ class UserScopes:
 
     @abort_on_highest
     def _has_field_profile_access(self, field: DatasetFieldSchema) -> Permission:
-        """Give the permission level for a field based on a profile
+        """Give the permission level for a field based on a profile.
 
         Fields have a special case: if a specific permission is defined, use that.
         This may "limit" the actual permission. For example, the table gives "read" permission,
@@ -277,6 +284,7 @@ class UserScopes:
     @methodtools.lru_cache()
     def get_active_profile_datasets(self, dataset_id: str) -> List[ProfileDatasetSchema]:
         """Find all profiles that mention a dataset and match the scopes.
+
         This already checks whether the mandatory user scopes are set.
         """
         if self._all_profiles is None:
@@ -298,7 +306,11 @@ class UserScopes:
     def get_active_profile_tables(
         self, dataset_id: str, table_id: str
     ) -> List[ProfileTableSchema]:
-        """Internal _get_active_profile_tables() variant to cache by string-keys."""
+        """Find all profiles that mention a particular table and give access.
+
+        This already checks whether the table passes the `mandatoryFilterSets` check,
+        and whether the scopes of the dataset match.
+        """
         return [
             profile_table
             for profile_dataset in self.get_active_profile_datasets(dataset_id)
@@ -312,6 +324,7 @@ class UserScopes:
 
     def _may_include_profile_table(self, profile_table: ProfileTableSchema):
         """Check whether the table rules are applicable to the current user.
+
         This checks whether any of the mandatory filtersets from a ProfileTableSchema were queried.
         """
         mandatory_filtersets = profile_table.mandatory_filtersets
@@ -326,6 +339,7 @@ class UserScopes:
 
 def _match_filter_rule(rule: Iterable[str], query_param_names: Iterable[str]) -> bool:
     """Tell whether a mandatory filter rule is matched.
+
     This happens when ALL required filters are present in the query string.
     """
     return all(filter_name in query_param_names for filter_name in rule)
