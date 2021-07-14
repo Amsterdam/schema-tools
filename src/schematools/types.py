@@ -1069,7 +1069,7 @@ class ProfileSchema(SchemaType):
 
     @property
     def scopes(self) -> FrozenSet[str]:
-        """One of these scopes should match in order to activate the profile."""
+        """All these scopes should match in order to activate the profile."""
         return _normalize_scopes(self.get("scopes"))
 
     @cached_property

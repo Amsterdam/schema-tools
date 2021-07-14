@@ -56,6 +56,12 @@ def test_mandatory_filters(brp_r_profile_schema):
     assert _active_profiles(user_scopes, "brp", "ingeschrevenpersonen") == set()
 
 
+def test_create_scopes_check():
+    assert create_scopes_check("A", "B")("A", "B")  # scopes match
+    assert not create_scopes_check("A")("A", "B")  # user misses scope
+    assert create_scopes_check("A", "B")("A")  # user has even more scopes
+
+
 class TestFieldAccess:
     """All variations to test the field access level."""
 

@@ -290,7 +290,7 @@ class UserScopes:
             # Profiles are only activated when:
             # - ALL scopes are matched
             # - dataset is mentioned in the profile
-            if self.has_any_scope(*profile.scopes)  # TODO: this mimics the current behavior!
+            if self.has_all_scopes(*profile.scopes)
             and (profile_dataset := profile.datasets.get(dataset_id)) is not None
         ]
 
