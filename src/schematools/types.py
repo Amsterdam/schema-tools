@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, total_ordering
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -30,9 +29,6 @@ from methodtools import lru_cache
 from schematools import RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
 from schematools.exceptions import SchemaObjectNotFound
-
-if TYPE_CHECKING:
-    from schematools.permissions import UserScopes
 
 ST = TypeVar("ST", bound="SchemaType")
 Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
