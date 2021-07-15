@@ -613,9 +613,10 @@ def index_factory(
                     logger.log_error(f"{e.__str__} on {dataset_table.id}.{identifier_column}")
                     continue
 
-        indexes_to_create.append(
-            Index(f"{db_table_name}_identifier_idx", *identifier_column_snaked)
-        )
+        index_name = f"{db_table_name}_identifier_idx"
+        if len(index_name) > MAX_TABLE_NAME_LENGTH:
+            index_name = make_hash_value(index_name)
+        indexes_to_create.append(Index(index_name, *identifier_column_snaked))
 
         # add Index objects to create
         index[db_table_name] = indexes_to_create
