@@ -21,22 +21,7 @@ from schematools.types import (
     ProfileTableSchema,
 )
 
-HasAllScopesFunc = Callable[..., bool]  # can't describe func(*scopes: str) -> bool
-
-__all__ = (
-    "UserScopes",
-    "create_scopes_check",
-)
-
-
-def create_scopes_check(*user_scopes: str) -> HasAllScopesFunc:
-    """Create a function that tests whether the scopes are set.
-
-    This function only needs to be used when features such as
-    ``request.is_authorized_for(*scopes)`` from authorization_django are not available.
-    """
-    user_scopes_set = set(user_scopes)  # can be empty
-    return lambda *needed: user_scopes_set.issuperset(needed)
+__all__ = ("UserScopes",)
 
 
 def abort_on_highest(func: Callable[..., Permission]):
@@ -90,7 +75,9 @@ class PermissionCollection:
 class UserScopes:
     """A request-like object that tells what the current user may access.
 
-    This is the foundation for all permission checks.
+    A UserScopes encapsulates the scopes on a request and the profiles that apply,
+    and performs permission checks against a schema.
+
     All ``has_...()`` functions are used for permission checks.
     Internally, these read the schema and profile data for the authorization matrix.
 
@@ -102,21 +89,21 @@ class UserScopes:
     def __init__(
         self,
         query_params: Dict[str, ...],
-        is_authorized_for: HasAllScopesFunc,
+        request_scopes: Iterable[str],
         all_profiles: Optional[Iterable[ProfileSchema]] = None,
     ):
         """Initialize the user scopes object.
 
         Args:
             query_params: The search query filter (e.g. request.GET).
-            is_authorized_for: A function that checks for authorization of scopes
-                For example ``request.is_authorized_for()`` from ``authorization_django``
-                or use :func:`create_scopes_check` as a substitute.
+            request_scopes: The scopes granted to a request.
             all_profiles: All profiles that need to be loaded.
+                If not None, this iterable is stored and converted to list
+                the first time it is needed.
         """
         self._query_param_names = [param for param, value in query_params.items() if value]
         self._all_profiles = all_profiles
-        self._is_authorized_for = is_authorized_for
+        self._scopes = frozenset(request_scopes)
 
     def add_query_params(self, params: List[str]):
         """Tell that the request has extra (implicit) parameters that are satisfied.
@@ -133,7 +120,7 @@ class UserScopes:
 
         This performs an AND check: all scopes should be present.
         """
-        return self._is_authorized_for(*needed_scopes)
+        return self._scopes.issuperset(needed_scopes)
 
     @methodtools.lru_cache()  # type: ignore[misc]
     def has_any_scope(self, *needed_scopes: str) -> bool:
@@ -141,9 +128,8 @@ class UserScopes:
 
         This performs an OR check: having one of the scopes gives access.
         """
-        return not needed_scopes or any(
-            self.has_all_scopes(needed_scope) for needed_scope in needed_scopes
-        )
+        needed_scopes = set(needed_scopes)
+        return not needed_scopes or any(scope in needed_scopes for scope in self._scopes)
 
     def has_dataset_access(self, dataset: DatasetSchema) -> Permission:
         """Tell whether a dataset can be accessed."""
@@ -288,7 +274,7 @@ class UserScopes:
         This already checks whether the mandatory user scopes are set.
         """
         if self._all_profiles is None:
-            raise RuntimeError("load_profiles() is not called yet")
+            self._all_profiles = []
         elif not isinstance(self._all_profiles, list):
             self._all_profiles = list(self._all_profiles)  # perform query on demand.
 
@@ -335,6 +321,11 @@ class UserScopes:
         return not mandatory_filtersets or any(
             _match_filter_rule(rule, self._query_param_names) for rule in mandatory_filtersets
         )
+
+    def __str__(self) -> str:
+        """str implementation, for debugging purposes."""
+        scopes = ", ".join(repr(scope) for scope in self._scopes)
+        return f"UserScopes({scopes})"
 
 
 def _match_filter_rule(rule: Iterable[str], query_param_names: Iterable[str]) -> bool:
