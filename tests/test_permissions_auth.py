@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from schematools.permissions import Permission, UserScopes, create_scopes_check
+from schematools.permissions import Permission, UserScopes
 from schematools.types import PermissionLevel
 
 
@@ -23,7 +23,7 @@ def test_profile_scopes(profile_verkeer_medewerker_schema, profile_brk_encoded_s
     """Prove that profiles are only applied for the correct scopes."""
     user_scopes = UserScopes(
         query_params={},
-        is_authorized_for=create_scopes_check("FP/MD"),
+        request_scopes=["FP/MD"],
         all_profiles=[profile_verkeer_medewerker_schema, profile_brk_encoded_schema],
     )
 
@@ -38,7 +38,7 @@ def test_mandatory_filters(brp_r_profile_schema):
             "postcode": "1234AB",
             "lastname": "foobar",
         },
-        is_authorized_for=create_scopes_check("BRP/R"),
+        request_scopes=["BRP/R"],
         all_profiles=[brp_r_profile_schema],
     )
 
@@ -49,17 +49,11 @@ def test_mandatory_filters(brp_r_profile_schema):
         query_params={
             "postcode": "1234AB",
         },
-        is_authorized_for=create_scopes_check("BRP/R"),
+        request_scopes=["BRP/R"],
         all_profiles=[brp_r_profile_schema],
     )
 
     assert _active_profiles(user_scopes, "brp", "ingeschrevenpersonen") == set()
-
-
-def test_create_scopes_check():
-    assert create_scopes_check("A", "B")("A", "B")  # scopes match
-    assert not create_scopes_check("A")("A", "B")  # user misses scope
-    assert create_scopes_check("A", "B")("A")  # user has even more scopes
 
 
 class TestFieldAccess:
@@ -69,7 +63,7 @@ class TestFieldAccess:
         """Check that user who is authorized for all authorization checks can access data"""
         user_scopes = UserScopes(
             {},
-            is_authorized_for=create_scopes_check("BRK/RSN"),
+            request_scopes=["BRK/RSN"],
             all_profiles=[profile_brk_encoded_schema],
         )
         table = brk_schema.get_table_by_id("kadastraleobjecten")
@@ -89,7 +83,7 @@ class TestFieldAccess:
         # Both Profiles used
         user_scopes = UserScopes(
             {},
-            is_authorized_for=create_scopes_check("BRK/RID", "BRK/ENCODED"),
+            request_scopes=["BRK/RID", "BRK/ENCODED"],
             all_profiles=[
                 profile_brk_encoded_schema,
                 profile_brk_read_id_schema,
@@ -112,7 +106,7 @@ class TestFieldAccess:
         # Read Profile used
         user_scopes = UserScopes(
             {},
-            create_scopes_check("BRK/RID"),
+            request_scopes=["BRK/RID"],
             all_profiles=[profile_brk_read_id_schema],
         )
         table = brk_schema.get_table_by_id("kadastraleobjecten")
@@ -128,7 +122,7 @@ class TestFieldAccess:
 
         user_scopes = UserScopes(
             {},
-            create_scopes_check("BRK/ENCODED", "BRK/RID"),
+            request_scopes=["BRK/ENCODED", "BRK/RID"],
             all_profiles=[profile_brk_encoded_schema, profile_brk_read_id_schema],
         )
         kadastraleobjecten_schema["auth"] = ["MAG/NIET"]  # monkeypatch schema
@@ -148,7 +142,7 @@ class TestFieldAccess:
         """Tests dataset permissions overrule lower profile permissions"""
         user_scopes = UserScopes(
             {},
-            create_scopes_check("BRK/ENCODED", "DATASET/SCOPE"),
+            request_scopes=["BRK/ENCODED", "DATASET/SCOPE"],
             all_profiles=[profile_brk_encoded_schema, profile_brk_read_id_schema],
         )
 
