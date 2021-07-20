@@ -486,9 +486,9 @@ class DatasetTableSchema(SchemaType):
         if self.has_compound_key:
             yield DatasetFieldSchema(_parent_table=self, _required=True, type="string", id="id")
 
-    @property
-    def fields(self) -> Iterator[DatasetFieldSchema]:
-        yield from self.get_fields(include_sub_fields=True)
+    @cached_property
+    def fields(self) -> List[DatasetFieldSchema]:
+        return list(self.get_fields(include_sub_fields=True))
 
     @lru_cache()  # type: ignore[misc]
     def get_fields_by_id(self, *field_ids: str) -> List[DatasetFieldSchema]:
