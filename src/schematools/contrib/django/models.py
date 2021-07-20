@@ -38,7 +38,7 @@ from schematools.types import (
 from schematools.utils import to_snake_case
 
 from . import managers
-from .validators import URLPathValidator
+from .validators import URLPathValidator, validate_json
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +203,7 @@ class Dataset(models.Model):
     """
 
     name = models.CharField(_("Name"), unique=True, max_length=50)
-    schema_data = JSONField(_("Amsterdam Schema Contents"))
+    schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
     version = models.CharField(_("Schema Version"), blank=True, null=True, max_length=250)
     is_default_version = models.BooleanField(_("Default version"), default=False)
 
@@ -250,7 +250,7 @@ class Dataset(models.Model):
             path = schema.get("path", name)
         return cls.objects.create(
             name=name,
-            schema_data=schema.json_data(),
+            schema_data=schema.json(),
             auth=" ".join(schema.auth),
             path=path,
             version=schema.version,
@@ -259,7 +259,7 @@ class Dataset(models.Model):
 
     def save_for_schema(self, schema: DatasetSchema):
         """Update this model with schema data"""
-        self.schema_data = schema.json_data()
+        self.schema_data = schema.json()
         self.auth = " ".join(schema.auth)
 
         if self.schema_data_changed():
@@ -270,15 +270,6 @@ class Dataset(models.Model):
 
     def save(self, *args, **kwargs):
         """Perform a final data validation check, and additional updates."""
-        if "schema_data" in self.__dict__:
-            # Make sure the schema_data field is properly filled with an actual dict.
-            if self.schema_data and not isinstance(self.schema_data, dict):
-                logger.debug(
-                    "Invalid data in Dataset.schema_data, expected dict: %r",
-                    self.schema_data,
-                )
-                raise RuntimeError("Invalid data in Dataset.schema_data")
-
         if self.schema_data_changed() and (self.schema_data or not self._state.adding):
             self.__dict__.pop("schema", None)  # clear cached property
             # The extra "and" above avoids the transaction savepoint for an empty dataset.
@@ -330,7 +321,7 @@ class Dataset(models.Model):
         if not self.schema_data:
             raise RuntimeError("Dataset.schema_data is empty")
 
-        return DatasetSchema.from_dict(self.schema_data)
+        return DatasetSchema.from_dict(json.loads(self.schema_data))
 
     @cached_property
     def has_geometry_fields(self) -> bool:
