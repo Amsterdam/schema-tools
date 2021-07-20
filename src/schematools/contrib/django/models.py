@@ -22,7 +22,6 @@ from django.conf import settings
 from django.contrib.gis.db import models as gis_models
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
-from django.db.models import JSONField
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
@@ -476,7 +475,7 @@ class Profile(models.Model):
 
     name = models.CharField(max_length=100)
     scopes = models.CharField(max_length=255)
-    schema_data = JSONField(_("Amsterdam Schema Contents"))
+    schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
 
     @cached_property
     def schema(self) -> ProfileSchema:
@@ -500,7 +499,7 @@ class Profile(models.Model):
     def save_for_schema(self, profile_schema: ProfileSchema) -> Profile:
         self.name = profile_schema.name
         self.scopes = profile_schema.scopes
-        self.schema_data = profile_schema.json_data()
+        self.schema_data = profile_schema.json()
         self.save()
         return self
 
