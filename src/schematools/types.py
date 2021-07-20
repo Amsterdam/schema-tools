@@ -86,6 +86,9 @@ class DatasetSchema(SchemaType):
         self.dataset_collection = DatasetCollection()
         self.dataset_collection.add_dataset(self)
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self['id']}>"
+
     @classmethod
     def from_file(cls, filename: str) -> DatasetSchema:
         """Open an Amsterdam schema from a file."""
@@ -440,6 +443,9 @@ class DatasetTableSchema(SchemaType):
         if not self["schema"].get("$schema", "").startswith("http://json-schema.org/"):
             raise ValueError("Invalid JSON-schema contents of table")
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self['id']}>"
+
     @property
     def name(self) -> str:
         return self.get("shortname", self.id)
@@ -709,6 +715,9 @@ class DatasetFieldSchema(DatasetType):
         self._parent_field = _parent_field
         self._required = _required
         self._temporal = _temporal
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self._id}>"
 
     @property
     def table(self) -> Optional[DatasetTableSchema]:
