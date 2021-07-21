@@ -1,0 +1,18 @@
+{
+  "type": "dataset",
+  "id": "gebieden",
+  "title": "dataset met losse tabellen",
+  "status": "beschikbaar",
+  "version": "0.0.1",
+  "crs": "EPSG:28992",
+  "tables": [
+    {
+      "$ref": "bouwblokken/v1.0.0",
+      "id": "bouwblokken"
+  },
+    {
+      "$ref": "buurten/v1.0.0",
+      "id": "buurten"
+  }
+  ]
+}

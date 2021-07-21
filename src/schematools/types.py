@@ -6,6 +6,7 @@ from collections import UserDict
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, total_ordering
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -91,9 +92,15 @@ class DatasetSchema(SchemaType):
 
     @classmethod
     def from_file(cls, filename: str) -> DatasetSchema:
-        """Open an Amsterdam schema from a file."""
+        """Open an Amsterdam schema from a file and any table files referenced therein"""
         with open(filename) as fh:
-            return cls.from_dict(json.load(fh))
+            ds = json.load(fh)
+
+            for i, table in enumerate(ds["tables"]):
+                if ref := table.get("$ref"):
+                    with open(Path(filename).parent / Path(ref + ".json")) as table_file:
+                        ds["tables"][i] = json.load(table_file)
+        return cls.from_dict(ds)
 
     @classmethod
     def from_dict(cls, obj: Json) -> DatasetSchema:
