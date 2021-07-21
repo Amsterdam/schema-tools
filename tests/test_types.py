@@ -34,6 +34,14 @@ def test_geo_and_id_when_not_configured(here):
     assert id_field.is_primary
 
 
+def test_import_dataset_separate_table_files(here):
+    """Prove that datasets with tables in separate files are created correctly."""
+    schema = DatasetSchema.from_file(here / "files" / "gebieden_sep_tables" / "dataset.json")
+    assert len(schema.tables) == 2
+    table = schema.get_table_by_id("buurten")
+    assert table.main_geometry == "primaireGeometrie"
+
+
 def test_profile_schema(brp_r_profile_schema):
     """Prove that the profile files are properly read,
     and have their fields access the JSON data.

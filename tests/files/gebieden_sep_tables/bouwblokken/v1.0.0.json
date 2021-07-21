@@ -1,0 +1,47 @@
+{
+    "id": "bouwblokken",
+    "mainGeometry": "geometrie",
+    "type": "table",
+    "version": "1.0.0",
+    "temporal": {
+      "identifier": "volgnummer",
+      "dimensions": {
+        "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+      }
+    },
+    "schema": {
+      "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "additionalProperties": false,
+      "identifier": ["id"],
+      "required": ["schema", "id"],
+      "display": "id",
+      "properties": {
+        "schema": {
+          "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unieke identificatie voor dit object, inclusief volgnummer"
+        },
+        "beginGeldigheid": {
+          "type": "string",
+          "format": "date",
+          "description": "De datum waarop het object is gecreëerd."
+        },
+        "eindGeldigheid": {
+          "type": "string",
+          "format": "date",
+          "description": "De datum waarop het object is komen te vervallen.",
+          "provenance": "eindgeldigheid"
+        },
+        "ligtInBuurt": {
+          "type": "string",
+          "relation": "gebieden:buurten",
+          "provenance": "ligtinbuurt",
+          "description": "De buurt waar het bouwblok in ligt."
+        }
+      }
+    }
+  }
