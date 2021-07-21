@@ -483,7 +483,7 @@ class Profile(models.Model):
         if not self.schema_data:
             raise RuntimeError("Profile.schema_data is empty")
 
-        return ProfileSchema.from_dict(self.schema_data)
+        return ProfileSchema.from_dict(json.loads(self.schema_data))
 
     def get_scopes(self):
         """The auth scopes for this profile"""
