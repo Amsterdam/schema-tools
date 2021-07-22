@@ -99,7 +99,7 @@ class RelationMaker:
             (identifier_field.name, identifier_field.type),
         }
 
-        return source_type_set != destination_type_set
+        return not destination_type_set <= source_type_set
 
     @classmethod
     def fetch_maker(cls, dataset, field):
