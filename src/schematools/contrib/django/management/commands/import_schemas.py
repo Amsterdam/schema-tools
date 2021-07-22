@@ -6,7 +6,7 @@ from django.db.models import Q
 
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetSchema
-from schematools.utils import schema_defs_from_url, to_snake_case
+from schematools.utils import paths_from_url, schema_defs_from_url, to_snake_case
 
 from .create_tables import create_tables
 
@@ -61,15 +61,19 @@ class Command(BaseCommand):
         self.stdout.write(f"Loading schema from {schema_url}")
         datasets = []
 
-        for name, schema in schema_defs_from_url(schema_url).items():
+        schemas = schema_defs_from_url(schema_url)
+        paths = paths_from_url(schema_url)
+        for name, schema in schemas.items():
             self.stdout.write(f"* Processing {name}")
-            dataset = self.import_schema(name, schema)
+            dataset = self.import_schema(name, schema, paths[name])
             if dataset is not None:
                 datasets.append(dataset)
 
         return datasets
 
-    def import_schema(self, name: str, schema: DatasetSchema) -> Optional[Dataset]:
+    def import_schema(
+        self, name: str, schema: DatasetSchema, path: Optional[str] = None
+    ) -> Optional[Dataset]:
         """Import a single dataset schema."""
 
         created = False
@@ -83,7 +87,7 @@ class Command(BaseCommand):
                 )
             except Dataset.DoesNotExist:
                 # Give up, Create new dataset
-                dataset = Dataset.create_for_schema(schema)
+                dataset = Dataset.create_for_schema(schema, path)
                 created = True
 
         if created:
@@ -96,6 +100,8 @@ class Command(BaseCommand):
                 self.update_dataset_version(dataset, schema)
 
             updated = dataset.save_for_schema(schema)
+            if path is not None:
+                dataset.save_path(path)
             if updated:
                 return dataset
 
