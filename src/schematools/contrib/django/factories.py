@@ -99,7 +99,14 @@ class RelationMaker:
             (identifier_field.name, identifier_field.type),
         }
 
-        return destination_type_set > source_type_set
+        # If all fields of source_type_set are also in destination_type_set
+        # it is not a loose relation
+        # truth table is:
+        # destination_type_set  source_type_set  result (meaning: relation is loose)
+        #  {1, 2}                   {1}          True
+        #  {1, 2}                   {1, 2}       False
+        #  {1, 2}                   {0}          True
+        return not destination_type_set <= source_type_set
 
     @classmethod
     def fetch_maker(cls, dataset, field):
