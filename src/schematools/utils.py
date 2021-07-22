@@ -63,6 +63,19 @@ def profile_defs_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.Prof
     return defs_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
 
 
+def dataset_paths_from_url(base_url: Union[URL, str]) -> Dict[str, str]:
+    """Fetch all dataset paths from a remote location.
+
+    The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
+    """
+    base_url = URL(base_url)
+
+    with requests.Session() as connection:
+        response = connection.get(base_url / "index.json")
+        response.raise_for_status()
+        return cast(Dict[str, str], response.json())
+
+
 def defs_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Dict[str, types.ST]:
     """Fetch all schema definitions from a remote file.
 
@@ -121,7 +134,6 @@ def _def_from_url_with_connection(
     response = connection.get(base_url / dataset_path / "dataset")
     response.raise_for_status()
     response_data = response.json()
-    response_data["path"] = dataset_path
 
     # Include referenced tables for datasets.
     for i, table in enumerate(response_data["tables"]):
@@ -130,8 +142,8 @@ def _def_from_url_with_connection(
             table_response.raise_for_status()
             response_data["tables"][i] = table_response.json()
 
-    dataset_schema: types.ST = data_type.from_dict(response_data)
-    return dataset_schema
+    schema: types.ST = data_type.from_dict(response_data)
+    return schema
 
 
 def schema_def_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetSchema]:

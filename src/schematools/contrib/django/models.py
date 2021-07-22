@@ -240,7 +240,7 @@ class Dataset(models.Model):
         """Create the schema based on the Amsterdam Schema JSON input"""
         name = cls.name_from_schema(schema)
         if path is None:
-            path = schema.get("path", name)
+            path = name
         return cls.objects.create(
             name=name,
             schema_data=schema.json(),
@@ -250,13 +250,20 @@ class Dataset(models.Model):
             is_default_version=schema.is_default_version,
         )
 
+    def save_path(self, path: str) -> bool:
+        """Update this model with new path"""
+        if path_changed := self.path != path:
+            self.path = path
+            self.save(update_fields=["path"])
+        return path_changed
+
     def save_for_schema(self, schema: DatasetSchema):
         """Update this model with schema data"""
         self.schema_data = schema.json()
         self.auth = " ".join(schema.auth)
 
         if self.schema_data_changed():
-            self.save(update_fields=["schema_data", "auth", "is_default_version", "path"])
+            self.save(update_fields=["schema_data", "auth", "is_default_version"])
             return True
         else:
             return False
