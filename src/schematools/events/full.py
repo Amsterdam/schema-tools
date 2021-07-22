@@ -167,7 +167,7 @@ class DataSplitter:
             nm_row_data[f"{snaked_field_id}_id"] = target_id_value
 
             # PK field, needed by Django
-            nm_row_data["id"] = f"{id_value}{target_id_value}"
+            nm_row_data["id"] = f"{id_value}.{target_id_value}"
 
             nm_rows.append(nm_row_data)
 
