@@ -1,4 +1,4 @@
-from schematools.provenance.create import ProvenaceIteration
+from schematools.provenance.create import ProvenanceIteration
 
 
 def test_provenance_result():
@@ -68,7 +68,7 @@ def test_provenance_result():
             else:
                 return 0
 
-    result = ProvenaceIteration(test_data)
+    result = ProvenanceIteration(test_data)
     result = result.final_dic
     result = count_num_of_levels(result)
     assert result == 3  # always three levels: dataset, table and property

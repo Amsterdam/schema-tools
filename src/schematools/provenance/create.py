@@ -1,7 +1,7 @@
 from schematools.types import DatasetSchema
 
 
-class ProvenaceIteration:
+class ProvenanceIteration:
     """Extract provenance elements in DatasetSchema (json)
     so it can be used for automatic processing"""
 

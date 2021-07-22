@@ -32,7 +32,7 @@ from schematools.permissions.db import (
     introspect_permissions,
     revoke_permissions,
 )
-from schematools.provenance.create import ProvenaceIteration
+from schematools.provenance.create import ProvenanceIteration
 from schematools.types import DatasetSchema, SchemaType
 from schematools.utils import schema_def_from_url, schema_defs_from_url, schema_fetch_url_file
 from schematools.validation import Validator
@@ -426,7 +426,7 @@ def show_provenance(schema_location):
     and its translated name (the attribute name itself)"""
     data = schema_fetch_url_file(schema_location)
     try:
-        instance = ProvenaceIteration(data)
+        instance = ProvenanceIteration(data)
         click.echo(instance.final_dic)
     except (jsonschema.ValidationError, jsonschema.SchemaError, KeyError) as e:
         click.echo(str(e), err=True)
