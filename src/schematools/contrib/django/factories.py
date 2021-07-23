@@ -194,7 +194,7 @@ class FKRelationMaker(RelationMaker):
                 ):
                     related_name = name
                     break
-        except ValueError:
+        except ValueError as e:
             pass
 
         return related_name or "+"
@@ -208,8 +208,13 @@ class FKRelationMaker(RelationMaker):
         kwargs["db_constraint"] = False  # relation is not mandatory
         if self.field._parent_table.has_parent_table:
             kwargs["related_name"] = to_snake_case(self.field._parent_table["originalID"])
+        elif self.field._parent_table.is_through_table:
+            kwargs["related_name"] = to_snake_case(
+                f"{self.field._parent_table.id}_through_{self.field.name}"
+            )
         else:
             kwargs["related_name"] = self._fetch_related_name_for_backward_relations()
+
         return {**super().field_kwargs, **kwargs}
 
 
@@ -223,6 +228,7 @@ class M2MRelationMaker(RelationMaker):
         kwargs = {}
         snakecased_fieldname = to_snake_case(self.field.name)
         parent_table = to_snake_case(self.field._parent_table.name)
+
         kwargs["related_name"] = f"{snakecased_fieldname}_{parent_table}"
         kwargs["through"] = self._make_through_classname(self.dataset.id, self.field.id)
         kwargs["through_fields"] = (parent_table, snakecased_fieldname)
