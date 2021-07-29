@@ -27,13 +27,7 @@ from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 
-from schematools.types import (
-    DatasetFieldSchema,
-    DatasetSchema,
-    DatasetTableSchema,
-    ProfileSchema,
-    SchemaType,
-)
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema, ProfileSchema
 from schematools.utils import to_snake_case
 
 from . import managers
@@ -548,7 +542,7 @@ class LooseRelationManyToManyField(models.ManyToManyField):
             return None
 
 
-def get_field_schema(model_field: models.Field) -> SchemaType:
+def get_field_schema(model_field: models.Field) -> DatasetFieldSchema:
     """Provide access to the underlying amsterdam schema field that created the model field."""
     if isinstance(model_field, models.ForeignObjectRel):
         # created by 'related_name' setting
