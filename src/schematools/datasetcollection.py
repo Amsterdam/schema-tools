@@ -26,14 +26,14 @@ class DatasetCollection(metaclass=Singleton):
         If SCHEMA_URL is not defined, return None.
         """
         # Avoid circular import problem.
-        from schematools.utils import schema_def_from_url
+        from schematools.utils import dataset_schema_from_url
 
         try:
             schemas_url = os.environ["SCHEMA_URL"]
         except KeyError:
             return None
 
-        return schema_def_from_url(schemas_url, dataset_id, prefetch_related=True)
+        return dataset_schema_from_url(schemas_url, dataset_id, prefetch_related=True)
 
     def add_dataset(self, dataset: DatasetSchema) -> None:
         self.datasets_cache[dataset.id] = dataset

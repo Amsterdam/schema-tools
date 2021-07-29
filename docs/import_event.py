@@ -3,7 +3,7 @@ import json
 from sqlalchemy import create_engine
 
 from schematools.events import EventsProcessor
-from schematools.utils import schema_def_from_url
+from schematools.utils import dataset_schema_from_url
 
 SCHEMA_URL = "http://schemas.data.amsterdam.nl/datasets/"
 
@@ -16,7 +16,7 @@ kafka_event_data = """{9EB35544-5CBB-4F2E-A659-F05203CC2736}.1|{"event_type": "A
 
 
 def main():
-    dataset_schema = schema_def_from_url(SCHEMA_URL, "gebieden")
+    dataset_schema = dataset_schema_from_url(SCHEMA_URL, "gebieden")
     srid = dataset_schema["crs"].split(":")[-1]
     engine = create_engine(DATABASE_URL)
 

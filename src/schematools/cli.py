@@ -34,7 +34,11 @@ from schematools.permissions.db import (
 )
 from schematools.provenance.create import ProvenanceIteration
 from schematools.types import DatasetSchema, SchemaType
-from schematools.utils import schema_def_from_url, schema_defs_from_url, schema_fetch_url_file
+from schematools.utils import (
+    dataset_schema_from_url,
+    dataset_schemas_from_url,
+    schema_fetch_url_file,
+)
 from schematools.validation import Validator
 
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
@@ -255,7 +259,7 @@ def permissions_apply(
         dataset_schema = DatasetSchema.from_file(schema_filename)
         ams_schema = {dataset_schema.id: dataset_schema}
     else:
-        ams_schema = schema_defs_from_url(schemas_url=schema_url)
+        ams_schema = dataset_schemas_from_url(schemas_url=schema_url)
 
     if profile_filename:
         profile = schema_fetch_url_file(profile_filename)
@@ -465,7 +469,7 @@ def show_schema(db_url, dataset_id):
 def show_mapfile(schema_url, dataset_id):
     """Generate a mapfile based on a dataset schema."""
     try:
-        dataset_schema = schema_def_from_url(schema_url, dataset_id)
+        dataset_schema = dataset_schema_from_url(schema_url, dataset_id)
     except KeyError:
         raise click.BadParameter(f"Schema {dataset_id} not found.") from None
     click.echo(create_mapfile(dataset_schema))
@@ -573,7 +577,7 @@ def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
         # Read the schema from the online repository.
         click.echo(f"Reading schemas from {schema_url}", err=True)
         try:
-            return schema_def_from_url(schema_url, schema_location)
+            return dataset_schema_from_url(schema_url, schema_location)
         except KeyError:
             raise click.BadParameter(f"Schema {schema_location} not found.") from None
 
@@ -637,8 +641,8 @@ def diff_schemas(schema_url, diff_schema_url):
 
     For nicer output, pipe it through a json formatter.
     """
-    schemas = schema_defs_from_url(schema_url)
-    diff_schemas = schema_defs_from_url(diff_schema_url)
+    schemas = dataset_schemas_from_url(schema_url)
+    diff_schemas = dataset_schemas_from_url(diff_schema_url)
     click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
 
 

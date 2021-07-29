@@ -5,7 +5,7 @@ from django.core.management import BaseCommand
 
 from schematools.contrib.django.models import Profile
 from schematools.types import ProfileSchema
-from schematools.utils import profile_defs_from_url
+from schematools.utils import profile_schemas_from_url
 
 
 class Command(BaseCommand):
@@ -47,7 +47,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Loading profiles from {schema_url}")
         profiles = []
 
-        for name, schema in profile_defs_from_url(schema_url).items():
+        for name, schema in profile_schemas_from_url(schema_url).items():
             self.stdout.write(f"* Processing {name}")
             profile = self.import_schema(name, schema)
             if profile is not None:
