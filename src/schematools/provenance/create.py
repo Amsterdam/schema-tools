@@ -41,21 +41,16 @@ class ProvenanceIteration:
                 if item == "tables":
                     self.get_provenance_per_table(dataschema[item])
 
-    def get_provenance_per_table(self, dictionary):
+    def get_provenance_per_table(self, dicts):
         """Calling the processing to extract the provenance data per table"""
 
         # loop trough all existing tables and proces data for provenance
         # on each and add them each to the final_dict outcome
-        for n in range(0, self.number_of_tables):
-
-            self.temp_dic_tables["table"] = dictionary[n]["id"]
-            self.temp_dic_tables["provenance"] = (
-                dictionary[n]["provenance"]
-                if "provenance" in dictionary[n]
-                else "na"  # not applicable
-            )
+        for d in dicts[: self.number_of_tables]:
+            self.temp_dic_tables["table"] = d["id"]
+            self.temp_dic_tables["provenance"] = d.get("provenance", "na")
             self.temp_dic_tables["properties"] = []
-            self.get_table_columns(dictionary[n]["schema"]["properties"])
+            self.get_table_columns(d["schema"]["properties"])
             # add table columns (within element properties) to table
             self.temp_dic_tables["properties"].append(dict(self.temp_dic_columns))
             # add table result (within element tables) in final result
@@ -68,20 +63,14 @@ class ProvenanceIteration:
         """Extrating the columns and if provenance then adding its value,
         resulting in a dictionary of source name : column name"""
 
-        # Setup list for holding column names to check if a column is already added
-        column_list = []
+        done = set()
         self.temp_dic_columns = {}
         for column in dictionary:
-
-            # Check if column has provenance specification,
-            # if so, add the value of this specification in the dictionary
-            for column_property, value in dictionary[column].items():
-
-                if column_property == "provenance":
-                    column_list.append(column)
-                    self.temp_dic_columns[column] = value
+            if "provenance" in dictionary[column]:
+                done.add(column)
+                self.temp_dic_columns[column] = dictionary[column]["provenance"]
 
             # Add the columns to the dictionary that have no provenance
             # and exclude schema as it will never be added in the database
-            if column not in column_list and column != "schema":
+            if column not in done and column != "schema":
                 self.temp_dic_columns[column] = column
