@@ -6,8 +6,8 @@ from django.db.models import Q
 
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetSchema
-from schematools.utils import paths_from_url, schema_defs_from_url, to_snake_case
 
+from schematools.utils import dataset_paths_from_url, dataset_schemas_from_url, to_snake_case
 from .create_tables import create_tables
 
 
@@ -61,8 +61,8 @@ class Command(BaseCommand):
         self.stdout.write(f"Loading schema from {schema_url}")
         datasets = []
 
-        schemas = schema_defs_from_url(schema_url)
-        paths = paths_from_url(schema_url)
+        schemas = dataset_schemas_from_url(schema_url)
+        paths = dataset_paths_from_url(schema_url)
         for name, schema in schemas.items():
             self.stdout.write(f"* Processing {name}")
             dataset = self.import_schema(name, schema, paths[name])
