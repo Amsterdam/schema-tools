@@ -32,7 +32,10 @@ class VirtualAppConfig(apps_config.AppConfig):
         try:
             settings.MIGRATION_MODULES[self.label] = None
         except TypeError as e:
-            logger.warning(f"Failed to disable migrations for {self.label}: {e}")
+            if settings.MIGRATION_MODULES.__class__.__name__ != "DisableMigrations":
+                # pytest_django.migrations.DisableMigrations does not allow item assignment,
+                # but doesn't need it either. Only warn when migrations might run
+                logger.warning(f"Failed to disable migrations for {self.label}: {e}")
 
         self.ready()
 
