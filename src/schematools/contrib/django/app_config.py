@@ -14,41 +14,37 @@ logger = logging.getLogger(__name__)
 
 
 class VirtualAppConfig(apps_config.AppConfig):
-    """
-    Virtual App Config, allowing to add models for datasets on the fly.
-    """
+    """Virtual App Config, allowing to add models for datasets on the fly."""
 
     def __init__(self, apps: Apps, app_name: str, app_module: ModuleType):
+        """Patch this object for virtual apps."""
         super().__init__(app_name, app_module)
         # Make django think that App is initiated already.
-        self.models: Dict[str, Type[models.Model]] = dict()
+        self.models: Dict[str, Type[models.Model]] = {}
         # Path is required for Django to think this APP is real.
         self.path = os.path.dirname(__file__)
         self.apps = apps
 
         # Disable migrations for this model.
         if not hasattr(settings, "MIGRATION_MODULES"):
-            settings.MIGRATION_MODULES = dict()
+            settings.MIGRATION_MODULES = {}
         try:
             settings.MIGRATION_MODULES[self.label] = None
         except TypeError as e:
             if settings.MIGRATION_MODULES.__class__.__name__ != "DisableMigrations":
                 # pytest_django.migrations.DisableMigrations does not allow item assignment,
                 # but doesn't need it either. Only warn when migrations might run
-                logger.warning(f"Failed to disable migrations for {self.label}: {e}")
+                msg = str(e)
+                logger.warning("Failed to disable migrations for %s: %s", self.label, msg)
 
         self.ready()
 
     def _path_from_module(self, module: ModuleType) -> Optional[str]:
-        """
-        Disable OS loading for this App Config.
-        """
+        """Disable OS loading for this App Config."""
         return None
 
     def register_model(self, model: Type[models.Model]) -> None:
-        """
-        Register model in django registry and update models.
-        """
+        """Register model in django registry and update models."""
         self.apps.register_model(self.label, model)
         self.models = self.apps.all_models[self.label]
 
