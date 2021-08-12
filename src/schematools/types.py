@@ -96,10 +96,11 @@ class DatasetSchema(SchemaType):
         with open(filename) as fh:
             ds = json.load(fh)
 
-            for i, table in enumerate(ds["tables"]):
-                if ref := table.get("$ref"):
-                    with open(Path(filename).parent / Path(ref + ".json")) as table_file:
-                        ds["tables"][i] = json.load(table_file)
+            if ds["type"] == "dataset":
+                for i, table in enumerate(ds["tables"]):
+                    if ref := table.get("$ref"):
+                        with open(Path(filename).parent / Path(ref + ".json")) as table_file:
+                            ds["tables"][i] = json.load(table_file)
         return cls.from_dict(ds)
 
     @classmethod
