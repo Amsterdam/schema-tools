@@ -22,7 +22,7 @@ HERE = Path(__file__).parent
 
 
 @pytest.fixture()
-def here():
+def here() -> Path:
     return HERE
 
 

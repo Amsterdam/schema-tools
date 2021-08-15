@@ -91,10 +91,13 @@ class DatasetSchema(SchemaType):
         return f"<{self.__class__.__name__}: {self['id']}>"
 
     @classmethod
-    def from_file(cls, filename: str) -> DatasetSchema:
+    def from_file(cls, filename: Union[Path, str]) -> DatasetSchema:
         """Open an Amsterdam schema from a file and any table files referenced therein"""
         with open(filename) as fh:
-            ds = json.load(fh)
+            try:
+                ds = json.load(fh)
+            except Exception as exc:
+                raise ValueError("Invalid Amsterdam Dataset schema file") from exc
 
             if ds["type"] == "dataset":
                 for i, table in enumerate(ds["tables"]):
@@ -107,7 +110,7 @@ class DatasetSchema(SchemaType):
     def from_dict(cls, obj: Json) -> DatasetSchema:
         """Parses given dict and validates the given schema"""
         if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
-            raise ValueError("Invalid Amsterdam Schema file")
+            raise ValueError("Invalid Amsterdam Dataset schema file")
 
         return cls(obj)
 

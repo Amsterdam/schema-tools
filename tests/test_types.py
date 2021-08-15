@@ -1,3 +1,7 @@
+from pathlib import Path
+
+import pytest
+
 from schematools.types import DatasetSchema, Permission, PermissionLevel
 
 
@@ -40,6 +44,21 @@ def test_import_dataset_separate_table_files(here):
     assert len(schema.tables) == 2
     table = schema.get_table_by_id("buurten")
     assert table.main_geometry == "primaireGeometrie"
+
+
+def test_datasetschema_from_file_not_a_dataset(here: Path) -> None:
+    """Ensure a proper exception is raised when loading a file that's not a DatasetSchema."""
+
+    error_msg = "Invalid Amsterdam Dataset schema file"
+    with pytest.raises(ValueError, match=error_msg):
+        # v1.0.0.json is a DatasetRow, not a DatasetSchema.
+        DatasetSchema.from_file(
+            here / "files" / "gebieden_sep_tables" / "bouwblokken" / "v1.0.0.json"
+        )
+
+    with pytest.raises(ValueError, match=error_msg):
+        # not_a_json_file.txt is not a JSON file. We should still get our ValueError.
+        DatasetSchema.from_file(here / "files" / "not_a_json_file.txt")
 
 
 def test_profile_schema(brp_r_profile_schema):
