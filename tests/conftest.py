@@ -1,17 +1,23 @@
+from __future__ import annotations
+
+import json
 import os
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, ContextManager, Dict
+from unittest.mock import MagicMock
 from urllib.parse import ParseResult, urlparse
 
 import pytest
+import requests
 import sqlalchemy_utils
-from geoalchemy2 import Geometry  # NoQA, needed to make postgis work
+from geoalchemy2 import Geometry
 from more_ds.network.url import URL
-from requests_mock import Mocker
 from sqlalchemy import MetaData
 from sqlalchemy.orm import Session
 
 from schematools.importer.base import metadata
-from schematools.types import DatasetSchema, ProfileSchema
+from schematools.types import DatasetSchema, Json, ProfileSchema
 
 HERE = Path(__file__).parent
 
@@ -124,27 +130,95 @@ def salogger():
     logger.setLevel(logging.DEBUG)
 
 
+class DummyResponse:
+    """Class that mimicks requests.Response."""
+
+    def __init__(self, content: Json):
+        self.content = content
+
+    def json(self) -> Json:
+        return self.content
+
+    def raise_for_status(self) -> None:
+        pass
+
+
+class DummySession:
+    """Class that mimicks requests.Session."""
+
+    def __init__(self, maker: DummySessionMaker):
+        self.maker = maker
+
+    def get(self, url: URL) -> DummyResponse:
+        content = self.maker.fetch_content_for(url)
+        return DummyResponse(content)
+
+
+class DummySessionMaker:
+    """Helper fixture that can produce a contextmanager.
+
+    This helper can be configured with several routes.
+    These routes will be mocked with a predefined json response.
+    This helper class is a callable and return a contextmanager
+    that mimicks `requests.Session`.
+    """
+
+    def __init__(self):
+        self.routes: Dict[URL, Json] = {}
+
+    def add_route(self, path: URL, content: Json) -> None:
+        self.routes[path] = content
+
+    def fetch_content_for(self, url: URL) -> Json:
+        return self.routes[url]
+
+    def __call__(self) -> ContextManager[None]:
+        @contextmanager
+        def dummy_session() -> ContextManager[None]:
+            yield DummySession(self)
+
+        return dummy_session()
+
+
 @pytest.fixture()
-def schemas_mock(requests_mock: Mocker, schema_url: URL) -> Mocker:
+def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
     """Mock the requests to import schemas.
 
     This allows to run "schema import schema afvalwegingen".
     """
-    # `requests_mock` is a fixture from the requests_mock package
+
+    from schematools.utils import requests
+
+    dummy_session_maker = DummySessionMaker()
+
     AFVALWEGINGEN_JSON = HERE / "files" / "afvalwegingen_sep_table.json"
     CLUSTERS_JSON = HERE / "files" / "afvalwegingen_clusters-table.json"
-    requests_mock.get(schema_url / "index.json", json={"afvalwegingen": "afvalwegingen"})
+    BAGGOB_JSON = HERE / "files" / "verblijfsobjecten.json"
+
+    monkeypatch.setattr(requests, "Session", dummy_session_maker)
+
+    dummy_session_maker.add_route(
+        schema_url / "index.json", {"afvalwegingen": "afvalwegingen", "bag": "bag"}
+    )
+
     with open(AFVALWEGINGEN_JSON, "rb") as fh:
-        requests_mock.get(
+        dummy_session_maker.add_route(
             schema_url / "afvalwegingen/dataset",
-            content=fh.read(),
+            content=json.load(fh),
         )
+
+    with open(BAGGOB_JSON, "rb") as fh:
+        dummy_session_maker.add_route(
+            schema_url / "bag/dataset",
+            content=json.load(fh),
+        )
+
     with open(CLUSTERS_JSON, "rb") as fh:
-        requests_mock.get(
+        dummy_session_maker.add_route(
             schema_url / "afvalwegingen/afvalwegingen_clusters-table",
-            content=fh.read(),
+            content=json.load(fh),
         )
-    yield requests_mock
+    yield dummy_session_maker
 
 
 @pytest.fixture()
