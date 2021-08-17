@@ -364,6 +364,7 @@ class DatasetSchema(SchemaType):
             target_table = table.dataset.get_dataset_schema(right_dataset_id).get_table_by_id(
                 right_table_id, include_nested=False, include_through=False
             )
+
             target_identifier_fields = set(target_table.identifier)
 
         # For both types of through tables (M2M and FK), we add extra fields
@@ -396,7 +397,7 @@ class DatasetSchema(SchemaType):
         return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
 
     @property
-    def related_dataset_schema_ids(self) -> Iterator[str]:
+    def related_dataset_schema_ids(self) -> Set[str]:
         """Fetch a list or related schema ids.
 
         When a dataset has relations,
@@ -409,12 +410,15 @@ class DatasetSchema(SchemaType):
         characteristics. However, we cannot know this for sure if not also the
         target dataset of a relation has been loaded.
         """
+
+        related_ids = []
         for table in self.tables:
             for field in table.get_fields(include_sub_fields=False):
                 a_relation = field.relation or field.nm_relation
                 if a_relation is not None:
                     dataset_id, table_id = a_relation.split(":")
-                    yield dataset_id
+                    related_ids.append(dataset_id)
+        return set(related_ids)
 
 
 class DatasetTableSchema(SchemaType):
