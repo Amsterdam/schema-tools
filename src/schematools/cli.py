@@ -351,7 +351,7 @@ def validate(
     """
 
     meta_schema = _fetch_json(meta_schema_url)
-    dataset = _get_dataset_schema(schema_url, schema_location)
+    dataset = _get_dataset_schema(schema_url, schema_location, prefetch_related=True)
 
     # The additional schemas are fetched, but the result is not used
     # because the only reason to fetch the additional schemas is to have those schemas
@@ -568,7 +568,7 @@ def import_schema(db_url, schema_url, schema_location):
     create_meta_table_data(engine, dataset_schema)
 
 
-def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
+def _get_dataset_schema(schema_url, schema_location, prefetch_related=False) -> DatasetSchema:
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
         click.echo(f"Reading schema from {schema_location}", err=True)
@@ -576,8 +576,11 @@ def _get_dataset_schema(schema_url, schema_location) -> DatasetSchema:
     else:
         # Read the schema from the online repository.
         click.echo(f"Reading schemas from {schema_url}", err=True)
+
         try:
-            return dataset_schema_from_url(schema_url, schema_location)
+            return dataset_schema_from_url(
+                schema_url, schema_location, prefetch_related=prefetch_related
+            )
         except KeyError:
             raise click.BadParameter(f"Schema {schema_location} not found.") from None
 
