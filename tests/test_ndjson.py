@@ -168,11 +168,11 @@ def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
     records = [dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten")]
     assert len(records) == 1
     # The foreign key, needed by Django, should be there
-    assert "ligtinbuurt_id" in records[0]
+    assert "ligt_in_buurt_id" in records[0]
     # And should have the concatenated value
-    assert records[0]["ligtinbuurt_id"] == "10180001.1"
+    assert records[0]["ligt_in_buurt_id"] == "10180001.1"
     # Should have a field identificatie
-    assert "ligtinbuurt_identificatie" in records[0]
+    assert "ligt_in_buurt_identificatie" in records[0]
 
 
 def test_inactive_relation_that_are_commented_out(here, engine, stadsdelen_schema, dbsession):
