@@ -23,7 +23,7 @@
           "nummer": {
             "type": "integer"
           },
-          "ligtinbuurt": {
+          "ligtInBuurt": {
             "relation": "gebieden:buurten",
             "type": "object",
             "properties": {
