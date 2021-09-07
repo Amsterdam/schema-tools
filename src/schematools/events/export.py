@@ -19,7 +19,7 @@ from sqlalchemy import Table
 from sqlalchemy.engine import Connection
 
 from schematools.events import metadata
-from schematools.events.factories import tables_factory
+from schematools.factories import tables_factory
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
 

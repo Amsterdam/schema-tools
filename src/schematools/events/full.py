@@ -9,7 +9,7 @@ from typing import Dict, List
 from sqlalchemy.engine import Connection
 
 from schematools.events import metadata
-from schematools.events.factories import tables_factory
+from schematools.factories import tables_factory
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case, toCamelCase
 
@@ -237,7 +237,7 @@ class EventsProcessor:
         self.tables = {}
         for dataset_id, dataset in self.datasets.items():
             base_tables_ids = {dataset_table.id for dataset_table in dataset.tables}
-            self.tables[dataset_id] = tfac = tables_factory(dataset, _metadata)
+            self.tables[dataset_id] = tfac = tables_factory(dataset, metadata=_metadata)
             self.geo_fields = defaultdict(lambda: defaultdict(list))
             for table_id, table in tfac.items():
                 if not table.exists():
