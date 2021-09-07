@@ -226,8 +226,16 @@ class DatasetSchema(SchemaType):
         # Map Arrays into tables.
         from schematools.utils import get_rel_table_identifier, to_snake_case
 
+        def _get_parent_fk_type():
+            """Get type of the parent identifier."""
+            # Compound keys are concatened to one id an thus always strings
+            if len(table.identifier) > 1:
+                return "string"
+            return table.get_field_by_id(table.identifier[0]).type
+
         snakecased_field_id = to_snake_case(field.id)
         sub_table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
+
         sub_table_schema = {
             "id": sub_table_id,
             "originalID": field.name,
@@ -242,7 +250,7 @@ class DatasetSchema(SchemaType):
                 "properties": {
                     "id": {"type": "integer/autoincrement", "description": ""},
                     "schema": {"$ref": "#/definitions/schema"},
-                    "parent": {"type": "integer", "relation": f"{self.id}:{table.id}"},
+                    "parent": {"type": _get_parent_fk_type(), "relation": f"{self.id}:{table.id}"},
                     **field["items"]["properties"],
                 },
             },
@@ -256,7 +264,9 @@ class DatasetSchema(SchemaType):
             sub_table_schema["shortname"] = get_rel_table_identifier(
                 len(self.id) + 1, table.name, snakecased_fieldname
             )
-        return DatasetTableSchema(sub_table_schema, _parent_schema=self, nested_table=True)
+        return DatasetTableSchema(
+            sub_table_schema, _parent_schema=self, _parent_table=table, nested_table=True
+        )
 
     def build_through_table(
         self, table: DatasetTableSchema, field: DatasetFieldSchema
@@ -400,7 +410,9 @@ class DatasetSchema(SchemaType):
 
             sub_table_schema["schema"]["properties"].update(extra_fields)
 
-        return DatasetTableSchema(sub_table_schema, _parent_schema=self, through_table=True)
+        return DatasetTableSchema(
+            sub_table_schema, _parent_schema=self, _parent_table=table, through_table=True
+        )
 
     @property
     def related_dataset_schema_ids(self) -> Set[str]:
@@ -449,12 +461,14 @@ class DatasetTableSchema(SchemaType):
         self,
         *args: Any,
         _parent_schema: Optional[DatasetSchema] = None,
+        _parent_table: Optional[DatasetTableSchema] = None,
         nested_table: bool = False,
         through_table: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self._parent_schema = _parent_schema
+        self._parent_table = _parent_table
         self.nested_table = nested_table
         self.through_table = through_table
 
@@ -479,6 +493,14 @@ class DatasetTableSchema(SchemaType):
     def dataset(self) -> Optional[DatasetSchema]:
         """The dataset that this table is part of."""
         return self._parent_schema
+
+    @property
+    def parent_table(self) -> Optional[DatasetTableSchema]:
+        """The parent table of this table.
+
+        For nested and through tables, the parent table is available.
+        """
+        return self._parent_table
 
     @property
     def description(self) -> Optional[str]:
@@ -709,7 +731,7 @@ class DatasetTableSchema(SchemaType):
             model_name = f"{model_name}_{self.dataset.version}"
         return cast(str, to_snake_case(model_name))  # mypy pleaser
 
-    def db_name(self) -> str:
+    def db_name(self, postfix: Optional[str] = None) -> str:
         """Returns the tablename for the database, prefixed with the schemaname.
         NB. `self.name` could have been changed by a 'shortname' in the schema.
         """
@@ -729,7 +751,12 @@ class DatasetTableSchema(SchemaType):
                 major, _minor, _patch = self.dataset.version.split(".")
                 table_name_parts = [self.dataset.id, major, self.name]
         table_name = "_".join(table_name_parts)
-        return shorten_name(to_snake_case(table_name), with_postfix=True)
+        if postfix is not None:
+            table_name += postfix
+        # NB. with_postfix means that extra shortening should be done.
+        # So, if there is already a postfix applied, this extra shortening should
+        # not be applied.
+        return shorten_name(to_snake_case(table_name), with_postfix=postfix is None)
 
     def get_fk_fields(self) -> Iterator[str]:
         """Generates fields names that contain a 1:N relation to a parent table"""
