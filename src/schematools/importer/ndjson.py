@@ -18,8 +18,11 @@ class NDJSONImporter(BaseImporter):
         fields_provenances = kwargs.pop("fields_provenances", {})
         identifier = dataset_table.identifier
         has_compound_key = dataset_table.has_compound_key
+
         if db_table_name is None:
             db_table_name = get_table_name(dataset_table)
+
+        table_name = dataset_table.name
 
         # Set up info for the special-case fields
         relation_field_info = []
@@ -107,7 +110,7 @@ class NDJSONImporter(BaseImporter):
 
                         nested_row_records.append(nested_row_record)
 
-                    sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]
+                    sub_table_id = f"{table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]
                     sub_rows[sub_table_id] = nested_row_records
 
                 for nm_field in nm_relation_field_info:
@@ -158,8 +161,8 @@ class NDJSONImporter(BaseImporter):
 
                             through_row_records.append(through_row_record)
 
-                        sub_table_id = f"{db_table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]
+                        sub_table_id = f"{table_name}_{field_name}"[:MAX_TABLE_NAME_LENGTH]
                         sub_rows[sub_table_id] = through_row_records
 
                     del row[nm_field.id]
-                yield {db_table_name: [row], **sub_rows}
+                yield {table_name: [row], **sub_rows}

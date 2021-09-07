@@ -8,7 +8,7 @@ from schematools.events.full import EventsProcessor
 # pytestmark = pytest.mark.skip("all tests disabled")
 
 
-def test_event_process_insert(here, tconn, local_metadata, gebieden_schema):
+def test_event_process_insert(here, db_schema, tconn, local_metadata, gebieden_schema):
     """Prove that event gets inserted."""
     events_path = here / "files" / "data" / "bouwblokken.gobevents"
     importer = EventsProcessor(

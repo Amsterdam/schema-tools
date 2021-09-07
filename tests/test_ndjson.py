@@ -24,6 +24,15 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, gebieden_schema, dbse
     assert "refereertaanreferentiepunten_identificatie" in records[0]
 
 
+def xtest_ndjson_import_separate_relations(
+    here, engine, meetbouten_schema, gebieden_schema, dbsession
+):
+    ndjson_path = here / "files" / "data" / "meetbouten_ligt_in_buurt.ndjson"
+    importer = NDJSONImporter(meetbouten_schema, engine)
+    importer.generate_db_objects("ligt_in_buurt", truncate=True, ind_extra_index=False)
+    importer.load_file(ndjson_path)
+
+
 def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbsession):
     ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
     importer = NDJSONImporter(meetbouten_schema, engine)
@@ -272,6 +281,7 @@ def test_ndjson_test_long_postfixed_names(
         truncate=True,
         ind_extra_index=False,
     )
-    assert (
-        "brk_aantekeningenkadastraleobjecten_new_heeft_betrokken_persoon" in importer.tables.keys()
-    )
+
+    db_table_names = set(t.name for t in importer.tables.values())
+
+    assert "brk_aantekeningenkadastraleobjecten_heeft_betrokken_persoon_new" in db_table_names

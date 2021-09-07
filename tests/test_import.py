@@ -189,7 +189,7 @@ def test_create_table_no_db_schema(here, engine, woningbouwplannen_schema, dbses
     assert record.schemaname == "public"
 
 
-def test_create_table_temp_name(engine, woningbouwplannen_schema):
+def test_create_table_temp_name(engine, woningbouwplannen_schema, gebieden_schema):
     """Prove that a table is created in DB schema with the temporary name
     as definied in a dictionary."""
     importer = BaseImporter(woningbouwplannen_schema, engine)

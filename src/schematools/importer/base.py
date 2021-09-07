@@ -21,6 +21,7 @@ from sqlalchemy import (
 )
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
+from schematools.factories import tables_factory
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import shorten_name, to_snake_case, toCamelCase
 
@@ -172,11 +173,11 @@ class BaseImporter:
                 pk_columns = inspect(table).primary_key.columns
                 # nm tables do not have a PK
                 if not pk_columns:
-                    return
+                    continue
                 # We assume a single PK (because of Django)
                 pk_col = pk_columns.values()[0]
                 pk_name = pk_col.name
-                if pk_col.autoincrement == "auto":
+                if pk_col.autoincrement:
                     continue
                 self.pk_colname_lookup[table_name] = pk_name
                 pks = {getattr(r, pk_name) for r in self.engine.execute(table.select())}
@@ -215,11 +216,11 @@ class BaseImporter:
             # Bind the metadata
             metadata.bind = self.engine
             # Get a table to import into
-            self.tables = table_factory(
-                self.dataset_table,
-                db_schema_name=db_schema_name,
+            self.tables = tables_factory(
+                self.dataset_table.dataset,
                 metadata=metadata,
-                db_table_name=db_table_name,
+                db_schema_names={table_name: db_schema_name},
+                db_table_names={table_name: db_table_name},
             )
 
         if db_table_name is None:
@@ -264,6 +265,7 @@ class BaseImporter:
             **{"fields_provenances": self.fields_provenances, **kwargs},
         )
         self.logger.log_start(file_name, size=batch_size)
+
         num_imported = 0
         insert_statements = {
             table_name: table.insert() for table_name, table in self.tables.items()
@@ -280,6 +282,7 @@ class BaseImporter:
                     self.fields_provenances,
                     self.deduplicate(table_name, table_records),
                 )
+
                 if table_records:
                     self.engine.execute(
                         insert_statement,
@@ -288,7 +291,7 @@ class BaseImporter:
             num_imported += len(records)
             self.logger.log_progress(num_imported)
             # main table is keys on tablename and only has one row
-            last_record = records[-1][self.db_table_name][0]
+            last_record = records[-1][self.dataset_table.name][0]
 
         self.logger.log_done(num_imported)
         return last_record
@@ -387,131 +390,6 @@ class LogfileLogger(CliLogger):
 
     def log_done(self, num_imported):
         self.logger.info("Done")
-
-
-def table_factory(
-    dataset_table: DatasetTableSchema,
-    metadata: Optional[MetaData] = None,
-    db_table_name: Optional[str] = None,
-    db_schema_name: Optional[str] = None,
-) -> Dict[str, Table]:
-    """Generate one or more SQLAlchemy Table objects to work with the JSON Schema
-
-    :param dataset_table: The Amsterdam Schema definition of the table
-    :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
-    :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
-    :param db_schema_name: Optional database schema name, which is otherwise None
-        and defaults to public.
-
-    The returned tables are keyed on the name of the table. The same goes for the incoming data,
-    so during creation or records, the data can be associated with the correct table.
-    """
-    with_postfix = db_table_name is None
-    if db_table_name is None:
-        db_table_name = dataset_table.db_name()
-
-    db_table_description = dataset_table.description
-
-    metadata = metadata or MetaData()
-    sub_tables = {}
-    columns = []
-
-    for field in dataset_table.fields:
-        if field.type.endswith("#/definitions/schema"):
-            continue
-        field_name = to_snake_case(field.name)
-        dataset_table_id = to_snake_case(dataset_table.id)
-        dataset_table_name = to_snake_case(dataset_table.name)
-        field_description = field.description
-        sub_columns = []
-
-        try:
-            if field.is_array_of_objects:
-
-                sub_table_id = shorten_name(
-                    f"{db_table_name}_{field_name}", with_postfix=with_postfix
-                )
-
-                if field.is_nested_table:
-                    # When the identifier is compound, we can assume
-                    # that an extra 'id' field will be available, because
-                    # Django cannot live without it.
-                    id_field = dataset_table.identifier
-                    id_field_name = "id" if len(id_field) > 1 else id_field[0]
-                    fk_column = f"{db_table_name}.{id_field_name}"
-                    sub_columns = [
-                        Column("id", Integer, primary_key=True),
-                        Column("parent_id", ForeignKey(fk_column, ondelete="CASCADE")),
-                    ]
-
-                elif field.is_through_table:
-
-                    # We need a 'through' table for the n-m relation
-                    sub_columns = [
-                        Column("id", Text, primary_key=True),
-                        Column(
-                            f"{dataset_table_name}_id",
-                            String,
-                        ),
-                        Column(
-                            f"{field_name}_id",
-                            String,
-                        ),
-                    ]
-                    # And the field(s) for the left side of the relation
-                    # if this left table has a compound key
-                    if dataset_table.has_compound_key:
-                        for id_field in dataset_table.get_fields_by_id(*dataset_table.identifier):
-                            sub_columns.append(
-                                Column(
-                                    f"{dataset_table_id}_{to_snake_case(id_field.name)}",
-                                    fetch_col_type(id_field),
-                                )
-                            )
-
-                # Fields for either the nested or the through table
-                for sub_field in field.sub_fields:
-                    sub_columns.append(
-                        Column(
-                            to_snake_case(sub_field.name),
-                            fetch_col_type(sub_field),
-                        )
-                    )
-
-                sub_tables[sub_table_id] = Table(
-                    sub_table_id,
-                    metadata,
-                    *sub_columns,
-                    extend_existing=True,
-                )
-
-                continue
-
-            col_type = fetch_col_type(field)
-
-        except KeyError:
-            raise NotImplementedError(
-                f'Import failed at "{field.name}": {dict(field)!r}\n'
-                f"Field type '{field.type}' is not implemented."
-            ) from None
-
-        col_kwargs = {"nullable": not field.required}
-        if field.is_primary:
-            col_kwargs["primary_key"] = True
-            col_kwargs["nullable"] = False
-            col_kwargs["autoincrement"] = False
-
-        id_postfix = "_id" if field.relation else ""
-        columns.append(
-            Column(f"{field_name}{id_postfix}", col_type, comment=field_description, **col_kwargs)
-        )
-
-    return {
-        db_table_name: Table(
-            db_table_name, metadata, comment=db_table_description, schema=db_schema_name, *columns
-        ),
-        **sub_tables,
-    }
 
 
 def index_factory(

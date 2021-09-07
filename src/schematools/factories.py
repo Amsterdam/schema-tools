@@ -1,0 +1,99 @@
+"""Module to hold factories."""
+from collections import defaultdict
+from typing import Dict, Optional, Set
+
+from sqlalchemy import Column, MetaData, Table
+
+from schematools import TMP_TABLE_POSTFIX
+from schematools.importer import fetch_col_type
+from schematools.types import DatasetSchema
+from schematools.utils import to_snake_case
+
+
+def tables_factory(
+    dataset: DatasetSchema,
+    metadata: Optional[MetaData] = None,
+    db_table_names: Optional[Dict[str, str]] = None,
+    db_schema_names: Optional[Dict[str, str]] = None,
+) -> Dict[str, Table]:
+    """Generate the SQLAlchemy Table objects base on a `DatasetSchema` definition.
+
+    Args:
+        dataset: The Amsterdam Schema definition of the dataset
+        metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
+        db_table_names: Optional sql table names, keyed on dataset_table_id.
+            If not give, db_table_names are inferred from the schema name.
+        db_schema_names: Optional database schema names, keyed on dataset_table_id.
+            If not given, schema names default to `public`.
+
+    The returned tables are keyed on the name of the dataset and table.
+    SA Table objects are also created for the junction tables that are needed for relations.
+
+    The nested and through tables that are generated on-the-fly are also taken into account.
+    Special care is needed to add postfixes to tables names if the parent table of these
+    tables has a non-default name. In that case, these on-the-fly tables also need to
+    get an extra postfix in their db name.
+
+    One caveat: The assumption now is that special "overridden" names for tables
+    only are used because postfixes are added, and for no other reasons.
+    """
+    tables = defaultdict(dict)
+    metadata = metadata or MetaData()
+
+    for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
+
+        db_table_description = dataset_table.description
+
+        if (db_table_name := (db_table_names or {}).get(dataset_table.id)) is None:
+
+            has_postfix = (
+                db_schema_names is not None
+                and (dataset_table.is_nested_table or dataset_table.is_through_table)
+                and db_table_names.get(dataset_table.parent_table.id) is not None
+            )
+
+            postfix = TMP_TABLE_POSTFIX if has_postfix else None
+
+            db_table_name = dataset_table.db_name(postfix=postfix)
+
+        db_schema_name = (db_schema_names or {}).get(dataset_table.id)
+
+        columns = []
+        for field in dataset_table.fields:
+            # Exclude nested and nm_relation fields (is_array check)
+            if field.type.endswith("#/definitions/schema") or field.is_array:
+                continue
+            field_name = to_snake_case(field.name)
+
+            try:
+                col_type = fetch_col_type(field)
+            except KeyError:
+                raise NotImplementedError(
+                    f'Import failed at "{field.name}": {dict(field)!r}\n'
+                    f"Field type '{field.type}' is not implemented."
+                ) from None
+
+            col_kwargs = {"nullable": not field.required}
+            if field.is_primary:
+                col_kwargs["primary_key"] = True
+                col_kwargs["nullable"] = False
+                col_kwargs["autoincrement"] = field.type.endswith("autoincrement")
+
+            id_postfix = "_id" if field.relation else ""
+
+            columns.append(
+                Column(
+                    f"{field_name}{id_postfix}", col_type, comment=field.description, **col_kwargs
+                )
+            )
+
+        tables[dataset_table.name] = Table(
+            db_table_name,
+            metadata,
+            comment=db_table_description,
+            schema=db_schema_name,
+            *columns,
+            extend_existing=True,
+        )
+
+    return tables
