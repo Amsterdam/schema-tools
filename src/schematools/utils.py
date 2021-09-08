@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any, Dict, Final, Match, Optional, Pattern, Type, Union, cast
 import requests
 from cachetools.func import ttl_cache
 from more_ds.network.url import URL
+from more_itertools import first
 from string_utils import slugify
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
@@ -144,6 +146,49 @@ def _schema_from_url_with_connection(
 
     schema: types.ST = data_type.from_dict(response_data)
     return schema
+
+
+def schema_from_file(
+    file_path: Union[Path, str], prefetch_related: bool = False
+) -> types.DatasetSchema:
+    """Read a dataset schema from a file on local drive.
+
+    If `prefetch_related` is given, an index is built that maps
+    the dataset id to the path towards `dataset.json` on the filesystem.
+    """
+
+    # Normalize to an absolute path.
+    file_path = Path(file_path).resolve()
+    index: Dict[str, str] = {}
+
+    # Find the location of the `datasets` folder (make sure to find the "deepest" one)
+    try:
+        ds_root = first(
+            parent for parent in reversed(file_path.parents) if parent.name == "datasets"
+        )
+    except ValueError:
+        raise ValueError(
+            f"The provided file_path ({file_path}) should contain a `datasets` folder."
+        )
+
+    # The dataset being requested
+    dataset_schema = types.DatasetSchema.from_file(file_path)
+
+    # Build the mapping from dataset -> path with jsonschema file
+    if prefetch_related:
+        for root, dirs, files in os.walk(ds_root):
+            if "dataset.json" in set(files):
+                root_path = Path(root)
+                index[root_path.name] = root_path.joinpath("dataset.json")
+
+        # Result of `schema_from_file` is discarded here, the call is only done
+        # to add the dataset to the cache.
+        # For this recursive call, we set prefetch_related=False
+        # to avoid deep/endless recursion
+        for ds_id in dataset_schema.related_dataset_schema_ids:
+            schema_from_file(index[ds_id], prefetch_related=False)
+
+    return dataset_schema
 
 
 def dataset_schema_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetSchema]:
