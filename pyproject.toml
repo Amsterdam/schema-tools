@@ -29,7 +29,7 @@ exclude = '''
 github_url = "https://github.com/Amsterdam/schema-tools"
 
 [tool.tbump.version]
-current = "0.23.4"
+current = "0.23.5"
 regex = '''
   (?P<major>\d+)
   \.
