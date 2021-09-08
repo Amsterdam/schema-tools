@@ -38,6 +38,7 @@ from schematools.utils import (
     dataset_schema_from_url,
     dataset_schemas_from_url,
     schema_fetch_url_file,
+    schema_from_file,
 )
 from schematools.validation import Validator
 
@@ -572,7 +573,7 @@ def _get_dataset_schema(schema_url, schema_location, prefetch_related=False) -> 
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
         click.echo(f"Reading schema from {schema_location}", err=True)
-        return DatasetSchema.from_file(schema_location)
+        return schema_from_file(schema_location, prefetch_related=True)
     else:
         # Read the schema from the online repository.
         click.echo(f"Reading schemas from {schema_url}", err=True)
