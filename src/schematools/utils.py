@@ -148,7 +148,7 @@ def _schema_from_url_with_connection(
     return schema
 
 
-def schema_from_file(
+def dataset_schema_from_file(
     file_path: Union[Path, str], prefetch_related: bool = False
 ) -> types.DatasetSchema:
     """Read a dataset schema from a file on local drive.
@@ -186,16 +186,9 @@ def schema_from_file(
         # For this recursive call, we set prefetch_related=False
         # to avoid deep/endless recursion
         for ds_id in dataset_schema.related_dataset_schema_ids:
-            schema_from_file(index[ds_id], prefetch_related=False)
+            dataset_schema_from_file(index[ds_id], prefetch_related=False)
 
     return dataset_schema
-
-
-def dataset_schema_from_file(filename: Union[Path, str]) -> Dict[str, types.DatasetSchema]:
-    """Read a dataset schema from a file on local drive."""
-    with open(filename, "r") as file_handler:
-        schema_info = json.load(file_handler)
-        return {schema_info["id"]: types.DatasetSchema.from_dict(schema_info)}
 
 
 def profile_schema_from_file(filename: Union[Path, str]) -> Dict[str, types.ProfileSchema]:
