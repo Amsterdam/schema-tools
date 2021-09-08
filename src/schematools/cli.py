@@ -402,7 +402,7 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
     errors: DefaultDict[str, List[str]] = defaultdict(list)
     for schema in schema_files:
         try:
-            dataset = DatasetSchema.from_file(schema)
+            dataset = schema_from_file(schema, prefetch_related=True)
         except ValueError as ve:
             errors[schema].append(str(ve))
             # No sense in continuing if we can't read the schema file.
