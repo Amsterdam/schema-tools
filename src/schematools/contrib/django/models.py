@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from django.apps import apps
 from django.conf import settings
@@ -549,7 +549,9 @@ class LooseRelationManyToManyField(models.ManyToManyField):
             return None
 
 
-def get_field_schema(model_field: models.Field) -> DatasetFieldSchema:
+def get_field_schema(
+    model_field: Union[models.Field, models.ForeignObjectRel]
+) -> DatasetFieldSchema:
     """Provide access to the underlying amsterdam schema field that created the model field."""
     if isinstance(model_field, models.ForeignObjectRel):
         # created by 'related_name' setting
