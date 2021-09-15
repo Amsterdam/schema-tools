@@ -210,15 +210,22 @@ class M2MRelationMaker(RelationMaker):
 
     @property
     def field_kwargs(self):
-        kwargs = {}
         snakecased_fieldname = to_snake_case(self.field.name)
         parent_table = to_snake_case(self.field._parent_table.name)
 
-        kwargs["related_name"] = f"{snakecased_fieldname}_{parent_table}"
-        kwargs["through"] = self._make_through_classname(self.dataset.id, self.field.id)
-        kwargs["through_fields"] = (parent_table, snakecased_fieldname)
+        if (additional_relation := self.field.reverse_relation) is not None:
+            # The relation is described by the other table, return it
+            related_name = additional_relation.id
+        else:
+            # Default: give it a name, but hide it as relation.
+            related_name = f"{snakecased_fieldname}_{parent_table}+"
 
-        return {**super().field_kwargs, **kwargs}
+        return {
+            **super().field_kwargs,
+            "related_name": related_name,
+            "through": self._make_through_classname(self.dataset.id, self.field.id),
+            "through_fields": (parent_table, snakecased_fieldname),
+        }
 
 
 class LooseM2MRelationMaker(M2MRelationMaker):
