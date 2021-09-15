@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from collections import UserDict
 from dataclasses import dataclass, field
 from enum import Enum
@@ -618,6 +619,22 @@ class DatasetTableSchema(SchemaType):
     @property
     def has_parent_table(self) -> bool:
         return "parentTableID" in self
+
+    @property
+    def filters(self):
+        warnings.warn(
+            "Using DatasetTableSchema.filters is deprecated, use additional_filters instead.",
+            DeprecationWarning,
+        )
+        return dict(self["schema"].get("additionalFilters", {}))
+
+    @property
+    def relations(self):
+        warnings.warn(
+            "Using DatasetTableSchema.relations is deprecated, use additional_relations instead.",
+            DeprecationWarning,
+        )
+        return dict(self["schema"].get("additionalRelations", {}))
 
     @property
     def additional_filters(self) -> Dict[str, Dict[str, str]]:
