@@ -128,7 +128,7 @@ class RelationMaker:
         related_dataset, related_table = [
             to_snake_case(part) for part in self.fetch_relation_parts(relation)
         ]
-        return f"{related_dataset}.{related_table}"
+        return f"{related_dataset}.{to_snake_case(related_table)}"
 
     def _make_through_classname(self, dataset_id, field_id):
         snakecased_fieldname = to_snake_case(field_id)
