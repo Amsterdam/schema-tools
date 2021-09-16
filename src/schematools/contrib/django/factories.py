@@ -50,17 +50,9 @@ class RelationMaker:
         self.nm_relation = field.nm_relation
 
     @classmethod
-    def fetch_relation_parts(cls, relation):
-        dataset_id, table_id, *_ = relation.split(":")
-        return dataset_id, table_id
-
-    @classmethod
-    def is_loose_relation(cls, relation, dataset, field):
+    def is_loose_relation(cls, field: DatasetFieldSchema):
         """Determine if relation is loose or not."""
-
-        related_dataset_id, related_table_id = cls.fetch_relation_parts(relation)
-        related_dataset = dataset.get_dataset_schema(related_dataset_id)
-        related_table = related_dataset.get_table_by_id(related_table_id)
+        related_table = field.related_table
 
         # Short-circuit for non-temporal or on-the-fly (through or nested) schemas
         if (
@@ -109,15 +101,15 @@ class RelationMaker:
         return not destination_type_set <= source_type_set
 
     @classmethod
-    def fetch_maker(cls, dataset, field):
+    def fetch_maker(cls, dataset, field: DatasetFieldSchema):
         # determine type of relation (FKLoose, FK, M2M, LooseM2M)
         if field.relation:
-            if cls.is_loose_relation(field.relation, dataset, field):
+            if cls.is_loose_relation(field):
                 return LooseFKRelationMaker
             else:
                 return FKRelationMaker
         elif field.nm_relation:
-            if cls.is_loose_relation(field.nm_relation, dataset, field):
+            if cls.is_loose_relation(field):
                 return LooseM2MRelationMaker
             else:
                 return M2MRelationMaker
@@ -125,10 +117,8 @@ class RelationMaker:
             return None  # To signal this is not a relation
 
     def _make_related_classname(self, relation):
-        related_dataset, related_table = [
-            to_snake_case(part) for part in self.fetch_relation_parts(relation)
-        ]
-        return f"{related_dataset}.{related_table}"
+        related_dataset, related_table, *_ = relation.split(":")
+        return f"{related_dataset}.{to_snake_case(related_table)}"
 
     def _make_through_classname(self, dataset_id, field_id):
         snakecased_fieldname = to_snake_case(field_id)
@@ -182,40 +172,35 @@ class FKRelationMaker(RelationMaker):
     def field_args(self):
         return super().field_args + [models.CASCADE if self.field.required else models.SET_NULL]
 
-    def _fetch_related_name_for_backward_relations(self):
-        related_name = None
-        try:
-            _, related_table_id = self.fetch_relation_parts(self.relation)
-            table = self.dataset.get_table_by_id(related_table_id)
-            for name, relation in table.relations.items():
-                if (
-                    relation["table"] == self.field.table.id
-                    and relation["field"] == self.field.name
-                ):
-                    related_name = name
-                    break
-        except ValueError as e:
-            pass
+    def _get_related_name(self):
+        """Find the name of the backwards relationship.
 
-        return related_name or "+"
+        If the linked table describes the other end of the relationship,
+        this field will also be included in the model.
+        """
+        if self.field._parent_table.has_parent_table:
+            # Won't ever show related name for internal tables
+            return to_snake_case(self.field._parent_table["originalID"])
+        elif self.field._parent_table.is_through_table:
+            # Need this for walking over the through table for the "_links" section.
+            return to_snake_case(f"{self.field._parent_table.id}_through_{self.field.name}")
+        elif (additional_relation := self.field.reverse_relation) is not None:
+            # The relation is described by the other table, return it
+            return additional_relation.id
+        else:
+            # Hide it as relation.
+            return "+"
 
     @property
     def field_kwargs(self):
-        kwargs = {}
         # In schema foreign keys should be specified without _id,
         # but the db_column should be with _id
-        kwargs["db_column"] = f"{to_snake_case(self.field.name)}_id"
-        kwargs["db_constraint"] = False  # relation is not mandatory
-        if self.field._parent_table.has_parent_table:
-            kwargs["related_name"] = to_snake_case(self.field._parent_table["originalID"])
-        elif self.field._parent_table.is_through_table:
-            kwargs["related_name"] = to_snake_case(
-                f"{self.field._parent_table.id}_through_{self.field.name}"
-            )
-        else:
-            kwargs["related_name"] = self._fetch_related_name_for_backward_relations()
-
-        return {**super().field_kwargs, **kwargs}
+        return {
+            **super().field_kwargs,
+            "db_column": f"{to_snake_case(self.field.name)}_id",
+            "db_constraint": False,
+            "related_name": self._get_related_name(),
+        }
 
 
 class M2MRelationMaker(RelationMaker):

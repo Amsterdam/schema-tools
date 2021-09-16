@@ -620,19 +620,43 @@ class DatasetTableSchema(SchemaType):
         return "parentTableID" in self
 
     @property
-    def filters(self) -> Dict[str, Dict[str, str]]:
-        """Fetch list of additional filters"""
+    def additional_filters(self) -> Dict[str, Dict[str, str]]:
+        """Fetch list of additional filters.
+        Example value:
+
+            "regimes.inWerkingOp": {
+              "type": "range",
+              "start": "regimes.beginTijd",
+              "end": "regimes.eindTijd"
+            }
+        """
         return dict(self["schema"].get("additionalFilters", {}))
 
-    @property
-    def relations(self) -> Dict[str, Dict[str, str]]:
+    @cached_property
+    def additional_relations(self) -> List[AdditionalRelationSchema]:
         """Fetch list of additional (backwards or N-N) relations.
 
         This is a dictionary of names for existing forward relations
         in other tables with either the 'embedded' or 'summary'
         property
         """
-        return dict(self["schema"].get("additionalRelations", {}))
+        return [
+            AdditionalRelationSchema(name, self, **relation)
+            for name, relation in self["schema"].get("additionalRelations", {}).items()
+        ]
+
+    def get_reverse_relation(
+        self, field: DatasetFieldSchema
+    ) -> Optional[AdditionalRelationSchema]:
+        """Find the description of a reverse relation for a field."""
+        if not field.relation and not field.nm_relation:
+            raise ValueError("Field is not a relation")
+
+        for relation in self.additional_relations:
+            if relation.is_reverse_relation(field):
+                return relation
+
+        return None
 
     @property
     def auth(self) -> FrozenSet[str]:
@@ -795,6 +819,33 @@ class DatasetFieldSchema(DatasetType):
         if self.type != "array":
             return None
         return self.get("relation")
+
+    @cached_property
+    def related_table(self) -> Optional[DatasetTableSchema]:
+        """If this field is a relation, return the field this relation references."""
+        relation = self.get("relation")
+        if not relation:
+            return None
+
+        # Find the related field
+        related_dataset_id, related_table_id = relation.split(":")
+        dataset = self.table.dataset.dataset_collection.get_dataset(related_dataset_id)
+        return dataset.get_table_by_id(
+            related_table_id, include_nested=False, include_through=False
+        )
+
+    @property
+    def reverse_relation(self) -> Optional[AdditionalRelationSchema]:
+        """Find the opposite description of a relation.
+
+        When there is a relation, this only returns a description
+        when the linked table also describes the other end of relationship.
+        """
+        related_table = self.related_table
+        if related_table is None:
+            return None
+
+        return related_table.get_reverse_relation(self)
 
     @property
     def format(self) -> Optional[str]:
@@ -967,6 +1018,39 @@ class DatasetRow(DatasetType):
     def validate(self, schema: DatasetSchema) -> None:
         table = schema.get_table_by_id(self["table"])
         table.validate(self.data)
+
+
+class AdditionalRelationSchema(DatasetType):
+    """Data class describing the additional relation block"""
+
+    def __init__(self, _id: str, _parent_table: Optional[DatasetTableSchema] = None, **kwargs):
+        super().__init__(**kwargs)
+        self._id = _id
+        self._parent_table = _parent_table
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def parent_table(self):
+        return self._parent_table
+
+    def is_reverse_relation(self, field: DatasetFieldSchema):
+        """See whether this relation"""
+        # TODO: should the "additionalRelations" use separate fields for table/field?
+        # Everywhere else the relation is described using dataset:table:field.
+        table = field.table
+        return (
+            table.dataset.id == self._parent_table.dataset.id
+            and self["table"] == table.id
+            and self["field"] == field.name
+        )
+
+    @property
+    def format(self):
+        """Format: "summary" or "embedded"."""
+        return self.get("format", "summary")
 
 
 @total_ordering
