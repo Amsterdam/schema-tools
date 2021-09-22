@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import typing
 import warnings
 from collections import UserDict
 from dataclasses import dataclass, field
@@ -736,6 +737,29 @@ class DatasetTableSchema(SchemaType):
         for field in field_schema:
             if field.relation:
                 yield field.name
+
+    @property
+    def zoom(self) -> ZoomLevel:
+        """Returns (minzoom, maxzoom) levels at which non-geometric fields are included in MVT.
+
+        Minimum and maximum are understood numerically, so 0 (entire earth) is the lowest level.
+        The range includes both endpoints.
+
+        The zoom levels may be strings, in which case they reference object fields that in turn
+        contain the levels: if the return value is (0, "maxzoom"), then an object x is shown at
+        levels 0 through x.maxzoom, inclusive.
+        """
+        z = self.get("zoom")
+        if z is None:
+            return _default_zoomlevel
+
+        return ZoomLevel(
+            min=z.get("min", _default_zoomlevel.min), max=z.get("max", _default_zoomlevel.max)
+        )
+
+
+ZoomLevel = typing.NamedTuple("ZoomLevel", min=Union[int, str], max=Union[int, str])
+_default_zoomlevel = ZoomLevel(0, 999)
 
 
 class DatasetFieldSchema(DatasetType):
