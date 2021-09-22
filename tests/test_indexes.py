@@ -340,7 +340,7 @@ def test_size_of_index_name(engine, db_schema):
                         "id": {"type": "string"},
                         "fkColumnReferenceWithAReallyLongRidiculousNameThatMustBeShortend": {
                             "type": "string",
-                            "relation": "test:parent_test",
+                            "relation": "test:parent_test_size",
                         },
                     },
                 },
