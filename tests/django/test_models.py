@@ -282,6 +282,7 @@ def test_table_shortname(verblijfsobjecten_dataset, hr_dataset):
         "hr_activiteiten_sbi_maatschappelijk",
         "hr_activiteiten_sbi_voor_activiteit",
         "hr_activiteiten_verblijfsobjecten",
+        "hr_activiteiten_gevestigd_in",
         "hr_activiteiten_wordt_uitgeoefend_in_commerciele_vestiging",
     }
 
