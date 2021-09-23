@@ -758,7 +758,9 @@ class DatasetTableSchema(SchemaType):
         )
 
 
-ZoomLevel = typing.NamedTuple("ZoomLevel", min=Union[int, str], max=Union[int, str])
+class ZoomLevel(typing.NamedTuple):
+  min: Union[int, str]
+  max: Union[int, str]
 _default_zoomlevel = ZoomLevel(0, 999)
 
 
