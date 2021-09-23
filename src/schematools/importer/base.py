@@ -3,7 +3,7 @@ import operator
 from collections import Counter, UserDict
 from functools import reduce
 from itertools import islice
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
 
 from jsonpath_rw import parse
 from more_itertools import first
@@ -127,10 +127,7 @@ class BaseImporter:
         """Create mapping from provenance to camelcased fieldname"""
         fields_provenances = {}
         for field in dataset_table.fields:
-            # XXX no walrus until we can go to python 3.8 (airflow needs 3.7)
-            # if (provenance := field.get("provenance")) is not None:
-            provenance = field.get("provenance")
-            if provenance is not None:
+            if (provenance := field.get("provenance")) is not None:
                 fields_provenances[provenance] = field.name
         return fields_provenances
 
@@ -181,23 +178,25 @@ class BaseImporter:
                     continue
                 self.pk_colname_lookup[table_name] = pk_name
                 pks = {getattr(r, pk_name) for r in self.engine.execute(table.select())}
+
                 self.pk_values_lookup[table_name] = pks
 
     def generate_db_objects(
         self,
-        table_name: str,
+        table_id: str,
         db_schema_name: Optional[str] = None,
         db_table_name: Optional[str] = None,
         truncate: bool = False,
         ind_tables: bool = True,
         ind_extra_index: bool = True,
+        limit_tables_to: Optional[Set] = None,
     ):
         """Generate the tablemodels and tables and / or index on identifier
         as specified in the JSON data schema. As default both table and index
         creation are set to True.
 
         Args:
-            table_name: Name of the table as defined in the id in the JSON schema defintion.
+            table_id: Name of the table as defined in the JSON schema defintion.
             db_schema_name: Name of the database schema where table should be
                 created/present. Defaults to None (== public).
             db_table_name: Name of the table as defined in the database.
@@ -205,10 +204,13 @@ class BaseImporter:
             truncate: Indication to truncate table. Defaults to False.
             ind_tables: Indication to create table. Defaults to True.
             ind_extra_index: Indication to create indexes. Defaults to True.
+            limit_tables_to: Only process the indicated tables. Normally, SA tables
+                are generated for the whole dataset where `table_id` belongs to.
+                Sometimes, this is not needed/wanted.
         """
 
         if ind_tables or ind_extra_index:
-            self.dataset_table = self.dataset_schema.get_table_by_id(table_name)
+            self.dataset_table = self.dataset_schema.get_table_by_id(table_id)
 
             # Collect provenance info for easy re-use
             self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
@@ -219,8 +221,9 @@ class BaseImporter:
             self.tables = tables_factory(
                 self.dataset_table.dataset,
                 metadata=metadata,
-                db_schema_names={table_name: db_schema_name},
-                db_table_names={table_name: db_table_name},
+                db_schema_names={table_id: db_schema_name},
+                db_table_names={table_id: db_table_name},
+                limit_tables_to=limit_tables_to,
             )
 
         if db_table_name is None:
@@ -252,6 +255,7 @@ class BaseImporter:
         self,
         file_name,
         batch_size=100,
+        is_through_table=False,
         **kwargs,
     ):
         """Import a file into the database table, returns the last record, if available"""
@@ -262,6 +266,7 @@ class BaseImporter:
             file_name,
             self.dataset_table,
             self.db_table_name,
+            is_through_table=is_through_table,
             **{"fields_provenances": self.fields_provenances, **kwargs},
         )
         self.logger.log_start(file_name, size=batch_size)

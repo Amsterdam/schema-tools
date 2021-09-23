@@ -15,6 +15,7 @@ def tables_factory(
     metadata: Optional[MetaData] = None,
     db_table_names: Optional[Dict[str, str]] = None,
     db_schema_names: Optional[Dict[str, str]] = None,
+    limit_tables_to: Optional[Set] = None,
 ) -> Dict[str, Table]:
     """Generate the SQLAlchemy Table objects base on a `DatasetSchema` definition.
 
@@ -25,6 +26,7 @@ def tables_factory(
             If not give, db_table_names are inferred from the schema name.
         db_schema_names: Optional database schema names, keyed on dataset_table_id.
             If not given, schema names default to `public`.
+        limit_tables_to: Only process the indicated tables (based on table.id).
 
     The returned tables are keyed on the name of the dataset and table.
     SA Table objects are also created for the junction tables that are needed for relations.
@@ -41,6 +43,9 @@ def tables_factory(
     metadata = metadata or MetaData()
 
     for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
+
+        if limit_tables_to is not None and dataset_table.id not in limit_tables_to:
+            continue
 
         db_table_description = dataset_table.description
 
@@ -59,6 +64,7 @@ def tables_factory(
         db_schema_name = (db_schema_names or {}).get(dataset_table.id)
 
         columns = []
+
         for field in dataset_table.fields:
             # Exclude nested and nm_relation fields (is_array check)
             if field.type.endswith("#/definitions/schema") or field.is_array:
