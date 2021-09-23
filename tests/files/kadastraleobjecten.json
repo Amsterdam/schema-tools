@@ -51,7 +51,7 @@
                   "type": "string"
                 },
                 "volgnummer": {
-                  "type": "string"
+                  "type": "integer"
                 }
               }
             },

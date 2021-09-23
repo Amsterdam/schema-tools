@@ -20,17 +20,73 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, gebieden_schema, dbse
         dict(r)
         for r in engine.execute("SELECT * from meetbouten_metingen_refereertaanreferentiepunten")
     ]
-    # Should have a field 'identificatie' in the n-m table
-    assert "refereertaanreferentiepunten_identificatie" in records[0]
+    # Should have a field 'id' in the n-m table
+    # an extra _identificatie is not needed, this is not a compound key
+    assert "refereertaanreferentiepunten_id" in records[0]
 
 
-def xtest_ndjson_import_separate_relations(
+def test_ndjson_import_separate_relations_target_compound(
     here, engine, meetbouten_schema, gebieden_schema, dbsession
 ):
     ndjson_path = here / "files" / "data" / "meetbouten_ligt_in_buurt.ndjson"
     importer = NDJSONImporter(meetbouten_schema, engine)
-    importer.generate_db_objects("ligt_in_buurt", truncate=True, ind_extra_index=False)
+    importer.generate_db_objects("meetbouten_ligt_in_buurt", truncate=True, ind_extra_index=False)
+
+    importer.load_file(ndjson_path, is_through_table=True)
+    records = [
+        dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten_ligt_in_buurt")
+    ]
+
+
+def test_ndjson_import_separate_relations_both_compound(
+    here, engine, ggwgebieden_schema, dbsession
+):
+    ndjson_path = here / "files" / "data" / "ggwgebieden_bestaatuitbuurten.ndjson"
+    importer = NDJSONImporter(ggwgebieden_schema, engine)
+    importer.generate_db_objects(
+        "ggwgebieden_bestaatuitbuurten", truncate=True, ind_extra_index=False
+    )
+
+    importer.load_file(ndjson_path, is_through_table=True)
+    records = [
+        dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
+    ]
+
+
+def test_ndjson_import_no_embedded_relation_in_data(here, engine, meetbouten_schema, dbsession):
+    ndjson_path = here / "files" / "data" / "meetbouten-no-embedded-rel-data.ndjson"
+    importer = NDJSONImporter(meetbouten_schema, engine)
+    importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
+    records = [dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten")]
+    assert len(records) == 1
+    # The foreign key, needed by Django, should be there
+    assert "ligt_in_buurt_id" in records[0]
+    # And should be None
+    assert records[0]["ligt_in_buurt_id"] is None
+    # Should have a field identificatie
+    assert "ligt_in_buurt_identificatie" in records[0]
+    # That is also None
+    assert records[0]["ligt_in_buurt_identificatie"] is None
+
+
+def test_ndjson_import_no_embedded_nm_relation_in_data(
+    here, engine, ggwgebieden_schema, dbsession
+):
+    ndjson_path = here / "files" / "data" / "ggwgebieden-no-embedded-rel-data.ndjson"
+    importer = NDJSONImporter(ggwgebieden_schema, engine)
+    importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
+
+    importer.load_file(ndjson_path, is_through_table=True)
+    records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden")]
+    assert len(records) == 1
+
+    # Through table is available, but has no content
+    # (because there is no data  for it in the ndjson).
+    records = [
+        dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
+    ]
+    assert len(records) == 0
 
 
 def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbsession):
@@ -101,7 +157,7 @@ def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_s
     }
 
     assert records[0] == {
-        "id": "03630950000000.1.03630023753960.1",
+        "id": 1,
         "ggwgebieden_id": "03630950000000.1",
         "bestaat_uit_buurten_id": "03630023753960.1",
         "ggwgebieden_identificatie": "03630950000000",
@@ -137,10 +193,10 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
     assert len(records) == 1
     assert sorted((n, v) for n, v in records[0].items()) == (
         [
-            ("id", "KAD.001.1.KAD.002.1"),
+            ("id", 1),
             ("is_ontstaan_uit_kadastraalobject_id", "KAD.002.1"),
             ("is_ontstaan_uit_kadastraalobject_identificatie", "KAD.002"),
-            ("is_ontstaan_uit_kadastraalobject_volgnummer", "1"),
+            ("is_ontstaan_uit_kadastraalobject_volgnummer", 1),
             ("kadastraleobjecten_id", "KAD.001.1"),
             ("kadastraleobjecten_identificatie", "KAD.001"),
             ("kadastraleobjecten_volgnummer", 1),
@@ -233,17 +289,18 @@ def test_ndjson_import_with_shortnames_in_schema(
         dict(r) for r in engine.execute("SELECT * from hr_activiteiten_sbi_voor_activiteit")
     ]
     assert len(records) == 1
+    # In this case, the through table does not have extra fields, because the
+    # FK to the target is not a compound key.
     assert records[0] == {
-        "id": "90004213.01131",
+        "id": 1,
         "activiteiten_id": "90004213",
         "sbi_voor_activiteit_id": "01131",
-        "sbi_voor_activiteit_sbi_activiteit_nummer": 1131,
     }
 
     records = [dict(r) for r in engine.execute("SELECT * from hr_activiteiten_verblijfsobjecten")]
     assert len(records) == 1
     assert records[0] == {
-        "id": "90004213.01001.1",
+        "id": 1,
         "activiteiten_id": "90004213",
         "verblijfsobjecten_id": "01001.1",
         "verblijfsobjecten_identificatie": "01001",

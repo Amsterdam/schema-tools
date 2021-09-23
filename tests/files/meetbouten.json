@@ -35,11 +35,11 @@
               },
               "beginGeldigheid": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date"
               },
               "eindGeldigheid": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date"
               }
             },
             "description": "De buurt waarbinnen de meetbout ligt"

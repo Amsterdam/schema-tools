@@ -13,11 +13,66 @@ from .base import BaseImporter, Row
 class NDJSONImporter(BaseImporter):
     """Import an NDJSON file into the database."""
 
-    def parse_records(self, file_name, dataset_table, db_table_name=None, **kwargs):
+    def _get_through_fields_mapper(self, dataset_table):
+        """Maps fields in ndjson to proper fieldnames and structure.
+
+        When through tables (1-N and NM relations) are imported directly
+        from the GOB graphql API, the fieldnames in the ndjson are not
+        following the names of the associated amsterdam schema.
+
+        The importer is built around the amsterdam schema fieldnames.
+        So, incoming ndjson records needs to be mapped to the appropriate
+        amsterdam schema field names, to be able to import the ndjson
+        records correctly.
+
+        """
+        field_mapping = {}
+        id_name_mapping = {
+            "identificatie": "Id",
+            "volgnummer": "Volgnummer",
+            "dossier": "Id",
+            "documentnummer": "Id",
+        }
+        through_field_ids = dataset_table.data.get("throughFields")
+        if through_field_ids is None:
+            return
+
+        for direction_prefix, field_id in zip(("src", "dst"), through_field_ids):
+            field = dataset_table.get_field_by_id(field_id)
+            if field is None:
+                self.logger.log_warning("No through field found: %s", field_id)
+                return
+
+            related_table = field.related_table
+            if related_table is None:
+                self.logger.log_warning("No related_table found for: %s", field_id)
+                return
+
+            field_mapping[field_id] = [
+                (idf, f"{direction_prefix}{id_name_mapping[idf]}")
+                for idf in related_table.identifier
+            ]
+
+        def _map_fields(row):
+            for field_id, idfs__in_names in field_mapping.items():
+                if len(idfs__in_names) > 1:  # compound key
+                    row[field_id] = {idf: row[in_name] for idf, in_name in idfs__in_names}
+                else:
+                    row[field_id] = row[idfs__in_names[0][1]]
+            return row
+
+        return _map_fields
+
+    def parse_records(
+        self, file_name, dataset_table, db_table_name=None, is_through_table=False, **kwargs
+    ):
         """Provide an iterator the reads the NDJSON records"""
         fields_provenances = kwargs.pop("fields_provenances", {})
         identifier = dataset_table.identifier
         has_compound_key = dataset_table.has_compound_key
+        through_fields_mapper = None
+        if is_through_table:
+            through_fields_mapper = self._get_through_fields_mapper(dataset_table)
 
         if db_table_name is None:
             db_table_name = get_table_name(dataset_table)
@@ -31,6 +86,7 @@ class NDJSONImporter(BaseImporter):
         inactive_relation_info = []
         jsonpath_provenance_info = []
         geo_fields = []
+
         for field in dataset_table.fields:
             # XXX maybe this is too much of a dirty hack and it would be better
             # to have an external configuration that determines which fields should
@@ -52,6 +108,8 @@ class NDJSONImporter(BaseImporter):
 
         with open(file_name) as fh:
             for _row in ndjson.reader(fh):
+                if through_fields_mapper is not None:
+                    _row = through_fields_mapper(_row)
                 row = Row(_row, fields_provenances=fields_provenances)
                 for ir_field in inactive_relation_info:
                     row[ir_field.name] = json.dumps(row[ir_field.id])
@@ -63,12 +121,18 @@ class NDJSONImporter(BaseImporter):
                     if geo_value is not None:
                         wkt = shape(geo_value).wkt
                         row[field_name] = f"SRID={self.srid};{wkt}"
-                id_value = ".".join(str(row[fn]) for fn in identifier)
-                if has_compound_key:
-                    row["id"] = id_value
+
+                if not dataset_table.is_autoincrement:
+                    id_value = ".".join(str(row[fn]) for fn in identifier)
+                    if has_compound_key:
+                        row["id"] = id_value
 
                 for rel_field in relation_field_info:
+
                     relation_field_name = rel_field.name
+                    # Only process relation if data is available in incoming row
+                    if rel_field.id not in row:
+                        continue
                     relation_field_value = row[rel_field.id]
                     if rel_field.is_object:
                         fk_value_parts = []
@@ -76,7 +140,8 @@ class NDJSONImporter(BaseImporter):
                             # Ignore temporal fields
                             if sub_field.is_temporal:
                                 continue
-                            sub_field_id = sub_field.id.split(RELATION_INDICATOR)[1]
+
+                            sub_field_id = sub_field.id.rsplit(RELATION_INDICATOR, 1)[1]
                             if relation_field_value is None:
                                 sub_field_value = None
                             else:
@@ -114,6 +179,11 @@ class NDJSONImporter(BaseImporter):
                     sub_rows[sub_table_id] = nested_row_records
 
                 for nm_field in nm_relation_field_info:
+
+                    # Only process relation if data is available in incoming row
+                    if nm_field.id not in row:
+                        continue
+
                     values = row[nm_field.id]
                     if values is not None:
                         if not isinstance(values, list):
@@ -156,7 +226,8 @@ class NDJSONImporter(BaseImporter):
                                     through_row_record[full_through_field_name] = value[
                                         through_field_name
                                     ]
-                            through_row_record["id"] = f"{from_fk}.{to_fk}"
+                            # PK has been changed to an autonumber
+                            # through_row_record["id"] = f"{from_fk}.{to_fk}"
                             through_row_record[f"{field_name}_id"] = to_fk
 
                             through_row_records.append(through_row_record)
