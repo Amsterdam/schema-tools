@@ -1,3 +1,1 @@
-{"cursor": 14626, "srcId": "25281132", "srcVolgnummer": null, "dstId": "03630023753951", "dstVolgnummer": 1, "beginGeldigheid": "2015-01-01T00:00:00.000000", "eindGeldigheid": null}
-{"cursor": 14627, "srcId": "25281133", "srcVolgnummer": null, "dstId": "03630023753951", "dstVolgnummer": 1, "beginGeldigheid": "2015-01-01T00:00:00.000000", "eindGeldigheid": null}
-{"cursor": 14628, "srcId": "25281134", "srcVolgnummer": null, "dstId": "03630023753951", "dstVolgnummer": 1, "beginGeldigheid": "2015-01-01T00:00:00.000000", "eindGeldigheid": null}
+{"cursor": 14626, "srcId": "25281132", "srcVolgnummer": null, "dstId": "03630023753951", "dstVolgnummer": 1, "beginGeldigheid": "2015-01-01T00:00:00.000000", "eindGeldigheid": null, "schema": "meetbouten_meetbouten_ligt_in_buurt"}

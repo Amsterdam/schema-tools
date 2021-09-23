@@ -27,6 +27,7 @@ from typing import (
 
 import jsonschema
 from methodtools import lru_cache
+from more_itertools import first
 
 from schematools import RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
@@ -312,6 +313,30 @@ class DatasetSchema(SchemaType):
         """
         from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
 
+        def _get_fk_target_table(dataset_id: str, table_id: str) -> DatasetTableSchema:
+            """Gets the"""
+            if table.dataset is not None:
+                return table.dataset.get_dataset_schema(dataset_id).get_table_by_id(
+                    table_id, include_nested=False, include_through=False
+                )
+
+        def _expand_relation_spec(
+            fk_target_table: DatasetTableSchema, sub_table_schema: Json, field_name: str
+        ) -> None:
+            """Changes the spec. of a relation inside a schema to an object.
+
+            Originally, the spec for the relation is based on singular key
+            When the relation has a compound key, the spec needs to be
+            expanded into an object.
+            """
+            if fk_target_table:
+                spec = sub_table_schema["schema"]["properties"][field_name]
+                spec["type"] = "object"
+                spec["properties"] = {
+                    toCamelCase(idf): {"type": fk_target_table.get_field_by_id(idf).type}
+                    for idf in fk_target_table.identifier
+                }
+
         # Build the through_table for n-m relation
         # For relations, we have to use the real ids of the tables
         # and not the shortnames
@@ -323,12 +348,8 @@ class DatasetSchema(SchemaType):
         # For FK relations, an extra through_table is created when
         # the table is temporal, to store the extra temporal information.
         relation = field.nm_relation
-        if relation is None and table.is_temporal:
-            relation = field.relation
-
-        # If the field is not a relation, that is an error and should not happen, bail out!
         if relation is None:
-            raise ValueError(f"Field {field.id} for table {table.id} should be a relation!")
+            relation = field.relation
 
         right_dataset_id, right_table_id = [
             to_snake_case(part) for part in str(relation).split(":")[:2]
@@ -342,7 +363,8 @@ class DatasetSchema(SchemaType):
 
         sub_table_schema: Json = {
             "id": table_id,
-            "schemaType": "table",
+            "type": "table",
+            "throughFields": [left_table_id, snakecased_fieldname],
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object",
@@ -351,7 +373,7 @@ class DatasetSchema(SchemaType):
                 "properties": {
                     "schema": {"$ref": "#/definitions/schema"},
                     "id": {
-                        "type": "string",
+                        "type": "integer/autoincrement",
                     },
                     left_table_name: {
                         "type": "string",
@@ -373,42 +395,33 @@ class DatasetSchema(SchemaType):
                 len(self.id) + 1, table.name, snakecased_fieldname
             )
 
-        # Get the schema of the target table, to be able to get the
-        # identifier fields.
-        target_identifier_fields: Set[str] = set()
-        if table.dataset is not None:
-            target_table = table.dataset.get_dataset_schema(right_dataset_id).get_table_by_id(
-                right_table_id, include_nested=False, include_through=False
-            )
-
-            target_identifier_fields = set(target_table.identifier)
-
         # For both types of through tables (M2M and FK), we add extra fields
         # to the table (see docstring).
-        if field.is_through_table and target_identifier_fields:
+        if field.is_through_table:
+
+            dim_fields = {}
+
             if field.is_object:
                 properties = field.get("properties", {})
             elif field.is_array_of_objects:
                 properties = field["items"].get("properties", {})
             else:
                 properties = {}
-            # Prefix the fields for the target side of the relation
-            extra_fields = {}
-            for sub_field_id, sub_field in properties.items():
-                # if source table has shortname, add shortname
-                if field.has_shortname:
-                    sub_field["shortname"] = toCamelCase(f"{field.name}_{sub_field_id}")
-                if sub_field_id in target_identifier_fields:
-                    sub_field_id = toCamelCase(f"{field.id}_{sub_field_id}")
-                extra_fields[sub_field_id] = sub_field
 
-            # Also add the fields for the source side of the relation
-            if table.has_compound_key:
-                for sub_field_schema in table.get_fields_by_id(*table.identifier):
-                    sub_field_id = toCamelCase(f"{table.id}_{sub_field_schema.id}")
-                    extra_fields[sub_field_id] = sub_field_schema.data
+            # Add the dimension fields, but only if those were defined in the
+            # fields of the relation.
+            for dim_field in field.get_dimension_fieldnames().get("geldigOp", []):
+                if (camel_dim_field := toCamelCase(dim_field)) in properties:
+                    dim_fields[camel_dim_field] = {"type": "string", "format": "date"}
 
-            sub_table_schema["schema"]["properties"].update(extra_fields)
+            for fk_target_table, relation_field_name in (
+                (table, left_table_name),
+                (_get_fk_target_table(right_dataset_id, right_table_id), snakecased_fieldname),
+            ):
+                if fk_target_table and fk_target_table.has_compound_key:
+                    _expand_relation_spec(fk_target_table, sub_table_schema, relation_field_name)
+
+            sub_table_schema["schema"]["properties"].update(dim_fields)
 
         return DatasetTableSchema(
             sub_table_schema, _parent_schema=self, _parent_table=table, through_table=True
@@ -628,6 +641,13 @@ class DatasetTableSchema(SchemaType):
         return cast(list, identifier)  # mypy pleaser
 
     @property
+    def is_autoincrement(self) -> bool:
+        """Return bool indicating autoincrement behaviour of the table identifier."""
+        if self.has_compound_key:
+            return False
+        return self.get_field_by_id(first(self.identifier)).is_autoincrement
+
+    @property
     def has_compound_key(self) -> bool:
         # Mypy bug that has been resolved but not merged
         # https://github.com/python/mypy/issues/9907
@@ -822,6 +842,10 @@ class DatasetFieldSchema(DatasetType):
         return self._id
 
     @property
+    def is_autoincrement(self) -> bool:
+        return "autoincrement" in self.type
+
+    @property
     def name(self) -> str:
         """Table name, for display purposes only."""
         return cast(str, self.get("shortname", self._id))
@@ -934,14 +958,12 @@ class DatasetFieldSchema(DatasetType):
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
 
-    def get_dimension_fieldnames_for_relation(
-        self, relation: Optional[str], nm_relation: Optional[str]
-    ) -> Dict[str, Tuple[str, str]]:
+    def get_dimension_fieldnames(self) -> Dict[str, Tuple[str, str]]:
         """Gets the dimension fieldnames."""
-        if relation is None and nm_relation is None:
+        if self.relation is None and self.nm_relation is None:
             return {}
 
-        dataset_id, table_id = cast(str, relation or nm_relation).split(":")
+        dataset_id, table_id = cast(str, self.relation or self.nm_relation).split(":")
         if self.table is None:
             return {}
 
@@ -979,6 +1001,7 @@ class DatasetFieldSchema(DatasetType):
         from schematools.utils import toCamelCase
 
         field_name_prefix = ""
+
         if self.is_object:
             # Field has direct sub fields (type=object)
             required = set(self.get("required", []))
@@ -996,9 +1019,7 @@ class DatasetFieldSchema(DatasetType):
             field_name_prefix = self.name + RELATION_INDICATOR
 
         combined_dimension_fieldnames: Set[str] = set()
-        for (_dimension, field_names) in self.get_dimension_fieldnames_for_relation(
-            relation, nm_relation
-        ).items():
+        for (_dimension, field_names) in self.get_dimension_fieldnames().items():
             combined_dimension_fieldnames |= set(
                 toCamelCase(fieldname) for fieldname in field_names
             )
@@ -1047,13 +1068,15 @@ class DatasetFieldSchema(DatasetType):
         """
         Checks if field is a possible through table.
 
-        XXX: What if source is not temporal, but target is temporal?
-        Do we have a through table in that case?
+        NM tables always are through tables. For 1N tables, there is a through
+        tables if the target of the relation is temporal.
         """
 
-        return (self.is_array and self.nm_relation is not None) or (
-            self.table is not None and self.table.is_temporal and self.relation is not None
-        )
+        if self.nm_relation is not None:
+            return True
+        if (related_table := self.related_table) is None:
+            return False
+        return related_table.is_temporal
 
     @property
     def auth(self) -> FrozenSet[str]:
