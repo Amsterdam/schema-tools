@@ -13,14 +13,14 @@
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "additionalProperties": false,
-        "required": ["nummer", "schema"],
-        "identifier": ["nummer"],
+        "required": ["identificatie", "schema"],
+        "identifier": ["identificatie"],
         "mainGeometry": "geometrie",
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "nummer": {
+          "identificatie": {
             "type": "integer"
           },
           "ligtInBuurt": {
