@@ -23,7 +23,7 @@ def test_permission_level_ordering() -> None:
 def test_geo_and_id_when_configured(here, gebieden_schema):
     schema = DatasetSchema.from_file(here / "files" / "meetbouten.json")
     table = schema.get_table_by_id("meetbouten")
-    assert table.identifier == ["nummer"]
+    assert table.identifier == ["identificatie"]
     assert table.main_geometry == "geometrie"
     id_field = [field for field in table.fields if [field.name] == table.identifier][0]
     assert id_field.is_primary
