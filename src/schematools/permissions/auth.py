@@ -211,11 +211,12 @@ class UserScopes:
             # If a profile defines "read" on the whole dataset, without explicitly
             # mentioning a table, this means the table can also be read unconditionally.
             profile_table = profile_dataset.tables.get(table_id, None)
-            if profile_table is None and (dataset_permission := profile_dataset.permissions):
-                permissions.append(dataset_permission)
+            if profile_table is None:
+                if dataset_permission := profile_dataset.permissions:
+                    permissions.append(dataset_permission)
 
             # Otherwise see if the table can be included (mandatory filters match)
-            if self._may_include_profile_table(profile_table):
+            elif self._may_include_profile_table(profile_table):
                 permissions.append(profile_table.permissions)
 
         # Datasets may a permission that also covers this table,
