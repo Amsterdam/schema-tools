@@ -53,3 +53,4 @@ class DatasetCollection(metaclass=Singleton):
             if dataset is None:
                 raise ValueError(f"Dataset {dataset_id} is missing.") from None
             self.add_dataset(dataset)
+            return dataset
