@@ -1065,6 +1065,25 @@ class AdditionalRelationSchema(DatasetType):
         )
 
     @property
+    def relation(self) -> str:
+        """Provide the relation identifier"""
+        # Currently generated, will change in schema later
+        return f"{self._parent_table.dataset.id}:{self['table']}:{self['field']}"
+
+    @cached_property
+    def related_table(self) -> DatasetTableSchema:
+        """Return the table this relation references."""
+        # NOTE: currently doesn't cross datasets
+        return self._parent_table.dataset.get_table_by_id(
+            self["table"], include_nested=False, include_through=False
+        )
+
+    @cached_property
+    def related_field(self) -> DatasetFieldSchema:
+        """Return the field this reverse relation queries to find objects."""
+        return self.related_table.get_field_by_id(self["field"])
+
+    @property
     def format(self):
         """Format: "summary" or "embedded"."""
         return self.get("format", "summary")
