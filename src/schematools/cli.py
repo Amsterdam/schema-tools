@@ -2,7 +2,7 @@
 
 import sys
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Tuple
+from typing import Any, DefaultDict, Dict, List, Optional, Tuple
 
 import click
 import jsonschema
@@ -45,7 +45,6 @@ from schematools.validation import Validator
 DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
 DEFAULT_PROFILE_URL = "https://schemas.data.amsterdam.nl/profiles/"
 
-
 option_db_url = click.option(
     "--db-url",
     envvar="DATABASE_URL",
@@ -59,7 +58,7 @@ option_schema_url = click.option(
     show_default=True,
     required=True,
     help="Url where valid amsterdam schema files are found. "
-    "SCHEMA_URL can also be provided as environment variable.",
+         "SCHEMA_URL can also be provided as environment variable.",
 )
 
 argument_schema_location = click.argument(
@@ -74,7 +73,7 @@ option_profile_url = click.option(
     show_default=True,
     required=True,
     help="Url where valid amsterdam profile files are found. "
-    "PROFILE_URL can also be provided as environment variable.",
+         "PROFILE_URL can also be provided as environment variable.",
 )
 
 argument_profile_location = click.argument(
@@ -174,7 +173,7 @@ def permissions_revoke(db_url, role):
     "--schema-filename",
     is_flag=False,
     help="Filename of local Amsterdam Schema (single dataset)."
-    " If specified, it will be used instead of schema-url",
+         " If specified, it will be used instead of schema-url",
 )
 @click.option(
     "--profile-filename",
@@ -231,20 +230,20 @@ def permissions_revoke(db_url, role):
     help="Before granting new permissions, revoke first all previous table and column permissions",
 )
 def permissions_apply(
-    db_url,
-    schema_url,
-    profile_url,
-    schema_filename,
-    profile_filename,
-    pg_schema,
-    auto,
-    role,
-    scope,
-    execute,
-    create_roles,
-    revoke,
-    set_read_permissions,
-    set_write_permissions,
+        db_url,
+        schema_url,
+        profile_url,
+        schema_filename,
+        profile_filename,
+        pg_schema,
+        auto,
+        role,
+        scope,
+        execute,
+        create_roles,
+        revoke,
+        set_read_permissions,
+        set_write_permissions,
 ):
     """Set permissions for a postgres role,
     based on a scope from Amsterdam Schema or Profiles."""
@@ -335,11 +334,11 @@ def _fetch_json(location: str) -> Dict[str, Any]:
     "-a",
     multiple=True,
     help="Id of a dataset schema that will be preloaded. "
-    "To be used mainly for schemas that are related to the schema that is being validated.",
+         "To be used mainly for schemas that are related to the schema that is being validated.",
 )
 @click.argument("meta_schema_url")
 def validate(
-    schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
+        schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
 ) -> None:
     """Validate a JSON file against the amsterdam schema meta schema.
     schema_location can be a url or a filesystem path.
@@ -352,13 +351,13 @@ def validate(
     """
 
     meta_schema = _fetch_json(meta_schema_url)
-    dataset = _get_dataset_schema(schema_url, schema_location, prefetch_related=True)
+    dataset = _get_dataset_schema(schema_location, schema_url, prefetch_related=True)
 
     # The additional schemas are fetched, but the result is not used
     # because the only reason to fetch the additional schemas is to have those schemas
     # available in the cache that is part of the DatasetSchema class
     for schema in additional_schemas:
-        _get_dataset_schema(schema_url, schema)
+        _get_dataset_schema(schema, schema_url)
 
     structural_errors = False
     try:
@@ -464,7 +463,7 @@ def show_schema(db_url, dataset_id):
     show_default=True,
     required=True,
     help="Url where valid amsterdam schema files are found. "
-    "SCHEMA_URL can also be provided as environment variable.",
+         "SCHEMA_URL can also be provided as environment variable.",
 )
 @click.argument("dataset_id")
 def show_mapfile(schema_url, dataset_id):
@@ -508,7 +507,7 @@ def introspect_geojson(dataset_id, files):
 def import_ndjson(db_url, schema_url, schema_location, table_name, ndjson_path, truncate_table):
     """Import a NDJSON file into a table."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_url, schema_location)
+    dataset_schema = _get_dataset_schema(schema_location, schema_url)
     importer = NDJSONImporter(dataset_schema, engine)
     importer.load_file(ndjson_path, table_name, truncate=truncate_table)
 
@@ -523,7 +522,7 @@ def import_ndjson(db_url, schema_url, schema_location, table_name, ndjson_path, 
 def import_geojson(db_url, schema_url, schema_location, table_name, geojson_path, truncate_table):
     """Import a GeoJSON file into a table."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_url, schema_location)
+    dataset_schema = _get_dataset_schema(schema_location, schema_url)
     importer = GeoJSONImporter(dataset_schema, engine)
     importer.load_file(geojson_path, table_name, truncate=truncate_table)
 
@@ -536,18 +535,13 @@ def import_geojson(db_url, schema_url, schema_location, table_name, geojson_path
 @click.argument("events_path")
 @click.option("-t", "--truncate-table", default=False, is_flag=True)
 def import_events(
-    db_url, schema_url, schema_location, additional_schemas, events_path, truncate_table
+        db_url, schema_url, schema_location, additional_schemas, events_path, truncate_table
 ):
     """Import an events file into a table."""
     engine = _get_engine(db_url)
-    dataset_schemas = [
-        _get_dataset_schema(
-            schema_url,
-            schema_location,
-        )
-    ]
+    dataset_schemas = [_get_dataset_schema(schema_location, schema_url)]
     for schema in additional_schemas:
-        dataset_schemas.append(_get_dataset_schema(schema_url, schema))
+        dataset_schemas.append(_get_dataset_schema(schema, schema_url))
     srid = dataset_schemas[0]["crs"].split(":")[-1]
     # Create connection, do not start a transaction.
     with engine.connect() as connection:
@@ -563,13 +557,15 @@ def import_schema(db_url, schema_url, schema_location):
     """Import the schema definition into the local database."""
     # Add drop or not flag
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_url, schema_location)
+    dataset_schema = _get_dataset_schema(schema_location, schema_url)
 
     create_meta_tables(engine)
     create_meta_table_data(engine, dataset_schema)
 
 
-def _get_dataset_schema(schema_url, schema_location, prefetch_related=False) -> DatasetSchema:
+def _get_dataset_schema(
+        schema_location: str, schema_url: Optional[str] = None, prefetch_related: bool = False
+) -> DatasetSchema:
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
         click.echo(f"Reading schema from {schema_location}", err=True)
@@ -658,18 +654,13 @@ def diff_schemas(schema_url, diff_schema_url):
 @click.argument("dataset_id")
 @click.argument("table_id")
 def export_events_for(
-    db_url, schema_url, schema_location, additional_schemas, dataset_id, table_id
+        db_url, schema_url, schema_location, additional_schemas, dataset_id, table_id
 ):
     """Export events from postgres."""
     engine = _get_engine(db_url)
-    dataset_schemas = [
-        _get_dataset_schema(
-            schema_url,
-            schema_location,
-        )
-    ]
+    dataset_schemas = [_get_dataset_schema(schema_location, schema_url)]
     for schema in additional_schemas:
-        dataset_schemas.append(_get_dataset_schema(schema_url, schema))
+        dataset_schemas.append(_get_dataset_schema(schema, schema_url))
     # Run as a transaction
     with engine.begin() as connection:
         for event in export_events(dataset_schemas, dataset_id, table_id, connection):
@@ -689,14 +680,9 @@ def consume(db_url, schema_url, schema_location, additional_schemas, topics, tru
     from schematools.events.consumer import consume_events
 
     engine = _get_engine(db_url)
-    dataset_schemas = [
-        _get_dataset_schema(
-            schema_url,
-            schema_location,
-        )
-    ]
+    dataset_schemas = [_get_dataset_schema(schema_location, schema_url)]
     for schema in additional_schemas:
-        dataset_schemas.append(_get_dataset_schema(schema_url, schema))
+        dataset_schemas.append(_get_dataset_schema(schema, schema_url))
     srid = dataset_schemas[0]["crs"].split(":")[-1]
     # Create connection, do not start a transaction.
     with engine.connect() as connection:
