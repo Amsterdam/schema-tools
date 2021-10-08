@@ -569,7 +569,7 @@ def _get_dataset_schema(
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
         click.echo(f"Reading schema from {schema_location}", err=True)
-        return dataset_schema_from_file(schema_location, prefetch_related=True)
+        return dataset_schema_from_file(schema_location, prefetch_related=prefetch_related)
     else:
         # Read the schema from the online repository.
         click.echo(f"Reading schemas from {schema_url}", err=True)
