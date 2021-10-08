@@ -593,38 +593,36 @@ def create_identifier_index(schema_url, db_url):
     dataset_schema = DatasetSchema(parent_schema)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in data["tables"]:
-        importer.generate_db_objects(table["id"], ind_tables=False, ind_extra_index=True)
+    for table in dataset_schema.tables:
+        importer.generate_db_objects(table.id, ind_tables=False, ind_extra_index=True)
 
 
 @create.command("tables")
 @option_db_url
 @option_schema_url
-def create_tables(schema_url, db_url):
+@argument_schema_location
+def create_tables(db_url: str, schema_url: str, schema_location: str) -> None:
     """Execute SQLalchemy Table objects"""
-    data = schema_fetch_url_file(schema_url)
     engine = _get_engine(db_url)
-    parent_schema = SchemaType(data)
-    dataset_schema = DatasetSchema(parent_schema)
+    dataset_schema = _get_dataset_schema(schema_location, schema_url, prefetch_related=True)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in data["tables"]:
-        importer.generate_db_objects(table["id"], ind_extra_index=False, ind_tables=True)
+    for table in dataset_schema.tables:
+        importer.generate_db_objects(table.id, ind_extra_index=False, ind_tables=True)
 
 
 @create.command("all")
 @option_db_url
 @option_schema_url
-def create_all_objects(schema_url, db_url):
+@argument_schema_location
+def create_all_objects(db_url: str, schema_url: str, schema_location: str) -> None:
     """Execute SQLalchemy Index (Identifier fields) and Table objects."""
-    data = schema_fetch_url_file(schema_url)
     engine = _get_engine(db_url)
-    parent_schema = SchemaType(data)
-    dataset_schema = DatasetSchema(parent_schema)
+    dataset_schema = _get_dataset_schema(schema_location, schema_url, prefetch_related=True)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in data["tables"]:
-        importer.generate_db_objects(table["id"])
+    for table in dataset_schema.tables:
+        importer.generate_db_objects(table.id)
 
 
 @diff.command("all")
