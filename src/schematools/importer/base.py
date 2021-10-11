@@ -3,35 +3,27 @@ import operator
 from collections import Counter, UserDict
 from functools import reduce
 from itertools import islice
-from typing import Dict, Optional, Set
+from logging import Logger
+from pathlib import PosixPath
+from typing import Any, Dict, Iterator, List, Optional, Set, Union, cast
 
 from jsonpath_rw import parse
-from more_itertools import first
-from sqlalchemy import (
-    Column,
-    ForeignKey,
-    Index,
-    Integer,
-    MetaData,
-    String,
-    Table,
-    Text,
-    exc,
-    inspect,
-)
+from jsonpath_rw.jsonpath import Child
+from sqlalchemy import exc, inspect
+from sqlalchemy.dialects.postgresql.base import PGInspector
+from sqlalchemy.engine.base import Engine
+from sqlalchemy.sql.schema import Index, MetaData, Table
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.factories import tables_factory
 from schematools.types import DatasetSchema, DatasetTableSchema
-from schematools.utils import shorten_name, to_snake_case, toCamelCase
-
-from . import fetch_col_type
+from schematools.utils import to_snake_case, toCamelCase
 
 metadata = MetaData()
 
 
-def chunked(generator, size):
-    """Read parts of the generator, pause each time after a chunk"""
+def chunked(generator: Iterator[Any], size: int) -> Iterator[Any]:
+    """Read parts of the generator, pause each time after a chunk."""
     # Based on more-itertools. islice returns results until 'size',
     # iter() repeatedly calls make_chunk until the '[]' sentinel is returned.
     gen = iter(generator)
@@ -40,27 +32,32 @@ def chunked(generator, size):
 
 
 class JsonPathException(Exception):
+    """Exception used to signal a jsonpath provenance."""
+
     pass
 
 
 class Row(UserDict):
+    """Dict-based class that used provenance to find values."""
 
     # class-level cache for jsonpath expressions
-    _expr_cache = {}
+    _expr_cache: Dict[str, Child] = {}
 
-    def __init__(self, *args, **kwargs):
-        self.fields_provenances = {
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initializer that sets the provenance information."""
+        self.fields_provenances: Dict[str, str] = {
             name: prov_name for prov_name, name in kwargs.pop("fields_provenances", {}).items()
         }
         # Provenanced keys are stored in a cache. This is not only for efficiency.
         # Sometimes, the key that is 'provenanced' is the same key that is in the ndjson
         # import data. When this key gets replaced, the original object structure
         # is not available anymore, so subsequent jsonpath lookups will fail.
-        self.provenances_cache = {}
+        self.provenances_cache: Dict[str, str] = {}
 
         super().__init__(*args, **kwargs)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
+        """Gets a value taking provenance into account."""
         try:
             value = super().__getitem__(self._transform_key(key))
         except JsonPathException:
@@ -68,7 +65,8 @@ class Row(UserDict):
             self.provenances_cache[key] = value
         return value
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
+        """Deletes a value taking provenance into account."""
         try:
             return super().__delitem__(self._transform_key(key))
         except JsonPathException:
@@ -76,7 +74,7 @@ class Row(UserDict):
             # key that is originally provided
             return super().__delitem__(key)
 
-    def _transform_key(self, key):
+    def _transform_key(self, key: str) -> str:
         prov_key = self.fields_provenances.get(key)
         if prov_key is not None:
             if prov_key.startswith("$"):
@@ -84,16 +82,19 @@ class Row(UserDict):
             return prov_key
         if key in self.data:
             return key
+        raise KeyError
 
-    def _fetch_expr(self, prov_key):
+    def _fetch_expr(self, prov_key: str) -> Child:
         if prov_key in self._expr_cache:
             return self._expr_cache[prov_key]
         expr = parse(prov_key)
         self._expr_cache[prov_key] = expr
         return expr
 
-    def _fetch_value_for_jsonpath(self, key):
+    def _fetch_value_for_jsonpath(self, key: str) -> Optional[Union[int, str]]:
         prov_key = self.fields_provenances.get(key)
+        if prov_key is None:
+            return None
         top_element_name = prov_key.split(".")[1]
         expr = self._fetch_expr(prov_key)
         # Sometimes the data is not an object, but simply None
@@ -110,30 +111,41 @@ class Row(UserDict):
 class BaseImporter:
     """Base importer that holds common data."""
 
-    def __init__(self, dataset_schema: DatasetSchema, engine, logger=None):
+    def __init__(
+        self, dataset_schema: DatasetSchema, engine: Engine, logger: Optional[Logger] = None
+    ) -> None:
+        """Initializes the BaseImporter.
+
+        dataset_schema: The dataset to work with.
+        engine: SQLAlchemy database engine.
+        """
         self.engine = engine
         self.dataset_schema = dataset_schema
         self.srid = dataset_schema["crs"].split(":")[-1]
-        self.dataset_table = None
-        self.fields_provenances = None
-        self.db_table_name = None
-        self.tables = {}
-        self.indexes = []
-        self.pk_values_lookup = {}
-        self.pk_colname_lookup = {}
+        self.dataset_table: Optional[DatasetTableSchema] = None
+        self.fields_provenances: Dict[str, str] = {}
+        self.db_table_name: Optional[str] = None
+        self.tables: Dict[str, Table] = {}
+        self.indexes: Dict[str, List[Index]] = {}
+        self.pk_values_lookup: Dict[str, Set[Any]] = {}
+        self.pk_colname_lookup: Dict[str, str] = {}
         self.logger = LogfileLogger(logger) if logger else CliLogger()
 
-    def fetch_fields_provenances(self, dataset_table):
-        """Create mapping from provenance to camelcased fieldname"""
+    def fetch_fields_provenances(self, dataset_table: DatasetTableSchema) -> Dict[str, str]:
+        """Create mapping from provenance to camelcased fieldname."""
         fields_provenances = {}
         for field in dataset_table.fields:
             if (provenance := field.get("provenance")) is not None:
                 fields_provenances[provenance] = field.name
         return fields_provenances
 
-    def fix_fieldnames(self, fields_provenances, table_records):
-        """We need relational snakecased fieldnames in the records
-        And, we need to take provenance in the input records into account
+    def fix_fieldnames(
+        self, fields_provenances: Dict[str, str], table_records: Iterator[Any]
+    ) -> Any:
+        """Fixes the fieldname.
+
+        We need relational snakecased fieldnames in the records and,
+        we need to take provenance in the input records into account.
         """
         fixed_records = []
         for record in table_records:
@@ -144,11 +156,17 @@ class BaseImporter:
             fixed_records.append(fixed_record)
         return fixed_records
 
-    def deduplicate(self, table_name, table_records):
+    def deduplicate(
+        self,
+        table_name: str,
+        table_records: List[Row],
+    ) -> Iterator[Row]:
+        """Removes duplicates from a set of records."""
         this_batch_pk_values = set()
         pk_name = self.pk_colname_lookup.get(table_name)
 
-        values_lookup = self.pk_values_lookup.get(table_name)
+        values_lookup: Set[Any] = self.pk_values_lookup.get(table_name, set())
+
         for record in table_records:
             if pk_name is None:
                 yield record
@@ -163,8 +181,8 @@ class BaseImporter:
             this_batch_pk_values.add(value)
             values_lookup.add(value)
 
-    def create_pk_lookup(self, tables):
-        """Generate a lookup to avoid primary_key clashes"""
+    def create_pk_lookup(self, tables: Dict[str, Table]) -> None:
+        """Generate a lookup to avoid primary_key clashes."""
         for table_name, table in tables.items():
             if isinstance(table, Table):
                 pk_columns = inspect(table).primary_key.columns
@@ -190,10 +208,10 @@ class BaseImporter:
         ind_tables: bool = True,
         ind_extra_index: bool = True,
         limit_tables_to: Optional[Set] = None,
-    ):
-        """Generate the tablemodels and tables and / or index on identifier
-        as specified in the JSON data schema. As default both table and index
-        creation are set to True.
+    ) -> None:
+        """Generate the tablemodels, tables and indexes.
+
+        As default both table and index creation are set to True.
 
         Args:
             table_id: Name of the table as defined in the JSON schema defintion.
@@ -208,9 +226,10 @@ class BaseImporter:
                 are generated for the whole dataset where `table_id` belongs to.
                 Sometimes, this is not needed/wanted.
         """
-
+        self.dataset_table = cast(
+            DatasetTableSchema, self.dataset_schema.get_table_by_id(table_id)
+        )
         if ind_tables or ind_extra_index:
-            self.dataset_table = self.dataset_schema.get_table_by_id(table_id)
 
             # Collect provenance info for easy re-use
             self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
@@ -218,8 +237,12 @@ class BaseImporter:
             # Bind the metadata
             metadata.bind = self.engine
             # Get a table to import into
+
+            if (dataset := self.dataset_table.dataset) is None:
+                raise ValueError("Table {table_id} does not belong to a dataset")
+
             self.tables = tables_factory(
-                self.dataset_table.dataset,
+                dataset,
                 metadata=metadata,
                 db_schema_names={table_id: db_schema_name},
                 db_table_names={table_id: db_table_name},
@@ -242,24 +265,25 @@ class BaseImporter:
                     db_schema_name=db_schema_name,
                     metadata=metadata,
                     db_table_name=self.db_table_name,
-                    logger=[],
                 )
                 metadata_inspector = inspect(metadata.bind)
                 self.prepare_extra_index(
-                    self.indexes, metadata_inspector, db_schema_name, metadata.bind, logger=[]
+                    self.indexes,
+                    metadata_inspector,
+                    metadata.bind,
+                    db_schema_name,
                 )
             except exc.NoInspectionAvailable:
                 pass
 
     def load_file(
         self,
-        file_name,
-        batch_size=100,
-        is_through_table=False,
-        **kwargs,
-    ):
-        """Import a file into the database table, returns the last record, if available"""
-
+        file_name: PosixPath,
+        batch_size: int = 100,
+        is_through_table: bool = False,
+        **kwargs: Any,
+    ) -> Optional[Row]:
+        """Import a file into the database table, returns the last record, if available."""
         if self.dataset_table is None:
             raise ValueError("Import needs to be initialized with table info")
         data_generator = self.parse_records(
@@ -276,11 +300,11 @@ class BaseImporter:
             table_name: table.insert() for table_name, table in self.tables.items()
         }
 
-        last_record = None
+        last_record: Optional[Row] = None
         for records in chunked(data_generator, size=batch_size):
             # every record is keyed on tablename + inside there is a list
             for table_name, insert_statement in insert_statements.items():
-                table_records = reduce(
+                table_records: List[Row] = reduce(
                     operator.add, [record.get(table_name, []) for record in records], []
                 )
                 table_records = self.fix_fieldnames(
@@ -295,18 +319,25 @@ class BaseImporter:
                     )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
-            # main table is keys on tablename and only has one row
+            # main table is keyed on tablename and only has one row
             last_record = records[-1][self.dataset_table.name][0]
 
         self.logger.log_done(num_imported)
         return last_record
 
-    def parse_records(self, filename, dataset_table, db_table_name=None, **kwargs):
-        """Yield all records from the filename"""
+    def parse_records(
+        self,
+        filename: PosixPath,
+        dataset_table: DatasetTableSchema,
+        db_table_name: Optional[str] = None,
+        is_through_table: bool = False,
+        **kwargs: Any,
+    ) -> Iterator[Dict[str, List[Row]]]:
+        """Yield all records from the filename."""
         raise NotImplementedError()
 
-    def prepare_tables(self, tables, truncate=False):
-        """Create the tables if needed"""
+    def prepare_tables(self, tables: Dict[str, Table], truncate: bool = False) -> None:
+        """Create the tables if needed."""
         for table in tables.values():
             if isinstance(table, Table):
                 if not table.exists():
@@ -314,12 +345,21 @@ class BaseImporter:
                 elif truncate:
                     self.engine.execute(table.delete())
 
-    def prepare_extra_index(self, indexes, inspector, db_schema_name, engine, logger=None):
-        """Create extra indexes on identifiers columns in base tables
-        and identifier columns in n:m tables, if not exists"""
+    def prepare_extra_index(
+        self,
+        indexes: Dict[str, List[Index]],
+        inspector: PGInspector,
+        engine: Engine,
+        db_schema_name: Optional[str] = None,
+        logger: Optional[Logger] = None,
+    ) -> None:
+        """Create extra indexes.
 
+        Indexs are placed on identifiers columns in base tables
+        and identifier columns in n:m tables, if not exists.
+        """
         # setup logger
-        logger = LogfileLogger(logger) if logger else CliLogger()
+        _logger: CliLogger = LogfileLogger(logger) if logger else CliLogger()
 
         # In the indexes dict, the table name of each index, is stored in the key
         target_table_name = list(indexes.keys())
@@ -347,53 +387,65 @@ class BaseImporter:
         # create indexes - that do not exists yet- in DB
         for index in indexes_to_create:
             try:
-                logger.log_warning(f"Index '{index}' not found...creating")
+                _logger.log_warning(f"Index '{index}' not found...creating")
                 schema_indexes_objects[index].create(bind=engine)
 
             except AttributeError as e:
-                logger.log_error(
+                _logger.log_error(
                     f"Error creating index '{index}' for '{target_table_name}', error: {e}"
                 )
                 continue
 
 
 class CliLogger:
-    def __index__(self, batch_size):
-        self.batch_size = batch_size
+    """Logger to be used when importer is called from the cli."""
 
-    def log_start(self, file_name, size):
-        print(f"Importing data [each dot is {size} records]: ", end="", flush=True)
+    def log_start(self, file_name: PosixPath, size: int) -> None:
+        """Start the logging."""
+        print(f"Importing data [each dot is {size} records]: ", end="", flush=True)  # noqa: T001
 
-    def log_progress(self, num_imported):
-        print(".", end="", flush=True)
+    def log_progress(self, num_imported: int) -> None:
+        """Output progress."""
+        print(".", end="", flush=True)  # noqa: T001
 
-    def log_error(self, msg, *args):
-        print(msg % args)
+    def log_error(self, msg: str, *args: Any) -> None:
+        """Output error."""
+        print(msg % args)  # noqa: T001
 
-    def log_warning(self, msg, *args):
-        print(msg % args)
+    def log_warning(self, msg: str, *args: Any) -> None:
+        """Output warning."""
+        print(msg % args)  # noqa: T001
 
-    def log_done(self, num_imported):
-        print(f" Done importing {num_imported} records", flush=True)
+    def log_done(self, num_imported: int) -> None:
+        """Indicate logging is finished."""
+        print(f" Done importing {num_imported} records", flush=True)  # noqa: T001
 
 
 class LogfileLogger(CliLogger):
-    def __init__(self, logger):
+    """Logger to be used when importer is called from python code."""
+
+    def __init__(self, logger: Logger):
+        """Initialize logger."""
         self.logger = logger
 
-    def log_start(self, file_name, size):
+    def log_start(self, file_name: PosixPath, size: int) -> None:
+        """Start the logging."""
         self.logger.info("Importing %s with %d records each:", file_name, size)
 
-    def log_progress(self, num_imported):
+    def log_progress(self, num_imported: int) -> None:
+        """Output progress."""
         self.logger.info("- imported %d records", num_imported)
 
-    def log_error(self, msg, *args):
+    def log_error(self, msg: str, *args: Any) -> None:
+        """Output error."""
         self.logger.error(msg, *args)
 
-    def log_warning(self, msg, *args):
+    def log_warning(self, msg: str, *args: Any) -> None:
+        """Output warning."""
         self.logger.warning(msg, *args)
 
-    def log_done(self, num_imported):
+    def log_done(self, num_imported: int) -> None:
+        """Indicate logging is finished."""
         self.logger.info("Done")
 
 
@@ -403,9 +455,9 @@ def index_factory(
     metadata: Optional[MetaData] = None,
     db_table_name: Optional[str] = None,
     db_schema_name: Optional[str] = None,
-    logger: Optional[LogfileLogger] = None,
-) -> Dict[str, Index]:
-    """Generate one or more SQLAlchemy Index objects to work with the JSON Schema
+    logger: Optional[Logger] = None,
+) -> Dict[str, List[Index]]:
+    """Generates one or more SQLAlchemy Index objects to work with the JSON Schema.
 
     :param dataset_table: The Amsterdam Schema definition of the table
     :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
@@ -432,25 +484,29 @@ def index_factory(
 
     The returned Index objects are keyed on the name of table
     """
+    indexes = {}
+    _metadata = cast(MetaData, metadata or MetaData())
+    _logger = LogfileLogger(logger) if logger else CliLogger()
 
-    index = {}
-    metadata = metadata or MetaData()
-    logger = LogfileLogger(logger) if logger else CliLogger()
-
+    # This is really ugly, mypy forces a new local variable here,
+    # otherwise it keeps complaining about the type of db_table_name being Optional.
     if db_table_name is None:
-        db_table_name = dataset_table.db_name()
+        _db_table_name = dataset_table.db_name()
+    else:
+        _db_table_name = db_table_name
 
-    table_object = f"{db_schema_name}.{db_table_name}" if db_schema_name else db_table_name
+    table_name = f"{db_schema_name}.{_db_table_name}" if db_schema_name else _db_table_name
 
     try:
-        table_object = metadata.tables[table_object]
+        table_object = _metadata.tables[table_name]
     except KeyError as ex:
-        logger.log_error(f"{table_object} cannot be found.", repr(ex))
+        _logger.log_error(f"{table_name} cannot be found.", repr(ex))
 
     indexes_to_create = []
 
-    def make_hash_value(index_name):
-        """
+    def make_hash_value(index_name: str) -> str:
+        """Create a hash value for index_name.
+
         Postgres DB holds currently 63 max characters for objectnames.
         To prevent exceeds and collisions, the index names are shortend
         based upon a hash.
@@ -462,25 +518,22 @@ def index_factory(
             hashlib.blake2s(index_name.encode(), digest_size=20).hexdigest() + TABLE_INDEX_POSTFIX
         )
 
-    def define_fk_index():
-        """creates an index on the columns that refer to another table as
-        a child (foreign key reference)"""
-
+    def define_fk_index() -> None:
+        """Creates an index on Foreign Keys."""
         if dataset_table.get_fk_fields():
 
             for field in dataset_table.get_fk_fields():
                 field_name = f"{to_snake_case(field)}_id"
-                index_name = f"{db_table_name}_{field_name}_idx"
+                index_name = f"{_db_table_name}_{field_name}_idx"
                 if len(index_name) > MAX_TABLE_NAME_LENGTH:
                     index_name = make_hash_value(index_name)
                 indexes_to_create.append(Index(index_name, table_object.c[field_name]))
 
         # add Index objects to create
-        index[db_table_name] = indexes_to_create
+        indexes[_db_table_name] = indexes_to_create
 
-    def define_identifier_index():
-        """creates index based on the 'identifier' specification in the Amsterdam schema"""
-
+    def define_identifier_index() -> None:
+        """Creates index based on the 'identifier' specification in the Amsterdam schema."""
         identifier_column_snaked = []
 
         if not indexes_to_create and dataset_table.identifier:
@@ -493,26 +546,26 @@ def index_factory(
                         table_object.c[to_snake_case(identifier_column)]
                     )
                 except KeyError as e:
-                    logger.log_error(f"{e.__str__} on {dataset_table.id}.{identifier_column}")
+                    _logger.log_error(f"{e.__str__} on {dataset_table.id}.{identifier_column}")
                     continue
 
-        index_name = f"{db_table_name}_identifier_idx"
+        index_name = f"{_db_table_name}_identifier_idx"
         if len(index_name) > MAX_TABLE_NAME_LENGTH:
             index_name = make_hash_value(index_name)
         indexes_to_create.append(Index(index_name, *identifier_column_snaked))
 
         # add Index objects to create
-        index[db_table_name] = indexes_to_create
+        indexes[_db_table_name] = indexes_to_create
 
-    def define_throughtable_index():
-        """creates index(es) on the many-to-many table based on 'relation' specification
-        in the Amsterdam schema
+    def define_throughtable_index() -> None:
+        """Creates index(es) on the many-to-many tables.
+
+        Those are based on 'relation' specification in the Amsterdam schema.
         """
-
         for table in dataset_table.get_through_tables_by_id():
 
-            through_columns = []
-            indexes_to_create = []
+            through_columns: List[str] = []
+            indexes_to_create: List[Index] = []
 
             # make a dictionary of the indexes to create
             if table.is_through_table:
@@ -539,11 +592,11 @@ def index_factory(
                 table_id = table.db_name()
 
                 try:
-                    table_object = metadata.tables[table_id]
+                    table_object = _metadata.tables[table_id]
 
                 except KeyError:
-                    logger.log_error(
-                        f"Unable to create Indexes {table_id}." f"Table not found in DB."
+                    _logger.log_error(
+                        f"Unable to create Indexes {table_id}. Table not found in DB."
                     )
                     continue
 
@@ -554,17 +607,17 @@ def index_factory(
                     try:
                         indexes_to_create.append(Index(index_name, table_object.c[column]))
                     except KeyError as e:
-                        logger.log_error(
+                        _logger.log_error(
                             f"{e.__str__}:{table_id}.{column} not found in {table_object.c}"
                         )
                         continue
 
                 # add Index objects to create
-                index[table_id] = indexes_to_create
+                indexes[table_id] = indexes_to_create
 
     if ind_extra_index:
         define_identifier_index()
         define_throughtable_index()
         define_fk_index()
 
-    return index
+    return indexes

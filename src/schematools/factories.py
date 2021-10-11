@@ -13,8 +13,8 @@ from schematools.utils import to_snake_case
 def tables_factory(
     dataset: DatasetSchema,
     metadata: Optional[MetaData] = None,
-    db_table_names: Optional[Dict[str, str]] = None,
-    db_schema_names: Optional[Dict[str, str]] = None,
+    db_table_names: Optional[Dict[str, Optional[str]]] = None,
+    db_schema_names: Optional[Dict[str, Optional[str]]] = None,
     limit_tables_to: Optional[Set] = None,
 ) -> Dict[str, Table]:
     """Generate the SQLAlchemy Table objects base on a `DatasetSchema` definition.
