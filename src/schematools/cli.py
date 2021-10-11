@@ -58,7 +58,7 @@ option_schema_url = click.option(
     show_default=True,
     required=True,
     help="Url where valid amsterdam schema files are found. "
-         "SCHEMA_URL can also be provided as environment variable.",
+    "SCHEMA_URL can also be provided as environment variable.",
 )
 
 argument_schema_location = click.argument(
@@ -73,7 +73,7 @@ option_profile_url = click.option(
     show_default=True,
     required=True,
     help="Url where valid amsterdam profile files are found. "
-         "PROFILE_URL can also be provided as environment variable.",
+    "PROFILE_URL can also be provided as environment variable.",
 )
 
 argument_profile_location = click.argument(
@@ -173,7 +173,7 @@ def permissions_revoke(db_url, role):
     "--schema-filename",
     is_flag=False,
     help="Filename of local Amsterdam Schema (single dataset)."
-         " If specified, it will be used instead of schema-url",
+    " If specified, it will be used instead of schema-url",
 )
 @click.option(
     "--profile-filename",
@@ -230,20 +230,20 @@ def permissions_revoke(db_url, role):
     help="Before granting new permissions, revoke first all previous table and column permissions",
 )
 def permissions_apply(
-        db_url,
-        schema_url,
-        profile_url,
-        schema_filename,
-        profile_filename,
-        pg_schema,
-        auto,
-        role,
-        scope,
-        execute,
-        create_roles,
-        revoke,
-        set_read_permissions,
-        set_write_permissions,
+    db_url,
+    schema_url,
+    profile_url,
+    schema_filename,
+    profile_filename,
+    pg_schema,
+    auto,
+    role,
+    scope,
+    execute,
+    create_roles,
+    revoke,
+    set_read_permissions,
+    set_write_permissions,
 ):
     """Set permissions for a postgres role,
     based on a scope from Amsterdam Schema or Profiles."""
@@ -334,11 +334,11 @@ def _fetch_json(location: str) -> Dict[str, Any]:
     "-a",
     multiple=True,
     help="Id of a dataset schema that will be preloaded. "
-         "To be used mainly for schemas that are related to the schema that is being validated.",
+    "To be used mainly for schemas that are related to the schema that is being validated.",
 )
 @click.argument("meta_schema_url")
 def validate(
-        schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
+    schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
 ) -> None:
     """Validate a JSON file against the amsterdam schema meta schema.
     schema_location can be a url or a filesystem path.
@@ -463,7 +463,7 @@ def show_schema(db_url, dataset_id):
     show_default=True,
     required=True,
     help="Url where valid amsterdam schema files are found. "
-         "SCHEMA_URL can also be provided as environment variable.",
+    "SCHEMA_URL can also be provided as environment variable.",
 )
 @click.argument("dataset_id")
 def show_mapfile(schema_url, dataset_id):
@@ -535,7 +535,7 @@ def import_geojson(db_url, schema_url, schema_location, table_name, geojson_path
 @click.argument("events_path")
 @click.option("-t", "--truncate-table", default=False, is_flag=True)
 def import_events(
-        db_url, schema_url, schema_location, additional_schemas, events_path, truncate_table
+    db_url, schema_url, schema_location, additional_schemas, events_path, truncate_table
 ):
     """Import an events file into a table."""
     engine = _get_engine(db_url)
@@ -564,13 +564,14 @@ def import_schema(db_url, schema_url, schema_location):
 
 
 def _get_dataset_schema(
-        schema_location: str, schema_url: Optional[str] = None, prefetch_related: bool = False
+    schema_location: str, schema_url: Optional[str] = None, prefetch_related: bool = False
 ) -> DatasetSchema:
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
         click.echo(f"Reading schema from {schema_location}", err=True)
         return dataset_schema_from_file(schema_location, prefetch_related=prefetch_related)
     else:
+        assert schema_url is not None, "We should use a more robust filename detection."
         # Read the schema from the online repository.
         click.echo(f"Reading schemas from {schema_url}", err=True)
 
@@ -652,7 +653,7 @@ def diff_schemas(schema_url, diff_schema_url):
 @click.argument("dataset_id")
 @click.argument("table_id")
 def export_events_for(
-        db_url, schema_url, schema_location, additional_schemas, dataset_id, table_id
+    db_url, schema_url, schema_location, additional_schemas, dataset_id, table_id
 ):
     """Export events from postgres."""
     engine = _get_engine(db_url)
