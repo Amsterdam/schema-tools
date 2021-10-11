@@ -1,9 +1,12 @@
 import json
+from pathlib import PosixPath
+from typing import Any, Callable, Dict, Iterator, List, Optional, cast
 
 import ndjson
 from shapely.geometry import shape
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR
+from schematools.types import DatasetTableSchema
 from schematools.utils import to_snake_case
 
 from . import get_table_name
@@ -13,7 +16,9 @@ from .base import BaseImporter, Row
 class NDJSONImporter(BaseImporter):
     """Import an NDJSON file into the database."""
 
-    def _get_through_fields_mapper(self, dataset_table):
+    def _get_through_fields_mapper(
+        self, dataset_table: DatasetTableSchema
+    ) -> Optional[Callable[[Row], Row]]:
         """Maps fields in ndjson to proper fieldnames and structure.
 
         When through tables (1-N and NM relations) are imported directly
@@ -35,25 +40,25 @@ class NDJSONImporter(BaseImporter):
         }
         through_field_ids = dataset_table.data.get("throughFields")
         if through_field_ids is None:
-            return
+            return None
 
         for direction_prefix, field_id in zip(("src", "dst"), through_field_ids):
             field = dataset_table.get_field_by_id(field_id)
             if field is None:
                 self.logger.log_warning("No through field found: %s", field_id)
-                return
+                return None
 
             related_table = field.related_table
             if related_table is None:
                 self.logger.log_warning("No related_table found for: %s", field_id)
-                return
+                return None
 
             field_mapping[field_id] = [
                 (idf, f"{direction_prefix}{id_name_mapping[idf]}")
                 for idf in related_table.identifier
             ]
 
-        def _map_fields(row):
+        def _map_fields(row: Row) -> Row:
             for field_id, idfs__in_names in field_mapping.items():
                 if len(idfs__in_names) > 1:  # compound key
                     row[field_id] = {idf: row[in_name] for idf, in_name in idfs__in_names}
@@ -63,10 +68,15 @@ class NDJSONImporter(BaseImporter):
 
         return _map_fields
 
-    def parse_records(
-        self, file_name, dataset_table, db_table_name=None, is_through_table=False, **kwargs
-    ):
-        """Provide an iterator the reads the NDJSON records"""
+    def parse_records(  # type: ignore[override]
+        self,
+        file_name: PosixPath,
+        dataset_table: DatasetTableSchema,
+        db_table_name: Optional[str] = None,
+        is_through_table: bool = False,
+        **kwargs: Any,
+    ) -> Iterator[Dict[str, List[Row]]]:
+        """Provide an iterator the reads the NDJSON records."""
         fields_provenances = kwargs.pop("fields_provenances", {})
         identifier = dataset_table.identifier
         has_compound_key = dataset_table.has_compound_key
@@ -163,8 +173,8 @@ class NDJSONImporter(BaseImporter):
                         # When the identifier is compound, we can assume
                         # that an extra 'id' field will be available, because
                         # Django cannot live without it.
-                        id_field = dataset_table.identifier
-                        id_field_name = "id" if len(id_field) > 1 else id_field[0]
+                        id_fields = dataset_table.identifier
+                        id_field_name = "id" if len(id_fields) > 1 else id_fields[0]
                         nested_row_record = {}
                         nested_row_record["parent_id"] = row[id_field_name]
                         for sub_field in n_field.sub_fields:
@@ -236,4 +246,4 @@ class NDJSONImporter(BaseImporter):
                         sub_rows[sub_table_id] = through_row_records
 
                     del row[nm_field.id]
-                yield {table_name: [row], **sub_rows}
+                yield {table_name: [row], **{k: cast(List[Row], v) for k, v in sub_rows.items()}}
