@@ -9,6 +9,7 @@ from typing import Any, Dict, Final, Match, Optional, Pattern, Type, Union, cast
 
 import requests
 from cachetools.func import ttl_cache
+from deprecated import deprecated
 from more_ds.network.url import URL
 from more_itertools import first
 from string_utils import slugify
@@ -22,9 +23,9 @@ RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
 
 @ttl_cache(ttl=16)
 def dataset_schemas_from_url(
-    schemas_url: Union[URL, str],
-    dataset_name: Optional[str] = None,
-    prefetch_related: bool = False,
+        schemas_url: Union[URL, str],
+        dataset_name: Optional[str] = None,
+        prefetch_related: bool = False,
 ) -> Dict[str, types.DatasetSchema]:
     """Fetch all dataset schemas from a remote file (or single dataset if specified).
 
@@ -43,9 +44,9 @@ def dataset_schemas_from_url(
 
 
 def dataset_schema_from_url(
-    schemas_url: Union[URL, str],
-    dataset_name: str,
-    prefetch_related: bool = False,
+        schemas_url: Union[URL, str],
+        dataset_name: str,
+        prefetch_related: bool = False,
 ) -> types.DatasetSchema:
     """Fetch a dataset schema from a remote file."""
     return schema_from_url(
@@ -99,10 +100,10 @@ def schemas_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Di
 
 
 def schema_from_url(
-    base_url: Union[URL, str],
-    data_type: Type[types.ST],
-    dataset_id: str,
-    prefetch_related: bool = False,
+        base_url: Union[URL, str],
+        data_type: Type[types.ST],
+        dataset_id: str,
+        prefetch_related: bool = False,
 ) -> types.ST:
     """Fetch schema definitions from a remote file for a single dataset.
 
@@ -130,7 +131,7 @@ def schema_from_url(
 
 
 def _schema_from_url_with_connection(
-    connection: requests.Session, base_url: URL, dataset_path: str, data_type: Type[types.ST]
+        connection: requests.Session, base_url: URL, dataset_path: str, data_type: Type[types.ST]
 ) -> types.ST:
     """Fetch single schema from url with connection."""
     response = connection.get(base_url / dataset_path / "dataset")
@@ -149,7 +150,7 @@ def _schema_from_url_with_connection(
 
 
 def dataset_schema_from_file(
-    file_path: Union[Path, str], prefetch_related: bool = False
+        file_path: Union[Path, str], prefetch_related: bool = False
 ) -> types.DatasetSchema:
     """Read a dataset schema from a file on local drive.
 
@@ -198,6 +199,9 @@ def profile_schema_from_file(filename: Union[Path, str]) -> Dict[str, types.Prof
         return {schema_info["name"]: types.ProfileSchema.from_dict(schema_info)}
 
 
+@deprecated(version="1.0.4", reason="Does not work with datasets that have their tables split "
+                                    "out into separate files. Use something like "
+                                    "`schematools.cli._get_dataset_schema` instead.")
 def schema_fetch_url_file(schema_url_file: Union[URL, str]) -> Dict[str, Any]:
     """Return schemadata from URL or File."""
     if not schema_url_file.startswith("http"):
@@ -306,7 +310,7 @@ def to_snake_case(ident: str) -> str:
 
 
 def get_rel_table_identifier(
-    prefix_length: int, table_identifier: str, through_identifier: str
+        prefix_length: int, table_identifier: str, through_identifier: str
 ) -> str:
     """Create identifier for related table (FK or M2M) from table_identifier and extra fieldname.
 
