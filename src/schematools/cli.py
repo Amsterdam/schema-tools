@@ -2,7 +2,7 @@
 
 import sys
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Optional, Tuple, Iterable
+from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Tuple
 
 import click
 import jsonschema
@@ -402,7 +402,7 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
     errors: DefaultDict[str, List[str]] = defaultdict(list)
     for schema in schema_files:
         try:
-            dataset = dataset_schema_from_file(schema, prefetch_related=True)
+            dataset = _get_dataset_schema(schema, prefetch_related=True)
         except ValueError as ve:
             errors[schema].append(str(ve))
             # No sense in continuing if we can't read the schema file.
