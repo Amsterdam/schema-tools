@@ -37,6 +37,11 @@ class NDJSONImporter(BaseImporter):
             "volgnummer": "Volgnummer",
             "dossier": "Id",
             "documentnummer": "Id",
+            "vestigingsnummer": "Id",
+            "sbiActiviteitNummer": "Id",
+            "kvknummer": "Id",
+            "wozdeelobjectnummer": "Id",
+            "wozobjectnummer": "Id",
         }
         through_field_ids = dataset_table.data.get("throughFields")
         if through_field_ids is None:
