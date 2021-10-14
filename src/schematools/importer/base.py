@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterator, List, Optional, Set, Union, cast
 
 from jsonpath_rw import parse
 from jsonpath_rw.jsonpath import Child
+from psycopg2.errors import UndefinedTable
 from sqlalchemy import exc, inspect
 from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
@@ -362,12 +363,17 @@ class BaseImporter:
         _logger: CliLogger = LogfileLogger(logger) if logger else CliLogger()
 
         # In the indexes dict, the table name of each index, is stored in the key
-        target_table_name = list(indexes.keys())
+        target_table_names = list(indexes.keys())
+        missing_table_names = set()
 
         # get current DB indexes on table
         current_db_indexes = set()
-        for table in target_table_name:
-            db_indexes = inspector.get_indexes(table, schema=db_schema_name)
+        for table in target_table_names:
+            try:
+                db_indexes = inspector.get_indexes(table, schema=db_schema_name)
+            except exc.NoSuchTableError:
+                missing_table_names.add(table)
+                continue
             for current_db_index in db_indexes:
                 current_db_indexes.add(current_db_index["name"])
 
@@ -385,14 +391,16 @@ class BaseImporter:
         )
 
         # create indexes - that do not exists yet- in DB
-        for index in indexes_to_create:
+        for index_name in indexes_to_create:
             try:
-                _logger.log_warning(f"Index '{index}' not found...creating")
-                schema_indexes_objects[index].create(bind=engine)
+                index = schema_indexes_objects[index_name]
+                if index.table.name not in missing_table_names:
+                    _logger.log_warning(f"Index '{index_name}' not found...creating")
+                    index.create(bind=engine)
 
             except AttributeError as e:
                 _logger.log_error(
-                    f"Error creating index '{index}' for '{target_table_name}', error: {e}"
+                    f"Error creating index '{index_name}' for '{target_table_names}', error: {e}"
                 )
                 continue
 
