@@ -1,5 +1,4 @@
 {
-  "type": "dataset",
   "id": "gebieden",
   "title": "gebieden",
   "status": "beschikbaar",
@@ -9,7 +8,6 @@
   "tables": [
     {
       "id": "buurten",
-      "type": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -95,7 +93,6 @@
     },
     {
       "id": "wijken",
-      "type": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -142,7 +139,6 @@
     },
     {
       "id": "ggwgebieden",
-      "type": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -231,7 +227,6 @@
     },
     {
       "id": "stadsdelen",
-      "type": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {

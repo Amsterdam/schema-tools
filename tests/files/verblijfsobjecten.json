@@ -1,5 +1,4 @@
 {
-  "type": "dataset",
   "id": "baggob",
   "title": "bag",
   "status": "niet_beschikbaar",
@@ -9,7 +8,6 @@
   "tables": [
     {
       "id": "verblijfsobjecten",
-      "type": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
