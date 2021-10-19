@@ -66,8 +66,10 @@ def tables_factory(
         columns = []
 
         for field in dataset_table.fields:
+
             # Exclude nested and nm_relation fields (is_array check)
-            if field.type.endswith("#/definitions/schema") or field.is_array:
+            # and fields that are added only for temporality
+            if field.type.endswith("#/definitions/schema") or field.is_array or field.is_temporal:
                 continue
             field_name = to_snake_case(field.name)
 
