@@ -1,5 +1,4 @@
 {
-  "type": "dataset",
   "id": "brp",
   "title": "Basisregistratie Personen (BRP)",
   "status": "beschikbaar",
@@ -10,7 +9,6 @@
   "tables": [
     {
       "id": "ingeschrevenpersonen",
-      "type": "table",
       "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",

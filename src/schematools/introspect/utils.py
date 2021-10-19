@@ -1,5 +1,4 @@
 DATASET_TMPL = {
-    "type": "dataset",
     "id": None,
     "title": None,
     "status": "beschikbaar",
@@ -13,7 +12,6 @@ DATASET_TMPL = {
 # by purely inspecting the postgresql db.
 TABLE_TMPL = {
     "id": None,
-    "type": "table",
     "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",

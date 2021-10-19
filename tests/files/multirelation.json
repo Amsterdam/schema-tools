@@ -1,5 +1,4 @@
 {
-  "type": "dataset",
   "id": "base",
   "title": "Base schema",
   "status": "niet_beschikbaar",
@@ -9,7 +8,6 @@
   "tables": [
     {
       "id": "hasrelations",
-      "type": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
