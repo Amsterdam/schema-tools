@@ -412,7 +412,7 @@ class DatasetSchema(SchemaType):
             # fields of the relation.
             for dim_field in field.get_dimension_fieldnames().get("geldigOp", []):
                 if (camel_dim_field := toCamelCase(dim_field)) in properties:
-                    dim_fields[camel_dim_field] = {"type": "string", "format": "date"}
+                    dim_fields[camel_dim_field] = properties[camel_dim_field]
 
             for fk_target_table, relation_field_name in (
                 (table, left_table_name),
