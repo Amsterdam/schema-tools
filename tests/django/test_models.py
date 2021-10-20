@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
+from django.db.models.fields import DateTimeField
 from django_postgres_unlimited_varchar import UnlimitedCharField
 
 from schematools.contrib.django.factories import model_factory, schema_models_factory
@@ -296,6 +297,7 @@ def test_column_shortnames_in_nm_throughtables(verblijfsobjecten_dataset, hr_dat
     We changed the table name to 'activiteiten'.
     And used a shortname for a nested and for a relation field.
     """
+
     model_dict = {
         cls._meta.model_name: cls
         for cls in schema_models_factory(hr_dataset, base_app_name="dso_api.dynamic_api")
@@ -322,3 +324,24 @@ def test_nested_objects_should_never_be_temporal(verblijfsobjecten_dataset):
     }
 
     assert not model_dict["verblijfsobjecten_gebruiksdoel"].is_temporal()
+
+
+@pytest.mark.django_db
+def test_temporal_subfields_are_skipped(verblijfsobjecten_dataset):
+    """Prove that relation subfields are skipped when they are temporal.
+
+    Verblijfsobjecten has as `beginGeldigheid` that is a `date-time`.
+    The `ligtInBuurt` FK also has a `beginGeldigheid` but field that is a `date`.
+    This `ligtInBuurt.beginGeldigheid` should not be used for model creation.
+    If it does, is will "mask" the original `beginGeldigheid` field, this
+    leads to a wrong Django field model type.
+    """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            verblijfsobjecten_dataset, base_app_name="dso_api.dynamic_api"
+        )
+    }
+
+    begin_geldigheid_field = model_dict["verblijfsobjecten"]._meta.get_field("begin_geldigheid")
+    assert isinstance(begin_geldigheid_field, DateTimeField)

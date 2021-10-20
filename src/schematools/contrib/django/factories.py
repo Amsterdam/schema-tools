@@ -407,8 +407,8 @@ def model_factory(
         # skip schema field for now
         if type_.endswith("definitions/schema"):
             continue
-        # skip nested tables
-        if field.is_nested_table:
+        # skip nested tables and fields that are only added for temporality
+        if field.is_nested_table or field.is_temporal:
             continue
         # reduce amsterdam schema refs to their fragment
         if type_.startswith(settings.SCHEMA_DEFS_URL):
