@@ -32,6 +32,8 @@ class NDJSONImporter(BaseImporter):
 
         """
         field_mapping = {}
+        # This is mapping the GOBModel `entity_id` to `Id`
+        # that needs to be used in GraphQL queries.
         id_name_mapping = {
             "identificatie": "Id",
             "volgnummer": "Volgnummer",
@@ -42,6 +44,8 @@ class NDJSONImporter(BaseImporter):
             "kvknummer": "Id",
             "wozdeelobjectnummer": "Id",
             "wozobjectnummer": "Id",
+            "id": "Id",
+            "code": "Id",
         }
         through_field_ids = dataset_table.data.get("throughFields")
         if through_field_ids is None:
