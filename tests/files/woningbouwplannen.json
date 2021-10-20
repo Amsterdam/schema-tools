@@ -1,4 +1,5 @@
 {
+  "schemaType": "dataset",
   "id": "woningbouwplannen",
   "title": "Woningbouwplannen en Strategische ruimtes",
   "description": "Deze dataset bevat de gegevens over de te realiseren woningen in Amsterdam.",
@@ -8,6 +9,7 @@
   "tables": [
     {
       "id": "woningbouwplan",
+      "schemaType": "table",
       "provenance": "wbw_woningbouwplan",
       "title": "Woningbouwplan",
       "description": "De aantallen vormen de planvoorraad. Dit zijn niet de aantallen die definitief worden gerealiseerd. Ervaring leert dat een deel van de planvoorraad wordt opgeschoven. Niet alle woningbouw initiatieven doorlopen de verschillende plaberumfasen. Met name kleinere particuliere projecten worden in de regel pas toegevoegd aan de monitor zodra er een intentieovereenkomst of afsprakenbrief is getekend.",

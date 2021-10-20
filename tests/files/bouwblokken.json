@@ -1,4 +1,5 @@
 {
+  "schemaType": "dataset",
   "id": "gebieden",
   "title": "gebieden",
   "status": "beschikbaar",
@@ -9,6 +10,7 @@
     {
       "id": "bouwblokken",
       "mainGeometry": "geometrie",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -53,6 +55,7 @@
     },
     {
       "id": "buurten",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
         "$schema": "http://json-schema.org/draft-07/schema#",

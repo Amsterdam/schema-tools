@@ -1,4 +1,5 @@
 {
+  "schemaType": "dataset",
   "id": "brk",
   "title": "brk",
   "status": "niet_beschikbaar",
@@ -9,6 +10,7 @@
   "tables": [
     {
       "id": "kadastraleobjecten",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -191,6 +193,7 @@
     },
     {
       "id": "zakelijkerechten",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -295,6 +298,7 @@
     },
     {
       "id": "kadastralesubjecten",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/kadastralesubjecten.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -589,6 +593,7 @@
     },
     {
       "id": "tenaamstellingen",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -702,6 +707,7 @@
     },
     {
       "id": "aantekeningenrechten",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/aantekeningenrechten.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -774,6 +780,7 @@
     },
     {
       "id": "aantekeningenkadastraleobjecten",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -875,6 +882,7 @@
     },
     {
       "id": "stukdelen",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/stukdelen.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1008,6 +1016,7 @@
     },
     {
       "id": "aardzakelijkerechten",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/aardzakelijkerechten.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1051,6 +1060,7 @@
     },
     {
       "id": "gemeentes",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/gemeentes.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1091,6 +1101,7 @@
     },
     {
       "id": "meta",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/meta.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1117,6 +1128,7 @@
     },
     {
       "id": "kadastralesecties",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/kadastralesecties.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1157,6 +1169,7 @@
     },
     {
       "id": "kadastralegemeentecodes",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/kadastralegemeentecodes.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1193,6 +1206,7 @@
     },
     {
       "id": "kadastralegemeentes",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/kadastralegemeentes.json",
         "$schema": "http://json-schema.org/draft-07/schema#",

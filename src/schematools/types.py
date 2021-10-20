@@ -50,6 +50,10 @@ class SchemaType(UserDict):
     def id(self) -> str:
         return cast(str, self["id"])
 
+    @property
+    def type(self) -> str:
+        return cast(str, self["schemaType"])
+
     def json(self) -> str:
         return json.dumps(self.data)
 
@@ -96,16 +100,17 @@ class DatasetSchema(SchemaType):
             except Exception as exc:
                 raise ValueError("Invalid Amsterdam Dataset schema file") from exc
 
-            for i, table in enumerate(ds.get("tables", ())):
-                if ref := table.get("$ref"):
-                    with open(Path(filename).parent / Path(ref + ".json")) as table_file:
-                        ds["tables"][i] = json.load(table_file)
+            if ds["type"] == "dataset":
+                for i, table in enumerate(ds["tables"]):
+                    if ref := table.get("$ref"):
+                        with open(Path(filename).parent / Path(ref + ".json")) as table_file:
+                            ds["tables"][i] = json.load(table_file)
         return cls.from_dict(ds)
 
     @classmethod
     def from_dict(cls, obj: Json) -> DatasetSchema:
         """Parses given dict and validates the given schema"""
-        if not isinstance(obj.get("tables"), list):
+        if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Dataset schema file")
 
         return cls(obj)
@@ -222,6 +227,7 @@ class DatasetSchema(SchemaType):
             "id": sub_table_id,
             "originalID": field.name,
             "parentTableID": table.id,
+            "type": "table",
             "auth": list(field.auth | table.auth),  # pass same auth rules as field has
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
@@ -321,6 +327,7 @@ class DatasetSchema(SchemaType):
 
         sub_table_schema: Json = {
             "id": table_id,
+            "type": "table",
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object",
@@ -445,6 +452,9 @@ class DatasetTableSchema(SchemaType):
         self._parent_schema = _parent_schema
         self.nested_table = nested_table
         self.through_table = through_table
+
+        if self.get("type") != "table":
+            raise ValueError("Invalid Amsterdam schema table data")
 
         if not self["schema"].get("$schema", "").startswith("http://json-schema.org/"):
             raise ValueError("Invalid JSON-schema contents of table")

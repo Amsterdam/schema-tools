@@ -1,4 +1,5 @@
 {
+  "schemaType": "dataset",
   "id": "brk",
   "title": "brk",
   "status": "niet_beschikbaar",
@@ -9,6 +10,7 @@
   "tables": [
     {
       "id": "kadastraleobjecten",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {

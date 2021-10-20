@@ -1,4 +1,5 @@
 {
+  "schemaType": "dataset",
   "id": "gebieden",
   "title": "gebieden",
   "auth": ["LEVEL/A1", "LEVEL/A2"],
@@ -9,6 +10,7 @@
     {
       "id": "bouwblokken",
       "mainGeometry": "geometrie",
+      "schemaType": "table",
       "auth": ["LEVEL/B1", "LEVEL/B2"],
       "temporal": {
         "identifier": "volgnummer",
@@ -55,6 +57,7 @@
     },
     {
       "id": "buurten",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -140,6 +143,7 @@
     },
     {
       "id": "wijken",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
