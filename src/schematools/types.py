@@ -1025,7 +1025,6 @@ class DatasetFieldSchema(DatasetType):
             )
 
         for id_, spec in properties.items():
-
             field_id = id_ if id_ in combined_dimension_fieldnames else f"{field_name_prefix}{id_}"
             yield DatasetFieldSchema(
                 _parent_table=self._parent_table,
