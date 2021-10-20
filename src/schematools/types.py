@@ -364,7 +364,7 @@ class DatasetSchema(SchemaType):
         sub_table_schema: Json = {
             "id": table_id,
             "type": "table",
-            "throughFields": [left_table_id, snakecased_fieldname],
+            "throughFields": [left_table_id, snakecased_field_id],
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object",
@@ -375,11 +375,11 @@ class DatasetSchema(SchemaType):
                     "id": {
                         "type": "integer/autoincrement",
                     },
-                    left_table_name: {
+                    left_table_id: {
                         "type": "string",
                         "relation": f"{left_dataset_id}:{left_table_id}",
                     },
-                    snakecased_fieldname: {
+                    snakecased_field_id: {
                         "type": "string",
                         "relation": f"{right_dataset_id}:{right_table_id}",
                     },
@@ -391,9 +391,14 @@ class DatasetSchema(SchemaType):
         # we need to add a shortname to the dynamically generated
         # schema definition.
         if field.has_shortname or table.has_shortname:
-            sub_table_schema["shortname"] = get_rel_table_identifier(
-                len(self.id) + 1, table.name, snakecased_fieldname
-            )
+            sub_table_schema["shortname"] = toCamelCase(f"{table.name}_{field.name}")
+
+        # We also need to add a shortname for the individual FK fields
+        # pointing to left en right table in the M2M
+        if field.has_shortname:
+            sub_table_schema["schema"]["properties"][snakecased_field_id]["shortname"] = field.name
+        if table.has_shortname:
+            sub_table_schema["schema"]["properties"][left_table_id]["shortname"] = table.name
 
         # For both types of through tables (M2M and FK), we add extra fields
         # to the table (see docstring).
