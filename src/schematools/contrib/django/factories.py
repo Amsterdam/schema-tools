@@ -183,7 +183,7 @@ class FKRelationMaker(RelationMaker):
             return to_snake_case(self.field._parent_table["originalID"])
         elif self.field._parent_table.is_through_table:
             # Need this for walking over the through table for the "_links" section.
-            return to_snake_case(f"{self.field._parent_table.id}_through_{self.field.name}")
+            return to_snake_case(f"{self.field._parent_table.id}_through_{self.field.id}")
         elif (additional_relation := self.field.reverse_relation) is not None:
             # The relation is described by the other table, return it
             return additional_relation.id

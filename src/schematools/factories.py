@@ -43,28 +43,20 @@ def tables_factory(
     metadata = metadata or MetaData()
 
     for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
-
         if limit_tables_to is not None and dataset_table.id not in limit_tables_to:
             continue
-
         db_table_description = dataset_table.description
-
         if (db_table_name := (db_table_names or {}).get(dataset_table.id)) is None:
-
             has_postfix = (
                 db_schema_names is not None
                 and (dataset_table.is_nested_table or dataset_table.is_through_table)
                 and db_table_names.get(dataset_table.parent_table.id) is not None
             )
-
             postfix = TMP_TABLE_POSTFIX if has_postfix else None
-
             db_table_name = dataset_table.db_name(postfix=postfix)
 
         db_schema_name = (db_schema_names or {}).get(dataset_table.id)
-
         columns = []
-
         for field in dataset_table.fields:
 
             # Exclude nested and nm_relation fields (is_array check)
@@ -72,7 +64,6 @@ def tables_factory(
             if field.type.endswith("#/definitions/schema") or field.is_array or field.is_temporal:
                 continue
             field_name = to_snake_case(field.name)
-
             try:
                 col_type = fetch_col_type(field)
             except KeyError:
@@ -80,15 +71,12 @@ def tables_factory(
                     f'Import failed at "{field.name}": {dict(field)!r}\n'
                     f"Field type '{field.type}' is not implemented."
                 ) from None
-
             col_kwargs = {"nullable": not field.required}
             if field.is_primary:
                 col_kwargs["primary_key"] = True
                 col_kwargs["nullable"] = False
                 col_kwargs["autoincrement"] = field.type.endswith("autoincrement")
-
             id_postfix = "_id" if field.relation else ""
-
             columns.append(
                 Column(
                     f"{field_name}{id_postfix}", col_type, comment=field.description, **col_kwargs
