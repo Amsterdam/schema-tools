@@ -321,7 +321,7 @@ class DatasetSchema(SchemaType):
                 )
 
         def _expand_relation_spec(
-            fk_target_table: DatasetTableSchema, sub_table_schema: Json, field_name: str
+            fk_target_table: DatasetTableSchema, sub_table_schema: Json, field_id: str
         ) -> None:
             """Changes the spec. of a relation inside a schema to an object.
 
@@ -330,7 +330,7 @@ class DatasetSchema(SchemaType):
             expanded into an object.
             """
             if fk_target_table:
-                spec = sub_table_schema["schema"]["properties"][field_name]
+                spec = sub_table_schema["schema"]["properties"][field_id]
                 spec["type"] = "object"
                 spec["properties"] = {
                     toCamelCase(idf): {"type": fk_target_table.get_field_by_id(idf).type}
@@ -419,12 +419,12 @@ class DatasetSchema(SchemaType):
                 if (camel_dim_field := toCamelCase(dim_field)) in properties:
                     dim_fields[camel_dim_field] = properties[camel_dim_field]
 
-            for fk_target_table, relation_field_name in (
-                (table, left_table_name),
-                (_get_fk_target_table(right_dataset_id, right_table_id), snakecased_fieldname),
+            for fk_target_table, relation_field_id in (
+                (table, left_table_id),
+                (_get_fk_target_table(right_dataset_id, right_table_id), snakecased_field_id),
             ):
                 if fk_target_table and fk_target_table.has_compound_key:
-                    _expand_relation_spec(fk_target_table, sub_table_schema, relation_field_name)
+                    _expand_relation_spec(fk_target_table, sub_table_schema, relation_field_id)
 
             sub_table_schema["schema"]["properties"].update(dim_fields)
 
