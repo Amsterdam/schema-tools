@@ -11,7 +11,7 @@ class Dataset(Base):
     __tablename__ = "ams_schema_dataset"
     id = Column(String, primary_key=True)
     path = Column(String)
-    type = Column(String)
+    schema_type = Column(String)
     title = Column(String)
     description = Column(String)
     date_created = Column(DateTime)
@@ -44,7 +44,7 @@ class Table(Base):
     __tablename__ = "ams_schema_table"
     id = Column(String, primary_key=True)
     dataset_id = Column(String, ForeignKey("ams_schema_dataset.id"), primary_key=True)
-    type = Column(String)
+    schema_type = Column(String)
     title = Column(String)
     description = Column(String)
     display = Column(String)
