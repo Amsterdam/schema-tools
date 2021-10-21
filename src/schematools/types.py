@@ -363,7 +363,7 @@ class DatasetSchema(SchemaType):
 
         sub_table_schema: Json = {
             "id": table_id,
-            "type": "table",
+            "schemaType": "table",
             "throughFields": [left_table_id, snakecased_field_id],
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
