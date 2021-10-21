@@ -30,5 +30,5 @@ build: clean
 	python -m build --sdist --wheel .
 
 .PHONY: upload
-upload:
+upload: build
 	python -m twine upload --repository-url https://upload.pypi.org/legacy/ --username datapunt dist/*
