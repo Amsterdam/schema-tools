@@ -312,7 +312,6 @@ class BaseImporter:
                     self.fields_provenances,
                     self.deduplicate(table_name, table_records),
                 )
-
                 if table_records:
                     self.engine.execute(
                         insert_statement,
