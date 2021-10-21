@@ -8,7 +8,7 @@ from schematools.types import DatasetSchema, SchemaType
 def test_index_creation(engine, db_schema):
     """Prove that identifier index is created based on schema specificiation."""
     test_data = {
-        "type": "dataset",
+        "schemaType": "dataset",
         "id": "test",
         "title": "test table",
         "status": "beschikbaar",
@@ -18,7 +18,7 @@ def test_index_creation(engine, db_schema):
         "tables": [
             {
                 "id": "test",
-                "type": "table",
+                "schemaType": "table",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
@@ -77,7 +77,7 @@ def test_index_troughtables_creation(engine, db_schema):
     names should avoid failing tests.
     """
     test_data = {
-        "type": "dataset",
+        "schemaType": "dataset",
         "id": "test",
         "title": "TEST",
         "status": "niet_beschikbaar",
@@ -88,7 +88,7 @@ def test_index_troughtables_creation(engine, db_schema):
         "tables": [
             {
                 "id": "test_1",
-                "type": "table",
+                "schemaType": "table",
                 "temporal": {
                     "identifier": "volgnummer",
                     "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
@@ -138,7 +138,7 @@ def test_index_troughtables_creation(engine, db_schema):
             },
             {
                 "id": "test_2",
-                "type": "table",
+                "schemaType": "table",
                 "temporal": {
                     "identifier": "volgnummer",
                     "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
@@ -215,7 +215,7 @@ def test_fk_index_creation(engine, db_schema):
         "tables": [
             {
                 "id": "parent_test",
-                "type": "table",
+                "schemaType": "table",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
@@ -235,7 +235,7 @@ def test_fk_index_creation(engine, db_schema):
             },
             {
                 "id": "child_test",
-                "type": "table",
+                "schemaType": "table",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
@@ -304,7 +304,7 @@ def test_size_of_index_name(engine, db_schema):
         "tables": [
             {
                 "id": "parent_test_size",
-                "type": "table",
+                "schemaType": "table",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
@@ -324,7 +324,7 @@ def test_size_of_index_name(engine, db_schema):
             },
             {
                 "id": "child_test_size",
-                "type": "table",
+                "schemaType": "table",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
