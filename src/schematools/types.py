@@ -52,7 +52,10 @@ class SchemaType(UserDict):
 
     @property
     def type(self) -> str:
-        return cast(str, self["schemaType"])
+        typ = self.get("schemaType")  # metaschema 1.1.1
+        if typ is None:
+            typ = self["type"]  # older metaschema
+        return cast(str, typ)
 
     def json(self) -> str:
         return json.dumps(self.data)
@@ -100,7 +103,7 @@ class DatasetSchema(SchemaType):
             except Exception as exc:
                 raise ValueError("Invalid Amsterdam Dataset schema file") from exc
 
-            if ds["schemaType"] == "dataset":
+            if ds.get("schemaType", ds.get("type")) == "dataset":
                 for i, table in enumerate(ds["tables"]):
                     if ref := table.get("$ref"):
                         with open(Path(filename).parent / Path(ref + ".json")) as table_file:
@@ -110,7 +113,9 @@ class DatasetSchema(SchemaType):
     @classmethod
     def from_dict(cls, obj: Json) -> DatasetSchema:
         """Parses given dict and validates the given schema"""
-        if obj.get("schemaType") != "dataset" or not isinstance(obj.get("tables"), list):
+        if obj.get("schemaType", obj.get("type")) != "dataset" or not isinstance(
+            obj.get("tables"), list
+        ):
             raise ValueError("Invalid Amsterdam Dataset schema file")
 
         return cls(obj)
@@ -453,7 +458,7 @@ class DatasetTableSchema(SchemaType):
         self.nested_table = nested_table
         self.through_table = through_table
 
-        if self.get("schemaType") != "table":
+        if self.type != "table":
             raise ValueError("Invalid Amsterdam schema table data")
 
         if not self["schema"].get("$schema", "").startswith("http://json-schema.org/"):
