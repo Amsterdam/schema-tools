@@ -83,7 +83,11 @@ def tables_factory(
                 )
             )
 
-        tables[dataset_table.name] = Table(
+        # The table_name has to be snakecased here, because
+        # it is used to lookup an SA Table and it needs to match
+        # with the records that are coming back from the
+        # BaseImporter.
+        tables[to_snake_case(dataset_table.name)] = Table(
             db_table_name,
             metadata,
             comment=db_table_description,
