@@ -1,4 +1,5 @@
 {
+  "schemaType": "dataset",
   "id": "validationTest",
   "title": "PsqlIdentifierLengthValidator Validation Test",
   "status": "beschikbaar",
@@ -9,6 +10,7 @@
     {
       "id": "AnAbsurdlyLongIdentifierThatShouldDefinitelyTriggerPsqlIdentifierLengthValidator",
       "title": "Some title",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/tests/long_ids.json",
         "$schema": "http://json-schema.org/draft-07/schema#",

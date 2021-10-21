@@ -1,4 +1,5 @@
 {
+  "schemaType": "dataset",
   "id": "gebieden",
   "title": "gebieden",
   "status": "beschikbaar",
@@ -8,6 +9,7 @@
     {
       "id": "stadsdelen",
       "mainGeometry": "geometrie",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/stadsdelen.json",
         "$schema": "http://json-schema.org/draft-07/schema#",

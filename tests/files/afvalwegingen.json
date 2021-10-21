@@ -1,5 +1,6 @@
 {
   "id": "afvalwegingen",
+  "schemaType": "dataset",
   "status": "beschikbaar",
   "authorizationGrantor": "Deze gegevensset wordt onderhouden voor uitvoering van taken betreffende het inzamelen van huishoudelijk afval. De juridische basis is de Wet Milieubeheer, Hoofdstuk 10. Afvalstoffen.",
   "theme": ["Wonen", "duurzaamheid en milieu", "Ruimte en Topografie"],
@@ -20,6 +21,7 @@
   "tables": [
     {
       "id": "containers",
+      "schemaType": "table",
       "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -103,6 +105,7 @@
     },
     {
       "id": "clusters",
+      "schemaType": "table",
       "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -158,6 +161,7 @@
     },
     {
       "id": "wegingen",
+      "schemaType": "table",
       "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -236,6 +240,7 @@
     },
     {
       "id": "containertypes",
+      "schemaType": "table",
       "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",

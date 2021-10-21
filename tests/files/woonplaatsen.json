@@ -1,4 +1,5 @@
 {
+  "schemaType": "dataset",
   "id": "baggob",
   "title": "bag",
   "status": "niet_beschikbaar",
@@ -8,6 +9,7 @@
   "tables": [
     {
       "id": "woonplaatsen",
+      "schemaType": "table",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -50,6 +52,7 @@
     },
     {
       "id": "dossiers",
+      "schemaType": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/bag/dossiers.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
