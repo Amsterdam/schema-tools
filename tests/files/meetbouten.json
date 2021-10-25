@@ -1,6 +1,6 @@
 {
   "id": "meetbouten",
-  "schemaType": "dataset",
+  "type": "dataset",
   "status": "beschikbaar",
   "version": "2.0.0",
   "default_version": "2.0.0",
@@ -8,7 +8,7 @@
   "tables": [
     {
       "id": "meetbouten",
-      "schemaType": "table",
+      "type": "table",
       "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -63,7 +63,7 @@
     },
     {
       "id": "metingen",
-      "schemaType": "table",
+      "type": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/meetbouten/metingen.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -103,7 +103,7 @@
     },
     {
       "id": "referentiepunten",
-      "schemaType": "table",
+      "type": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/meetbouten/referentiepunten.json",
         "$schema": "http://json-schema.org/draft-07/schema#",

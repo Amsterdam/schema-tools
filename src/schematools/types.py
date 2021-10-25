@@ -53,10 +53,7 @@ class SchemaType(UserDict):
 
     @property
     def type(self) -> str:
-        typ = self.get("schemaType")  # metaschema 1.1.1
-        if typ is None:
-            typ = self["type"]  # older metaschema
-        return cast(str, typ)
+        return cast(str, self["type"])
 
     def json(self) -> str:
         return json.dumps(self.data)
@@ -104,7 +101,7 @@ class DatasetSchema(SchemaType):
             except Exception as exc:
                 raise ValueError("Invalid Amsterdam Dataset schema file") from exc
 
-            if ds.get("schemaType", ds.get("type")) == "dataset":
+            if ds["type"] == "dataset":
                 for i, table in enumerate(ds["tables"]):
                     if ref := table.get("$ref"):
                         with open(Path(filename).parent / Path(ref + ".json")) as table_file:
@@ -114,9 +111,7 @@ class DatasetSchema(SchemaType):
     @classmethod
     def from_dict(cls, obj: Json) -> DatasetSchema:
         """Parses given dict and validates the given schema"""
-        if obj.get("schemaType", obj.get("type")) != "dataset" or not isinstance(
-            obj.get("tables"), list
-        ):
+        if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Dataset schema file")
 
         return cls(obj)
@@ -241,7 +236,7 @@ class DatasetSchema(SchemaType):
             "id": sub_table_id,
             "originalID": field.name,
             "parentTableID": table.id,
-            "schemaType": "table",
+            "type": "table",
             "auth": list(field.auth | table.auth),  # pass same auth rules as field has
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
@@ -363,7 +358,7 @@ class DatasetSchema(SchemaType):
 
         sub_table_schema: Json = {
             "id": table_id,
-            "schemaType": "table",
+            "type": "table",
             "throughFields": [left_table_id, snakecased_field_id],
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",

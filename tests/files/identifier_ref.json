@@ -1,5 +1,5 @@
 {
-  "schemaType": "dataset",
+  "type": "dataset",
   "id": "validationTest",
   "title": "PsqlIdentifierLengthValidator Validation Test",
   "status": "beschikbaar",
@@ -10,7 +10,7 @@
     {
       "id": "someTable",
       "title": "Some title",
-      "schemaType": "table",
+      "type": "table",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/tests/identifier_ref.json",
         "$schema": "http://json-schema.org/draft-07/schema#",

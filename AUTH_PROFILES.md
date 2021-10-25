@@ -11,7 +11,7 @@ This is done via `auth` parameter on each level respectively.
 ### Example of Dataset Level Authorization:
 
     {
-      "schemaType": "dataset",
+      "type": "dataset",
       "id": "brp",
       ...
       "auth": "BRP/R"
@@ -22,13 +22,13 @@ This is done via `auth` parameter on each level respectively.
 ### Example of Table Level Authorization:
 
     {
-      "schemaType": "dataset",
+      "type": "dataset",
       "id": "brp",
       ...
       "tables": [
         {
           "id": "ingeschrevenpersonen",
-          "schemaType": "table",
+          "type": "table",
           "auth": "BRP/R",
           "schema": {
             ...
@@ -40,13 +40,13 @@ This is done via `auth` parameter on each level respectively.
 ### Example of Field Level Authorization:
 
     {
-      "schemaType": "dataset",
+      "type": "dataset",
       "id": "brp",
       ...
       "tables": [
         {
           "id": "ingeschrevenpersonen",
-          "schemaType": "table",
+          "type": "table",
           "schema": {
             ...,
             "properties": {
@@ -136,14 +136,14 @@ Representations will be merged in favour of highest as well. Given 2 profiles wi
 
     # dataset configuration
     {
-      "schemaType": "dataset",
+      "type": "dataset",
       "id": "brp",
       "auth": "BRP/R"
       ...
       "tables": [
         {
           "id": "ingeschrevenpersonen",
-          "schemaType": "table",
+          "type": "table",
           "schema": {
             ...,
             "properties": {
