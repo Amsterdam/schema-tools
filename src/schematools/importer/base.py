@@ -9,7 +9,6 @@ from typing import Any, Dict, Iterator, List, Optional, Set, Union, cast
 
 from jsonpath_rw import parse
 from jsonpath_rw.jsonpath import Child
-from psycopg2.errors import UndefinedTable
 from sqlalchemy import exc, inspect
 from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
@@ -46,9 +45,11 @@ class Row(UserDict):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initializer that sets the provenance information."""
-        self.fields_provenances: Dict[str, str] = {
-            name: prov_name for prov_name, name in kwargs.pop("fields_provenances", {}).items()
+        fields_provenances = kwargs.pop("fields_provenances", {})
+        self.rev_provenances: Dict[str, str] = {
+            name: prov_name for prov_name, name in fields_provenances.items()
         }
+        self.field_provenanced_by_id: Optional[str] = fields_provenances.get("id")
         # Provenanced keys are stored in a cache. This is not only for efficiency.
         # Sometimes, the key that is 'provenanced' is the same key that is in the ndjson
         # import data. When this key gets replaced, the original object structure
@@ -56,6 +57,9 @@ class Row(UserDict):
         self.provenances_cache: Dict[str, str] = {}
 
         super().__init__(*args, **kwargs)
+
+        if self.field_provenanced_by_id is not None:
+            self.data[self.field_provenanced_by_id] = self.data["id"]
 
     def __getitem__(self, key: str) -> Any:
         """Gets a value taking provenance into account."""
@@ -76,7 +80,9 @@ class Row(UserDict):
             return super().__delitem__(key)
 
     def _transform_key(self, key: str) -> str:
-        prov_key = self.fields_provenances.get(key)
+        if key == self.field_provenanced_by_id:
+            return self.field_provenanced_by_id
+        prov_key = self.rev_provenances.get(key)
         if prov_key is not None:
             if prov_key.startswith("$"):
                 raise JsonPathException()
@@ -93,7 +99,7 @@ class Row(UserDict):
         return expr
 
     def _fetch_value_for_jsonpath(self, key: str) -> Optional[Union[int, str]]:
-        prov_key = self.fields_provenances.get(key)
+        prov_key = self.rev_provenances.get(key)
         if prov_key is None:
             return None
         top_element_name = prov_key.split(".")[1]
@@ -152,6 +158,9 @@ class BaseImporter:
         for record in table_records:
             fixed_record = {}
             for field_name, field_value in record.items():
+                if field_name == "id":
+                    fixed_record["id"] = field_value
+                    continue
                 fixed_field_name = fields_provenances.get(field_name, field_name)
                 fixed_record[to_snake_case(fixed_field_name)] = field_value
             fixed_records.append(fixed_record)
