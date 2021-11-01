@@ -1,5 +1,7 @@
+import argparse
 from argparse import ArgumentTypeError
 from distutils.util import strtobool
+from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.core.management import BaseCommand, CommandError
@@ -7,15 +9,15 @@ from django.core.management import BaseCommand, CommandError
 from schematools.contrib.django.models import Dataset
 
 
-def _strtobool(value):
+def _strtobool(value: Any) -> bool:
     try:
         return bool(strtobool(value))
     except ValueError:
         raise ArgumentTypeError("expected boolean value") from None
 
 
-class Command(BaseCommand):
-    help = "Modify the settings for a dataset."
+class Command(BaseCommand):  # noqa: D101
+    help = "Modify the settings for a dataset."  # noqa: A003
     requires_system_checks = False
     setting_options = (
         "auth",
@@ -26,7 +28,7 @@ class Command(BaseCommand):
         "path",
     )
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:  # noqa: D102
         parser.add_argument("dataset", help="Name of the dataset")
         parser.add_argument(
             "--enable-db",
@@ -60,7 +62,7 @@ class Command(BaseCommand):
         parser.add_argument("--ordering", type=int, help="Set the ordering of the dataset")
         parser.add_argument("--endpoint-url")
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:  # noqa: D102
         name = options.pop("dataset")
         try:
             dataset = Dataset.objects.get(name=name)
@@ -69,12 +71,18 @@ class Command(BaseCommand):
             raise CommandError(f"Dataset not found: {name}.\nAvailable are: {available}") from None
 
         # Validate illogical combinations
-        if options.get("endpoint_url"):
+        endpoint_url = options.get("endpoint_url")
+        if endpoint_url is not None:
             if options.get("enable_db"):
                 raise CommandError("Can't use --endpoint-url with --enable-db")
 
             if dataset.enable_db:
                 options["enable_db"] = False
+
+        # URL endpoints need to contain {table_id}, which DSO-API replaces
+        # with the actual table name.
+        if endpoint_url is not None and "{table_id}" not in endpoint_url:
+            raise CommandError("--endpoint-url argument must contain '{table_id}'")
 
         changed = False
         if options.get("enable_geosearch") is not None:
