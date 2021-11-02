@@ -9,7 +9,7 @@ from django.core.management import BaseCommand, CommandError
 from schematools.contrib.django.models import Dataset
 
 
-def _strtobool(value: Any) -> bool:
+def _strtobool(value: str) -> bool:
     try:
         return bool(strtobool(value))
     except ValueError:
