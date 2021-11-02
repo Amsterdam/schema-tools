@@ -59,7 +59,7 @@ option_schema_url = click.option(
     show_default=True,
     required=True,
     help="Url where valid amsterdam schema files are found. "
-         "SCHEMA_URL can also be provided as environment variable.",
+    "SCHEMA_URL can also be provided as environment variable.",
 )
 
 argument_schema_location = click.argument(
@@ -74,7 +74,7 @@ option_profile_url = click.option(
     show_default=True,
     required=True,
     help="Url where valid amsterdam profile files are found. "
-         "PROFILE_URL can also be provided as environment variable.",
+    "PROFILE_URL can also be provided as environment variable.",
 )
 
 argument_profile_location = click.argument(
@@ -174,7 +174,7 @@ def permissions_revoke(db_url: str, role: str) -> None:
     "--schema-filename",
     is_flag=False,
     help="Filename of local Amsterdam Schema (single dataset)."
-         " If specified, it will be used instead of schema-url",
+    " If specified, it will be used instead of schema-url",
 )
 @click.option(
     "--profile-filename",
@@ -231,20 +231,20 @@ def permissions_revoke(db_url: str, role: str) -> None:
     help="Before granting new permissions, revoke first all previous table and column permissions",
 )
 def permissions_apply(
-        db_url: str,
-        schema_url: str,
-        profile_url: str,
-        schema_filename: str,
-        profile_filename: str,
-        pg_schema: str,
-        auto: bool,
-        role: str,
-        scope: str,
-        execute: bool,
-        create_roles: bool,
-        revoke: bool,
-        set_read_permissions: bool,
-        set_write_permissions: bool,
+    db_url: str,
+    schema_url: str,
+    profile_url: str,
+    schema_filename: str,
+    profile_filename: str,
+    pg_schema: str,
+    auto: bool,
+    role: str,
+    scope: str,
+    execute: bool,
+    create_roles: bool,
+    revoke: bool,
+    set_read_permissions: bool,
+    set_write_permissions: bool,
 ) -> None:
     """Set permissions for a postgres role,
     based on a scope from Amsterdam Schema or Profiles."""
@@ -335,11 +335,11 @@ def _fetch_json(location: str) -> Dict[str, Any]:
     "-a",
     multiple=True,
     help="Id of a dataset schema that will be preloaded. "
-         "To be used mainly for schemas that are related to the schema that is being validated.",
+    "To be used mainly for schemas that are related to the schema that is being validated.",
 )
 @click.argument("meta_schema_url")
 def validate(
-        schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
+    schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
 ) -> None:
     """Validate a JSON file against the amsterdam schema meta schema.
     schema_location can be a url or a filesystem path.
@@ -464,7 +464,7 @@ def show_schema(db_url: str, dataset_id: str) -> None:
     show_default=True,
     required=True,
     help="Url where valid amsterdam schema files are found. "
-         "SCHEMA_URL can also be provided as environment variable.",
+    "SCHEMA_URL can also be provided as environment variable.",
 )
 @click.argument("dataset_id")
 def show_mapfile(schema_url: str, dataset_id: str) -> None:
@@ -482,8 +482,9 @@ def show_mapfile(schema_url: str, dataset_id: str) -> None:
 @option_db_url
 @click.argument("dataset_id")
 @click.argument("tables", nargs=-1)
-def introspect_db(db_schema: str, prefix: str, db_url: str, dataset_id: str,
-                  tables: Iterable[str]) -> None:
+def introspect_db(
+    db_schema: str, prefix: str, db_url: str, dataset_id: str, tables: Iterable[str]
+) -> None:
     """Generate a schema for the tables in a database"""
     engine = _get_engine(db_url)
     aschema = introspect_db_schema(engine, dataset_id, tables, db_schema, prefix)
@@ -506,9 +507,14 @@ def introspect_geojson(dataset_id: str, files: Iterable[str]) -> None:
 @click.argument("table_name")
 @click.argument("ndjson_path")
 @click.option("--truncate-table", is_flag=True)
-def import_ndjson(db_url: str, schema_url: str, schema_location: str, table_name: str,
-                  ndjson_path: str,
-                  truncate_table: bool) -> None:
+def import_ndjson(
+    db_url: str,
+    schema_url: str,
+    schema_location: str,
+    table_name: str,
+    ndjson_path: str,
+    truncate_table: bool,
+) -> None:
     """Import a NDJSON file into a table."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_location, schema_url)
@@ -523,9 +529,14 @@ def import_ndjson(db_url: str, schema_url: str, schema_location: str, table_name
 @click.argument("table_name")
 @click.argument("geojson_path")
 @click.option("--truncate-table", is_flag=True)
-def import_geojson(db_url: str, schema_url: str, schema_location: str, table_name: str,
-                   geojson_path: str,
-                   truncate_table: bool) -> None:
+def import_geojson(
+    db_url: str,
+    schema_url: str,
+    schema_location: str,
+    table_name: str,
+    geojson_path: str,
+    truncate_table: bool,
+) -> None:
     """Import a GeoJSON file into a table."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(schema_location, schema_url)
@@ -541,8 +552,12 @@ def import_geojson(db_url: str, schema_url: str, schema_location: str, table_nam
 @click.argument("events_path")
 @click.option("-t", "--truncate-table", default=False, is_flag=True)
 def import_events(
-        db_url: str, schema_url: str, schema_location: str, additional_schemas: str,
-        events_path: str, truncate_table: bool
+    db_url: str,
+    schema_url: str,
+    schema_location: str,
+    additional_schemas: str,
+    events_path: str,
+    truncate_table: bool,
 ) -> None:
     """Import an events file into a table."""
     engine = _get_engine(db_url)
@@ -571,7 +586,7 @@ def import_schema(db_url: str, schema_url: str, schema_location: str) -> None:
 
 
 def _get_dataset_schema(
-        schema_location: str, schema_url: Optional[str] = None, prefetch_related: bool = False
+    schema_location: str, schema_url: Optional[str] = None, prefetch_related: bool = False
 ) -> DatasetSchema:
     """Find the dataset schema for the given dataset"""
     if "." in schema_location or "/" in schema_location:
@@ -659,8 +674,12 @@ def diff_schemas(schema_url: str, diff_schema_url: str) -> None:
 @click.argument("dataset_id")
 @click.argument("table_id")
 def export_events_for(
-        db_url: str, schema_url: str, schema_location: str, additional_schemas: str,
-        dataset_id: str, table_id: str
+    db_url: str,
+    schema_url: str,
+    schema_location: str,
+    additional_schemas: str,
+    dataset_id: str,
+    table_id: str,
 ) -> None:
     """Export events from postgres."""
     engine = _get_engine(db_url)
@@ -680,8 +699,14 @@ def export_events_for(
 @click.option("--additional-schemas", "-a", multiple=True)
 @click.option("--topics", "-t", multiple=True)
 @click.option("--truncate-table", default=False, is_flag=True)
-def consume(db_url: str, schema_url: str, schema_location: str, additional_schemas: str,
-            topics: Iterable[str], truncate_table: bool) -> None:
+def consume(
+    db_url: str,
+    schema_url: str,
+    schema_location: str,
+    additional_schemas: str,
+    topics: Iterable[str],
+    truncate_table: bool,
+) -> None:
     """Consume kafka events."""
     # Late import, to prevent dependency on confluent-kafka for every cli user
     from schematools.events.consumer import consume_events
