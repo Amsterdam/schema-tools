@@ -147,7 +147,6 @@ class NDJSONImporter(BaseImporter):
                         row["id"] = id_value
 
                 for rel_field in relation_field_info:
-
                     relation_field_name = rel_field.name
                     # Only process relation if data is available in incoming row
                     if rel_field.id not in row:
@@ -155,7 +154,7 @@ class NDJSONImporter(BaseImporter):
                     relation_field_value = row[rel_field.id]
                     if rel_field.is_object:
                         fk_value_parts = []
-                        for sub_field in rel_field.sub_fields:
+                        for sub_field in rel_field.get_sub_fields(add_prefixes=True):
                             # Ignore temporal fields
                             if sub_field.is_temporal:
                                 continue
