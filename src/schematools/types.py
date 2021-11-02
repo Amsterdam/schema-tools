@@ -522,6 +522,13 @@ class DatasetTableSchema(SchemaType):
         return self.get("description")
 
     def get_fields(self, include_sub_fields: bool = False) -> Iterator[DatasetFieldSchema]:
+        """Get the fields for this table.
+
+        Args:
+            include_sub_fields: Merge the sub fields of an FK relation into the fields
+            of this table. The ids of these fields need to be prefixed
+            (usually with the `id` of the relation field) to avoid name collisions.
+        """
         required = set(self["schema"]["required"])
         for id_, spec in self["schema"]["properties"].items():
             field_schema = DatasetFieldSchema(
@@ -534,8 +541,11 @@ class DatasetTableSchema(SchemaType):
             # These fields are added to identify the different
             # components of a compound FK to a another table
             if field_schema.relation is not None and field_schema.is_object and include_sub_fields:
-                for subfield_schema in field_schema.sub_fields:
-                    yield subfield_schema
+                for sub_field in field_schema.get_sub_fields(add_prefixes=True):
+                    # We exclude temporal fields, they need not to be merged into the table fields
+                    if sub_field.is_temporal:
+                        continue
+                    yield sub_field
             yield field_schema
 
         # If compound key, add PK field
@@ -982,16 +992,28 @@ class DatasetFieldSchema(DatasetType):
 
         return dataset_table.temporal.dimensions
 
-    @property
-    def sub_fields(self) -> Iterator[DatasetFieldSchema]:
+    @cached_property
+    def sub_fields(self) -> List[DatasetFieldSchema]:
         """Return the sub fields for a nested structure.
+
+        Calls the `get_sub_fields` method without argument,
+        so no prefixes are added to the field ids.
+        This is the default situation.
+        """
+        return list(self.get_sub_fields())
+
+    def get_sub_fields(self, add_prefixes=False) -> Iterator[DatasetFieldSchema]:
+        """Return the sub fields for a nested structure.
+
+        Args:
+            add_prefixes: Add prefixes to the ids of the subfields.
 
         For a nested object, fields are based on its properties,
         for an array of objects, fields are based on the properties
         of the "items" field.
 
-        When subfields are added as part of an nm-relation
-        those subfields will be prefixed with the name of the relation field.
+        When subfields are added as part of an 1m-relation
+        those subfields need to be prefixed with the name of the relation field.
         However, this is not the case for the so-called `dimension` fields
         of a temporal relation (e.g. `beginGeldigheid` and `eindGeldigheid`).
         """
@@ -1022,7 +1044,8 @@ class DatasetFieldSchema(DatasetType):
             )
 
         for id_, spec in properties.items():
-            field_id = id_ if id_ in combined_dimension_fieldnames else f"{field_name_prefix}{id_}"
+            needs_prefix = add_prefixes and id_ not in combined_dimension_fieldnames
+            field_id = f"{field_name_prefix}{id_}" if needs_prefix else id_
             yield DatasetFieldSchema(
                 _parent_table=self._parent_table,
                 _parent_field=self,
