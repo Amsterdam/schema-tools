@@ -15,6 +15,7 @@ from typing import (
     FrozenSet,
     Iterator,
     List,
+    NamedTuple,
     NoReturn,
     Optional,
     Set,
@@ -585,7 +586,7 @@ class DatasetTableSchema(SchemaType):
         """Return the associated parent datasetschema for this table."""
         return self.dataset.get_dataset_schema(dataset_id) if self.dataset is not None else None
 
-    @property
+    @cached_property
     def temporal(self) -> Optional[Temporal]:
         """The temporal property of a Table.
         Describes validity of objects for tables where
@@ -598,24 +599,22 @@ class DatasetTableSchema(SchemaType):
         Temporal also has a `dimensions` property, which gives the attributes of
         objects that determine for what (time)period an object is valid.
         """
-
         temporal_config = self.get("temporal")
         if temporal_config is None:
             return None
 
-        from schematools.utils import to_snake_case
-
-        if temporal_config.get("identifier") is None or temporal_config.get("dimensions") is None:
+        identifier = temporal_config.get("identifier")
+        dimensions = temporal_config.get("dimensions")
+        if identifier is None or dimensions is None:
             raise ValueError("Invalid temporal data")
 
-        dimensions: Dict[str, Tuple[str, str]] = {}
-        for key, [start_field, end_field] in temporal_config.get("dimensions").items():
-            dimensions[key] = (
-                to_snake_case(start_field),
-                to_snake_case(end_field),
-            )
-
-        return Temporal(temporal_config.get("identifier"), dimensions)
+        return Temporal(
+            identifier=identifier,
+            dimensions={
+                key: TemporalDimensionFields(start_field, end_field)
+                for key, [start_field, end_field] in dimensions.items()
+            },
+        )
 
     @property
     def is_temporal(self) -> bool:
@@ -958,7 +957,7 @@ class DatasetFieldSchema(DatasetType):
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
 
-    def get_dimension_fieldnames(self) -> Dict[str, Tuple[str, str]]:
+    def get_dimension_fieldnames(self) -> Dict[str, TemporalDimensionFields]:
         """Gets the dimension fieldnames."""
         if self.relation is None and self.nm_relation is None:
             return {}
@@ -981,9 +980,7 @@ class DatasetFieldSchema(DatasetType):
         if not dataset_table.is_temporal:
             return {}
 
-        # Seems that mypy cannot infer the type from the assignment
-        dimensions: Dict[str, Tuple[str, str]] = dataset_table.temporal.dimensions
-        return dimensions if dimensions is not None else {}
+        return dataset_table.temporal.dimensions
 
     @property
     def sub_fields(self) -> Iterator[DatasetFieldSchema]:
@@ -1396,6 +1393,15 @@ class ProfileTableSchema(DatasetType):
         return self.get("mandatoryFilterSets", [])
 
 
+class TemporalDimensionFields(NamedTuple):
+    """A tuple that describes the start field and end field of a range.
+    This could be something like ``("beginGeldigheid", "eindGeldigheid")``.
+    """
+
+    start: str
+    end: str
+
+
 @dataclass
 class Temporal:
     """The temporal property of a Table.
@@ -1403,7 +1409,7 @@ class Temporal:
     different versions of objects are valid over time.
 
     Attributes:
-        identifier (str):
+        identifier:
             The key to the property that uniquely identifies a specific
             version of an object from among other versions of the same object.
 
@@ -1412,7 +1418,7 @@ class Temporal:
             These identifier properties are non-contiguous increasing integers.
             The latest version of an object will have the highest value for identifier.
 
-        dimensions Dict[Tuple[str]]:
+        dimensions:
             Contains the attributes of objects that determine for what (time)period an object is valid.
 
             Dimensions is of type dict.
@@ -1422,11 +1428,11 @@ class Temporal:
             Example:
                 With dimensions = {"time":('valid_start', 'valid_end')}
                 an_object will be valid on some_time if:
-                some_time >= an_object.valid_start and some_time <= an_object.valid_end
+                an_object.valid_start <= some_time < an_object.valid_end
     """
 
     identifier: str
-    dimensions: Dict[str, Tuple[str, str]] = field(default_factory=dict)
+    dimensions: Dict[str, TemporalDimensionFields] = field(default_factory=dict)
 
 
 def _normalize_scopes(auth: Union[None, str, list, tuple]) -> FrozenSet[str]:
