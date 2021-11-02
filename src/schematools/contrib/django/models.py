@@ -509,15 +509,18 @@ class Profile(models.Model):
 
 
 class LooseRelationField(models.CharField):
-    def __init__(self, *args, **kwargs):
-        self.relation = kwargs.pop("relation")
+    def __init__(self, *args, relation, to_field=None, **kwargs):
         kwargs.setdefault("max_length", 254)
         super().__init__(*args, **kwargs)
+        self.relation = relation
+        self.to_field = to_field
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
         del kwargs["max_length"]
         kwargs["relation"] = self.relation
+        if self.to_field:
+            kwargs["to_field"] = self.to_field
         return name, path, args, kwargs
 
     @property
@@ -528,25 +531,7 @@ class LooseRelationField(models.CharField):
 
 
 class LooseRelationManyToManyField(models.ManyToManyField):
-    def __init__(self, *args, **kwargs):
-        self.relation = kwargs.pop("relation")
-        kwargs.setdefault("max_length", 254)
-        super().__init__(*args, **kwargs)
-
-    def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        del kwargs["max_length"]
-        kwargs["relation"] = self.relation
-        return name, path, args, kwargs
-
-    @property
-    def related_model(self):
-        dataset_name, table_name, *_ = [to_snake_case(part) for part in self.relation.split(":")]
-        if dataset_name in apps.all_models and table_name in apps.all_models[dataset_name]:
-            return apps.all_models[dataset_name][table_name]
-        else:
-            #  The loosely related model may not be registered yet
-            return None
+    pass
 
 
 def get_field_schema(

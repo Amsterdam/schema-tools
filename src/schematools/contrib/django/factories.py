@@ -157,9 +157,11 @@ class LooseFKRelationMaker(RelationMaker):
 
     @property
     def field_kwargs(self):
+        target_table = self.field.related_table
         kwargs = {}
         kwargs["db_column"] = f"{to_snake_case(self.field.name)}_id"
         kwargs["relation"] = self.fk_relation
+        kwargs["to_field"] = target_table.identifier[0]  # temporal identifier
         return {**super().field_kwargs, **kwargs}
 
 
@@ -232,10 +234,6 @@ class LooseM2MRelationMaker(M2MRelationMaker):
     @property
     def field_cls(self):
         return LooseRelationManyToManyField
-
-    @property
-    def field_kwargs(self):
-        return {**super().field_kwargs, "relation": self.nm_relation}
 
 
 class FieldMaker:
