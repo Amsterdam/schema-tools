@@ -459,6 +459,7 @@ def model_factory(
         (DynamicModel,),
         {
             **fields,
+            "__doc__": table_schema.description or "",
             "_dataset": dataset,
             "_dataset_schema": dataset_schema,
             "_table_schema": table_schema,
