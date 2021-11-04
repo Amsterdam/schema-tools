@@ -1,7 +1,8 @@
+import inspect
 import textwrap
 from argparse import ArgumentParser
 from datetime import date, datetime
-from typing import Any, List, Tuple, Type
+from typing import Any, Dict, List, Tuple, Type
 
 from django.apps import AppConfig, apps
 from django.core.management import BaseCommand
@@ -13,9 +14,9 @@ from schematools.contrib.django.models import DynamicModel
 
 
 class Command(BaseCommand):
-    """Dump the dynamically generated models"""
+    """Dump the dynamically generated models."""
 
-    help = "Dump the (dynamic) model definitions that Django holds in-memory."
+    help = "Dump the (dynamic) model definitions that Django holds in-memory."  # noqa: A003
 
     model_meta_args: List[Tuple[str, Any]] = [
         # All possible options in Meta, with their defaults.
@@ -49,13 +50,13 @@ class Command(BaseCommand):
     ]
 
     def add_arguments(self, parser: ArgumentParser) -> None:
-        """Hook to add arguments"""
+        """Hook to add arguments."""
         parser.add_argument(
             "args", metavar="app_label", nargs="*", help="Names of Django apps to dump"
         )
 
     def handle(self, *args: str, **options: Any) -> None:
-        """Main function of this command"""
+        """Main function of this command."""
         app_labels = sorted(args or apps.app_configs.keys())
 
         for app_label in app_labels:
@@ -66,17 +67,16 @@ class Command(BaseCommand):
                 self.write_model(model)
 
     def write_header(self, app: AppConfig) -> None:
+        """Write app start header."""
         self.stdout.write(f"# ---- App: {app.verbose_name or app.label}\n\n\n")
 
     def write_model(self, model: Type[models.Model]) -> None:
+        """Write the representation of a complete Django model to the output."""
         bases = ", ".join(base_class.__name__ for base_class in model.__bases__)
         self.stdout.write(f"class {model.__name__}({bases}):\n")
 
         if model.__doc__:
-            doc = textwrap.fill(model.__doc__, 96, subsequent_indent="    ")
-            if "\n" in doc:
-                doc += "\n"
-            self.stdout.write(f'    """{doc}"""\n\n')
+            self.write_docstring(model.__doc__)
 
         # Get model fields, split in auto created vs declared fields
         all_fields = model._meta.get_fields(include_parents=False, include_hidden=True)
@@ -97,26 +97,39 @@ class Command(BaseCommand):
         if issubclass(model, DynamicModel):
             self.write_dynamic_model_attrs(model)
 
-        self.stdout.write("    class Meta:\n")
-        for meta_arg, default in self.model_meta_args:
-            value = getattr(model._meta, meta_arg, ...)
-            if value != default:
-                self.stdout.write(f"        {meta_arg} = {value!r}\n")
+        self.write_model_meta(model)
 
         if issubclass(model, DynamicModel) and model._display_field:
             self.write_model_str(model)
 
         self.stdout.write("\n\n")
 
+    def write_docstring(self, doc: str) -> None:
+        """Write the docstring for a class."""
+        if "\n" not in doc:  # if not formatted already
+            # Wrap our description text
+            doc = textwrap.fill(doc, 96, subsequent_indent="    ")
+            if "\n" in doc:  # if wrapped
+                doc += "\n"
+        self.stdout.write(f'    """{doc}"""\n\n')
+
     def write_dynamic_model_attrs(self, model: Type[DynamicModel]) -> None:
-        """Write the attributes defined by model_factory() for completeness"""
-        self.stdout.write(f"    # Set by model_factory()\n")
+        """Write the attributes defined by model_factory() for completeness."""
+        self.stdout.write("    # Set by model_factory()\n")
         self.stdout.write(f"    # _dataset = {model._dataset!r}\n")
         self.stdout.write(f"    # _table_schema = {model._table_schema}\n")
         self.stdout.write(f"    _display_field = {model._display_field!r}\n")
         if model._is_temporal:
             self.stdout.write("    _is_temporal = True\n")
         self.stdout.write("\n")
+
+    def write_model_meta(self, model: Type[models.Model]) -> None:
+        """Write the 'class Meta' section."""
+        self.stdout.write("    class Meta:\n")
+        for meta_arg, default in self.model_meta_args:
+            value = getattr(model._meta, meta_arg, ...)
+            if value != default:
+                self.stdout.write(f"        {meta_arg} = {value!r}\n")
 
     def write_model_str(self, model: Type[DynamicModel]) -> None:
         """For dynamic model, we know how __str__() looks like."""
@@ -126,14 +139,23 @@ class Command(BaseCommand):
 
     def write_field(self, field: models.Field) -> None:
         """Write how a field would have been written in a models file."""
+        # Note that migration files use the 'name' from field.deconstruct()
+        # but this is always identical to 'field.name' for standard Django fields.
+        self.stdout.write(f"    {field.name} = {self._get_field_repr(field)}\n")
+
+    def _get_field_repr(self, field: models.Field) -> str:
+        """Generate the field representation, it's reused for arguments."""
         name, path, args, kwargs = field.deconstruct()
+        return self._get_deconstructable_repr(path, args, kwargs)
+
+    def _get_deconstructable_repr(self, path: str, args: List[Any], kwargs: Dict[str, Any]) -> str:
         for prefix, alias in self.path_aliases:
             if path.startswith(prefix):
                 path = alias + path[len(prefix) :]
 
-        str_args = ", ".join(_format_value(arg) for arg in args)
-        str_kwargs = ", ".join(f"{n}={_format_value(v)}" for n, v in kwargs.items())
-        self.stdout.write(f"    {name} = {path}({str_args}{str_kwargs})\n")
+        str_args = ", ".join(self._format_value(arg) for arg in args)
+        str_kwargs = ", ".join(f"{n}={self._format_value(v)}" for n, v in kwargs.items())
+        return f"{path}({str_args}{str_kwargs})"
 
     def write_reverse_field(self, field: models.ForeignObjectRel) -> None:
         """Mention the reverse relations for clarity."""
@@ -148,28 +170,41 @@ class Command(BaseCommand):
             f"    # {comment}: {field.name} = {cls_name}(field={source_name}, ...)\n"
         )
 
+    def _format_value(self, value: Any) -> str:
+        """Format the model kwarg, some callables should be mapped to their code name."""
+        if isinstance(value, models.Field):
+            # e.g. ArrayField(base_field=models.CharField(...))
+            return self._get_field_repr(value)
+        elif isinstance(value, type):
+            return value.__name__
+        elif isinstance(value, object) and hasattr(value, "deconstruct"):
+            # A @deconstructible, e.g. URLPathValidator.
+            return self._get_deconstructable_repr(*value.deconstruct())
+        elif isinstance(value, list):
+            # for validators=[...]
+            return "[{0}]".format(",".join(self._format_value(v) for v in value))
+        elif callable(value):
+            if value is datetime.now:
+                return "datetime.now"
+            elif value is date.today:
+                return "date.today"
+            elif value is timezone.now:
+                return "timezone.now"
+            elif value is models.CASCADE:
+                return "models.CASCADE"
+            elif value is models.SET_NULL:
+                return "models.SET_NULL"
+            elif value is models.PROTECT:
+                return "models.DO_NOTHING"
+            elif value is models.SET_DEFAULT:
+                return "models.SET_DEFAULT"
+            elif value is models.PROTECT:
+                return "models.PROTECT"
+            elif inspect.isfunction(value):
+                # e.g. validators=[some_function]
+                return f"{value.__module__}.{value.__qualname__}"
 
-def _format_value(value: Any) -> str:
-    """Format the model kwarg, some callables should be mapped to their code name."""
-    if callable(value):
-        if value is datetime.now:
-            return "datetime.now"
-        if value is date.today:
-            return "date.today"
-        if value is timezone.now:
-            return "timezone.now"
-        if value is models.CASCADE:
-            return "models.CASCADE"
-        if value is models.SET_NULL:
-            return "models.SET_NULL"
-        if value is models.PROTECT:
-            return "models.DO_NOTHING"
-        if value is models.SET_DEFAULT:
-            return "models.SET_DEFAULT"
-        if value is models.PROTECT:
-            return "models.PROTECT"
-
-    return repr(value)
+        return repr(value)
 
 
 def _format_model_name(model: Type[models.Model]) -> str:
