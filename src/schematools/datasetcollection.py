@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
+from urllib.parse import urlparse
 
+from more_ds.network.url import URL
 from simple_singleton import Singleton
 
 if TYPE_CHECKING:
     from schematools.types import DatasetSchema
+
+from schematools import DEFAULT_SCHEMA_URL, loaders
+
+# Initialize the schema_loader in the DatasetCollection singleton
 
 
 class DatasetCollection(metaclass=Singleton):
@@ -18,27 +24,36 @@ class DatasetCollection(metaclass=Singleton):
     """
 
     def __init__(self) -> None:
-        self.datasets_cache = {}
+        """Initialize the DatasetCollection.
 
-    def _load_dataset(self, dataset_id: str) -> Optional[DatasetSchema]:
-        """Loads the dataset from SCHEMA_URL.
-
-        If SCHEMA_URL is not defined, return None.
+        Args:
+            schema_loader: An alternative schema loader can be provided
+                If schema_loader is None, the default url loader is used.
         """
-        # Avoid circular import problem.
-        from schematools.utils import dataset_schema_from_url
+        self.datasets_cache = {}
+        self.schema_loader = None
 
-        try:
-            schemas_url = os.environ["SCHEMA_URL"]
-        except KeyError:
+    def set_schema_loader(self, schema_loader: loaders.SchemaLoader):
+        """Set the schema loader for the datasetcollection."""
+        self.schema_loader = schema_loader
+
+    def get_schema_loader(self):
+        """Get the schema_loader."""
+        if self.schema_loader is None:
+            raise ValueError("The datasetcollection should be initialized with a schema loader")
+        return self.schema_loader
+
+    def _load_dataset(self, dataset_id: str, prefetch_related: bool) -> Optional[DatasetSchema]:
+        """Loads the dataset, using the configured loader."""
+        if self.schema_loader is None:
             return None
-
-        return dataset_schema_from_url(schemas_url, dataset_id, prefetch_related=True)
+        return self.schema_loader.get_dataset(dataset_id, prefetch_related=prefetch_related)
 
     def add_dataset(self, dataset: DatasetSchema) -> None:
+        """Add a dataset to the cache."""
         self.datasets_cache[dataset.id] = dataset
 
-    def get_dataset(self, dataset_id: str) -> DatasetSchema:
+    def get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
         """Gets a dataset by id from the cache.
 
         If not available, load the dataset from the SCHEMA_URL location.
@@ -49,8 +64,30 @@ class DatasetCollection(metaclass=Singleton):
         try:
             return self.datasets_cache[dataset_id]
         except KeyError:
-            dataset = self._load_dataset(dataset_id)
+            dataset = self._load_dataset(dataset_id, prefetch_related=prefetch_related)
             if dataset is None:
                 raise ValueError(f"Dataset {dataset_id} is missing.") from None
             self.add_dataset(dataset)
             return dataset
+
+
+def set_schema_loader(schema_url: Union[URL, str]):
+    """Initialize the schema loader at module load time.
+
+    schema_url:
+        Location where the schemas can be found. This
+        can be a web url, or a filesystem path.
+    """
+    dataset_collection = DatasetCollection()
+    if urlparse(schema_url).scheme in ("http", "https"):
+        loader = loaders.URLSchemaLoader(schema_url)
+    else:
+        loader = loaders.FileSystemSchemaLoader(schema_url)
+    dataset_collection.set_schema_loader(loader)
+
+
+# The scheme loader is initialized from the `SCHEMA_URL` environment variable,
+# or from the DEFAULT_SCHEMA_URL constant.
+# This call is done at module load time, to have an initial value for the schemaloader.
+# If needed, an alternative schemaloader can be injected into `DatasetCollection` at runtime.
+set_schema_loader(os.environ.get("SCHEMA_URL", DEFAULT_SCHEMA_URL))

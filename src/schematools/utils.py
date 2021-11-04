@@ -5,16 +5,18 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Final, Match, Optional, Pattern, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, Match, Optional, Pattern, Type, Union, cast
 
 import requests
 from cachetools.func import ttl_cache
 from deprecated import deprecated
 from more_ds.network.url import URL
-from more_itertools import first
 from string_utils import slugify
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
+
+if TYPE_CHECKING:
+    from schematools.loaders import SchemaLoader  # noqa: F401
 
 RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
@@ -57,7 +59,6 @@ def dataset_schema_from_url(
     )
 
 
-@ttl_cache(ttl=16)
 def profile_schemas_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.ProfileSchema]:
     """Fetch all profile schemas from a remote file.
 
@@ -131,7 +132,10 @@ def schema_from_url(
 
 
 def _schema_from_url_with_connection(
-    connection: requests.Session, base_url: URL, dataset_path: str, data_type: Type[types.ST]
+    connection: requests.Session,
+    base_url: URL,
+    dataset_path: str,
+    data_type: Type[types.ST],
 ) -> types.ST:
     """Fetch single schema from url with connection."""
     response = connection.get(base_url / dataset_path / "dataset")
@@ -149,45 +153,67 @@ def _schema_from_url_with_connection(
     return schema
 
 
+@deprecated(
+    version="2.3.1",
+    reason="""The `dataset_schema_from_file` is replaced by `dataset_schema_from_path`.""",
+)
 def dataset_schema_from_file(
     file_path: Union[Path, str], prefetch_related: bool = False
 ) -> types.DatasetSchema:
+    """Gets a dataset scheme from a file path."""
+    return dataset_schema_from_path(file_path)
+
+
+def dataset_schema_from_path(
+    dataset_path: Union[Path, str],
+) -> types.DatasetSchema:
+    """Read a dataset schema from the filesystem.
+
+    Args:
+        dataset_path: Filesystem path to the dataset.
+    """
+    with open(dataset_path) as fh:
+        try:
+            ds = json.load(fh)
+        except Exception as exc:
+            raise ValueError("Invalid Amsterdam Dataset schema file") from exc
+
+        if ds["type"] == "dataset":
+            for i, table in enumerate(ds["tables"]):
+                if ref := table.get("$ref"):
+                    with open(Path(dataset_path).parent / Path(ref + ".json")) as table_file:
+                        ds["tables"][i] = json.load(table_file)
+    return types.DatasetSchema.from_dict(ds)
+
+
+def dataset_schema_from_id_and_schemas_path(
+    dataset_id: str,
+    schemas_path: Union[Path, str] = None,
+    prefetch_related: bool = False,
+) -> types.DatasetSchema:
     """Read a dataset schema from a file on local drive.
 
-    If `prefetch_related` is given, an index is built that maps
-    the dataset id to the path towards `dataset.json` on the filesystem.
+    Args:
+        dataset_id: Id of the dataset.
+        schemas_path: Path to the location with the dataset schemas.
+        prefetch_related: If True, the related datasets are preloaded.
     """
+    dataset_path = Path(schemas_path) / dataset_id / "dataset.json"
+    dataset_schema = dataset_schema_from_path(dataset_path)
 
-    # Normalize to an absolute path.
-    file_path = Path(file_path).resolve()
     index: Dict[str, str] = {}
-
-    # Find the location of the `datasets` folder (make sure to find the "deepest" one)
-    try:
-        ds_root = first(
-            parent for parent in reversed(file_path.parents) if parent.name == "datasets"
-        )
-    except ValueError:
-        raise ValueError(
-            f"The provided file_path ({file_path}) should contain a `datasets` folder."
-        )
-
-    # The dataset being requested
-    dataset_schema = types.DatasetSchema.from_file(file_path)
 
     # Build the mapping from dataset -> path with jsonschema file
     if prefetch_related:
-        for root, dirs, files in os.walk(ds_root):
+        for root, _, files in os.walk(schemas_path):
             if "dataset.json" in set(files):
                 root_path = Path(root)
                 index[root_path.name] = root_path.joinpath("dataset.json")
 
-        # Result of `schema_from_file` is discarded here, the call is only done
+        # Result of `dataset_schema_from_path` is discarded here, the call is only done
         # to add the dataset to the cache.
-        # For this recursive call, we set prefetch_related=False
-        # to avoid deep/endless recursion
         for ds_id in dataset_schema.related_dataset_schema_ids:
-            dataset_schema_from_file(index[ds_id], prefetch_related=False)
+            dataset_schema_from_path(index[ds_id])
 
     return dataset_schema
 

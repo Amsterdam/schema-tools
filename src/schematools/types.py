@@ -20,7 +20,6 @@ from typing import (
     NoReturn,
     Optional,
     Set,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -28,6 +27,7 @@ from typing import (
 )
 
 import jsonschema
+from deprecated import deprecated
 from methodtools import lru_cache
 from more_itertools import first
 
@@ -82,7 +82,11 @@ class DatasetSchema(SchemaType):
     This is a collection of JSON Schema's within a single file.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
         about the related datasets
@@ -95,20 +99,16 @@ class DatasetSchema(SchemaType):
         return f"<{self.__class__.__name__}: {self['id']}>"
 
     @classmethod
+    @deprecated(
+        version="2.3.1",
+        reason="""The `DatasetSchema.from_file` has been replaced by
+            `schematools.utils.dataset_schema_from_path`.""",
+    )
     def from_file(cls, filename: Union[Path, str]) -> DatasetSchema:
         """Open an Amsterdam schema from a file and any table files referenced therein"""
-        with open(filename) as fh:
-            try:
-                ds = json.load(fh)
-            except Exception as exc:
-                raise ValueError("Invalid Amsterdam Dataset schema file") from exc
+        from schematools.utils import dataset_schema_from_path
 
-            if ds["type"] == "dataset":
-                for i, table in enumerate(ds["tables"]):
-                    if ref := table.get("$ref"):
-                        with open(Path(filename).parent / Path(ref + ".json")) as table_file:
-                            ds["tables"][i] = json.load(table_file)
-        return cls.from_dict(ds)
+        return dataset_schema_from_path(filename)
 
     @classmethod
     def from_dict(cls, obj: Json) -> DatasetSchema:
@@ -312,7 +312,6 @@ class DatasetSchema(SchemaType):
         from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
 
         def _get_fk_target_table(dataset_id: str, table_id: str) -> DatasetTableSchema:
-            """Gets the"""
             if table.dataset is not None:
                 return table.dataset.get_dataset_schema(dataset_id).get_table_by_id(
                     table_id, include_nested=False, include_through=False
@@ -340,7 +339,6 @@ class DatasetSchema(SchemaType):
         # and not the shortnames
         left_dataset_id = to_snake_case(self.id)
         left_table_id = to_snake_case(table.id)
-        left_table_name = to_snake_case(table.name)
 
         # Both relation types can have a through table,
         # For FK relations, an extra through_table is created when
@@ -445,7 +443,6 @@ class DatasetSchema(SchemaType):
         characteristics. However, we cannot know this for sure if not also the
         target dataset of a relation has been loaded.
         """
-
         related_ids = []
         for table in self.tables:
             for field in table.get_fields(include_subfields=False):

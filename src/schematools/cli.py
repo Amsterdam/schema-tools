@@ -13,6 +13,8 @@ from json_encoder import json
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 
+from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL
+from schematools.datasetcollection import DatasetCollection, set_schema_loader
 from schematools.db import (
     create_meta_table_data,
     create_meta_tables,
@@ -34,17 +36,14 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema, SchemaType
+from schematools.types import DatasetSchema
 from schematools.utils import (
-    dataset_schema_from_file,
+    dataset_schema_from_path,
     dataset_schema_from_url,
     dataset_schemas_from_url,
     schema_fetch_url_file,
 )
 from schematools.validation import Validator
-
-DEFAULT_SCHEMA_URL = "https://schemas.data.amsterdam.nl/datasets/"
-DEFAULT_PROFILE_URL = "https://schemas.data.amsterdam.nl/profiles/"
 
 option_db_url = click.option(
     "--db-url",
@@ -62,9 +61,8 @@ option_schema_url = click.option(
     "SCHEMA_URL can also be provided as environment variable.",
 )
 
-argument_schema_location = click.argument(
-    "schema_location",
-    metavar="(DATASET-ID | DATASET-FILENAME)",
+argument_dataset_id = click.argument(
+    "dataset_id",
 )
 
 option_profile_url = click.option(
@@ -132,13 +130,13 @@ def export() -> None:
 
 @schema.group()
 def show() -> None:
-    """Show existing metadata"""
+    """Show existing metadata."""
     pass
 
 
 @schema.group()
 def permissions() -> None:
-    """Show existing metadata"""
+    """Subcommand for permissions."""
     pass
 
 
@@ -246,8 +244,10 @@ def permissions_apply(
     set_read_permissions: bool,
     set_write_permissions: bool,
 ) -> None:
-    """Set permissions for a postgres role,
-    based on a scope from Amsterdam Schema or Profiles."""
+    """Set permissions for a postgres role.
+
+    This is based on a scope from Amsterdam Schema or Profiles.
+    """
     dry_run = not execute
 
     if auto:
@@ -285,7 +285,7 @@ def permissions_apply(
             revoke,
         )
     else:
-        print(
+        click.echo(
             "Choose --auto or specify both a --role and a --scope to be able to grant permissions"
         )
 
@@ -329,7 +329,7 @@ def _fetch_json(location: str) -> Dict[str, Any]:
 
 @schema.command()
 @option_schema_url
-@argument_schema_location
+@argument_dataset_id
 @click.option(
     "--additional-schemas",
     "-a",
@@ -339,20 +339,19 @@ def _fetch_json(location: str) -> Dict[str, Any]:
 )
 @click.argument("meta_schema_url")
 def validate(
-    schema_url: str, schema_location: str, additional_schemas: List[str], meta_schema_url: str
+    schema_url: str, dataset_id: str, additional_schemas: List[str], meta_schema_url: str
 ) -> None:
     """Validate a JSON file against the amsterdam schema meta schema.
-    schema_location can be a url or a filesystem path.
 
-    DATASET-ID | DATASET-FILENAME: When an DATASET-ID is provided, this is combined with
-    the schema-url to produce a full url to a dataset schema. A DATASET-FILENAME is detected
-    when the argument has a '.' or a '/'.
-
-    META_SCHEMA_URL is the url where the metaschema for amsterdam schema definitions can be found.
+    Args:
+        schema_url: url where schema can be found.
+        dataset_id: id of the dataset.
+        additional_schemas: Schemas that should be preloaded.
+        meta_schema_url: is the url where the metaschema
+            for amsterdam schema definitions can be found.
     """
-
     meta_schema = _fetch_json(meta_schema_url)
-    dataset = _get_dataset_schema(schema_location, schema_url, prefetch_related=True)
+    dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
 
     # The additional schemas are fetched, but the result is not used
     # because the only reason to fetch the additional schemas is to have those schemas
@@ -387,7 +386,7 @@ def validate(
 @click.argument("meta_schema_url")
 @click.argument("schema_files", nargs=-1)
 def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
-    """Batch validate schema's.
+    r"""Batch validate schema's.
 
     This command was tailored so that it could be run from a pre-commit hook. As a result,
     the order and type of its arguments differ from other `schema` sub-commands.
@@ -402,7 +401,7 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
     errors: DefaultDict[str, List[str]] = defaultdict(list)
     for schema in schema_files:
         try:
-            dataset = _get_dataset_schema(schema, prefetch_related=True)
+            dataset = dataset_schema_from_path(schema)
         except ValueError as ve:
             errors[schema].append(str(ve))
             # No sense in continuing if we can't read the schema file.
@@ -419,17 +418,19 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
         width = len(max(errors.keys()))
         for schema, error_messages in errors.items():
             for err_msg in error_messages:
-                print(f"{schema:>{width}}: {err_msg}")
+                click.echo(f"{schema:>{width}}: {err_msg}")
         sys.exit(1)
 
 
 @show.command("provenance")
-@click.argument("schema_location")
-def show_provenance(schema_location: str) -> None:
-    """Retrieve the key-values pairs of the source column
+@click.argument("dataset_id")
+def show_provenance(dataset_id: str) -> None:
+    """Retrieve the key-values pairs of the source column.
+
     (specified as a 'provenance' property of an attribute)
-    and its translated name (the attribute name itself)"""
-    dataset = _get_dataset_schema(schema_location, prefetch_related=True)
+    and its translated name (the attribute name itself)
+    """
+    dataset = _get_dataset_schema(dataset_id, prefetch_related=True)
     try:
         instance = ProvenanceIteration(dataset)
         click.echo(instance.final_dic)
@@ -485,7 +486,7 @@ def show_mapfile(schema_url: str, dataset_id: str) -> None:
 def introspect_db(
     db_schema: str, prefix: str, db_url: str, dataset_id: str, tables: Iterable[str]
 ) -> None:
-    """Generate a schema for the tables in a database"""
+    """Generate a schema for the tables in a database."""
     engine = _get_engine(db_url)
     aschema = introspect_db_schema(engine, dataset_id, tables, db_schema, prefix)
     click.echo(json.dumps(aschema, indent=2))
@@ -503,21 +504,21 @@ def introspect_geojson(dataset_id: str, files: Iterable[str]) -> None:
 @import_.command("ndjson")
 @option_db_url
 @option_schema_url
-@argument_schema_location
+@argument_dataset_id
 @click.argument("table_name")
 @click.argument("ndjson_path")
 @click.option("--truncate-table", is_flag=True)
 def import_ndjson(
     db_url: str,
     schema_url: str,
-    schema_location: str,
+    dataset_id: str,
     table_name: str,
     ndjson_path: str,
     truncate_table: bool,
 ) -> None:
     """Import a NDJSON file into a table."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_location, schema_url)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = NDJSONImporter(dataset_schema, engine)
     importer.load_file(ndjson_path, table_name, truncate=truncate_table)
 
@@ -525,21 +526,21 @@ def import_ndjson(
 @import_.command("geojson")
 @option_db_url
 @option_schema_url
-@argument_schema_location
+@argument_dataset_id
 @click.argument("table_name")
 @click.argument("geojson_path")
 @click.option("--truncate-table", is_flag=True)
 def import_geojson(
     db_url: str,
     schema_url: str,
-    schema_location: str,
+    dataset_id: str,
     table_name: str,
     geojson_path: str,
     truncate_table: bool,
 ) -> None:
     """Import a GeoJSON file into a table."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_location, schema_url)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = GeoJSONImporter(dataset_schema, engine)
     importer.load_file(geojson_path, table_name, truncate=truncate_table)
 
@@ -547,21 +548,21 @@ def import_geojson(
 @import_.command("events")
 @option_db_url
 @option_schema_url
-@argument_schema_location
+@argument_dataset_id
 @click.option("--additional-schemas", "-a", multiple=True)
 @click.argument("events_path")
 @click.option("-t", "--truncate-table", default=False, is_flag=True)
 def import_events(
     db_url: str,
     schema_url: str,
-    schema_location: str,
+    dataset_id: str,
     additional_schemas: str,
     events_path: str,
     truncate_table: bool,
 ) -> None:
     """Import an events file into a table."""
     engine = _get_engine(db_url)
-    dataset_schemas = [_get_dataset_schema(schema_location, schema_url)]
+    dataset_schemas = [_get_dataset_schema(dataset_id, schema_url)]
     for schema in additional_schemas:
         dataset_schemas.append(_get_dataset_schema(schema, schema_url))
     srid = dataset_schemas[0]["crs"].split(":")[-1]
@@ -574,45 +575,40 @@ def import_events(
 @import_.command("schema")
 @option_db_url
 @option_schema_url
-@argument_schema_location
-def import_schema(db_url: str, schema_url: str, schema_location: str) -> None:
+@argument_dataset_id
+def import_schema(db_url: str, schema_url: str, dataset_id: str) -> None:
     """Import the schema definition into the local database."""
     # Add drop or not flag
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_location, schema_url)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
 
     create_meta_tables(engine)
     create_meta_table_data(engine, dataset_schema)
 
 
 def _get_dataset_schema(
-    schema_location: str, schema_url: Optional[str] = None, prefetch_related: bool = False
+    dataset_id: str, schema_url: str, prefetch_related: bool = False
 ) -> DatasetSchema:
-    """Find the dataset schema for the given dataset"""
-    if "." in schema_location or "/" in schema_location:
-        click.echo(f"Reading schema from {schema_location}", err=True)
-        return dataset_schema_from_file(schema_location, prefetch_related=prefetch_related)
-    else:
-        assert schema_url is not None, "We should use a more robust filename detection."
-        # Read the schema from the online repository.
-        click.echo(f"Reading schemas from {schema_url}", err=True)
+    """Find the dataset schema for the given dataset.
 
-        try:
-            return dataset_schema_from_url(
-                schema_url, schema_location, prefetch_related=prefetch_related
-            )
-        except KeyError:
-            raise click.BadParameter(f"Schema {schema_location} not found.") from None
+    Args:
+        dataset_id: id of the dataset.
+        schema_url: url of the location where the collection of amsterdam schemas is found.
+        prefetch_related: related schemas should be prefetched.
+    """
+    set_schema_loader(schema_url)
+    dataset_collection = DatasetCollection()
+    return dataset_collection.get_dataset(dataset_id, prefetch_related=prefetch_related)
 
 
 @create.command("extra_index")
 @option_db_url
 @option_schema_url
-@argument_schema_location
-def create_identifier_index(db_url: str, schema_url: str, schema_location: str) -> None:
-    """Execute SQLalchemy Index based on Identifier in the JSON schema data defintion"""
+@argument_dataset_id
+def create_identifier_index(db_url: str, schema_url: str, dataset_id: str) -> None:
+    """Execute SQLalchemy Index based on Identifier in the JSON schema data definition."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_location, schema_url)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = BaseImporter(dataset_schema, engine)
 
     for table in dataset_schema.tables:
@@ -622,11 +618,11 @@ def create_identifier_index(db_url: str, schema_url: str, schema_location: str) 
 @create.command("tables")
 @option_db_url
 @option_schema_url
-@argument_schema_location
-def create_tables(db_url: str, schema_url: str, schema_location: str) -> None:
-    """Execute SQLalchemy Table objects"""
+@argument_dataset_id
+def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
+    """Execute SQLalchemy Table objects."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_location, schema_url, prefetch_related=True)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
     importer = BaseImporter(dataset_schema, engine)
 
     for table in dataset_schema.tables:
@@ -636,11 +632,11 @@ def create_tables(db_url: str, schema_url: str, schema_location: str) -> None:
 @create.command("all")
 @option_db_url
 @option_schema_url
-@argument_schema_location
-def create_all_objects(db_url: str, schema_url: str, schema_location: str) -> None:
+@argument_dataset_id
+def create_all_objects(db_url: str, schema_url: str, dataset_id: str) -> None:
     """Execute SQLalchemy Index (Identifier fields) and Table objects."""
     engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(schema_location, schema_url, prefetch_related=True)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
     importer = BaseImporter(dataset_schema, engine)
 
     for table in dataset_schema.tables:
@@ -669,21 +665,19 @@ def diff_schemas(schema_url: str, diff_schema_url: str) -> None:
 @export.command("events")
 @option_db_url
 @option_schema_url
-@argument_schema_location
+@argument_dataset_id
 @click.option("--additional-schemas", "-a", multiple=True)
-@click.argument("dataset_id")
 @click.argument("table_id")
 def export_events_for(
     db_url: str,
     schema_url: str,
-    schema_location: str,
-    additional_schemas: str,
     dataset_id: str,
+    additional_schemas: str,
     table_id: str,
 ) -> None:
     """Export events from postgres."""
     engine = _get_engine(db_url)
-    dataset_schemas = [_get_dataset_schema(schema_location, schema_url)]
+    dataset_schemas = [_get_dataset_schema(dataset_id, schema_url)]
     for schema in additional_schemas:
         dataset_schemas.append(_get_dataset_schema(schema, schema_url))
     # Run as a transaction
@@ -695,14 +689,14 @@ def export_events_for(
 @kafka.command()
 @option_db_url
 @option_schema_url
-@argument_schema_location
+@argument_dataset_id
 @click.option("--additional-schemas", "-a", multiple=True)
 @click.option("--topics", "-t", multiple=True)
 @click.option("--truncate-table", default=False, is_flag=True)
 def consume(
     db_url: str,
     schema_url: str,
-    schema_location: str,
+    dataset_id: str,
     additional_schemas: str,
     topics: Iterable[str],
     truncate_table: bool,
@@ -712,7 +706,7 @@ def consume(
     from schematools.events.consumer import consume_events
 
     engine = _get_engine(db_url)
-    dataset_schemas = [_get_dataset_schema(schema_location, schema_url)]
+    dataset_schemas = [_get_dataset_schema(dataset_id, schema_url)]
     for schema in additional_schemas:
         dataset_schemas.append(_get_dataset_schema(schema, schema_url))
     srid = dataset_schemas[0]["crs"].split(":")[-1]
