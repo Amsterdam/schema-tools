@@ -43,7 +43,7 @@ Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 Ref = str
 
 
-@total_ordering
+@dataclass(order=True, frozen=True)
 class SemVer:
     """Semantic version numbers.
 
@@ -62,25 +62,36 @@ class SemVer:
 
     """
 
-    PAT: ClassVar[Pattern] = re.compile(
-        r"^v?(?P<major>\d+)(?:\.(?P<minor>\d+)(?:\.(?P<patch>\d+))?)?$"
+    PAT: ClassVar[Pattern[str]] = re.compile(
+        r"""
+        ^v?                     # Optionally start with a 'v' (for version)
+        (?P<major>\d+)          # A major version number is compulsory
+        (?:\.                   # Optionally followed by a '.'
+            (?P<minor>\d+)      # ... and a minor version number
+            (?:\.               # Optionally followed by a '.'
+                (?P<patch>\d+)  # ... and a patch version number
+            )?
+        )?$                     # And nothing else
+        """,
+        re.VERBOSE,
     )
-    major: int = 0
-    minor: int = 0
-    patch: int = 0
+    major: int
+    minor: int
+    patch: int
 
-    def __init__(self, version: str) -> None:
-        """Initialize using a string that could be interpreted to be a semantic version number.
+    @classmethod
+    def from_str(cls, version: str) -> SemVer:
+        """Create a SemVer using a string that could be interpreted to be a semantic version number.
 
         Examples:
-              >>> SemVer("1.0.0")
-              SemVer("v1.0.0")
+              >>> SemVer.from_str("1.0.0")
+              SemVer(major=1, minor=0, patch=0)
 
-              >>> SemVer("v54")
-              SemVer("v54.0.0")
+              >>> SemVer.from_str("v54")
+              SemVer(major=54, minor=0, patch=0)
 
-              >>> SemVer("v3.9.0")
-              SemVer("v3.9.0")
+              >>> SemVer.from_str("v3.9.0")
+              SemVer(major=3, minor=9, patch=0)
 
         Args:
             version: A semantic version number, optionally prefixed with a "v".
@@ -89,37 +100,22 @@ class SemVer:
               ValueError if the string supplied is not a semantic version number.
         """
         if m := SemVer.PAT.match(version):
-            self.major = int(m.group("major"))
-            if minor := m.group("minor"):
-                self.minor = int(minor)
-                if patch := m.group("patch"):
-                    self.patch = int(patch)
+            major = int(m.group("major"))
+            if minor_match := m.group("minor"):
+                minor = int(minor_match)
+                if patch_match := m.group("patch"):
+                    patch = int(patch_match)
+                else:
+                    patch = 0
+            else:
+                minor = patch = 0
+            return SemVer(major, minor, patch)
         else:
             raise ValueError(f"Argument '{version}' is not a semantic version number.")
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, SemVer):
-            return NotImplemented
-        return (
-            self.major == other.major and self.minor == other.minor and self.patch == other.patch
-        )
-
-    def __lt__(self, other: object) -> bool:
-        if not isinstance(other, SemVer):
-            return NotImplemented
-        if self.major != other.major:
-            return self.major < other.major
-        if self.minor != other.minor:
-            return self.minor < other.minor
-        return self.patch < other.patch
 
     def __str__(self) -> str:
         """Return string representation of semantic version with "v" prefix."""
         return f"v{self.major}.{self.minor}.{self.patch}"
-
-    def __repr__(self) -> str:
-        """Return eval-ready string reprsentation of semantic version."""
-        return f'{self.__class__.__name__}("{self}")'
 
 
 class SchemaType(UserDict):
