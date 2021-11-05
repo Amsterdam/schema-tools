@@ -1266,16 +1266,16 @@ class PermissionLevel(Enum):
         else:
             return cls[value.upper()]
 
-    def __str__(self):
+    def __str__(self) -> str:
         # Using the name as official value.
         return self.name
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         """The 'none' level is recognized as "NO PERMISSION"."""
         # more direct then reading bool(self.value) as that goes through descriptors
         return self is not PermissionLevel.NONE
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         if not isinstance(other, PermissionLevel):
             return NotImplemented
 
