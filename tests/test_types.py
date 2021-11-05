@@ -8,17 +8,16 @@ from schematools.utils import dataset_schema_from_path
 
 def test_permission_level_ordering() -> None:
     """Test whether enum ordering works based on the int values."""
-    assert sorted(PermissionLevel._member_map_.values()) == [
+    assert sorted(PermissionLevel) == [
         PermissionLevel.NONE,
         PermissionLevel.SUBOBJECTS_ONLY,
         PermissionLevel.LETTERS,
         PermissionLevel.RANDOM,
         PermissionLevel.ENCODED,
         PermissionLevel.READ,
-        PermissionLevel.highest,  # alias for read
     ]
     assert PermissionLevel.highest is PermissionLevel.READ
-    assert PermissionLevel.highest is max(PermissionLevel._member_map_.values())
+    assert PermissionLevel.highest is max(PermissionLevel)
 
 
 def test_geo_and_id_when_configured(here: Path, gebieden_schema: DatasetSchema) -> None:
