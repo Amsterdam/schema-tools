@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import warnings
 from collections import UserDict
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Dict,
     FrozenSet,
     Iterable,
@@ -19,6 +21,7 @@ from typing import (
     NamedTuple,
     NoReturn,
     Optional,
+    Pattern,
     Set,
     Type,
     TypeVar,
@@ -37,6 +40,86 @@ from schematools.exceptions import SchemaObjectNotFound
 
 ST = TypeVar("ST", bound="SchemaType")
 Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
+Ref = str
+
+
+@total_ordering
+class SemVer:
+    """Semantic version numbers.
+
+    Semantic version numbers take the form X.Y.Z where X, Y,
+    and Z are non-negative integers, and MUST NOT contain leading zeroes. X is the major
+    version, Y is the minor version, and Z is the patch version. Each element MUST increase
+    numerically. For instance: 1.9.0 -> 1.10.0 -> 1.11.0.
+
+    See also: https://semver.org/ (where the above "definition" was taken from)
+
+    This class allows semantic version numbers to be prefixed with "v". Eg "v1.11.0". That is
+    also how they will be outputted by the :meth:`__str__` and :meth:`__repr__` methods.
+
+    In addition the minor and patch version can be left unspecified. :class:`SemVer` will assume
+    them to be equal to 0 in that case.
+
+    """
+
+    PAT: ClassVar[Pattern] = re.compile(
+        r"^v?(?P<major>\d+)(?:\.(?P<minor>\d+)(?:\.(?P<patch>\d+))?)?$"
+    )
+    major: int = 0
+    minor: int = 0
+    patch: int = 0
+
+    def __init__(self, version: str) -> None:
+        """Initialize using a string that could be interpreted to be a semantic version number.
+
+        Examples:
+              >>> SemVer("1.0.0")
+              SemVer("v1.0.0")
+
+              >>> SemVer("v54")
+              SemVer("v54.0.0")
+
+              >>> SemVer("v3.9.0")
+              SemVer("v3.9.0")
+
+        Args:
+            version: A semantic version number, optionally prefixed with a "v".
+
+        Raises:
+              ValueError if the string supplied is not a semantic version number.
+        """
+        if m := SemVer.PAT.match(version):
+            self.major = int(m.group("major"))
+            if minor := m.group("minor"):
+                self.minor = int(minor)
+                if patch := m.group("patch"):
+                    self.patch = int(patch)
+        else:
+            raise ValueError(f"Argument '{version}' is not a semantic version number.")
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SemVer):
+            return NotImplemented
+        return (
+            self.major == other.major and self.minor == other.minor and self.patch == other.patch
+        )
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, SemVer):
+            return NotImplemented
+        if self.major != other.major:
+            return self.major < other.major
+        if self.minor != other.minor:
+            return self.minor < other.minor
+        return self.patch < other.patch
+
+    def __str__(self) -> str:
+        """Return string representation of semantic version with "v" prefix."""
+        return f"v{self.major}.{self.minor}.{self.patch}"
+
+    def __repr__(self) -> str:
+        """Return eval-ready string reprsentation of semantic version."""
+        return f'{self.__class__.__name__}("{self}")'
 
 
 class SchemaType(UserDict):
