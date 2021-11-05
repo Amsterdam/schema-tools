@@ -21,7 +21,7 @@ def test_permission_level_ordering() -> None:
     assert PermissionLevel.highest is max(PermissionLevel._member_map_.values())
 
 
-def test_geo_and_id_when_configured(here, gebieden_schema):
+def test_geo_and_id_when_configured(here: Path, gebieden_schema: DatasetSchema) -> None:
     schema = dataset_schema_from_path(here / "files" / "meetbouten.json")
     table = schema.get_table_by_id("meetbouten")
     assert table.identifier == ["identificatie"]
@@ -30,7 +30,7 @@ def test_geo_and_id_when_configured(here, gebieden_schema):
     assert id_field.is_primary
 
 
-def test_geo_and_id_when_not_configured(here):
+def test_geo_and_id_when_not_configured(here: Path) -> None:
     schema = dataset_schema_from_path(here / "files" / "afvalwegingen.json")
     table = schema.get_table_by_id("containers")
     assert table.identifier == ["id"]
@@ -39,7 +39,7 @@ def test_geo_and_id_when_not_configured(here):
     assert id_field.is_primary
 
 
-def test_import_dataset_separate_table_files(here):
+def test_import_dataset_separate_table_files(here: Path) -> None:
     """Prove that datasets with tables in separate files are created correctly."""
     schema = dataset_schema_from_path(here / "files" / "gebieden_sep_tables" / "dataset.json")
     assert len(schema.tables) == 2
@@ -62,7 +62,7 @@ def test_datasetschema_from_file_not_a_dataset(here: Path) -> None:
         dataset_schema_from_path(here / "files" / "not_a_json_file.txt")
 
 
-def test_profile_schema(brp_r_profile_schema):
+def test_profile_schema(brp_r_profile_schema: ProfileSchema) -> None:
     """Prove that the profile files are properly read,
     and have their fields access the JSON data.
     """
@@ -79,7 +79,7 @@ def test_profile_schema(brp_r_profile_schema):
     ]
 
 
-def test_fetching_of_related_schema_ids(here):
+def test_fetching_of_related_schema_ids(here: Path) -> None:
     """Prove that ids of related dataset schemas are properly collected."""
     schema = dataset_schema_from_path(here / "files" / "multirelation.json")
     assert set(schema.related_dataset_schema_ids) == {"gebieden", "meetbouten"}
