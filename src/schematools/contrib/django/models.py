@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import warnings
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from django.apps import apps
@@ -161,6 +162,32 @@ class DynamicModel(models.Model):
     def table_schema(cls) -> DatasetTableSchema:
         """Give access to the original table_schema that this model implements."""
         return cls._table_schema
+
+    @classmethod
+    def get_field_schema(cls, model_field: Union[models.Field, models.ForeignObjectRel]):
+        """Provide access to the underlying amsterdam schema field that created the model field."""
+        if isinstance(model_field, models.ForeignObjectRel):
+            # When Django auto-creates the related field, it doesn't have `field_schema`,
+            # but it can be resolved by looking up the original forward relation.
+            model_field = model_field.remote_field
+
+        try:
+            # This internal property is assigned by model_factory()
+            return model_field.field_schema
+        except AttributeError:
+            # Easier to ask for forgiveness than permission;
+            if not issubclass(model_field.model, DynamicModel):
+                raise ValueError(
+                    f"get_field_schema() is only usable on fields from on DynamicModel instances."
+                ) from None
+
+            if model_field.auto_created:
+                raise ValueError(
+                    "get_field_schema() can't be used on"
+                    f" '{model_field.model._meta.model_name}.{model_field.name}',"
+                    f" because that is an auto-created field."
+                ) from None
+            raise
 
     @classmethod
     def get_table_id(cls) -> str:
@@ -537,9 +564,10 @@ class LooseRelationManyToManyField(models.ManyToManyField):
 def get_field_schema(
     model_field: Union[models.Field, models.ForeignObjectRel]
 ) -> DatasetFieldSchema:
-    """Provide access to the underlying amsterdam schema field that created the model field."""
-    if isinstance(model_field, models.ForeignObjectRel):
-        # created by 'related_name' setting
-        return model_field.remote_field.field_schema
-    else:
-        return model_field.field_schema
+    # Backwards compatibility code.
+    warnings.warn(
+        "get_field_schema() is deprecated, use DynamicModel.get_field_schema() instead",
+        DeprecationWarning,
+    )
+
+    return DynamicModel.get_field_schema(model_field)
