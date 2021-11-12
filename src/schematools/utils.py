@@ -23,7 +23,7 @@ RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
 )
 
 
-@ttl_cache(ttl=16)
+@ttl_cache(ttl=16)  # type: ignore[misc]
 def dataset_schemas_from_url(
     schemas_url: Union[URL, str],
     dataset_name: Optional[str] = None,
@@ -188,7 +188,7 @@ def dataset_schema_from_path(
 
 def dataset_schema_from_id_and_schemas_path(
     dataset_id: str,
-    schemas_path: Union[Path, str] = None,
+    schemas_path: Union[Path, str],
     prefetch_related: bool = False,
 ) -> types.DatasetSchema:
     """Read a dataset schema from a file on local drive.
@@ -201,7 +201,7 @@ def dataset_schema_from_id_and_schemas_path(
     dataset_path = Path(schemas_path) / dataset_id / "dataset.json"
     dataset_schema = dataset_schema_from_path(dataset_path)
 
-    index: Dict[str, str] = {}
+    index: Dict[str, Path] = {}
 
     # Build the mapping from dataset -> path with jsonschema file
     if prefetch_related:
