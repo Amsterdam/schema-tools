@@ -83,3 +83,36 @@ def test_fetching_of_related_schema_ids(here):
     """Prove that ids of related dataset schemas are properly collected."""
     schema = dataset_schema_from_path(here / "files" / "multirelation.json")
     assert set(schema.related_dataset_schema_ids) == {"gebieden", "meetbouten"}
+
+
+def test_dataset_schema_get_fields_with_surrogate_pk(
+    compound_key_schema: DatasetSchema, verblijfsobjecten_schema: DatasetSchema
+):
+    """Prove that the surrogate 'id' key is returned once for schemas with a
+    compound key, regardless of whether the surrogate key is already defined
+    by the schema or generated"""
+
+    verblijfsobjecten = verblijfsobjecten_schema.tables[0]
+    compound_key_schema = compound_key_schema.tables[0]
+
+    # this schema gets a generated 'id'
+    assert sorted([x.id for x in verblijfsobjecten.get_fields(include_subfields=False)]) == [
+        "beginGeldigheid",
+        "eindGeldigheid",
+        "gebruiksdoel",
+        "id",
+        "identificatie",
+        "ligtInBuurt",
+        "schema",
+        "volgnummer",
+    ]
+
+    # this schema defines an 'id'
+    assert sorted([x.name for x in compound_key_schema.get_fields(include_subfields=False)]) == [
+        "beginGeldigheid",
+        "eindGeldigheid",
+        "id",
+        "identificatie",
+        "schema",
+        "volgnummer",
+    ]

@@ -306,6 +306,11 @@ def profile_brk_read_id_schema(here) -> ProfileSchema:
     return ProfileSchema.from_file(here / "files/profiles/BRK_RID.json")
 
 
+@pytest.fixture()
+def compound_key_schema(here) -> ProfileSchema:
+    return DatasetSchema.from_file(here / "files/compound_key.json")
+
+
 @pytest.fixture
 def profile_verkeer_medewerker_schema() -> ProfileSchema:
     return ProfileSchema.from_dict(
