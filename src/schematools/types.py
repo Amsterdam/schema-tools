@@ -13,6 +13,7 @@ from typing import (
     Callable,
     Dict,
     FrozenSet,
+    Iterable,
     Iterator,
     List,
     NamedTuple,
@@ -523,7 +524,7 @@ class DatasetTableSchema(SchemaType):
         """The description of the table as stated in the schema."""
         return self.get("description")
 
-    def get_fields(self, include_subfields: bool = False) -> Iterator[DatasetFieldSchema]:
+    def get_fields(self, include_subfields: bool = False) -> Iterable[DatasetFieldSchema]:
         """Get the fields for this table.
 
         Args:
