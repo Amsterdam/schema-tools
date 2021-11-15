@@ -6,7 +6,12 @@ from django.db.models import Q
 
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetSchema
-from schematools.utils import dataset_paths_from_url, dataset_schemas_from_url, to_snake_case
+from schematools.utils import (
+    dataset_paths_from_url,
+    dataset_schema_from_path,
+    dataset_schemas_from_url,
+    to_snake_case,
+)
 
 from .create_tables import create_tables
 
@@ -50,7 +55,7 @@ class Command(BaseCommand):
         datasets = []
         for filename in schema_files:
             self.stdout.write(f"Loading schema from {filename}")
-            schema = DatasetSchema.from_file(filename)
+            schema = dataset_schema_from_path(filename)
             dataset = self.import_schema(schema.id, schema)
             datasets.append(dataset)
 

@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from schematools.types import DatasetSchema, Permission, PermissionLevel
+from schematools.utils import dataset_schema_from_path
 
 
 def test_permission_level_ordering() -> None:
@@ -21,7 +22,7 @@ def test_permission_level_ordering() -> None:
 
 
 def test_geo_and_id_when_configured(here, gebieden_schema):
-    schema = DatasetSchema.from_file(here / "files" / "meetbouten.json")
+    schema = dataset_schema_from_path(here / "files" / "meetbouten.json")
     table = schema.get_table_by_id("meetbouten")
     assert table.identifier == ["identificatie"]
     assert table.main_geometry == "geometrie"
@@ -30,7 +31,7 @@ def test_geo_and_id_when_configured(here, gebieden_schema):
 
 
 def test_geo_and_id_when_not_configured(here):
-    schema = DatasetSchema.from_file(here / "files" / "afvalwegingen.json")
+    schema = dataset_schema_from_path(here / "files" / "afvalwegingen.json")
     table = schema.get_table_by_id("containers")
     assert table.identifier == ["id"]
     assert table.main_geometry == "geometry"
@@ -40,7 +41,7 @@ def test_geo_and_id_when_not_configured(here):
 
 def test_import_dataset_separate_table_files(here):
     """Prove that datasets with tables in separate files are created correctly."""
-    schema = DatasetSchema.from_file(here / "files" / "gebieden_sep_tables" / "dataset.json")
+    schema = dataset_schema_from_path(here / "files" / "gebieden_sep_tables" / "dataset.json")
     assert len(schema.tables) == 2
     table = schema.get_table_by_id("buurten")
     assert table.main_geometry == "primaireGeometrie"
@@ -52,13 +53,13 @@ def test_datasetschema_from_file_not_a_dataset(here: Path) -> None:
     error_msg = "Invalid Amsterdam Dataset schema file"
     with pytest.raises(ValueError, match=error_msg):
         # v1.0.0.json is a DatasetRow, not a DatasetSchema.
-        DatasetSchema.from_file(
+        dataset_schema_from_path(
             here / "files" / "gebieden_sep_tables" / "bouwblokken" / "v1.0.0.json"
         )
 
     with pytest.raises(ValueError, match=error_msg):
         # not_a_json_file.txt is not a JSON file. We should still get our ValueError.
-        DatasetSchema.from_file(here / "files" / "not_a_json_file.txt")
+        dataset_schema_from_path(here / "files" / "not_a_json_file.txt")
 
 
 def test_profile_schema(brp_r_profile_schema):
@@ -80,5 +81,5 @@ def test_profile_schema(brp_r_profile_schema):
 
 def test_fetching_of_related_schema_ids(here):
     """Prove that ids of related dataset schemas are properly collected."""
-    schema = DatasetSchema.from_file(here / "files" / "multirelation.json")
+    schema = dataset_schema_from_path(here / "files" / "multirelation.json")
     assert set(schema.related_dataset_schema_ids) == {"gebieden", "meetbouten"}
