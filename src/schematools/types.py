@@ -524,7 +524,7 @@ class DatasetTableSchema(SchemaType):
         """The description of the table as stated in the schema."""
         return self.get("description")
 
-    def get_fields(self, include_subfields: bool = False) -> Iterable[DatasetFieldSchema]:
+    def get_fields(self, include_subfields: bool = False) -> Iterator[DatasetFieldSchema]:
         """Get the fields for this table.
 
         Args:
@@ -1005,7 +1005,7 @@ class DatasetFieldSchema(DatasetType):
         """
         return list(self.get_subfields())
 
-    def get_subfields(self, add_prefixes=False) -> Iterator[DatasetFieldSchema]:
+    def get_subfields(self, add_prefixes=False) -> Iterable[DatasetFieldSchema]:
         """Return the subfields for a nested structure.
 
         Args:
