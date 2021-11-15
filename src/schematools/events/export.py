@@ -30,7 +30,7 @@ class ComplexFieldAttrs:
     is_many: Optional[bool] = None
     relation_ds: Optional[str] = None
     identifier_names: List[str] = field(default_factory=list)
-    sub_field_names: List[str] = field(default_factory=list)
+    subfield_names: List[str] = field(default_factory=list)
 
 
 def fetch_complex_fields_metadata(dataset_table: DatasetTableSchema) -> List[ComplexFieldAttrs]:
@@ -63,7 +63,7 @@ def fetch_complex_fields_metadata(dataset_table: DatasetTableSchema) -> List[Com
                     is_many=is_many,
                     relation_ds=relation_ds,
                     identifier_names=dataset_table.identifier,
-                    sub_field_names=[to_snake_case(sf) for sf in properties.keys()],
+                    subfield_names=[to_snake_case(sf) for sf in properties.keys()],
                 )
             )
 
@@ -90,7 +90,7 @@ def collect_nm_embed_rows(
                 )
 
                 stripped_row = {}
-                for sfn in field_metadata.sub_field_names:
+                for sfn in field_metadata.subfield_names:
                     stripped_row[sfn] = row_dict[f"{field_metadata.field_name}_{sfn}"]
                 nm_embeds[table_id][id_value].append(stripped_row)
     return dict(nm_embeds)
@@ -121,8 +121,8 @@ def fetch_1n_embeds(
     for field_metadata in complex_fields_metadata:
         if not field_metadata.is_many:
             embed_obj = {}
-            for sub_field_name in field_metadata.sub_field_names:
-                embed_obj[sub_field_name] = row[f"{field_metadata.field_name}_{sub_field_name}"]
+            for subfield_name in field_metadata.subfield_names:
+                embed_obj[subfield_name] = row[f"{field_metadata.field_name}_{subfield_name}"]
             embeddable_objs[field_metadata.field_name] = embed_obj
     return embeddable_objs
 
