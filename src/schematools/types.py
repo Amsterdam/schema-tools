@@ -552,8 +552,7 @@ class DatasetTableSchema(SchemaType):
             yield field_schema
 
         # If compound key, add PK field
-        # XXX we should check for an existing "id" field, avoid collisions
-        if self.has_compound_key:
+        if self.has_compound_key and "id" not in self["schema"]["properties"]:
             yield DatasetFieldSchema(_parent_table=self, _required=True, type="string", id="id")
 
     @cached_property
