@@ -679,33 +679,12 @@ class DatasetTableSchema(SchemaType):
         return "parentTableID" in self
 
     @property
-    def filters(self):
-        warnings.warn(
-            "Using DatasetTableSchema.filters is deprecated, use additional_filters instead.",
-            DeprecationWarning,
-        )
-        return dict(self["schema"].get("additionalFilters", {}))
-
-    @property
     def relations(self):
         warnings.warn(
             "Using DatasetTableSchema.relations is deprecated, use additional_relations instead.",
             DeprecationWarning,
         )
         return dict(self["schema"].get("additionalRelations", {}))
-
-    @property
-    def additional_filters(self) -> Dict[str, Dict[str, str]]:
-        """Fetch list of additional filters.
-        Example value:
-
-            "regimes.inWerkingOp": {
-              "type": "range",
-              "start": "regimes.beginTijd",
-              "end": "regimes.eindTijd"
-            }
-        """
-        return dict(self["schema"].get("additionalFilters", {}))
 
     @cached_property
     def additional_relations(self) -> List[AdditionalRelationSchema]:
