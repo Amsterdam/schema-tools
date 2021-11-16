@@ -4,7 +4,7 @@ from typing import Dict, Optional, Set
 
 from sqlalchemy import Column, MetaData, Table
 
-from schematools import TMP_TABLE_POSTFIX
+from schematools import TMP_TABLE_POSTFIX, DATABASE_SCHEMA_NAME_DEFAULT
 from schematools.importer import fetch_col_type
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
@@ -55,7 +55,11 @@ def tables_factory(
             postfix = TMP_TABLE_POSTFIX if has_postfix else None
             db_table_name = dataset_table.db_name(postfix=postfix)
 
-        db_schema_name = (db_schema_names or {}).get(dataset_table.id)
+        # If schema is None, default to Public. Leave it to None will have a risk that
+        # the DB schema that is currently in use will be used to create the table in
+        # leading to unwanted/unexepected results
+        if (db_schema_name := (db_schema_names or {}).get(dataset_table.id)) is None:
+            db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
         columns = []
         for field in dataset_table.fields:
 
