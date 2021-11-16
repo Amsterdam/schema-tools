@@ -47,6 +47,10 @@ repos:
     hooks:
       - id: mypy
         language_version: python3
+        additional_dependencies:
+          - types-requests
+          - types-cachetools
+          - types-Deprecated
   -   repo: https://github.com/pre-commit/pygrep-hooks
       rev: v1.9.0  # Use the ref you want to point at
       hooks:

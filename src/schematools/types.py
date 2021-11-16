@@ -13,13 +13,13 @@ from typing import (
     Callable,
     Dict,
     FrozenSet,
+    Iterable,
     Iterator,
     List,
     NamedTuple,
     NoReturn,
     Optional,
     Set,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -27,6 +27,7 @@ from typing import (
 )
 
 import jsonschema
+from deprecated import deprecated
 from methodtools import lru_cache
 from more_itertools import first
 
@@ -81,7 +82,11 @@ class DatasetSchema(SchemaType):
     This is a collection of JSON Schema's within a single file.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
         about the related datasets
@@ -94,20 +99,16 @@ class DatasetSchema(SchemaType):
         return f"<{self.__class__.__name__}: {self['id']}>"
 
     @classmethod
+    @deprecated(
+        version="2.3.1",
+        reason="""The `DatasetSchema.from_file` has been replaced by
+            `schematools.utils.dataset_schema_from_path`.""",
+    )
     def from_file(cls, filename: Union[Path, str]) -> DatasetSchema:
         """Open an Amsterdam schema from a file and any table files referenced therein"""
-        with open(filename) as fh:
-            try:
-                ds = json.load(fh)
-            except Exception as exc:
-                raise ValueError("Invalid Amsterdam Dataset schema file") from exc
+        from schematools.utils import dataset_schema_from_path
 
-            if ds["type"] == "dataset":
-                for i, table in enumerate(ds["tables"]):
-                    if ref := table.get("$ref"):
-                        with open(Path(filename).parent / Path(ref + ".json")) as table_file:
-                            ds["tables"][i] = json.load(table_file)
-        return cls.from_dict(ds)
+        return dataset_schema_from_path(filename)
 
     @classmethod
     def from_dict(cls, obj: Json) -> DatasetSchema:
@@ -311,7 +312,6 @@ class DatasetSchema(SchemaType):
         from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
 
         def _get_fk_target_table(dataset_id: str, table_id: str) -> DatasetTableSchema:
-            """Gets the"""
             if table.dataset is not None:
                 return table.dataset.get_dataset_schema(dataset_id).get_table_by_id(
                     table_id, include_nested=False, include_through=False
@@ -339,7 +339,6 @@ class DatasetSchema(SchemaType):
         # and not the shortnames
         left_dataset_id = to_snake_case(self.id)
         left_table_id = to_snake_case(table.id)
-        left_table_name = to_snake_case(table.name)
 
         # Both relation types can have a through table,
         # For FK relations, an extra through_table is created when
@@ -444,10 +443,9 @@ class DatasetSchema(SchemaType):
         characteristics. However, we cannot know this for sure if not also the
         target dataset of a relation has been loaded.
         """
-
         related_ids = []
         for table in self.tables:
-            for field in table.get_fields(include_sub_fields=False):
+            for field in table.get_fields(include_subfields=False):
                 a_relation = field.relation or field.nm_relation
                 if a_relation is not None:
                     dataset_id, table_id = a_relation.split(":")
@@ -523,11 +521,11 @@ class DatasetTableSchema(SchemaType):
         """The description of the table as stated in the schema."""
         return self.get("description")
 
-    def get_fields(self, include_sub_fields: bool = False) -> Iterator[DatasetFieldSchema]:
+    def get_fields(self, include_subfields: bool = False) -> Iterator[DatasetFieldSchema]:
         """Get the fields for this table.
 
         Args:
-            include_sub_fields: Merge the sub fields of an FK relation into the fields
+            include_subfields: Merge the subfields of an FK relation into the fields
             of this table. The ids of these fields need to be prefixed
             (usually with the `id` of the relation field) to avoid name collisions.
         """
@@ -542,22 +540,21 @@ class DatasetTableSchema(SchemaType):
             # Add extra fields for relations of type object
             # These fields are added to identify the different
             # components of a compound FK to a another table
-            if field_schema.relation is not None and field_schema.is_object and include_sub_fields:
-                for sub_field in field_schema.get_sub_fields(add_prefixes=True):
+            if field_schema.relation is not None and field_schema.is_object and include_subfields:
+                for subfield in field_schema.get_subfields(add_prefixes=True):
                     # We exclude temporal fields, they need not to be merged into the table fields
-                    if sub_field.is_temporal:
+                    if subfield.is_temporal:
                         continue
-                    yield sub_field
+                    yield subfield
             yield field_schema
 
         # If compound key, add PK field
-        # XXX we should check for an existing "id" field, avoid collisions
-        if self.has_compound_key:
+        if self.has_compound_key and "id" not in self["schema"]["properties"]:
             yield DatasetFieldSchema(_parent_table=self, _required=True, type="string", id="id")
 
     @cached_property
     def fields(self) -> List[DatasetFieldSchema]:
-        return list(self.get_fields(include_sub_fields=True))
+        return list(self.get_fields(include_subfields=True))
 
     @lru_cache()  # type: ignore[misc]
     def get_fields_by_id(self, *field_ids: str) -> List[DatasetFieldSchema]:
@@ -995,17 +992,17 @@ class DatasetFieldSchema(DatasetType):
         return dataset_table.temporal.dimensions
 
     @cached_property
-    def sub_fields(self) -> List[DatasetFieldSchema]:
-        """Return the sub fields for a nested structure.
+    def subfields(self) -> List[DatasetFieldSchema]:
+        """Return the subfields for a nested structure.
 
-        Calls the `get_sub_fields` method without argument,
+        Calls the `get_subfields` method without argument,
         so no prefixes are added to the field ids.
         This is the default situation.
         """
-        return list(self.get_sub_fields())
+        return list(self.get_subfields())
 
-    def get_sub_fields(self, add_prefixes=False) -> Iterator[DatasetFieldSchema]:
-        """Return the sub fields for a nested structure.
+    def get_subfields(self, add_prefixes=False) -> Iterable[DatasetFieldSchema]:
+        """Return the subfields for a nested structure.
 
         Args:
             add_prefixes: Add prefixes to the ids of the subfields.
@@ -1018,13 +1015,15 @@ class DatasetFieldSchema(DatasetType):
         those subfields need to be prefixed with the name of the relation field.
         However, this is not the case for the so-called `dimension` fields
         of a temporal relation (e.g. `beginGeldigheid` and `eindGeldigheid`).
+
+        If self is not an object or array, the return value is an empty iterator.
         """
         from schematools.utils import toCamelCase
 
         field_name_prefix = ""
 
         if self.is_object:
-            # Field has direct sub fields (type=object)
+            # Field has direct subfields (type=object)
             required = set(self.get("required", []))
             properties = self["properties"]
         elif self.is_array_of_objects and self.field_items is not None:
@@ -1032,7 +1031,7 @@ class DatasetFieldSchema(DatasetType):
             required = set(self.field_items.get("required") or ())
             properties = self.field_items["properties"]
         else:
-            raise ValueError("Subfields are only possible for 'object' or 'array' fields.")
+            return ()
 
         relation = self.relation
         nm_relation = self.nm_relation
@@ -1041,9 +1040,7 @@ class DatasetFieldSchema(DatasetType):
 
         combined_dimension_fieldnames: Set[str] = set()
         for (_dimension, field_names) in self.get_dimension_fieldnames().items():
-            combined_dimension_fieldnames |= set(
-                toCamelCase(fieldname) for fieldname in field_names
-            )
+            combined_dimension_fieldnames |= {toCamelCase(fieldname) for fieldname in field_names}
 
         for id_, spec in properties.items():
             needs_prefix = add_prefixes and id_ not in combined_dimension_fieldnames

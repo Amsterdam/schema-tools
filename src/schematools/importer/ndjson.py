@@ -154,18 +154,18 @@ class NDJSONImporter(BaseImporter):
                     relation_field_value = row[rel_field.id]
                     if rel_field.is_object:
                         fk_value_parts = []
-                        for sub_field in rel_field.get_sub_fields(add_prefixes=True):
+                        for subfield in rel_field.get_subfields(add_prefixes=True):
                             # Ignore temporal fields
-                            if sub_field.is_temporal:
+                            if subfield.is_temporal:
                                 continue
 
-                            sub_field_id = sub_field.id.rsplit(RELATION_INDICATOR, 1)[1]
+                            subfield_id = subfield.id.rsplit(RELATION_INDICATOR, 1)[1]
                             if relation_field_value is None:
-                                sub_field_value = None
+                                subfield_value = None
                             else:
-                                sub_field_value = relation_field_value[sub_field_id]
-                                fk_value_parts.append(sub_field_value)
-                            row[sub_field.name] = sub_field_value
+                                subfield_value = relation_field_value[subfield_id]
+                                fk_value_parts.append(subfield_value)
+                            row[subfield.name] = subfield_value
                         # empty fk_value_parts should result in None value
                         relation_field_value = ".".join([str(p) for p in fk_value_parts]) or None
                     row[f"{relation_field_name}_id"] = relation_field_value
@@ -185,11 +185,11 @@ class NDJSONImporter(BaseImporter):
                         id_field_name = "id" if len(id_fields) > 1 else id_fields[0]
                         nested_row_record = {}
                         nested_row_record["parent_id"] = row[id_field_name]
-                        for sub_field in n_field.sub_fields:
-                            if sub_field.is_temporal:
+                        for subfield in n_field.subfields:
+                            if subfield.is_temporal:
                                 continue
-                            sub_field_name = to_snake_case(sub_field.name)
-                            nested_row_record[sub_field_name] = nested_row.get(sub_field.name)
+                            subfield_name = to_snake_case(subfield.name)
+                            nested_row_record[subfield_name] = nested_row.get(subfield.name)
 
                         nested_row_records.append(nested_row_record)
 
@@ -227,7 +227,7 @@ class NDJSONImporter(BaseImporter):
                             if nm_field.is_through_table:
                                 through_field_metas = [
                                     (f.id.split(RELATION_INDICATOR)[-1], f.is_temporal)
-                                    for f in nm_field.sub_fields
+                                    for f in nm_field.subfields
                                 ]
                                 to_fk = ".".join(
                                     str(value[fn])

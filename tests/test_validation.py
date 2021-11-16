@@ -3,16 +3,17 @@ from __future__ import annotations
 import pytest
 
 from schematools.types import DatasetSchema
+from schematools.utils import dataset_schema_from_path
 from schematools.validation import IdentPropRefsValidator, PsqlIdentifierLengthValidator
 
 
 def test_PsqlIdentifierLengthValidator(here) -> None:
-    dataset = DatasetSchema.from_file(here / "files/long_ids.json")
+    dataset = dataset_schema_from_path(here / "files/long_ids.json")
     validator = PsqlIdentifierLengthValidator(dataset=dataset)
     error = next(validator.validate())
     assert error
 
-    dataset = DatasetSchema.from_file(here / "files/stadsdelen.json")
+    dataset = dataset_schema_from_path(here / "files/stadsdelen.json")
     validator = PsqlIdentifierLengthValidator(dataset=dataset)
     with pytest.raises(StopIteration):
         # no validation error
@@ -20,13 +21,13 @@ def test_PsqlIdentifierLengthValidator(here) -> None:
 
 
 def test_IdentPropRefsValidator(here) -> None:
-    dataset = DatasetSchema.from_file(here / "files/identifier_ref.json")
+    dataset = dataset_schema_from_path(here / "files/identifier_ref.json")
     validator = IdentPropRefsValidator(dataset=dataset)
     error = next(validator.validate())
     assert error
     assert "foobar" in error.message
 
-    dataset = DatasetSchema.from_file(here / "files/stadsdelen.json")
+    dataset = dataset_schema_from_path(here / "files/stadsdelen.json")
     validator = IdentPropRefsValidator(dataset=dataset)
     with pytest.raises(StopIteration):
         # no validation error
