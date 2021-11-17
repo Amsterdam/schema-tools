@@ -676,11 +676,8 @@ class DatasetTableSchema(SchemaType):
         return "parentTableID" in self
 
     @property
+    @deprecated("additionalFilters is no longer supported")
     def filters(self):
-        warnings.warn(
-            "Using DatasetTableSchema.filters is deprecated, use additional_filters instead.",
-            DeprecationWarning,
-        )
         return dict(self["schema"].get("additionalFilters", {}))
 
     @property
@@ -692,6 +689,7 @@ class DatasetTableSchema(SchemaType):
         return dict(self["schema"].get("additionalRelations", {}))
 
     @property
+    @deprecated("additionalFilters is no longer supported")
     def additional_filters(self) -> Dict[str, Dict[str, str]]:
         """Fetch list of additional filters.
         Example value:
