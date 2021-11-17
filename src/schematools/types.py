@@ -201,22 +201,22 @@ class DatasetSchema(SchemaType):
     @property
     def nested_tables(self) -> List[DatasetTableSchema]:
         """Access list of nested tables."""
-        tables = []
-        for table in self.tables:
-            for field in table.fields:
-                if field.is_nested_table:
-                    tables.append(self.build_nested_table(table=table, field=field))
-        return tables
+        return [
+            self.build_nested_table(table=t, field=f)
+            for t in self.tables
+            for f in t.fields
+            if f.is_nested_table
+        ]
 
     @property
     def through_tables(self) -> List[DatasetTableSchema]:
         """Access list of through_tables, for n-m relations."""
-        tables = []
-        for table in self.tables:
-            for field in table.fields:
-                if field.is_through_table:
-                    tables.append(self.build_through_table(table=table, field=field))
-        return tables
+        return [
+            self.build_through_table(table=t, field=f)
+            for t in self.tables
+            for f in t.fields
+            if f.is_through_table
+        ]
 
     def build_nested_table(
         self, table: DatasetTableSchema, field: DatasetFieldSchema
@@ -351,9 +351,6 @@ class DatasetSchema(SchemaType):
             to_snake_case(part) for part in str(relation).split(":")[:2]
         ]
 
-        # XXX maybe not logical to snakecase the fieldname here.
-        # this is still schema-land.
-        snakecased_fieldname = to_snake_case(field.name)
         snakecased_field_id = to_snake_case(field.id)
         table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
 
@@ -443,14 +440,14 @@ class DatasetSchema(SchemaType):
         characteristics. However, we cannot know this for sure if not also the
         target dataset of a relation has been loaded.
         """
-        related_ids = []
+        related_ids = set()
         for table in self.tables:
-            for field in table.get_fields(include_subfields=False):
-                a_relation = field.relation or field.nm_relation
+            for f in table.get_fields(include_subfields=False):
+                a_relation = f.relation or f.nm_relation
                 if a_relation is not None:
-                    dataset_id, table_id = a_relation.split(":")
-                    related_ids.append(dataset_id)
-        return set(related_ids)
+                    dataset_id, _ = a_relation.split(":")
+                    related_ids.add(dataset_id)
+        return related_ids
 
 
 class DatasetTableSchema(SchemaType):
@@ -578,13 +575,13 @@ class DatasetTableSchema(SchemaType):
 
     def get_through_tables_by_id(self) -> List[DatasetTableSchema]:
         """Access list of through_tables (for n-m relations) for a single base table."""
-        tables = []
         if self.dataset is None:
             return []
-        for field in self.fields:
-            if field.is_through_table:
-                tables.append(self.dataset.build_through_table(table=self, field=field))
-        return tables
+        return [
+            self.dataset.build_through_table(table=self, field=f)
+            for f in self.fields
+            if f.is_through_table
+        ]
 
     @property
     def display_field(self) -> Optional[str]:
@@ -791,9 +788,7 @@ class DatasetTableSchema(SchemaType):
             DatasetFieldSchema(_parent_table=self, **{**spec, "id": _id})
             for _id, spec in fields_items
         )
-        for field in field_schema:
-            if field.relation:
-                yield field.name
+        return (f for f in field_schema if f.relation)
 
 
 class DatasetFieldSchema(DatasetType):
@@ -1439,7 +1434,8 @@ class Temporal:
             The latest version of an object will have the highest value for identifier.
 
         dimensions:
-            Contains the attributes of objects that determine for what (time)period an object is valid.
+            Contains the attributes of objects that determine for what (time)period
+            an object is valid.
 
             Dimensions is of type dict.
             A dimension is a tuple of the form "('valid_start', 'valid_end')",
