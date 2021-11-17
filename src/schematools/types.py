@@ -111,7 +111,7 @@ class DatasetSchema(SchemaType):
         return dataset_schema_from_path(filename)
 
     @classmethod
-    def from_dict(cls, obj: Json) -> DatasetSchema:
+    def from_dict(cls, obj: Dict[str, Any]) -> DatasetSchema:
         """Parses given dict and validates the given schema"""
         if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Dataset schema file")
@@ -327,6 +327,7 @@ class DatasetSchema(SchemaType):
             expanded into an object.
             """
             if fk_target_table:
+                sub_table_schema = cast(Dict[str, Any], sub_table_schema)
                 spec = sub_table_schema["schema"]["properties"][field_id]
                 spec["type"] = "object"
                 spec["properties"] = {
@@ -354,7 +355,7 @@ class DatasetSchema(SchemaType):
         snakecased_field_id = to_snake_case(field.id)
         table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
 
-        sub_table_schema: Json = {
+        sub_table_schema: Dict[str, Any] = {
             "id": table_id,
             "type": "table",
             "throughFields": [left_table_id, snakecased_field_id],
@@ -788,7 +789,7 @@ class DatasetTableSchema(SchemaType):
             DatasetFieldSchema(_parent_table=self, **{**spec, "id": _id})
             for _id, spec in fields_items
         )
-        return (f for f in field_schema if f.relation)
+        return (f.name for f in field_schema if f.relation)
 
 
 class DatasetFieldSchema(DatasetType):
@@ -825,7 +826,7 @@ class DatasetFieldSchema(DatasetType):
         self._required = _required
         self._temporal = _temporal
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self._id}>"
 
     @property
@@ -903,7 +904,8 @@ class DatasetFieldSchema(DatasetType):
 
         # Find the related field
         related_dataset_id, related_table_id = relation.split(":")
-        dataset = self.table.dataset.dataset_collection.get_dataset(related_dataset_id)
+        dataset = cast(self.table.dataset, DatasetSchema)
+        dataset = dataset.dataset_collection.get_dataset(related_dataset_id)
         return dataset.get_table_by_id(
             related_table_id, include_nested=False, include_through=False
         )
@@ -994,7 +996,7 @@ class DatasetFieldSchema(DatasetType):
         """
         return list(self.get_subfields())
 
-    def get_subfields(self, add_prefixes=False) -> Iterable[DatasetFieldSchema]:
+    def get_subfields(self, add_prefixes: bool = False) -> Iterable[DatasetFieldSchema]:
         """Return the subfields for a nested structure.
 
         Args:
@@ -1213,7 +1215,7 @@ class Permission:
     #: Who authenticated this (added for easier debugging. typically tested against)
     source: Optional[str] = field(default=None, compare=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.level is PermissionLevel.NONE:
             # since profiles only grant permission,
             # having no permission is always from the schema.
