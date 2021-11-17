@@ -904,7 +904,7 @@ class DatasetFieldSchema(DatasetType):
 
         # Find the related field
         related_dataset_id, related_table_id = relation.split(":")
-        dataset = cast(self.table.dataset, DatasetSchema)
+        dataset = cast(DatasetSchema, self.table.dataset)
         dataset = dataset.dataset_collection.get_dataset(related_dataset_id)
         return dataset.get_table_by_id(
             related_table_id, include_nested=False, include_through=False
