@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.schema import Index, MetaData, Table
 
-from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
+from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX, DATABASE_SCHEMA_NAME_DEFAULT
 from schematools.factories import tables_factory
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case, toCamelCase
@@ -511,12 +511,15 @@ def index_factory(
     else:
         _db_table_name = db_table_name
 
-    table_name = f"{db_schema_name}.{_db_table_name}" if db_schema_name else _db_table_name
+    final_db_schema_name = (
+        DATABASE_SCHEMA_NAME_DEFAULT if db_schema_name is None else db_schema_name
+    )
+    table_name = f"{final_db_schema_name}.{_db_table_name}"
 
     try:
         table_object = _metadata.tables[table_name]
     except KeyError as ex:
-        _logger.log_error(f"{table_name} cannot be found.", repr(ex))
+        _logger.log_error(f"{table_name} cannot be found.")
 
     indexes_to_create = []
 
@@ -605,8 +608,7 @@ def index_factory(
 
             # create the Index objects
             if through_columns:
-                table_id = table.db_name()
-
+                table_id = f"{final_db_schema_name}.{table.db_name()}"
                 try:
                     table_object = _metadata.tables[table_id]
 
