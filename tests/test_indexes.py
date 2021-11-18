@@ -192,7 +192,6 @@ def test_index_troughtables_creation(engine, db_schema):
             meta_data.reflect()
             metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(table.db_name(), schema=None)
-
             for index in indexes:
                 indexes_name.append(index["name"])
 
