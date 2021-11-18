@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.schema import Index, MetaData, Table
 
-from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX, DATABASE_SCHEMA_NAME_DEFAULT
+from schematools import DATABASE_SCHEMA_NAME_DEFAULT, MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.factories import tables_factory
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case, toCamelCase
@@ -598,14 +598,6 @@ def index_factory(
                         relation_field_names.append(snakecased_fieldname)
                         through_columns.append(f"{snakecased_fieldname}_id")
 
-                # Now check complementary field if they start with
-                # the name of the relation field
-                for field in table.fields:
-                    if not field.relation:
-                        snakecased_fieldname = to_snake_case(field.name)
-                        if snakecased_fieldname.startswith(tuple(relation_field_names)):
-                            through_columns.append(snakecased_fieldname)
-
             # create the Index objects
             if through_columns:
                 table_id = f"{final_db_schema_name}.{table.db_name()}"
@@ -631,7 +623,7 @@ def index_factory(
                         continue
 
                 # add Index objects to create
-                indexes[table_id] = indexes_to_create
+                indexes[table.db_name()] = indexes_to_create
 
     if ind_extra_index:
         define_identifier_index()
