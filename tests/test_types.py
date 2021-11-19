@@ -84,24 +84,24 @@ def test_fetching_of_related_schema_ids(here: Path) -> None:
     assert set(schema.related_dataset_schema_ids) == {"gebieden", "meetbouten"}
 
 
-def test_semver_create() -> None:
+def test_semver_init() -> None:
     """Test SemVer initialization (including raising ValueError's)"""
-    sv = SemVer.from_str("1.2.3")
+    sv = SemVer("1.2.3")
     assert sv.major == 1
     assert sv.minor == 2
     assert sv.patch == 3
 
-    sv_no_patch = SemVer.from_str("1.2")
+    sv_no_patch = SemVer("1.2")
     assert sv_no_patch.major == 1
     assert sv_no_patch.minor == 2
     assert sv_no_patch.patch == 0  # default when not explicitly specified
 
-    sv_no_minor = SemVer.from_str("1")
+    sv_no_minor = SemVer("1")
     assert sv_no_minor.major == 1
     assert sv_no_minor.minor == 0  # default when not explicitly specified
     assert sv_no_minor.patch == 0  # default when not explicitly specified
 
-    sv_with_v_prefix = SemVer.from_str("v1.2.3")
+    sv_with_v_prefix = SemVer("v1.2.3")
     assert sv_with_v_prefix.major == 1
     assert sv_with_v_prefix.minor == 2
     assert sv_with_v_prefix.patch == 3
@@ -109,18 +109,64 @@ def test_semver_create() -> None:
     invalid_semver_values = ("1.0.0.0", "-1.0.0", "fubar")
     for isv in invalid_semver_values:
         with pytest.raises(ValueError):
-            SemVer.from_str(isv)
+            SemVer(isv)
 
 
 def test_semver_str() -> None:
     """Test SemVer str representation."""
-    assert str(SemVer.from_str("1.2.3")) == "v1.2.3"
-    assert str(SemVer.from_str("1.2")) == "v1.2.0"
-    assert str(SemVer.from_str("1")) == "v1.0.0"
+    assert str(SemVer("1.2.3")) == "1.2.3"
+    assert str(SemVer("1.2")) == "1.2.0"
+    assert str(SemVer("1")) == "1.0.0"
 
-    assert str(SemVer.from_str("v1.2.3")) == "v1.2.3"
-    assert str(SemVer.from_str("v1.2")) == "v1.2.0"
-    assert str(SemVer.from_str("v1")) == "v1.0.0"
+    assert str(SemVer("v1.2.3")) == "1.2.3"
+    assert str(SemVer("v1.2")) == "1.2.0"
+    assert str(SemVer("v1")) == "1.0.0"
+
+
+def test_semver_repr() -> None:
+    """Test SemVer repr representation."""
+    assert repr(SemVer("1.2.3")) == 'SemVer("1.2.3")'
+    assert repr(SemVer("1.2")) == 'SemVer("1.2.0")'
+    assert repr(SemVer("1")) == 'SemVer("1.0.0")'
+
+    assert repr(SemVer("v1.2.3")) == 'SemVer("1.2.3")'
+    assert repr(SemVer("v1.2")) == 'SemVer("1.2.0")'
+    assert repr(SemVer("v1")) == 'SemVer("1.0.0")'
+
+
+def test_semver_lt() -> None:
+    assert not SemVer("v1.0.0") < SemVer("1.0.0")
+    assert not SemVer("1.0.0") < SemVer("v1.0.0")
+    assert SemVer("v1.0.0") < SemVer("1.0.2")
+    assert SemVer("v1.0.0") < SemVer("1.2.0")
+
+
+def test_semver_le() -> None:
+    assert SemVer("v1.0.0") <= SemVer("1.0.0")
+    assert SemVer("1.0.0") <= SemVer("v1.0.0")
+    assert SemVer("v1.0.0") <= SemVer("1.0.2")
+    assert SemVer("v1.0.0") <= SemVer("1.2.0")
+
+
+def test_semver_gt() -> None:
+    assert not SemVer("v1.0.0") > SemVer("1.0.0")
+    assert not SemVer("1.0.0") > SemVer("v1.0.0")
+    assert SemVer("v1.0.2") > SemVer("1.0.0")
+    assert SemVer("v1.2.0") > SemVer("1.0.0")
+
+
+def test_semver_ge() -> None:
+    assert SemVer("v1.0.0") >= SemVer("1.0.0")
+    assert SemVer("1.0.0") >= SemVer("v1.0.0")
+    assert SemVer("v1.0.2") >= SemVer("1.0.0")
+    assert SemVer("v1.2.0") >= SemVer("1.0.0")
+
+
+def test_semver_eq() -> None:
+    assert SemVer("v1.0.0") == SemVer("1.0.0")
+    assert SemVer("1.0.0") == SemVer("v1.0.0")
+    assert SemVer("1.0.2") != SemVer("1.0.0")
+    assert SemVer("1.2.0") != SemVer("1.0.0")
 
 
 def test_dataset_schema_get_fields_with_surrogate_pk(
