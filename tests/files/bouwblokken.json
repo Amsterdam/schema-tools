@@ -11,6 +11,7 @@
       "id": "bouwblokken",
       "mainGeometry": "geometrie",
       "type": "table",
+      "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -56,6 +57,7 @@
     {
       "id": "buurten",
       "type": "table",
+      "version": "1.0.0",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
         "$schema": "http://json-schema.org/draft-07/schema#",

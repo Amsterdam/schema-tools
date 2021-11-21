@@ -11,6 +11,7 @@
     {
       "id": "kadastraleobjecten",
       "type": "table",
+      "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {

@@ -48,6 +48,7 @@ def test_geojson_to_table():
         {
             "id": "unittest_relation",  # @id field was parsed as "relation"
             "type": "table",
+            "version": "1.0.0",
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "type": "object",

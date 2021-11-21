@@ -16,6 +16,7 @@ def test_provenance_result():
             {
                 "id": "winkelgebieden",
                 "type": "table",
+                "version": "1.0.0",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",

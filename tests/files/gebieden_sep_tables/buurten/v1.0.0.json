@@ -1,7 +1,8 @@
 {
     "id": "buurten",
     "type": "table",
-    "schema": {
+    "version": "1.0.0",
+      "schema": {
       "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
       "$schema": "http://json-schema.org/draft-07/schema#",
       "type": "object",

@@ -11,6 +11,7 @@
       "id": "bouwblokken",
       "mainGeometry": "geometrie",
       "type": "table",
+      "version": "1.0.0",
       "auth": ["LEVEL/B1", "LEVEL/B2"],
       "temporal": {
         "identifier": "volgnummer",
@@ -58,6 +59,7 @@
     {
       "id": "buurten",
       "type": "table",
+      "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
@@ -144,6 +146,7 @@
     {
       "id": "wijken",
       "type": "table",
+      "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
