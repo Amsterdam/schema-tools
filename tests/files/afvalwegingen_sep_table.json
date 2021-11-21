@@ -22,7 +22,8 @@
       {
         "id": "containers",
         "type": "table",
-        "schema": {
+        "version": "1.0.0",
+      "schema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "additionalProperties": false,
@@ -110,7 +111,8 @@
       {
         "id": "wegingen",
         "type": "table",
-        "schema": {
+        "version": "1.0.0",
+      "schema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "additionalProperties": false,
@@ -189,7 +191,8 @@
       {
         "id": "containertypes",
         "type": "table",
-        "schema": {
+        "version": "1.0.0",
+      "schema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "additionalProperties": false,

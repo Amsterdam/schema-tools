@@ -19,6 +19,7 @@ def test_index_creation(engine, db_schema):
             {
                 "id": "test",
                 "type": "table",
+                "version": "1.0.0",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
@@ -89,6 +90,7 @@ def test_index_troughtables_creation(engine, db_schema):
             {
                 "id": "test_1",
                 "type": "table",
+                "version": "1.0.0",
                 "temporal": {
                     "identifier": "volgnummer",
                     "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
@@ -139,6 +141,7 @@ def test_index_troughtables_creation(engine, db_schema):
             {
                 "id": "test_2",
                 "type": "table",
+                "version": "1.0.0",
                 "temporal": {
                     "identifier": "volgnummer",
                     "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
@@ -215,6 +218,7 @@ def test_fk_index_creation(engine, db_schema):
             {
                 "id": "parent_test",
                 "type": "table",
+                "version": "1.0.0",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
@@ -235,6 +239,7 @@ def test_fk_index_creation(engine, db_schema):
             {
                 "id": "child_test",
                 "type": "table",
+                "version": "1.0.0",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
@@ -306,6 +311,7 @@ def test_size_of_index_name(engine, db_schema):
             {
                 "id": "parent_test_size",
                 "type": "table",
+                "version": "1.0.0",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
@@ -326,6 +332,7 @@ def test_size_of_index_name(engine, db_schema):
             {
                 "id": "child_test_size",
                 "type": "table",
+                "version": "1.0.0",
                 "schema": {
                     "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
