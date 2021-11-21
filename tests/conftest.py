@@ -190,7 +190,7 @@ def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
     dummy_session_maker = DummySessionMaker()
 
     AFVALWEGINGEN_JSON = HERE / "files" / "afvalwegingen_sep_table.json"
-    CLUSTERS_JSON = HERE / "files" / "afvalwegingen_clusters-table.json"
+    CLUSTERS_JSON = HERE / "files" / "afvalwegingen_clusters" / "v1.0.0.json"
     BAGGOB_JSON = HERE / "files" / "verblijfsobjecten.json"
 
     monkeypatch.setattr(requests, "Session", dummy_session_maker)
@@ -213,7 +213,7 @@ def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
 
     with open(CLUSTERS_JSON, "rb") as fh:
         dummy_session_maker.add_route(
-            schema_url / "afvalwegingen/afvalwegingen_clusters-table",
+            schema_url / "afvalwegingen/afvalwegingen_clusters" / "v1.0.0",
             content=json.load(fh),
         )
     yield dummy_session_maker
