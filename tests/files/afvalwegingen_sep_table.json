@@ -106,7 +106,10 @@
       },
       {
         "id": "clusters",
-        "$ref": "afvalwegingen_clusters-table"
+        "$ref": "afvalwegingen_clusters/v1.0.0",
+        "activeVersions": {
+          "1.0.0": "afvalwegingen_clusters/v1.0.0"
+        }
       },
       {
         "id": "wegingen",
