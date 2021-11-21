@@ -64,6 +64,7 @@ def geojson_to_table(geojson_features: Iterable[dict], file_name: str) -> List[d
     for name in all_schema:
         table = deepcopy(TABLE_TMPL)
         table["id"] = name if name == default_name else f"{default_name}_{name}"
+        table["version"] = "1.0.0"  # Hardcoded, what else?
         table["schema"].update(all_schema[name])
         table["schema"]["properties"].update(all_properties[name])
         result.append(table)
