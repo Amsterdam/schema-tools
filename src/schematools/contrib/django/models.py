@@ -28,7 +28,13 @@ from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 
-from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema, ProfileSchema
+from schematools.types import (
+    DatasetFieldSchema,
+    DatasetSchema,
+    DatasetTableSchema,
+    ProfileSchema,
+    SemVer,
+)
 from schematools.utils import to_snake_case
 
 from . import managers
@@ -379,6 +385,7 @@ class DatasetTable(models.Model):
 
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="tables")
     name = models.CharField(max_length=100)
+    version = models.TextField(default=SemVer("1.0.0"))
 
     # Exposed metadata from the jsonschema, so other utils can query these
     auth = models.CharField(max_length=250, blank=True, null=True)
