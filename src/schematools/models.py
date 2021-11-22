@@ -4,6 +4,8 @@ from sqlalchemy.orm import relationship
 
 __all__ = ["Base", "Dataset", "Table", "Field"]
 
+from schematools.types import SemVer
+
 Base = declarative_base()
 
 
@@ -45,6 +47,7 @@ class Table(Base):
     id = Column(String, primary_key=True)
     dataset_id = Column(String, ForeignKey("ams_schema_dataset.id"), primary_key=True)
     type = Column(String)
+    version = Column(String, default=SemVer("1.0.0"))
     title = Column(String)
     description = Column(String)
     display = Column(String)
