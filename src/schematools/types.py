@@ -597,6 +597,7 @@ class DatasetSchema(SchemaType):
         sub_table_schema: Dict[str, Any] = {
             "id": table_id,
             "type": "table",
+            "version": table.version,
             "throughFields": [left_table_id, snakecased_field_id],
             "description": f"Auto-generated M2M table for {table.id}.{field.id}",
             "schema": {
