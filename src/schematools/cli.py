@@ -12,6 +12,7 @@ from deepdiff import DeepDiff
 from json_encoder import json
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.schema import CreateTable
 
 from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL
 from schematools.datasetcollection import DatasetCollection, set_schema_loader
@@ -24,6 +25,7 @@ from schematools.db import (
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
 from schematools.exceptions import ParserError
+from schematools.factories import tables_factory
 from schematools.importer.base import BaseImporter
 from schematools.importer.geojson import GeoJSONImporter
 from schematools.importer.ndjson import NDJSONImporter
@@ -627,6 +629,21 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
 
     for table in dataset_schema.tables:
         importer.generate_db_objects(table.id, ind_extra_index=False, ind_tables=True)
+
+
+@create.command("sql")
+@option_db_url
+@click.argument("schema_path")
+def create_sql(db_url: str, schema_path: str) -> None:
+    """Generate SQL Create from amsterdam schema definition."""
+    engine = _get_engine(db_url)
+    dataset_schema = dataset_schema_from_path(schema_path)
+    tables = tables_factory(
+        dataset_schema,
+    )
+    for table in tables.values():
+        table_sql = CreateTable(table).compile(engine)
+        click.echo(str(table_sql))
 
 
 @create.command("all")
