@@ -1030,6 +1030,12 @@ class DatasetTableSchema(SchemaType):
         )
         return (f.name for f in field_schema if f.relation)
 
+    @property
+    def version(self) -> SemVer:
+        """Get table version."""
+        # It's a required attribute, hence should be present.
+        return SemVer(self["version"])
+
 
 class DatasetFieldSchema(DatasetType):
     """A single field (column) in a table
