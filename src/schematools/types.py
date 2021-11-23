@@ -281,7 +281,7 @@ class SchemaType(UserDict):
         return json.dumps(self.data, cls=TableVersionsEncoder)
 
     def json_data(self) -> Json:
-        return self.data
+        return json.loads(self.json())
 
     @classmethod
     def from_dict(cls: Type[ST], obj: Json) -> ST:
