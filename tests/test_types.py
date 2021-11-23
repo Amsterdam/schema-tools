@@ -116,3 +116,28 @@ def test_dataset_schema_get_fields_with_surrogate_pk(
         "schema",
         "volgnummer",
     ]
+
+
+def test_dataset_with_loose_1n_relations_has_no_through_tables(meldingen_schema, gebieden_schema):
+    """Prove that a loose relation for a 1-N is not generating a though table.
+
+    The `meldingen_schema` has a 1-N relation to `buurt`, however,
+    that is a loose relation. Those relations should not get a through tables,
+    so, the only one table that should be generated is the main meldingen table.
+    """
+    tables_including_through = meldingen_schema.get_tables(include_through=True)
+    assert len(tables_including_through) == 1
+
+
+def test_dataset_with_loose_nm_relations_has_through_tables(
+    woningbouwplannen_schema, gebieden_schema
+):
+    """Prove that a loose relation for a NM relation is generating a though table.
+
+    The `woningbouwplannen_schema` has two NM relations to `buurt`, however,
+    those are loose relations. Those relations should get a through tables,
+    because NM relations always need a through table by nature.
+    So, in total, 3 tables should be created.
+    """
+    tables_including_through = woningbouwplannen_schema.get_tables(include_through=True)
+    assert len(tables_including_through) == 3

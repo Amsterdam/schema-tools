@@ -215,7 +215,7 @@ class DatasetSchema(SchemaType):
             self.build_through_table(table=t, field=f)
             for t in self.tables
             for f in t.fields
-            if f.is_through_table
+            if f.is_through_table and not (f.is_loose_relation and f.nm_relation is None)
         ]
 
     def build_nested_table(
@@ -581,7 +581,7 @@ class DatasetTableSchema(SchemaType):
         return [
             self.dataset.build_through_table(table=self, field=f)
             for f in self.fields
-            if f.is_through_table
+            if f.is_through_table and not (f.is_loose_relation and f.relation is None)
         ]
 
     @property
@@ -1095,6 +1095,57 @@ class DatasetFieldSchema(DatasetType):
     def auth(self) -> FrozenSet[str]:
         """Auth of the field, if available, or None"""
         return _normalize_scopes(self.get("auth"))
+
+    @property
+    def is_loose_relation(self):
+        """Determine if relation is loose or not."""
+        related_table = self.related_table
+
+        # Short-circuit for non-temporal or on-the-fly (through or nested) schemas
+        if (
+            not related_table.is_temporal
+            or self._parent_table.is_through_table
+            or self._parent_table.is_nested_table
+        ):
+            return False
+
+        # So, target-side of relation is temporal
+        # Determine fieldnames used for temporal
+        sequence_identifier = related_table.temporal.identifier
+        # Table identifier is mandatory and always contains at least one field
+        identifier = first(related_table.identifier)
+
+        # If temporal, this implicates that the type is not a scalar
+        # but needs to be more complex (object) or array_of_objects
+        if self.type in ["string", "integer"] or self.is_array_of_scalars:
+            return True
+
+        sequence_field = related_table.get_field_by_id(sequence_identifier)
+        identifier_field = related_table.get_field_by_id(identifier)
+
+        if self.is_array_of_objects:
+            properties = self.field_items["properties"]
+        elif self.is_object:
+            properties = self["properties"]
+        else:
+            raise ValueError("Relations should have string/array/object type")
+
+        source_type_set = {
+            (prop_name, prop_val["type"]) for prop_name, prop_val in properties.items()
+        }
+        destination_type_set = {
+            (sequence_field.name, sequence_field.type),
+            (identifier_field.name, identifier_field.type),
+        }
+
+        # If all fields of source_type_set are also in destination_type_set
+        # it is not a loose relation
+        # truth table is:
+        # destination_type_set  source_type_set  result (meaning: relation is loose)
+        #  {1, 2}                   {1}          True
+        #  {1, 2}                   {1, 2}       False
+        #  {1, 2}                   {0}          True
+        return not destination_type_set <= source_type_set
 
 
 class DatasetRow(DatasetType):
