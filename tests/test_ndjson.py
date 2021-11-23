@@ -36,6 +36,17 @@ def test_ndjson_import_separate_relations_target_compound(
     records = [
         dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten_ligt_in_buurt")
     ]
+    assert records == [
+        {
+            "id": 1,
+            "meetbouten_id": "25281132",
+            "ligt_in_buurt_identificatie": "03630023753951",
+            "ligt_in_buurt_volgnummer": 1,
+            "ligt_in_buurt_id": "03630023753951.1",
+            "begin_geldigheid": datetime.date(2015, 1, 1),
+            "eind_geldigheid": None,
+        },
+    ]
 
 
 def test_ndjson_import_separate_relations_both_compound(
@@ -50,6 +61,18 @@ def test_ndjson_import_separate_relations_both_compound(
     importer.load_file(ndjson_path, is_through_table=True)
     records = [
         dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
+    ]
+
+    assert records == [
+        {
+            "id": 1,
+            "ggwgebieden_identificatie": "012",
+            "ggwgebieden_volgnummer": 1,
+            "ggwgebieden_id": "012.1",
+            "bestaatuitbuurten_identificatie": "045",
+            "bestaatuitbuurten_volgnummer": 2,
+            "bestaatuitbuurten_id": "045.2",
+        },
     ]
 
 
