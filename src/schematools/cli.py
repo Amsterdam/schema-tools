@@ -347,10 +347,10 @@ def validate(
 
     Args:
 
+    \b
         DATASET_ID: id of the dataset.
-
-        META_SCHEMA_URL: url where the metaschema for Amsterdam Schema definitions can be found.
-    """
+        META_SCHEMA_URL: URL where the meta schema for Amsterdam Schema definitions can be found.
+    """  # noqa: D301,D412,D417
     meta_schema = _fetch_json(meta_schema_url)
     dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
 
@@ -387,17 +387,19 @@ def validate(
 @click.argument("meta_schema_url")
 @click.argument("schema_files", nargs=-1)
 def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
-    r"""Batch validate schema's.
+    """Batch validate schema's.
 
     This command was tailored so that it could be run from a pre-commit hook. As a result,
     the order and type of its arguments differ from other `schema` sub-commands.
 
     It will perform both structural and semantic validation of the schema's.
 
+    Args:
+
     \b
-    META_SCHEMA_URL: the URL to the Amsterdam meta schema
-    SCHEMA_FILES: one or more schema files to be validated
-    """
+        META_SCHEMA_URL: the URL to the Amsterdam meta schema
+        SCHEMA_FILES: one or more schema files to be validated
+    """  # noqa: D301,D412,D417
     meta_schema = _fetch_json(meta_schema_url)
     errors: DefaultDict[str, List[str]] = defaultdict(list)
     for schema in schema_files:
