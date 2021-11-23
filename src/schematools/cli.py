@@ -343,14 +343,13 @@ def _fetch_json(location: str) -> Dict[str, Any]:
 def validate(
     schema_url: str, dataset_id: str, additional_schemas: List[str], meta_schema_url: str
 ) -> None:
-    """Validate a JSON file against the amsterdam schema meta schema.
+    """Validate a schema against the Amsterdam Schema meta schema.
 
     Args:
-        schema_url: url where schema can be found.
-        dataset_id: id of the dataset.
-        additional_schemas: Schemas that should be preloaded.
-        meta_schema_url: is the url where the metaschema
-            for amsterdam schema definitions can be found.
+
+        DATASET_ID: id of the dataset.
+
+        META_SCHEMA_URL: url where the metaschema for Amsterdam Schema definitions can be found.
     """
     meta_schema = _fetch_json(meta_schema_url)
     dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
