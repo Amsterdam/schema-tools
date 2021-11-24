@@ -111,12 +111,12 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
 
 
 def set_dataset_write_permissions(session, pg_schema, ams_schema, dry_run, create_roles):
-    grantee = f"write_{ams_schema.id}"
+    grantee = f"write_{to_snake_case(ams_schema.id)}"
     if create_roles:
         _create_role_if_not_exists(session, grantee, dry_run=dry_run)
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = "{}_{}".format(
-            table.dataset.id, to_snake_case(table.id)
+            to_snake_case(table.dataset.id), to_snake_case(table.id)
         )  # een aantal table.id's zijn camelcase
         table_privileges = ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"]
         _execute_grant(
@@ -156,7 +156,7 @@ def set_dataset_read_permissions(
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = "{}_{}".format(
-            table.dataset.id, to_snake_case(table.id)
+            to_snake_case(table.dataset.id), to_snake_case(table.id)
         )  # een aantal table.id's zijn camelcase
         table_scope = table.auth if table.auth else dataset_scope
         table_scope_set = {table_scope} if isinstance(table_scope, str) else set(table_scope)
