@@ -49,7 +49,7 @@ from functools import partial
 from typing import Callable, ClassVar, Iterator, List, Set, Type, cast, final
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, SemVer, TableVersions
 from schematools.utils import to_snake_case
 
 
@@ -74,7 +74,7 @@ class ValidationException(Exception):
 
     message: str
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str) -> None:  # noqa: D107
         super().__init__(message)
         self.message = message
 
@@ -116,7 +116,7 @@ class Validator:
 
     @final
     def run_all(self) -> Iterator[ValidationError]:
-        """Run all registered validators.
+        r"""Run all registered validators.
 
         Yields:
             :class:`ValidationError`\s if any.
@@ -136,7 +136,7 @@ class PsqlIdentifierLengthValidator(Validator):
     supported by PostgreSQL.
     """
 
-    def validate(self) -> Iterator[ValidationError]:
+    def validate(self) -> Iterator[ValidationError]:  # noqa: D102
         for table in self.dataset.get_tables(include_nested=True, include_through=True):
             # `table_name` should probably be a property on `DatasetTableSchema`.
             # There already is a `db_name` property however it truncates the inferred
@@ -155,7 +155,7 @@ class PsqlIdentifierLengthValidator(Validator):
 class IdentPropRefsValidator(Validator):
     """Validate that the identifier property refers to actual fields on the table definitions."""
 
-    def validate(self) -> Iterator[ValidationError]:
+    def validate(self) -> Iterator[ValidationError]:  # noqa: D102
         @dataclass
         class DerivedField:
             original: str
@@ -206,4 +206,43 @@ class IdentPropRefsValidator(Validator):
                         f"Property 'identifier' on table '{table.id}' refers to {fields} "
                         f"'{', '.join(missing_fields)}' that {have} not been defined on the "
                         "table.",
+                    )
+
+
+class ActiveVersionsValidator(Validator):
+    """Validate activeVersions and table identifiers in referenced tables."""
+
+    def validate(self) -> Iterator[ValidationError]:  # noqa: D102
+        # The current Amsterdam Meta Schema does not allow for inline definitions of multiple
+        # active tables versions. In addition :class:`DatasetSchema`'s
+        # :property:`~DatasetSchema.tables` property and :meth:~DatasetSchema.get_tables` method
+        # still assume that there will always be one and only one table. The part of
+        # :class:`DatasetSchema` that has gained some knowledge of multiple active versions is
+        # its internal representation with the addition of the :class:`TableVersions` class.
+        # Hence it is the internal representation that we use for this validation.
+        #
+        # This obviously is a stop gap. Ideally we have a more, arguably, sensible definition of
+        # multiple active version in the Amsterdam Meta Schema (eg an inline definition). When
+        # we do, we are in a position to restructure our abstraction (eg :class:`DatasetSchema`,
+        # etc) more definitely. And as a result can rely on those abstractions for our
+        # validation instead of some internal representation.
+        for tv in self.dataset["tables"]:
+            assert isinstance(  # noqa: S101
+                tv, TableVersions
+            ), 'Someone messed with the internal representation of DatasetSchema["tables"].'
+            for version, table in tv.active.items():
+                assert isinstance(table, dict)  # noqa: S101
+                if tv.id != table["id"]:
+                    yield ValidationError(
+                        self.__class__.__name__,
+                        f"Table {tv.id!r} with version number '{version}' does not match with "
+                        f"id {table['id']!r} of the referenced table.",
+                    )
+                version_in_table = SemVer(table["version"])
+                if version != version_in_table:
+                    yield ValidationError(
+                        self.__class__.__name__,
+                        f"Version number '{version}' in activeVersions for table {table['id']!r} "
+                        f"does not match with version number '{version_in_table}' of the "
+                        "referenced table.",
                     )
