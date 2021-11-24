@@ -8,11 +8,17 @@
   "tables": [
     {
       "$ref": "bouwblokken/v1.0.0",
-      "id": "bouwblokken"
-  },
+      "id": "bouwblokken",
+      "activeVersions": {
+        "1.0.0": "bouwblokken/v1.0.0"
+      }
+    },
     {
       "$ref": "buurten/v1.0.0",
-      "id": "buurten"
-  }
+      "id": "buurten",
+      "activeVersions": {
+        "1.0.0": "buurten/v1.0.0"
+      }
+    }
   ]
 }
