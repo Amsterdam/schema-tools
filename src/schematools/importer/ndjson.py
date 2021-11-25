@@ -96,7 +96,7 @@ class NDJSONImporter(BaseImporter):
         if db_table_name is None:
             db_table_name = get_table_name(dataset_table)
 
-        table_name = dataset_table.name
+        table_name = to_snake_case(dataset_table.name)
 
         # Set up info for the special-case fields
         relation_field_info = []
@@ -147,7 +147,7 @@ class NDJSONImporter(BaseImporter):
                         row["id"] = id_value
 
                 for rel_field in relation_field_info:
-                    relation_field_name = rel_field.name
+                    relation_field_name = to_snake_case(rel_field.name)
                     # Only process relation if data is available in incoming row
                     if rel_field.id not in row:
                         continue
@@ -165,10 +165,11 @@ class NDJSONImporter(BaseImporter):
                             else:
                                 subfield_value = relation_field_value[subfield_id]
                                 fk_value_parts.append(subfield_value)
-                            row[subfield.name] = subfield_value
+                            row[to_snake_case(subfield.name)] = subfield_value
                         # empty fk_value_parts should result in None value
                         relation_field_value = ".".join([str(p) for p in fk_value_parts]) or None
                     row[f"{relation_field_name}_id"] = relation_field_value
+
                     del row[rel_field.id]
 
                 for n_field in nested_field_info:

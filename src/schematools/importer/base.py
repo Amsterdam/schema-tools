@@ -329,7 +329,7 @@ class BaseImporter:
             num_imported += len(records)
             self.logger.log_progress(num_imported)
             # main table is keyed on tablename and only has one row
-            last_record = records[-1][self.dataset_table.name][0]
+            last_record = records[-1][to_snake_case(self.dataset_table.name)][0]
 
         self.logger.log_done(num_imported)
         return last_record
