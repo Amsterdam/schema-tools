@@ -5,12 +5,11 @@ from collections import defaultdict
 from dateutil.parser import parse as dtparse
 from sqlalchemy import DateTime, inspect
 from sqlalchemy.orm import sessionmaker
-from string_utils import camel_case_to_snake, snake_case_to_camel
 
 from schematools import models
 from schematools.exceptions import ParserError
 from schematools.types import DatasetSchema
-from schematools.utils import toCamelCase
+from schematools.utils import to_snake_case, toCamelCase
 
 
 def fetch_table_names(engine):
@@ -42,14 +41,16 @@ def transformer_factory(model):
 
 def create_meta_table_data(engine, dataset_schema: DatasetSchema):
     session = sessionmaker(bind=engine)()
-    ds_content = {camel_case_to_snake(k): v for k, v in dataset_schema.items() if k != "tables"}
+    ds_content = {to_snake_case(k): v for k, v in dataset_schema.items() if k != "tables"}
     ds_content["contact_point"] = str(ds_content.get("contact_point", ""))
     ds_transformer = transformer_factory(models.Dataset)
     dataset = models.Dataset(**ds_transformer(ds_content))
     session.add(dataset)
 
     for table_data in dataset_schema["tables"]:
-        table_content = {camel_case_to_snake(k): v for k, v in table_data.default.items() if k != "schema"}
+        table_content = {
+            to_snake_case(k): v for k, v in table_data.default.items() if k != "schema"
+        }
 
         table = models.Table(
             **{
@@ -134,7 +135,7 @@ def _serialize(obj, camelize=True):
         value = attr.value
         key = attr.key
         if camelize:
-            key = snake_case_to_camel(key, upper_case_first=False)
+            key = toCamelCase(key, upper_case_first=False)
         if value is None:
             continue
         if hasattr(value, "isoformat"):
