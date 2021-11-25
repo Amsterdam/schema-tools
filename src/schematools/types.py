@@ -577,8 +577,8 @@ class DatasetSchema(SchemaType):
         # Build the through_table for n-m relation
         # For relations, we have to use the real ids of the tables
         # and not the shortnames
-        left_dataset_id = to_snake_case(self.id)
-        left_table_id = to_snake_case(table.id)
+        left_dataset_id = self.id
+        left_table_id = table.id
 
         # Both relation types can have a through table,
         # For FK relations, an extra through_table is created when
@@ -587,18 +587,15 @@ class DatasetSchema(SchemaType):
         if relation is None:
             relation = field.relation
 
-        right_dataset_id, right_table_id = [
-            to_snake_case(part) for part in str(relation).split(":")[:2]
-        ]
+        right_dataset_id, right_table_id = str(relation).split(":")[:2]
 
-        snakecased_field_id = to_snake_case(field.id)
-        table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
+        target_field_id = field.id
+        table_id = get_rel_table_identifier(len(self.id) + 1, table.id, target_field_id)
 
         sub_table_schema: Dict[str, Any] = {
             "id": table_id,
             "type": "table",
-            "version": table.version,
-            "throughFields": [left_table_id, snakecased_field_id],
+            "throughFields": [left_table_id, target_field_id],
             "description": f"Auto-generated M2M table for {table.id}.{field.id}",
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
@@ -614,7 +611,7 @@ class DatasetSchema(SchemaType):
                         "type": "string",
                         "relation": f"{left_dataset_id}:{left_table_id}",
                     },
-                    snakecased_field_id: {
+                    target_field_id: {
                         "type": "string",
                         "relation": f"{right_dataset_id}:{right_table_id}",
                     },
@@ -631,7 +628,7 @@ class DatasetSchema(SchemaType):
         # We also need to add a shortname for the individual FK fields
         # pointing to left en right table in the M2M
         if field.has_shortname:
-            sub_table_schema["schema"]["properties"][snakecased_field_id]["shortname"] = field.name
+            sub_table_schema["schema"]["properties"][target_field_id]["shortname"] = field.name
         if table.has_shortname:
             sub_table_schema["schema"]["properties"][left_table_id]["shortname"] = table.name
 
@@ -656,7 +653,7 @@ class DatasetSchema(SchemaType):
 
             for fk_target_table, relation_field_id in (
                 (table, left_table_id),
-                (_get_fk_target_table(right_dataset_id, right_table_id), snakecased_field_id),
+                (_get_fk_target_table(right_dataset_id, right_table_id), target_field_id),
             ):
                 if fk_target_table and fk_target_table.has_compound_key:
                     _expand_relation_spec(fk_target_table, sub_table_schema, relation_field_id)

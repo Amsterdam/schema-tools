@@ -81,7 +81,7 @@ def test_profile_schema(brp_r_profile_schema: ProfileSchema) -> None:
 def test_fetching_of_related_schema_ids(here: Path) -> None:
     """Prove that ids of related dataset schemas are properly collected."""
     schema = dataset_schema_from_path(here / "files" / "multirelation.json")
-    assert set(schema.related_dataset_schema_ids) == {"gebieden", "meetbouten"}
+    assert set(schema.related_dataset_schema_ids) == {"gebieden", "baseDataset"}
 
 
 def test_semver_init() -> None:
@@ -225,3 +225,19 @@ def test_dataset_with_loose_nm_relations_has_through_tables(
     """
     tables_including_through = woningbouwplannen_schema.get_tables(include_through=True)
     assert len(tables_including_through) == 3
+
+
+def test_dataset_with_camel_cased_id_generates_correct_through_relations(here):
+    """Prove that the relation identifiers in through tables are correctly generated.
+
+    When a through table is generated, two FK relations are inserted in this table,
+    one to the source and one to the target table.
+    When dataset.id or table.id in the source or target table are camelCased,
+    the generated identifiers should stay intact, and should not be snakecased.
+    """
+    schema = dataset_schema_from_path(here / "files" / "multirelation.json")
+    through_table = schema.through_tables[0]
+
+    # The fields `hasrelations` and `hasNMRelation` are the FK's to source and target table.
+    assert through_table.get_field_by_id("hasrelations").relation == "baseDataset:hasrelations"
+    assert through_table.get_field_by_id("hasNMRelation").relation == "baseDataset:internalRelated"
