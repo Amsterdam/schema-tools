@@ -49,18 +49,18 @@ def create_meta_table_data(engine, dataset_schema: DatasetSchema):
     session.add(dataset)
 
     for table_data in dataset_schema["tables"]:
-        table_content = {camel_case_to_snake(k): v for k, v in table_data.items() if k != "schema"}
+        table_content = {camel_case_to_snake(k): v for k, v in table_data.default.items() if k != "schema"}
 
         table = models.Table(
             **{
                 **table_content,
-                **{f: table_data["schema"].get(f) for f in ("required", "display")},
+                **{f: table_data.default["schema"].get(f) for f in ("required", "display")},
             }
         )
         table.dataset_id = dataset.id
         session.add(table)
 
-        for field_name, field_value in table_data["schema"]["properties"].items():
+        for field_name, field_value in table_data.default["schema"]["properties"].items():
             field_content = {
                 k.replace("$", ""): v for k, v in field_value.items() if k not in {"$comment"}
             }

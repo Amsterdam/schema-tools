@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from functools import lru_cache
@@ -11,9 +12,11 @@ import requests
 from cachetools.func import ttl_cache
 from deprecated import deprecated
 from more_ds.network.url import URL
+from more_itertools import last
 from string_utils import slugify
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
+from schematools.types import SemVer, TableVersions
 
 if TYPE_CHECKING:
     from schematools.loaders import SchemaLoader  # noqa: F401
@@ -21,6 +24,8 @@ if TYPE_CHECKING:
 RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
 )
+
+logger = logging.getLogger(__name__)
 
 
 @ttl_cache(ttl=16)  # type: ignore[misc]
@@ -93,7 +98,9 @@ def schemas_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Di
         response.raise_for_status()
         response_data = response.json()
 
-        for schema_id, schema_path in response_data.items():
+        for i, schema_id in enumerate(response_data):
+            schema_path = response_data[schema_id]
+            logger.debug("Looking up dataset %3d of %d: %s.", i, len(response_data), schema_id)
             schema_lookup[schema_id] = _schema_from_url_with_connection(
                 connection, base_url, schema_path, data_type
             )
@@ -138,6 +145,7 @@ def _schema_from_url_with_connection(
     data_type: Type[types.ST],
 ) -> types.ST:
     """Fetch single schema from url with connection."""
+
     response = connection.get(base_url / dataset_path / "dataset")
     response.raise_for_status()
     response_data = response.json()
@@ -147,7 +155,20 @@ def _schema_from_url_with_connection(
         if ref := table.get("$ref"):
             table_response = connection.get(base_url / dataset_path / ref)
             table_response.raise_for_status()
-            response_data["tables"][i] = table_response.json()
+            # Assume `ref` is of form "table_name/v1.1.0"
+            dvn = SemVer(last(ref.split("/")))
+            response_data["tables"][i] = TableVersions(
+                id=table["id"], default_version_number=dvn, active={dvn: table_response.json()}
+            )
+            for version, ref in table.get("activeVersions", {}).items():
+                table_response = connection.get(base_url / dataset_path / ref)
+                table_response.raise_for_status()
+                response_data["tables"][i].active[SemVer(version)] = table_response.json()
+        else:
+            dvn = SemVer(table["version"])
+            response_data["tables"][i] = TableVersions(
+                id=table["id"], default_version_number=dvn, active={dvn: table}
+            )
 
     schema: types.ST = data_type.from_dict(response_data)
     return schema
@@ -181,8 +202,22 @@ def dataset_schema_from_path(
         if ds["type"] == "dataset":
             for i, table in enumerate(ds["tables"]):
                 if ref := table.get("$ref"):
+                    # Assume `ref` is of form "table_name/v1.1.0"
+                    dvn = SemVer(last(ref.split("/")))
                     with open(Path(dataset_path).parent / Path(ref + ".json")) as table_file:
-                        ds["tables"][i] = json.load(table_file)
+                        ds["tables"][i] = TableVersions(
+                            id=table["id"],
+                            default_version_number=dvn,
+                            active={dvn: json.load(table_file)},
+                        )
+                    for version, ref in table.get("activeVersions", {}).items():
+                        with open(Path(dataset_path).parent / Path(ref + ".json")) as table_file:
+                            ds["tables"][i].active[SemVer(version)] = json.load(table_file)
+                else:
+                    dvn = SemVer(table["version"])
+                    ds["tables"][i] = TableVersions(
+                        id=table["id"], default_version_number=dvn, active={dvn: table}
+                    )
     return types.DatasetSchema.from_dict(ds)
 
 

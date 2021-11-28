@@ -8,6 +8,7 @@ from collections import UserDict
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, total_ordering
+from json import JSONEncoder
 from pathlib import Path
 from typing import (
     Any,
@@ -179,6 +180,85 @@ class SemVer(str):
         return hash(str(self))
 
 
+@dataclass
+class TableVersions:
+    """Capture all active table definition versions.
+
+    Upon reading in datasets
+     :class:`TableVersions` nodes are explicitly inserted into the deserialized JSON schema
+    to retain information about active table versions.
+    This information would otherwise be lost
+    by virtue of the `$ref` property being on the same level
+    as the `activeVersions` property,
+    and how `$ref`s are supposed to be treated.
+
+    See Also: https://json-schema.org/understanding-json-schema/structuring.html#ref
+
+    This a stop gap
+    until the Amsterdam Meta Schema is extended to retain this information.
+    """
+
+    id: str  # noqa: A003
+    """Table id."""
+
+    default_version_number: SemVer
+    """Version number of the default table version."""
+
+    active: Dict[SemVer, Json]
+    """All active table versions."""
+
+    @property
+    def default(self) -> Json:
+        """Return default table version."""
+        return self.active[self.default_version_number]
+
+
+class TableVersionsEncoder(JSONEncoder):
+    """Partially encode TableVersions to JSON.
+
+    We allow for two different ways to define tables:
+
+    1. Inline with the dataset definition.
+       This allows for only one version of the table to be specified.
+    2. In separate files referenced from the dataset definition.
+       This allows for multiple versions of the table to be specified.
+
+    Option 2. was originally introduced in a backwards compatible way;
+    when the JSON definitions were loaded from either a path or URL,
+    the node,
+    in the JSON that referenced the tables,
+    was replaced with the default version of the table.
+    This allowed most of the existing code to keep working
+    as if option 1 had been used.
+
+    The downside of that approach is that specified information,
+    namely that of active versions,
+    is lost in the process.
+    As a stop gap,
+    this was temporarily remedied with the introduction of the :class:`TableVersions` object:
+    it retained the references to all active versions on the table,
+    including the default version,
+    by enriching the deserialized dataset with additional information
+    However,
+    this cannot be serialized back to a single dataset definition
+    with inline table definitions;
+    the Amsterdam Meta Schema currently won't allow for it.
+
+    This means that
+    anything that expects a deserialized dataset
+    that adheres to the Amsterdam Meta Schema,
+    e.g. the DSO-API that wants to store the dataset definitions in SQL tables,
+    should receive the original non-enriched JSON.
+    That is exactly what this encoder does;
+    it effectively removes everything that :class:`TableVersions` added.
+    """
+
+    def default(self, o: Any) -> Any:
+        if isinstance(o, TableVersions):
+            return o.default
+        return super().default(o)
+
+
 class SchemaType(UserDict):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
@@ -190,7 +270,7 @@ class SchemaType(UserDict):
         return id(self)  # allow usage in lru_cache()
 
     @property
-    def id(self) -> str:
+    def id(self) -> str:  # noqa: A003
         return cast(str, self["id"])
 
     @property
@@ -198,7 +278,7 @@ class SchemaType(UserDict):
         return cast(str, self["type"])
 
     def json(self) -> str:
-        return json.dumps(self.data)
+        return json.dumps(self.data, cls=TableVersionsEncoder)
 
     def json_data(self) -> Json:
         return self.data
@@ -233,6 +313,13 @@ class DatasetSchema(SchemaType):
         """
         super().__init__(*args, **kwargs)
         self.dataset_collection = DatasetCollection()
+        for i, table in enumerate(self["tables"]):
+            if isinstance(table, TableVersions):
+                continue
+            dvn = SemVer(table["version"])
+            self["tables"][i] = TableVersions(
+                id=table["id"], default_version_number=dvn, active={dvn: table}
+            )
         self.dataset_collection.add_dataset(self)
 
     def __repr__(self):
@@ -305,7 +392,19 @@ class DatasetSchema(SchemaType):
     @property
     def tables(self) -> List[DatasetTableSchema]:
         """Access the tables within the file"""
-        return [DatasetTableSchema(i, _parent_schema=self) for i in self["tables"]]
+        tables: List[DatasetTableSchema] = []
+        for tv in self["tables"]:
+            if isinstance(tv, TableVersions):
+                # Dataset was likely loaded using the path or URL loader that properly resolves
+                # all the active tables. Hence the presence of the TableVersions node in
+                # dictionary.
+                tables.append(DatasetTableSchema(tv.default, _parent_schema=self))
+            else:
+                # For backwards compatibility reasons assume the node in the dictionary is an
+                # actual table definition. This happens when the schema is handed to us
+                # by the DSO-API. See also :class:`TableVersionsEncoder` for a more complete rant.
+                tables.append(DatasetTableSchema(tv, _parent_schema=self))
+        return tables
 
     def get_tables(
         self,
@@ -332,7 +431,7 @@ class DatasetSchema(SchemaType):
             if to_snake_case(table.id) == to_snake_case(table_id):
                 return table
 
-        available = "', '".join([table["id"] for table in self["tables"]])
+        available = "', '".join([table.default["id"] for table in self["tables"]])
         raise SchemaObjectNotFound(
             f"Table '{table_id}' does not exist "
             f"in schema '{self.id}', available are: '{available}'"
