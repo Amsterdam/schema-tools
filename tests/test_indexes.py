@@ -52,14 +52,14 @@ def test_index_creation(engine, db_schema):
     for table in data["tables"]:
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
-        importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
+        importer.generate_db_objects(table.default["id"], ind_tables=True, ind_extra_index=True)
 
         conn = create_engine(engine.url, client_encoding="UTF-8")
         meta_data = MetaData(bind=conn)
         meta_data.reflect()
         metadata_inspector = inspect(meta_data.bind)
         indexes = metadata_inspector.get_indexes(
-            f"{parent_schema['id']}_{table['id']}", schema=None
+            f"{parent_schema['id']}_{table.default['id']}", schema=None
         )
         indexes_name = []
 
@@ -176,14 +176,14 @@ def test_index_troughtables_creation(engine, db_schema):
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
         importer.generate_db_objects(
-            table["id"],
+            table.default["id"],
             ind_tables=True,
             ind_extra_index=True,
         )
 
     for table in data["tables"]:
 
-        dataset_table = dataset_schema.get_table_by_id(table["id"])
+        dataset_table = dataset_schema.get_table_by_id(table.default["id"])
 
         for table in dataset_table.get_through_tables_by_id():
 
@@ -264,18 +264,20 @@ def test_fk_index_creation(engine, db_schema):
     ind_index_exists = False
 
     for table in data["tables"]:
-        if table["id"] == "child_test":
+        if table.default["id"] == "child_test":
 
             importer = BaseImporter(dataset_schema, engine)
             # the generate_table and create index
-            importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
+            importer.generate_db_objects(
+                table.default["id"], ind_tables=True, ind_extra_index=True
+            )
 
             conn = create_engine(engine.url, client_encoding="UTF-8")
             meta_data = MetaData(bind=conn)
             meta_data.reflect()
             metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(
-                f"{parent_schema['id']}_{table['id']}", schema=None
+                f"{parent_schema['id']}_{table.default['id']}", schema=None
             )
             indexes_name = []
 
@@ -352,18 +354,20 @@ def test_size_of_index_name(engine, db_schema):
     dataset_schema = DatasetSchema(parent_schema)
 
     for table in data["tables"]:
-        if table["id"] == "child_test_size":
+        if table.default["id"] == "child_test_size":
 
             importer = BaseImporter(dataset_schema, engine)
             # the generate_table and create index
-            importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
+            importer.generate_db_objects(
+                table.default["id"], ind_tables=True, ind_extra_index=True
+            )
 
             conn = create_engine(engine.url, client_encoding="UTF-8")
             meta_data = MetaData(bind=conn)
             meta_data.reflect()
             metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(
-                f"{parent_schema['id']}_{table['id']}", schema=None
+                f"{parent_schema['id']}_{table.default['id']}", schema=None
             )
             indexes_name = []
 
