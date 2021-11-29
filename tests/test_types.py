@@ -1,8 +1,18 @@
+import operator
+from functools import partial
 from pathlib import Path
 
 import pytest
 
-from schematools.types import DatasetSchema, Permission, PermissionLevel, ProfileSchema, SemVer
+from schematools.types import (
+    DatasetSchema,
+    Json,
+    Permission,
+    PermissionLevel,
+    ProfileSchema,
+    SemVer,
+    TableVersions,
+)
 from schematools.utils import dataset_schema_from_path
 
 
@@ -241,3 +251,19 @@ def test_dataset_with_camel_cased_id_generates_correct_through_relations(here):
     # The fields `hasrelations` and `hasNMRelation` are the FK's to source and target table.
     assert through_table.get_field_by_id("hasrelations").relation == "baseDataset:hasrelations"
     assert through_table.get_field_by_id("hasNMRelation").relation == "baseDataset:internalRelated"
+
+
+def test_from_dict(afval_schema_json: Json) -> None:
+    is_dict = lambda o: isinstance(o, dict)
+    is_tv = lambda o: isinstance(o, TableVersions)
+
+    assert all(map(is_dict, afval_schema_json["tables"]))
+
+    dataset = DatasetSchema.from_dict(afval_schema_json)
+
+    # Internally `DatasetSchema` uses `TableVersions` instances as the elements of the "tables"
+    # list.
+    assert all(map(is_dict, afval_schema_json["tables"]))
+
+    # However that should not affect the dict that was originally passed in to `from_dict`
+    assert all(map(is_tv, dataset["tables"]))

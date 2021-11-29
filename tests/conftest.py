@@ -25,7 +25,7 @@ HERE = Path(__file__).parent
 # https://github.com/toirl/pytest-sqlalchemy/blob/master/pytest_sqlalchemy.py
 
 
-@pytest.fixture()
+@pytest.fixture
 def here() -> Path:
     return HERE
 
@@ -63,7 +63,7 @@ def db_schema(engine, sqlalchemy_keep_db):
     sqlalchemy_utils.functions.drop_database(engine.url)
 
 
-@pytest.fixture()
+@pytest.fixture
 def schema_url():
     return URL(os.environ.get("SCHEMA_URL", "https://schemas.data.amsterdam.nl/datasets/"))
 
@@ -81,7 +81,7 @@ def dbsession(engine, dbsession, sqlalchemy_keep_db) -> Session:
         dbsession.close()
 
 
-@pytest.fixture()
+@pytest.fixture
 def tconn(engine, local_metadata):
     """Will start a transaction on the connection. The connection will
     be rolled back after it leaves its scope.
@@ -178,7 +178,7 @@ class DummySessionMaker:
         return dummy_session()
 
 
-@pytest.fixture()
+@pytest.fixture
 def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
     """Mock the requests to import schemas.
 
@@ -219,94 +219,100 @@ def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
     yield dummy_session_maker
 
 
-@pytest.fixture()
+@pytest.fixture
+def afval_schema_json(here: Path) -> Json:
+    with open(here / "files/afval.json") as f:
+        return json.load(f)
+
+
+@pytest.fixture
 def afval_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/afval.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def meetbouten_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/meetbouten.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def parkeervakken_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/parkeervakken.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def gebieden_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/gebieden.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def bouwblokken_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/bouwblokken.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def gebieden_schema_auth(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/gebieden_auth.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def gebieden_schema_auth_list(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/gebieden_auth_list.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def ggwgebieden_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/ggwgebieden.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def stadsdelen_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/stadsdelen.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def verblijfsobjecten_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/verblijfsobjecten.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def kadastraleobjecten_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/kadastraleobjecten.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def meldingen_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/meldingen.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def woonplaatsen_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/woonplaatsen.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def woningbouwplannen_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/woningbouwplannen.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def brp_r_profile_schema(here) -> ProfileSchema:
     """A downloaded profile schema definition"""
     return ProfileSchema.from_file(here / "files/profiles/BRP_R.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def profile_brk_encoded_schema(here) -> ProfileSchema:
     """A downloaded profile schema definition"""
     return ProfileSchema.from_file(here / "files/profiles/BRK_encoded.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def profile_brk_read_id_schema(here) -> ProfileSchema:
     return ProfileSchema.from_file(here / "files/profiles/BRK_RID.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def compound_key_schema(here) -> ProfileSchema:
     return DatasetSchema.from_file(here / "files/compound_key.json")
 
@@ -324,11 +330,11 @@ def profile_verkeer_medewerker_schema() -> ProfileSchema:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def brk_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/brk.json")
 
 
-@pytest.fixture()
+@pytest.fixture
 def hr_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/hr.json")
