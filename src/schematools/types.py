@@ -1,6 +1,7 @@
 """Python types for the Amsterdam Schema JSON file contents."""
 from __future__ import annotations
 
+import copy
 import json
 import re
 import warnings
@@ -286,7 +287,7 @@ class SchemaType(UserDict):
 
     @classmethod
     def from_dict(cls: Type[ST], obj: Json) -> ST:
-        return cls(obj)
+        return cls(copy.deepcopy(obj))
 
 
 class DatasetType(UserDict):
@@ -344,7 +345,7 @@ class DatasetSchema(SchemaType):
         if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Dataset schema file")
 
-        return cls(obj)
+        return cls(copy.deepcopy(obj))
 
     @property
     def title(self) -> Optional[str]:
@@ -1563,7 +1564,7 @@ class ProfileSchema(SchemaType):
     @classmethod
     def from_dict(cls, obj: Json) -> ProfileSchema:
         """Parses given dict and validates the given schema"""
-        return cls(obj)
+        return cls(copy.deepcopy(obj))
 
     @property
     def name(self) -> Optional[str]:
