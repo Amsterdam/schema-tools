@@ -10,6 +10,7 @@ import requests
 import sqlalchemy
 from deepdiff import DeepDiff
 from json_encoder import json
+from jsonschema import draft7_format_checker
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateTable
@@ -363,7 +364,9 @@ def validate(
     structural_errors = False
     try:
         click.echo("Structural validation: ", nl=False)
-        jsonschema.validate(instance=dataset.json_data(), schema=meta_schema)
+        jsonschema.validate(
+            instance=dataset.json_data(), schema=meta_schema, format_checker=draft7_format_checker
+        )
     except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
         structural_errors = True
         click.echo(f"\n{e!s}", err=True)
@@ -410,7 +413,11 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
             # No sense in continuing if we can't read the schema file.
             break
         try:
-            jsonschema.validate(instance=dataset.json_data(), schema=meta_schema)
+            jsonschema.validate(
+                instance=dataset.json_data(),
+                schema=meta_schema,
+                format_checker=draft7_format_checker,
+            )
         except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
             errors[schema].append(f"{struct_error.message}: ({', '.join(struct_error.path)})")
 
