@@ -133,39 +133,30 @@ class SemVer(str):
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
-        return self.major < other.major or self.minor < other.minor or self.patch < other.patch
+        return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
 
     def __le__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
 
-        return (
-            self.major < other.major or self.minor < other.minor or self.patch < other.patch
-        ) or (
-            self.major == other.major and self.minor == other.minor and self.patch == other.patch
-        )
+        return (self.major, self.minor, self.patch) <= (other.major, other.minor, other.patch)
 
     def __gt__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
-        return self.major > other.major or self.minor > other.minor or self.patch > other.patch
+        return (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
 
     def __ge__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
 
-        return (
-            self.major > other.major or self.minor > other.minor or self.patch > other.patch
-        ) or (
-            self.major == other.major and self.minor == other.minor and self.patch == other.patch
-        )
+        return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return False
-        return (
-            self.major == other.major and self.minor == other.minor and self.patch == other.patch
-        )
+
+        return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
 
     def __ne__(self, other: object) -> bool:
         return not self == other
