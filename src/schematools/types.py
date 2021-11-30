@@ -33,7 +33,7 @@ from typing import (
 
 import jsonschema
 from deprecated import deprecated
-from jsonschema import draft7_format_checker
+from jsonschema import draft201909_format_checker
 from methodtools import lru_cache
 from more_itertools import first
 
@@ -893,7 +893,7 @@ class DatasetTableSchema(SchemaType):
 
     def validate(self, row: Json) -> None:
         """Validate a record against the schema."""
-        jsonschema.validate(row, self.data["schema"], format_checker=draft7_format_checker)
+        jsonschema.validate(row, self.data["schema"], format_checker=draft201909_format_checker)
 
     def _resolve(self, ref: str) -> jsonschema.RefResolver:
         """Resolve the actual data type of a remote URI reference."""
