@@ -15,7 +15,7 @@
       "title": "Woningbouwplan",
       "description": "De aantallen vormen de planvoorraad. Dit zijn niet de aantallen die definitief worden gerealiseerd. Ervaring leert dat een deel van de planvoorraad wordt opgeschoven. Niet alle woningbouw initiatieven doorlopen de verschillende plaberumfasen. Met name kleinere particuliere projecten worden in de regel pas toegevoegd aan de monitor zodra er een intentieovereenkomst of afsprakenbrief is getekend.",
       "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
         "type": "id",
         "additionalProperties": false,
         "required": ["schema", "id"],

@@ -101,7 +101,7 @@ def fetch_schema_from_relational_schema(engine, dataset_id) -> dict:
         del table_dict["dataset"]
         del table_dict["datasetId"]
         table_dict["schema"] = {f: table_dict.get(f) for f in ("required", "display")}
-        table_dict["schema"]["$schema"] = "http://json-schema.org/draft-07/schema#"
+        table_dict["schema"]["$schema"] = "https://json-schema.org/draft/2019-09/schema"
         table_dict["schema"]["type"] = "object"
         table_dict["schema"]["additionalProperties"] = False
         table_dict.pop("required", "")

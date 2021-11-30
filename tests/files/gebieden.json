@@ -19,7 +19,7 @@
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
         "type": "object",
         "additionalProperties": false,
         "mainGeometry": "geometrie",
@@ -97,7 +97,7 @@
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
         "type": "object",
         "additionalProperties": false,
         "mainGeometry": "geometrie",
@@ -184,7 +184,7 @@
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
         "type": "object",
         "additionalProperties": false,
         "mainGeometry": "geometrie",
@@ -271,7 +271,7 @@
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/stadsdelen.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
         "type": "object",
         "additionalProperties": false,
         "mainGeometry": "geometrie",
@@ -346,7 +346,7 @@
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/ggwgebieden.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
         "type": "object",
         "additionalProperties": false,
         "mainGeometry": "geometrie",

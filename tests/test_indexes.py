@@ -21,7 +21,7 @@ def test_index_creation(engine, db_schema):
                 "type": "table",
                 "version": "1.0.0",
                 "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "$schema": "https://json-schema.org/draft/2019-09/schema",
                     "type": "object",
                     "additionalProperties": "false",
                     "required": ["schema", "id"],
@@ -96,7 +96,7 @@ def test_index_troughtables_creation(engine, db_schema):
                     "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
                 },
                 "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "$schema": "https://json-schema.org/draft/2019-09/schema",
                     "type": "object",
                     "identifier": ["identificatie", "volgnummer"],
                     "required": ["schema", "id", "identificatie", "volgnummer"],
@@ -147,7 +147,7 @@ def test_index_troughtables_creation(engine, db_schema):
                     "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
                 },
                 "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "$schema": "https://json-schema.org/draft/2019-09/schema",
                     "type": "object",
                     "identifier": ["identificatie", "volgnummer"],
                     "required": ["schema", "id", "identificatie", "volgnummer"],
@@ -220,7 +220,7 @@ def test_fk_index_creation(engine, db_schema):
                 "type": "table",
                 "version": "1.0.0",
                 "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "$schema": "https://json-schema.org/draft/2019-09/schema",
                     "type": "object",
                     "additionalProperties": "false",
                     "required": ["schema", "id"],
@@ -241,7 +241,7 @@ def test_fk_index_creation(engine, db_schema):
                 "type": "table",
                 "version": "1.0.0",
                 "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "$schema": "https://json-schema.org/draft/2019-09/schema",
                     "type": "object",
                     "additionalProperties": "false",
                     "required": ["schema"],
@@ -313,7 +313,7 @@ def test_size_of_index_name(engine, db_schema):
                 "type": "table",
                 "version": "1.0.0",
                 "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "$schema": "https://json-schema.org/draft/2019-09/schema",
                     "type": "object",
                     "additionalProperties": "false",
                     "required": ["schema", "id"],
@@ -334,7 +334,7 @@ def test_size_of_index_name(engine, db_schema):
                 "type": "table",
                 "version": "1.0.0",
                 "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "$schema": "https://json-schema.org/draft/2019-09/schema",
                     "type": "object",
                     "additionalProperties": "false",
                     "required": ["schema"],

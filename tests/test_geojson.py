@@ -50,7 +50,7 @@ def test_geojson_to_table():
             "type": "table",
             "version": "1.0.0",
             "schema": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
+                "$schema": "https://json-schema.org/draft/2019-09/schema",
                 "type": "object",
                 "additionalProperties": False,
                 "required": [],

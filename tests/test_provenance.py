@@ -18,7 +18,7 @@ def test_provenance_result():
                 "type": "table",
                 "version": "1.0.0",
                 "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "$schema": "https://json-schema.org/draft/2019-09/schema",
                     "type": "object",
                     "additionalProperties": "false",
                     "required": ["schema", "id"],

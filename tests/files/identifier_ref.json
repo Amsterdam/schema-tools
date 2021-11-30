@@ -14,7 +14,7 @@
       "version": "1.0.0",
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/tests/identifier_ref.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
         "identifier": "foobar",
         "type": "object",
         "additionalProperties": false,

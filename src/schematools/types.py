@@ -474,7 +474,7 @@ class DatasetSchema(SchemaType):
             "auth": list(field.auth | table.auth),  # pass same auth rules as field has
             "description": f"Auto-generated table for nested field: {table.id}.{field.id}",
             "schema": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
+                "$schema": "https://json-schema.org/draft/2019-09/schema",
                 "type": "object",
                 "additionalProperties": False,
                 "required": ["id", "schema"],
@@ -591,7 +591,7 @@ class DatasetSchema(SchemaType):
             "throughFields": [left_table_id, target_field_id],
             "description": f"Auto-generated M2M table for {table.id}.{field.id}",
             "schema": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
+                "$schema": "https://json-schema.org/draft/2019-09/schema",
                 "type": "object",
                 "additionalProperties": False,
                 "required": ["schema", "id"],

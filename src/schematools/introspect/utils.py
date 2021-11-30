@@ -15,7 +15,7 @@ TABLE_TMPL = {
     "id": None,
     "type": "table",
     "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
         "type": "object",
         "additionalProperties": False,
         "required": [],
