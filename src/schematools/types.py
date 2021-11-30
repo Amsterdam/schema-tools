@@ -309,7 +309,10 @@ class DatasetSchema(SchemaType):
         for i, table in enumerate(self["tables"]):
             if isinstance(table, TableVersions):
                 continue
-            dvn = SemVer(table["version"])
+            try:
+                dvn = SemVer(table["version"])
+            except ValueError as e:
+                raise ValueError(f"""{e} (in {table["id"]})""") from e
             self["tables"][i] = TableVersions(
                 id=table["id"], default_version_number=dvn, active={dvn: table}
             )
