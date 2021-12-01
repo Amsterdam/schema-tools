@@ -510,7 +510,7 @@ class DatasetSchema(SchemaType):
         The through tables are not defined separately in a schema.
         The fact that a M2M relation needs an extra table is an implementation aspect.
         However, the through (aka. junction) table schema is needed for the
-        dyanamic model generation and for data-importing.
+        dynamic model generation and for data-importing.
 
         FK relations also have an additional through table, because the temporal information
         of the relation needs to be stored somewhere.
@@ -651,7 +651,11 @@ class DatasetSchema(SchemaType):
                 (table, left_table_id),
                 (_get_fk_target_table(right_dataset_id, right_table_id), target_field_id),
             ):
-                if fk_target_table and fk_target_table.has_compound_key:
+                if (
+                    fk_target_table
+                    and fk_target_table.has_compound_key
+                    and not field.is_loose_relation
+                ):
                     _expand_relation_spec(fk_target_table, sub_table_schema, relation_field_id)
 
             sub_table_schema["schema"]["properties"].update(dim_fields)
