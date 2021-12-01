@@ -240,6 +240,11 @@ def test_model_factory_loose_relations(meldingen_dataset, gebieden_dataset):
 def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_dataset, gebieden_dataset):
     """Prove that a loose relation is created when column
     is part of relation definition (<dataset>:<table>:column)
+    and that the intermediate model contains the correct references to both
+    associated tables.
+
+    Loose m2m relations defined with an array of scalars or an array of
+    single-property-objects generate the same output.
     """
     model_dict = {
         cls._meta.model_name: cls
@@ -250,11 +255,26 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_dataset, 
     model_cls = model_dict["woningbouwplan"]
     meta = model_cls._meta
     buurten_field = meta.get_field("buurten")
+    intermediate_table = buurten_field.remote_field.through
     assert isinstance(buurten_field, LooseRelationManyToManyField)
-    assert isinstance(buurten_field.remote_field.through, ModelBase)
+    assert isinstance(intermediate_table, ModelBase)
+
+    assert {x.name for x in intermediate_table._meta.get_fields()} == {
+        "buurten",
+        "id",
+        "woningbouwplan",
+    }
+
     buurten_as_scalar_field = meta.get_field("buurten_as_scalar")
+    intermediate_table = buurten_as_scalar_field.remote_field.through
     assert isinstance(buurten_as_scalar_field, LooseRelationManyToManyField)
     assert isinstance(buurten_as_scalar_field.remote_field.through, ModelBase)
+
+    assert {x.name for x in intermediate_table._meta.get_fields()} == {
+        "buurten_as_scalar",
+        "id",
+        "woningbouwplan",
+    }
 
 
 @pytest.mark.django_db

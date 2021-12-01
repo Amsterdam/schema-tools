@@ -1,5 +1,5 @@
 # Start runtime image,
-FROM amsterdam/python:3.8-buster
+FROM amsterdam/python:3.9-buster
 
 WORKDIR /app
 COPY . ./
