@@ -394,12 +394,12 @@ class DatasetSchema(SchemaType):
                 # Dataset was likely loaded using the path or URL loader that properly resolves
                 # all the active tables. Hence the presence of the TableVersions node in
                 # dictionary.
-                tables.append(DatasetTableSchema(tv.default, _parent_schema=self))
+                tables.append(DatasetTableSchema(tv.default, parent_schema=self))
             else:
                 # For backwards compatibility reasons assume the node in the dictionary is an
                 # actual table definition. This happens when the schema is handed to us
                 # by the DSO-API. See also :class:`TableVersionsEncoder` for a more complete rant.
-                tables.append(DatasetTableSchema(tv, _parent_schema=self))
+                tables.append(DatasetTableSchema(tv, parent_schema=self))
         return tables
 
     def get_tables(
@@ -499,7 +499,7 @@ class DatasetSchema(SchemaType):
                 len(self.id) + 1, table.name, snakecased_fieldname
             )
         return DatasetTableSchema(
-            sub_table_schema, _parent_schema=self, _parent_table=table, nested_table=True
+            sub_table_schema, parent_schema=self, parent_table=table, nested_table=True
         )
 
     def build_through_table(
@@ -661,7 +661,7 @@ class DatasetSchema(SchemaType):
             sub_table_schema["schema"]["properties"].update(dim_fields)
 
         return DatasetTableSchema(
-            sub_table_schema, _parent_schema=self, _parent_table=table, through_table=True
+            sub_table_schema, parent_schema=self, parent_table=table, through_table=True
         )
 
     @property
@@ -709,15 +709,15 @@ class DatasetTableSchema(SchemaType):
     def __init__(
         self,
         *args: Any,
-        _parent_schema: Optional[DatasetSchema] = None,
-        _parent_table: Optional[DatasetTableSchema] = None,
+        parent_schema: DatasetSchema,
+        parent_table: Optional[DatasetTableSchema] = None,
         nested_table: bool = False,
         through_table: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
-        self._parent_schema = _parent_schema
-        self._parent_table = _parent_table
+        self.parent_schema = parent_schema
+        self.parent_table = parent_table
         self.nested_table = nested_table
         self.through_table = through_table
 
@@ -739,17 +739,9 @@ class DatasetTableSchema(SchemaType):
         return self.get("shortname") is not None
 
     @property
-    def dataset(self) -> Optional[DatasetSchema]:
+    def dataset(self) -> DatasetSchema:
         """The dataset that this table is part of."""
-        return self._parent_schema
-
-    @property
-    def parent_table(self) -> Optional[DatasetTableSchema]:
-        """The parent table of this table.
-
-        For nested and through tables, the parent table is available.
-        """
-        return self._parent_table
+        return self.parent_schema
 
     @property
     def description(self) -> Optional[str]:
