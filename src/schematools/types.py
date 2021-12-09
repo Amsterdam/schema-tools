@@ -42,6 +42,7 @@ from schematools.datasetcollection import DatasetCollection
 from schematools.exceptions import SchemaObjectNotFound
 
 ST = TypeVar("ST", bound="SchemaType")
+DTS = TypeVar("DTS", bound="DatasetSchemaType")
 Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 Ref = str
 
@@ -1025,6 +1026,13 @@ class DatasetTableSchema(SchemaType):
         """Get table version."""
         # It's a required attribute, hence should be present.
         return SemVer(self["version"])
+
+    @classmethod
+    def from_dict(cls: Type[DTS], obj: Json) -> DTS:  # noqa: D102
+        raise Exception(
+            f"A dict is not sufficient anymore to instantiate a {cls.__name__!r}. "
+            "Use regular class instantiation instead and supply all required parameters!"
+        )
 
 
 class DatasetFieldSchema(DatasetType):
