@@ -160,17 +160,17 @@ class PsqlIdentifierLengthValidator(Validator):
 
     def validate(self) -> Iterator[ValidationError]:  # noqa: D102
         for table in self.dataset.get_tables(include_nested=True, include_through=True):
-            # `table_name` should probably be a property on `DatasetTableSchema`.
-            # There already is a `db_name` property however it truncates the inferred
-            # table name to prevent exceeding the PostgreSQL limit. Hence it cannot
-            # be used for validation purposes.
-            table_name = to_snake_case("_".join((self.dataset.id, table.name)))
-            if (length := len(table_name)) > MAX_TABLE_NAME_LENGTH:
+            db_name = table.db_name(
+                with_dataset_prefix=True, with_version=True, check_assert=False
+            )
+            # print(f"{db_name:>{MAX_TABLE_NAME_LENGTH}}")
+            if (length := len(db_name)) > MAX_TABLE_NAME_LENGTH:
                 excess = length - MAX_TABLE_NAME_LENGTH
                 yield ValidationError(
                     self.__class__.__name__,
-                    f"Inferred PostgreSQL table name '{table_name}' is '{excess}' characters too "
-                    f"long. Maximum table name length is '{MAX_TABLE_NAME_LENGTH}'.",
+                    f"Inferred PostgreSQL table name '{db_name}' is '{excess}' characters "
+                    f"too long. Maximum table name length is '{MAX_TABLE_NAME_LENGTH}'. Define "
+                    f"a `shortname`!",
                 )
 
 
