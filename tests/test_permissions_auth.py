@@ -59,7 +59,7 @@ def test_mandatory_filters(brp_r_profile_schema):
 class TestFieldAccess:
     """All variations to test the field access level."""
 
-    def test_auth_access(self, brk_schema, profile_brk_encoded_schema):
+    def test_auth_access(self, brk_schema, profile_brk_encoded_schema, verblijfsobjecten_schema):
         """Check that user who is authorized for all authorization checks can access data"""
         user_scopes = UserScopes(
             {},
@@ -101,7 +101,9 @@ class TestFieldAccess:
         assert user_scopes.has_field_access(table.get_field_by_id("identificatie")) == as_encoded
         assert not user_scopes.has_field_access(table.get_field_by_id("registratiedatum"))
 
-    def test_has_perm_dataset_field_read_profile(self, brk_schema, profile_brk_read_id_schema):
+    def test_has_perm_dataset_field_read_profile(
+        self, brk_schema, profile_brk_read_id_schema, verblijfsobjecten_schema
+    ):
         """Check that user with one profile can access data, while regular medeweker not."""
         # Read Profile used
         user_scopes = UserScopes(
