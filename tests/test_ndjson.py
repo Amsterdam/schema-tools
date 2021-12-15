@@ -342,24 +342,3 @@ def test_provenance_for_schema_field_ids_equal_to_ndjson_keys(
     assert len(records) == 2
     assert records[0]["heeft_dossier_id"] == "GV12"
     assert records[1]["heeft_dossier_id"] is None
-
-
-def test_ndjson_test_long_postfixed_names(
-    here, engine, brk_schema, verblijfsobjecten_schema, dbsession
-):
-    """Prove that very long names with a postfix are trucacted correctly.
-
-    In this case, the table names is just below the threshhold,
-    so should not be truncated.
-    """
-    importer = NDJSONImporter(brk_schema, engine)
-    importer.generate_db_objects(
-        "aantekeningenkadastraleobjecten",
-        db_table_name="brk_aantekeningenkadastraleobjecten_new",
-        truncate=True,
-        ind_extra_index=False,
-    )
-
-    db_table_names = set(t.name for t in importer.tables.values())
-
-    assert "brk_aantekeningenkadastraleobjecten_heeft_betrokken_persoon_new" in db_table_names
