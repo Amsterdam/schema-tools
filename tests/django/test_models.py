@@ -78,41 +78,6 @@ def test_model_factory_table_name_default_version(afval_schema):
 
 
 @pytest.mark.django_db
-def test_model_factory_table_name_non_default_version_similar_major(afval_schema):
-    """Prove that dataset with same major version as default
-    is not getting version in table name"""
-    afval_schema.data["default_version"] = "1.0.1"
-    afval_schema.data["version"] = "1.1.1"
-    afval_dataset = Dataset.create_for_schema(afval_schema)
-
-    models = {
-        cls._meta.model_name: cls
-        for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
-    }
-    assert "containers_1_1_1" in models.keys()
-    assert "containers" not in models.keys()
-    Containers = models["containers_1_1_1"]
-    assert Containers._meta.db_table == "afvalwegingen_containers"
-
-
-@pytest.mark.django_db
-def test_model_factory_table_name_non_default_version(afval_schema):
-    """Prove that non default datasets getting major version in table name"""
-    afval_schema.data["default_version"] = "0.1.1"
-    afval_schema.data["version"] = "1.0.1"
-    afval_dataset = Dataset.create_for_schema(afval_schema)
-
-    models = {
-        cls._meta.model_name: cls
-        for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
-    }
-    assert "containers" not in models.keys()
-    assert "containers_1_0_1" in models.keys()
-    Containers = models["containers_1_0_1"]
-    assert Containers._meta.db_table == "afvalwegingen_1_containers"
-
-
-@pytest.mark.django_db
 def test_model_factory_relations(afval_dataset):
     """Prove that relations between models can be resolved"""
     models = {
