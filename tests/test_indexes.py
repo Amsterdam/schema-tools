@@ -72,11 +72,7 @@ def test_index_creation(engine, db_schema):
 
 
 def test_index_troughtables_creation(engine, db_schema):
-    """Prove that many-to-many table indexes are created based on schema specification.
-
-    A NM relation with a very long name has deliberatly added. The truncation of index
-    names should avoid failing tests.
-    """
+    """Prove that many-to-many table indexes are created based on schema specification."""
     test_data = {
         "type": "dataset",
         "id": "test",
@@ -123,7 +119,7 @@ def test_index_troughtables_creation(engine, db_schema):
                             },
                             "relation": "test:test_2",
                         },
-                        "lang456789012345678901234567890123456789verylongtail": {
+                        "some_random_name": {
                             "type": "array",
                             "items": {
                                 "type": "object",
