@@ -475,6 +475,7 @@ class DatasetSchema(SchemaType):
             "originalID": field.name,
             "parentTableID": table.id,
             "type": "table",
+            "version": str(table.version),
             "auth": list(field.auth | table.auth),  # pass same auth rules as field has
             "description": f"Auto-generated table for nested field: {table.id}.{field.id}",
             "schema": {
@@ -568,6 +569,7 @@ class DatasetSchema(SchemaType):
         sub_table_schema: Dict[str, Any] = {
             "id": table_id,
             "type": "table",
+            "version": str(table.version),
             "throughFields": [left_table_id, target_field_id],
             "description": f"Auto-generated M2M table for {table.id}.{field.id}",
             "schema": {
