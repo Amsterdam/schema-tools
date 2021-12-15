@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import re
 import warnings
 from collections import UserDict
@@ -37,14 +38,17 @@ from jsonschema import draft7_format_checker
 from methodtools import lru_cache
 from more_itertools import first
 
-from schematools import RELATION_INDICATOR
+from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
 from schematools.exceptions import SchemaObjectNotFound
+from schematools.utils import to_snake_case
 
 ST = TypeVar("ST", bound="SchemaType")
 DTS = TypeVar("DTS", bound="DatasetSchemaType")
 Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 Ref = str
+
+logger = logging.getLogger(__name__)
 
 
 class SemVer(str):
@@ -172,6 +176,19 @@ class SemVer(str):
 
     def __hash__(self) -> int:
         return hash(str(self))
+
+    @property
+    def signif(self) -> str:
+        """Return stringified significant part of SemVer.
+
+        Significant being the version numbers *without* the patch level.
+        Stringified as in both significant numbers as a string separated by an underscore.
+
+        Examples:
+            >>> SemVer("v3.9.0").signif
+            "3_9"
+        """
+        return f"{self.major}_{self.minor}"
 
 
 @dataclass
@@ -546,7 +563,7 @@ class DatasetSchema(SchemaType):
             - bestaat_uit_buurten_identificatie
             - bestaat_uit_buurten_volgnummer
         """
-        from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
+        from schematools.utils import get_rel_table_identifier, toCamelCase
 
         def _get_fk_target_table(dataset_id: str, table_id: str) -> DatasetTableSchema:
             if table.dataset is not None:
@@ -985,34 +1002,57 @@ class DatasetTableSchema(SchemaType):
         model_name = self.id
         if self.dataset.version is not None and not self.dataset.is_default_version:
             model_name = f"{model_name}_{self.dataset.version}"
-        return cast(str, to_snake_case(model_name))  # mypy pleaser
+        return to_snake_case(model_name)
 
-    def db_name(self, postfix: Optional[str] = None) -> str:
-        """Returns the tablename for the database, prefixed with the schemaname.
-        NB. `self.name` could have been changed by a 'shortname' in the schema.
+    def db_name(
+        self,
+        *,
+        with_dataset_prefix: bool = True,
+        with_version: bool = False,
+        postfix: Optional[str] = None,
+        check_assert: bool = True,
+    ) -> str:
+        """Return derived table name for DB usage.
+
+        Args:
+            with_dataset_prefix: if True, include dataset ID as a prefix to the table name.
+            with_version:  if True, include the major and minor version number in the table name.
+            postfix: An optional postfix to append to the table name
+            check_assert: Check max table length name. Can be turned of to have the check done
+                by validation code (with much better error reporting.)
+
+        Returns:
+            A derived table name suitable for DB usage.
+
         """
-
-        from schematools.utils import shorten_name, to_snake_case
-
-        if self.dataset is None:
-            raise ValueError(
-                "Cannot obtain a db_name from a DatasetTableSchema without a parent dataset."
+        dataset_prefix = version_postfix = ""
+        if with_version:
+            version_postfix = self.version.signif
+        if with_dataset_prefix:
+            dataset_prefix = self.dataset.id
+        db_table_name = "_".join(
+            filter(None, (dataset_prefix, to_snake_case(self.name), version_postfix, postfix))
+        )
+        # We should not be shortening table names automatically! Instead we should rely on
+        # validation code to prevent table ids in Amsterdam Schema's that result in DB table
+        # names that are too long. Why? Haphazardly shortening names results in table names that
+        # differ from what the user has specified in the corresponding Amsterdam Schema
+        # potentially leading to confusion. It might also result in name clashes by turning a
+        # previously unique name into a non-unique name by accidentally chopping off what made
+        # the name unique. So we will have to do with an `assert` here, and fix Amsterdam Schema's
+        # by specifying `shortname`s for whatever breaks.
+        logger.debug(
+            "Derived table name is '%s', its length: %d, max allowed length: %d",
+            db_table_name,
+            len(db_table_name),
+            MAX_TABLE_NAME_LENGTH,
+        )
+        if check_assert:
+            assert len(db_table_name) <= MAX_TABLE_NAME_LENGTH, (
+                f"table name {db_table_name!r} is too long, having {len(db_table_name)} chars. "
+                f"Max allowed length is {MAX_TABLE_NAME_LENGTH} chars."
             )
-        table_name_parts = [self.dataset.id, self.name]
-        if self.dataset.version is not None:
-            is_default_table = (
-                self.dataset.version.split(".")[0] == self.dataset.default_version.split(".")[0]
-            )
-            if not is_default_table:
-                major, _minor, _patch = self.dataset.version.split(".")
-                table_name_parts = [self.dataset.id, major, self.name]
-        table_name = "_".join(table_name_parts)
-        if postfix is not None:
-            table_name += postfix
-        # NB. with_postfix means that extra shortening should be done.
-        # So, if there is already a postfix applied, this extra shortening should
-        # not be applied.
-        return shorten_name(to_snake_case(table_name), with_postfix=postfix is None)
+        return db_table_name
 
     def get_fk_fields(self) -> Iterator[str]:
         """Generates fields names that contain a 1:N relation to a parent table"""

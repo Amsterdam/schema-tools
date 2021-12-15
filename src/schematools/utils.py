@@ -16,7 +16,6 @@ from more_itertools import last
 from string_utils import slugify
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
-from schematools.types import SemVer, TableVersions
 
 if TYPE_CHECKING:
     from schematools.loaders import SchemaLoader  # noqa: F401
@@ -150,6 +149,8 @@ def _schema_from_url_with_connection(
     response.raise_for_status()
     response_data = response.json()
 
+    from schematools.types import SemVer, TableVersions
+
     # Include referenced tables for datasets.
     for i, table in enumerate(response_data["tables"]):
         if ref := table.get("$ref"):
@@ -200,6 +201,8 @@ def dataset_schema_from_path(
             raise ValueError("Invalid Amsterdam Dataset schema file") from exc
 
         if ds["type"] == "dataset":
+            from schematools.types import SemVer, TableVersions
+
             for i, table in enumerate(ds["tables"]):
                 if ref := table.get("$ref"):
                     # Assume `ref` is of form "table_name/v1.1.0"
