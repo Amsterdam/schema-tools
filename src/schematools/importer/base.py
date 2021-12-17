@@ -1,17 +1,18 @@
 import hashlib
 import operator
 from collections import Counter, UserDict
-from functools import reduce
+from functools import cached_property, reduce
 from itertools import islice
 from logging import Logger
 from pathlib import PosixPath
-from typing import Any, Dict, Iterator, List, Optional, Set, Union, cast
+from typing import Any, Dict, Final, Iterator, List, Optional, Set, Union, cast
 
 from jsonpath_rw import parse
 from jsonpath_rw.jsonpath import Child
-from sqlalchemy import exc, inspect
+from sqlalchemy import Boolean, exc, inspect, text
 from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
+from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.schema import Index, MetaData, Table
 
 from schematools import DATABASE_SCHEMA_NAME_DEFAULT, MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
@@ -20,6 +21,32 @@ from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case, toCamelCase
 
 metadata = MetaData()
+
+#: We'd like to make a distinction between existing datasets that were originally, and
+#: continue to be, created in the ``public`` PostgreSQL schema and newer datasets that will get
+#: their own PostgreSQL schema. These newer datasets will also be versioned. Meaning that all
+#: tables of these newer datasets will include their major and minor version in their name. Hence
+#: the name of the SQL query to detect these newer datasets
+IS_VERSIONED_DATASET_SQL: Final[TextClause] = text(
+    """
+    WITH public_dataset AS (  -- 'public' as in using public psql schema for a given dataset
+        SELECT DISTINCT SPLIT_PART(TABLE_NAME, '_', 1) AS dataset_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_type = 'BASE TABLE'  -- specifically not 'VIEW'
+            ORDER BY dataset_name),
+         private_dataset AS (  -- 'private' as in using dataset specific psql schema
+             SELECT schema_name AS dataset_name
+                 FROM information_schema.schemata
+                 WHERE schema_name NOT IN ('pg_toast',
+                                           'pg_catalog',
+                                           'public',
+                                           'information_schema'
+                     ))
+    SELECT :dataset_name NOT IN (SELECT * FROM public_dataset) OR
+           :dataset_name IN (SELECT * FROM private_dataset) AS is_versioned_dataset;
+"""
+).columns(is_versioned_dataset=Boolean)
 
 
 def chunked(generator: Iterator[Any], size: int) -> Iterator[Any]:
@@ -412,6 +439,28 @@ class BaseImporter:
                 )
                 continue
 
+    @cached_property
+    def is_versioned_dataset(self) -> bool:
+        """Returns whether versioning will be employed for the current dataset.
+
+        Strictly speaking datasets are not directly (as in: on the dataset level) versioned
+        anymore. Its tables, however, are! That is, in the Amsterdam Schema corresponding to the
+        dataset. Whether we employ versioning on the DB level depends on whether we are dealing
+        with:
+
+            * an existing dataset that has been created in the ``public`` PostgreSQL schema
+            * a dataset in a dataset specific PostgreSQL schema
+            * a brand new dataset with no current DB representation.
+
+        Versioning will be used for the latter two. Not for the first one.
+        """
+        with self.engine.connect() as connection:
+            is_versioned = cast(
+                bool,
+                connection.scalar(IS_VERSIONED_DATASET_SQL, dataset_name=self.dataset_schema.id),
+            )
+        return is_versioned
+
 
 class CliLogger:
     """Logger to be used when importer is called from the cli."""
@@ -518,7 +567,7 @@ def index_factory(
 
     try:
         table_object = _metadata.tables[table_name]
-    except KeyError as ex:
+    except KeyError:
         _logger.log_error(f"{table_name} cannot be found.")
 
     indexes_to_create = []
