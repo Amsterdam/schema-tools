@@ -7,6 +7,7 @@ from logging import Logger
 from pathlib import PosixPath
 from typing import Any, Dict, Final, Iterator, List, Optional, Set, TypeVar, Union, cast
 
+import click
 from jsonpath_rw import parse
 from jsonpath_rw.jsonpath import Child
 from sqlalchemy import Boolean, exc, inspect, text
@@ -468,23 +469,25 @@ class CliLogger:
 
     def log_start(self, file_name: PosixPath, size: int) -> None:
         """Start the logging."""
-        print(f"Importing data [each dot is {size} records]: ", end="", flush=True)  # noqa: T001
+        click.echo(
+            f"Importing data from {file_name} [each dot is {size} records]: ", nl=False
+        )  # noqa: T001
 
     def log_progress(self, num_imported: int) -> None:
         """Output progress."""
-        print(".", end="", flush=True)  # noqa: T001
+        click.echo(".", nl=False)  # noqa: T001
 
     def log_error(self, msg: str, *args: Any) -> None:
         """Output error."""
-        print(msg % args)  # noqa: T001
+        click.echo(msg % args, err=True)  # noqa: T001
 
     def log_warning(self, msg: str, *args: Any) -> None:
         """Output warning."""
-        print(msg % args)  # noqa: T001
+        click.echo(msg % args)  # noqa: T001
 
     def log_done(self, num_imported: int) -> None:
         """Indicate logging is finished."""
-        print(f" Done importing {num_imported} records", flush=True)  # noqa: T001
+        click.echo(f" Done importing {num_imported} records")  # noqa: T001
 
 
 class LogfileLogger(CliLogger):
