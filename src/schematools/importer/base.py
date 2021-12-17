@@ -5,7 +5,7 @@ from functools import cached_property, reduce
 from itertools import islice
 from logging import Logger
 from pathlib import PosixPath
-from typing import Any, Dict, Final, Iterator, List, Optional, Set, Union, cast
+from typing import Any, Dict, Final, Iterator, List, Optional, Set, TypeVar, Union, cast
 
 from jsonpath_rw import parse
 from jsonpath_rw.jsonpath import Child
@@ -48,13 +48,14 @@ IS_VERSIONED_DATASET_SQL: Final[TextClause] = text(
 """
 ).columns(is_versioned_dataset=Boolean)
 
+T = TypeVar("T")
 
-def chunked(generator: Iterator[Any], size: int) -> Iterator[Any]:
+
+def chunked(stream: Iterator[T], size: int) -> Iterator[List[T]]:
     """Read parts of the generator, pause each time after a chunk."""
     # Based on more-itertools. islice returns results until 'size',
     # iter() repeatedly calls make_chunk until the '[]' sentinel is returned.
-    gen = iter(generator)
-    make_chunk = lambda: list(islice(gen, size))
+    make_chunk = lambda: list(islice(stream, size))
     return iter(make_chunk, [])
 
 
