@@ -8,11 +8,14 @@ from pathlib import PosixPath
 from typing import Any, Dict, Final, Iterator, List, Optional, Set, TypeVar, Union, cast
 
 import click
+import psycopg2
 from jsonpath_rw import parse
 from jsonpath_rw.jsonpath import Child
 from sqlalchemy import Boolean, exc, inspect, text
 from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
+from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.sql.ddl import CreateSchema
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.schema import Index, MetaData, Table
 
@@ -268,6 +271,10 @@ class BaseImporter:
         self.dataset_table = cast(
             DatasetTableSchema, self.dataset_schema.get_table_by_id(table_id)
         )
+
+        if db_schema_name is not None:
+            self.create_schema(db_schema_name)
+
         if ind_tables or ind_extra_index:
 
             # Collect provenance info for easy re-use
@@ -463,6 +470,21 @@ class BaseImporter:
             )
         return is_versioned
 
+    def create_schema(self, db_schema_name: str) -> None:
+        """Create DB Schema.
+
+        Is a no-op if schema already exists.
+        """
+        with self.engine.connect() as connection:
+            try:
+                connection.execute(CreateSchema(db_schema_name))
+                self.logger.log_info("Created schema '%s'", db_schema_name)
+            except ProgrammingError as pe:
+                if not isinstance(pe.orig, psycopg2.errors.DuplicateSchema):
+                    # `CreateSchema` does not use the 'IF NOT EXISTS` clause.
+                    # Hence we get an error if the schema already exists.
+                    raise
+
 
 class CliLogger:
     """Logger to be used when importer is called from the cli."""
@@ -492,7 +514,6 @@ class CliLogger:
     def log_info(self, msg: str, *args: Any) -> None:
         """Output informational message."""
         click.echo(msg % args)
-
 
 
 class LogfileLogger(CliLogger):
