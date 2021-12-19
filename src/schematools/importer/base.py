@@ -489,6 +489,11 @@ class CliLogger:
         """Indicate logging is finished."""
         click.echo(f" Done importing {num_imported} records")  # noqa: T001
 
+    def log_info(self, msg: str, *args: Any) -> None:
+        """Output informational message."""
+        click.echo(msg % args)
+
+
 
 class LogfileLogger(CliLogger):
     """Logger to be used when importer is called from python code."""
@@ -516,6 +521,10 @@ class LogfileLogger(CliLogger):
     def log_done(self, num_imported: int) -> None:
         """Indicate logging is finished."""
         self.logger.info("Done")
+
+    def log_info(self, msg: str, *args: Any) -> None:
+        """Output informational message."""
+        self.logger.info(msg, *args)
 
 
 def index_factory(
