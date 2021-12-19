@@ -9,7 +9,7 @@ def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsess
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from gebieden_bouwblokken ORDER BY id")]
+    records = [dict(r) for r in engine.execute("SELECT * FROM gebieden_bouwblokken ORDER BY id")]
     assert len(records) == 2
     assert set(records[0].keys()) == {
         "id",
@@ -61,13 +61,12 @@ def test_numeric_datatype_scale(
         dict(r)
         for r in engine.execute(
             """
-                                                SELECT data_type, numeric_scale
-                                                FROM information_schema.columns
-                                                WHERE 1=1
-                                                AND table_schema = 'public'
-                                                AND table_name = 'woningbouwplannen_woningbouwplan'
-                                                AND column_name = 'avarage_sales_price';
-                                                """
+            SELECT data_type, numeric_scale
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'woningbouwplannen_woningbouwplan'
+                  AND column_name = 'avarage_sales_price';
+            """
         )
     ]
     assert record[0]["data_type"] == "numeric"
@@ -85,15 +84,13 @@ def test_invalid_numeric_datatype_scale(
         dict(r)
         for r in engine.execute(
             """
-                                                SELECT data_type, numeric_scale
-                                                FROM information_schema.columns
-                                                WHERE 1=1
-                                                AND table_schema = 'public'
-                                                AND table_name = 'woningbouwplannen_woningbouwplan'
-                                                AND column_name = 'avarage_sales_price_incorrect'
-                                                OR
-                                                column_name = 'avarage_sales_price_incorrect_zero';
-                                                """
+            SELECT data_type, numeric_scale
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                    AND table_name = 'woningbouwplannen_woningbouwplan'
+                    AND column_name = 'avarage_sales_price_incorrect'
+                   OR column_name = 'avarage_sales_price_incorrect_zero'
+            """
         )
     ]
     assert record[0]["data_type"] == "numeric"
@@ -110,11 +107,11 @@ def test_biginteger_datatype(here, engine, woningbouwplannen_schema, gebieden_sc
     results = engine.execute(
         """
         SELECT data_type, numeric_precision
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-        AND table_name = 'woningbouwplannen_woningbouwplan'
-        AND column_name = 'id';
-    """
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'woningbouwplannen_woningbouwplan'
+              AND column_name = 'id';
+        """
     )
     record = results.fetchone()
     assert record.data_type == "bigint"
@@ -128,13 +125,13 @@ def test_add_column_comment(here, engine, woningbouwplannen_schema, dbsession):
     results = engine.execute(
         """
         SELECT pgd.description
-        FROM pg_catalog.pg_statio_all_tables as st
-        INNER JOIN pg_catalog.pg_description pgd on (pgd.objoid=st.relid)
-        INNER JOIN information_schema.columns c on (pgd.objsubid=c.ordinal_position
-        AND  c.table_schema=st.schemaname and c.table_name=st.relname)
-        WHERE table_name  = 'woningbouwplannen_woningbouwplan'
-        AND column_name = 'projectnaam';
-    """
+            FROM pg_catalog.pg_statio_all_tables AS st
+                     INNER JOIN pg_catalog.pg_description pgd ON (pgd.objoid = st.relid)
+                     INNER JOIN information_schema.columns c ON (pgd.objsubid = c.ordinal_position
+                AND c.table_schema = st.schemaname AND c.table_name = st.relname)
+            WHERE table_name = 'woningbouwplannen_woningbouwplan'
+              AND column_name = 'projectnaam';
+        """
     )
     record = results.fetchone()
     assert record.description == "Naam van het project"
@@ -146,8 +143,8 @@ def test_add_table_comment(here, engine, woningbouwplannen_schema, dbsession):
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=False)
     results = engine.execute(
         """
-        SELECT obj_description('public.woningbouwplannen_woningbouwplan'::regclass) as description;
-    """
+        SELECT OBJ_DESCRIPTION('public.woningbouwplannen_woningbouwplan'::REGCLASS) AS description;
+        """
     )
     record = results.fetchone()
     assert (
@@ -170,7 +167,7 @@ def test_create_table_db_schema(here, engine, woningbouwplannen_schema, dbsessio
     results = engine.execute(
         """
         SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan'
-    """
+        """
     )
     record = results.fetchone()
     assert record.schemaname == "schema_foo_bar"
@@ -183,7 +180,7 @@ def test_create_table_no_db_schema(here, engine, woningbouwplannen_schema, dbses
     results = engine.execute(
         """
         SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan'
-    """
+        """
     )
     record = results.fetchone()
     assert record.schemaname == "public"
@@ -202,7 +199,7 @@ def test_create_table_temp_name(engine, woningbouwplannen_schema, gebieden_schem
     results = engine.execute(
         """
         SELECT tablename FROM pg_tables WHERE tablename = 'foo_bar'
-    """
+        """
     )
     record = results.fetchone()
     assert record.tablename == "foo_bar"
