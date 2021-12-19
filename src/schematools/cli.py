@@ -593,7 +593,18 @@ def create_identifier_index(db_url: str, schema_url: str, dataset_id: str) -> No
     importer = BaseImporter(dataset_schema, engine)
 
     for table in dataset_schema.tables:
-        importer.generate_db_objects(table.id, ind_tables=False, ind_extra_index=True)
+        if importer.is_versioned_dataset:
+            schema_name = dataset_schema.id
+            table_name = table.db_name(with_dataset_prefix=False, with_version=True)
+            importer.generate_db_objects(
+                table.id,
+                db_schema_name=schema_name,
+                db_table_name=table_name,
+                ind_tables=False,
+                ind_extra_index=True,
+            )
+        else:
+            importer.generate_db_objects(table.id, ind_tables=False, ind_extra_index=True)
 
 
 @create.command("tables")
@@ -607,7 +618,18 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
     importer = BaseImporter(dataset_schema, engine)
 
     for table in dataset_schema.tables:
-        importer.generate_db_objects(table.id, ind_extra_index=False, ind_tables=True)
+        if importer.is_versioned_dataset:
+            schema_name = dataset_schema.id
+            table_name = table.db_name(with_dataset_prefix=False, with_version=True)
+            importer.generate_db_objects(
+                table.id,
+                db_schema_name=schema_name,
+                db_table_name=table_name,
+                ind_extra_index=False,
+                ind_tables=True,
+            )
+        else:
+            importer.generate_db_objects(table.id, ind_extra_index=False, ind_tables=True)
 
 
 @create.command("sql")
@@ -636,7 +658,16 @@ def create_all_objects(db_url: str, schema_url: str, dataset_id: str) -> None:
     importer = BaseImporter(dataset_schema, engine)
 
     for table in dataset_schema.tables:
-        importer.generate_db_objects(table.id)
+        if importer.is_versioned_dataset:
+            schema_name = dataset_schema.id
+            table_name = table.db_name(with_dataset_prefix=False, with_version=True)
+            importer.generate_db_objects(
+                table.id,
+                db_schema_name=schema_name,
+                db_table_name=table_name,
+            )
+        else:
+            importer.generate_db_objects(table.id)
 
 
 @diff.command("all")
