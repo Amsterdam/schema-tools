@@ -52,7 +52,7 @@ def tables_factory(
                 and (dataset_table.is_nested_table or dataset_table.is_through_table)
                 and db_table_names.get(dataset_table.parent_table.id) is not None
             )
-            postfix = TMP_TABLE_POSTFIX if has_postfix else None
+            postfix = TMP_TABLE_POSTFIX if has_postfix else ""
             db_table_name = dataset_table.db_name(postfix=postfix)
 
         # If schema is None, default to Public. Leave it to None will have a risk that
