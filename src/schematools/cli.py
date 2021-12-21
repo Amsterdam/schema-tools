@@ -592,7 +592,7 @@ def create_identifier_index(db_url: str, schema_url: str, dataset_id: str) -> No
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in dataset_schema.tables:
+    for table in dataset_schema.get_tables(include_nested=True, include_through=True):
         if importer.is_versioned_dataset:
             schema_name = dataset_schema.id
             table_name = table.db_name(with_dataset_prefix=False, with_version=True)
@@ -602,9 +602,12 @@ def create_identifier_index(db_url: str, schema_url: str, dataset_id: str) -> No
                 db_table_name=table_name,
                 ind_tables=False,
                 ind_extra_index=True,
+                limit_tables_to={table.id},
             )
         else:
-            importer.generate_db_objects(table.id, ind_tables=False, ind_extra_index=True)
+            importer.generate_db_objects(
+                table.id, ind_tables=False, ind_extra_index=True, limit_tables_to={table.id}
+            )
 
 
 @create.command("tables")
@@ -617,7 +620,7 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
     dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in dataset_schema.tables:
+    for table in dataset_schema.get_tables(include_nested=True, include_through=True):
         if importer.is_versioned_dataset:
             schema_name = dataset_schema.id
             table_name = table.db_name(with_dataset_prefix=False, with_version=True)
@@ -627,9 +630,12 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
                 db_table_name=table_name,
                 ind_extra_index=False,
                 ind_tables=True,
+                limit_tables_to={table.id},
             )
         else:
-            importer.generate_db_objects(table.id, ind_extra_index=False, ind_tables=True)
+            importer.generate_db_objects(
+                table.id, ind_extra_index=False, ind_tables=True, limit_tables_to={table.id}
+            )
 
 
 @create.command("sql")
@@ -657,7 +663,7 @@ def create_all_objects(db_url: str, schema_url: str, dataset_id: str) -> None:
     dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in dataset_schema.tables:
+    for table in dataset_schema.get_tables(include_nested=True, include_through=True):
         if importer.is_versioned_dataset:
             schema_name = dataset_schema.id
             table_name = table.db_name(with_dataset_prefix=False, with_version=True)
@@ -665,9 +671,10 @@ def create_all_objects(db_url: str, schema_url: str, dataset_id: str) -> None:
                 table.id,
                 db_schema_name=schema_name,
                 db_table_name=table_name,
+                limit_tables_to={table.id},
             )
         else:
-            importer.generate_db_objects(table.id)
+            importer.generate_db_objects(table.id, limit_tables_to={table.id})
 
 
 @diff.command("all")
