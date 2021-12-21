@@ -1009,7 +1009,7 @@ class DatasetTableSchema(SchemaType):
         *,
         with_dataset_prefix: bool = True,
         with_version: bool = False,
-        postfix: Optional[str] = None,
+        postfix: str = "",
         check_assert: bool = True,
     ) -> str:
         """Return derived table name for DB usage.
@@ -1030,17 +1030,34 @@ class DatasetTableSchema(SchemaType):
             version_postfix = self.version.signif
         if with_dataset_prefix:
             dataset_prefix = self.dataset.id
-        db_table_name = "_".join(
-            filter(None, (dataset_prefix, to_snake_case(self.name), version_postfix, postfix))
-        )
-        # We should not be shortening table names automatically! Instead we should rely on
+        if self.nested_table or self.through_table:
+            # We don't automatically shorten user defined table names. Automatically generated
+            # names, however, should be shortened as the user has no direct control over them.
+            db_table_name = "_".join(filter(None, (dataset_prefix, to_snake_case(self.name))))
+            additional_underscores = len(list(filter(None, (version_postfix, postfix))))
+            max_length = (
+                MAX_TABLE_NAME_LENGTH
+                - len(version_postfix)
+                - len(postfix)
+                - additional_underscores
+            )
+            # Shortening should preserve both postfixes
+            db_table_name = "_".join(
+                filter(None, (db_table_name[:max_length], version_postfix, postfix))
+            )
+        else:
+            # User defined table name -> no schortening
+            db_table_name = "_".join(
+                filter(None, (dataset_prefix, to_snake_case(self.name), version_postfix, postfix))
+            )
+        # We are not shortening user defined table names automatically. Instead we rely on
         # validation code to prevent table ids in Amsterdam Schema's that result in DB table
         # names that are too long. Why? Haphazardly shortening names results in table names that
         # differ from what the user has specified in the corresponding Amsterdam Schema
         # potentially leading to confusion. It might also result in name clashes by turning a
         # previously unique name into a non-unique name by accidentally chopping off what made
-        # the name unique. So we will have to do with an `assert` here, and fix Amsterdam Schema's
-        # by specifying `shortname`s for whatever breaks.
+        # the name unique. So we will have to do with an `assert` here, and fix Amsterdam
+        # Schema's by specifying `shortname`s for whatever breaks.
         logger.debug(
             "Derived table name is '%s', its length: %d, max allowed length: %d",
             db_table_name,
