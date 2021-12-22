@@ -1,87 +1,21 @@
 """Datbase storage of metadata from imported Amsterdam schema files."""
 import json
-from collections import defaultdict
 
-from dateutil.parser import parse as dtparse
-from sqlalchemy import DateTime, inspect
+from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
 
 from schematools import models
-from schematools.exceptions import ParserError
-from schematools.types import DatasetSchema
-from schematools.utils import to_snake_case, toCamelCase
+from schematools.utils import toCamelCase
 
 
 def fetch_table_names(engine):
-    """Fetches all tablenames, to be used in other commands"""
+    """Fetches all tablenames, to be used in other commands."""
     insp = inspect(engine)
     return insp.get_table_names()
 
 
-def create_meta_tables(engine):
-    models.Base.metadata.drop_all(engine)
-    models.Base.metadata.create_all(engine)
-
-
-def transformer_factory(model):
-
-    transforms = defaultdict(lambda: lambda x: x)
-    transforms[DateTime] = lambda x: x and dtparse(x) or None
-
-    transform_lookup = {col.name: transforms[col.type.__class__] for col in model.__table__.c}
-
-    def _transformer(content):
-        try:
-            return {k: transform_lookup[k](v) for k, v in content.items()}
-        except ValueError as e:
-            raise ParserError(f"Failed to parse row: {e}, at {content!r}") from e
-
-    return _transformer
-
-
-def create_meta_table_data(engine, dataset_schema: DatasetSchema):
-    session = sessionmaker(bind=engine)()
-    ds_content = {to_snake_case(k): v for k, v in dataset_schema.items() if k != "tables"}
-    ds_content["contact_point"] = str(ds_content.get("contact_point", ""))
-    ds_transformer = transformer_factory(models.Dataset)
-    dataset = models.Dataset(**ds_transformer(ds_content))
-    session.add(dataset)
-
-    for table_data in dataset_schema["tables"]:
-        table_content = {
-            to_snake_case(k): v for k, v in table_data.default.items() if k != "schema"
-        }
-
-        table = models.Table(
-            **{
-                **table_content,
-                **{f: table_data.default["schema"].get(f) for f in ("required", "display")},
-            }
-        )
-        table.dataset_id = dataset.id
-        session.add(table)
-
-        for field_name, field_value in table_data.default["schema"]["properties"].items():
-            field_content = {
-                k.replace("$", ""): v for k, v in field_value.items() if k not in {"$comment"}
-            }
-            field_content["name"] = field_name
-            try:
-                field = models.Field(**field_content)
-            except TypeError as e:
-                raise NotImplementedError(
-                    f'Import failed: at "{field_name}": {field_value!r}:\n{e}'
-                ) from e
-
-            field.table_id = table.id
-            field.dataset_id = dataset.id
-            session.add(field)
-
-    session.commit()
-
-
 def fetch_schema_from_relational_schema(engine, dataset_id) -> dict:
-    """Restore the schema based on the stored metadata"""
+    """Restore the schema based on the stored metadata."""
     session = sessionmaker(bind=engine)()
     dataset = (
         session.query(models.Dataset)
