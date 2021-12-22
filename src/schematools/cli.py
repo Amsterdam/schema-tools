@@ -11,18 +11,12 @@ import sqlalchemy
 from deepdiff import DeepDiff
 from json_encoder import json
 from jsonschema import draft7_format_checker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateTable
 
 from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL
 from schematools.datasetcollection import DatasetCollection, set_schema_loader
-from schematools.db import (
-    create_meta_table_data,
-    create_meta_tables,
-    fetch_schema_from_relational_schema,
-    fetch_table_names,
-)
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
 from schematools.exceptions import ParserError
@@ -454,17 +448,8 @@ def show_provenance(dataset_id: str) -> None:
 def show_tablenames(db_url: str) -> None:
     """Retrieve tablenames from a database."""
     engine = _get_engine(db_url)
-    click.echo("\n".join(fetch_table_names(engine)))
-
-
-@show.command("schema")
-@option_db_url
-@click.argument("dataset_id")
-def show_schema(db_url: str, dataset_id: str) -> None:
-    """Generate a json schema based on a schema define in a relational database."""
-    engine = _get_engine(db_url, pg_schemas=["meta"])
-    aschema = fetch_schema_from_relational_schema(engine, dataset_id)
-    click.echo(json.dumps(aschema, indent=2))
+    names = inspect(engine).get_table_names()
+    click.echo("\n".join(names))
 
 
 @show.command("mapfile")
@@ -580,20 +565,6 @@ def import_events(
     with engine.connect() as connection:
         importer = EventsProcessor(dataset_schemas, srid, connection, truncate=truncate_table)
         importer.load_events_from_file(events_path)
-
-
-@import_.command("schema")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-def import_schema(db_url: str, schema_url: str, dataset_id: str) -> None:
-    """Import the schema definition into the local database."""
-    # Add drop or not flag
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-
-    create_meta_tables(engine)
-    create_meta_table_data(engine, dataset_schema)
 
 
 def _get_dataset_schema(
