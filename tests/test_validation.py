@@ -13,7 +13,25 @@ from schematools.validation import (
     ActiveVersionsValidator,
     IdentPropRefsValidator,
     PsqlIdentifierLengthValidator,
+    ValidationError,
+    _validate_camelcase,
 )
+
+
+def test_validate_camelcase():
+    for ident in ("camelCase", "camelCase100"):
+        assert _validate_camelcase(ident) is None
+
+    assert isinstance(_validate_camelcase(""), ValidationError)
+
+    for ident, suggest in (
+        ("snake_case", "snakeCase"),
+        ("camelCase_snake", "camelCaseSnake"),
+        ("camel100camel", "camel100Camel"),
+    ):
+        error = _validate_camelcase(ident)
+        assert isinstance(error, ValidationError)
+        assert error.message.endswith(f"suggestion: {suggest}")
 
 
 def test_PsqlIdentifierLengthValidator(here: Path) -> None:

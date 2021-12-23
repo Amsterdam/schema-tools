@@ -50,7 +50,7 @@ from typing import Callable, ClassVar, Iterator, List, Set, Type, cast, final
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.types import DatasetSchema, SemVer, TableVersions
-from schematools.utils import to_snake_case
+from schematools.utils import to_snake_case, toCamelCase
 
 
 @dataclass(frozen=True)
@@ -125,6 +125,28 @@ class Validator:
         for validator_cls in self._registry:
             validator_inst = validator_cls(dataset=self.dataset)
             yield from validator_inst.validate()
+
+
+class CamelCaseValidator(Validator):
+    """Checks that conversion to snake case and back leaves field identifiers unchanged."""
+
+    def validate(self) -> Iterator[ValidationError]:
+        """Run validation."""
+        for table in self.dataset.tables:
+            for field in table.fields:
+                error = _validate_camelcase(field.id)
+                if error is not None:
+                    yield error
+
+
+def _validate_camelcase(ident: str) -> Iterator[ValidationError]:
+    if ident == "":
+        return ValidationError("CamelCaseValidator", "empty identifier not allowed")
+    camel = toCamelCase(to_snake_case(ident))
+    if camel == ident:
+        return
+    msg = f"{ident} does not survive conversion to snake case and back, suggestion: {camel}"
+    return ValidationError("CamelCaseValidator", msg)
 
 
 class PsqlIdentifierLengthValidator(Validator):
