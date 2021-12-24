@@ -250,6 +250,7 @@ class BaseImporter:
         ind_tables: bool = True,
         ind_extra_index: bool = True,
         limit_tables_to: Optional[Set] = None,
+        is_versioned_dataset: bool = False,
     ) -> None:
         """Generate the tablemodels, tables and indexes.
 
@@ -267,10 +268,45 @@ class BaseImporter:
             limit_tables_to: Only process the indicated tables. Normally, SA tables
                 are generated for the whole dataset where `table_id` belongs to.
                 Sometimes, this is not needed/wanted.
+            is_versioned_dataset: Indicate whether the tables should be created in a private DB
+                schema with a version in their name. See also:
+                :attr:`.BaseImporter.is_versioned_dataset`. The private
+                schema name will be derived from the dataset ID, unless overridden by the
+                ``db_schema_name`` parameter.
         """
         self.dataset_table = cast(
             DatasetTableSchema, self.dataset_schema.get_table_by_id(table_id)
         )
+
+        if is_versioned_dataset:
+            if db_schema_name is None:
+                # private DB schema instead of `public`
+                db_schema_name = self.dataset_schema.id
+            else:
+                self.logger.log_warning(
+                    "Versioning is specified, though schema name is explicitly overridden. "
+                    "Is this really want you want?"
+                )
+            if db_table_name is None:
+                db_table_name = self.dataset_table.db_name(
+                    # No dataset prefix as the tables will be created in their own
+                    # private schema.
+                    with_dataset_prefix=False,
+                    with_version=True,
+                )
+            else:
+                self.logger.log_warning(
+                    "Versioning is specified, though table name is explicitly overridden. "
+                    "Is this really what you want?"
+                )
+            if {table_id} != limit_tables_to:
+                # We don't want to push versioning logic (eg how schema and the tables are
+                # named) deeper into our code base. Hence we don't want the `tables_factory` to
+                # generated (and consequently name) additional tables beyond what we have
+                # explicitly specified.
+                raise Exception(
+                    "When using versioning each table should be specified individually."
+                )
 
         if db_schema_name is not None:
             self.create_schema(db_schema_name)
@@ -279,6 +315,8 @@ class BaseImporter:
 
             # Collect provenance info for easy re-use
             self.fields_provenances = self.fetch_fields_provenances(self.dataset_table)
+
+            # FIXME This is nasty! Better to rely on explicit parameter passing.
             self.db_table_name = db_table_name
             # Bind the metadata
             metadata.bind = self.engine
