@@ -238,7 +238,7 @@ class ActiveVersionsValidator(Validator):
         # The current Amsterdam Meta Schema does not allow for inline definitions of multiple
         # active tables versions. In addition :class:`DatasetSchema`'s
         # :property:`~DatasetSchema.tables` property and :meth:~DatasetSchema.get_tables` method
-        # still assume that there will always be one and only one table. The part of
+        # still assume that there will always be one and only one version. The part of
         # :class:`DatasetSchema` that has gained some knowledge of multiple active versions is
         # its internal representation with the addition of the :class:`TableVersions` class.
         # Hence it is the internal representation that we use for this validation.
