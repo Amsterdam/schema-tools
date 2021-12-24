@@ -1,11 +1,23 @@
 import hashlib
 import operator
-from collections import Counter, UserDict
+from collections import Counter, UserDict, defaultdict
 from functools import cached_property, reduce
 from itertools import islice
 from logging import Logger
 from pathlib import PosixPath
-from typing import Any, Dict, Final, Iterator, List, Optional, Set, TypeVar, Union, cast
+from typing import (
+    Any,
+    DefaultDict,
+    Dict,
+    Final,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import click
 import psycopg2
@@ -349,6 +361,7 @@ class BaseImporter:
                     db_schema_name=db_schema_name,
                     metadata=metadata,
                     db_table_name=self.db_table_name,
+                    is_versioned_dataset=is_versioned_dataset,
                 )
                 metadata_inspector = inspect(metadata.bind)
                 self.prepare_extra_index(
@@ -593,14 +606,21 @@ def index_factory(
     db_table_name: Optional[str] = None,
     db_schema_name: Optional[str] = None,
     logger: Optional[Logger] = None,
+    is_versioned_dataset: bool = False,
 ) -> Dict[str, List[Index]]:
     """Generates one or more SQLAlchemy Index objects to work with the JSON Schema.
 
-    :param dataset_table: The Amsterdam Schema definition of the table
-    :param metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
-    :param db_table_name: Optional table name, which is otherwise inferred from the schema name.
-    :param db_schema_name: Optional database schema name, which is otherwise None
-        and defaults to public.
+    Args:
+        dataset_table: The Amsterdam Schema definition of the table
+        metadata: SQLAlchemy schema metadata that groups all tables to a single connection.
+        db_table_name: Optional table name, which is otherwise inferred from the schema name.
+        db_schema_name: Optional database schema name, which is otherwise None and
+            defaults to "public"
+        is_versioned_dataset: Indicate whether the indices should be created in a private DB
+            schema with a version in their name. See also:
+            :attr:`.BaseImporter.is_versioned_dataset`. The private
+            schema name will be derived from the dataset ID, unless overridden by the
+            ``db_schema_name`` parameter.
 
     Identifier index:
     In the JSON Schema definition of the table, an identifier arry may be definied.
@@ -621,63 +641,76 @@ def index_factory(
 
     The returned Index objects are keyed on the name of table
     """
-    indexes = {}
+    indexes: DefaultDict[str, List[Index]] = defaultdict(list)
     _metadata = cast(MetaData, metadata or MetaData())
     _logger = LogfileLogger(logger) if logger else CliLogger()
 
-    # This is really ugly, mypy forces a new local variable here,
-    # otherwise it keeps complaining about the type of db_table_name being Optional.
-    if db_table_name is None:
-        _db_table_name = dataset_table.db_name()
+    if is_versioned_dataset:
+        if db_schema_name is None:
+            # private DB schema instead of `public`
+            db_schema_name = dataset_table.parent_schema.id
+        if db_table_name is None:
+            db_table_name = dataset_table.db_name(
+                # No dataset prefix as the tables will be created in their own
+                # private schema.
+                with_dataset_prefix=False,
+                with_version=True,
+            )
     else:
-        _db_table_name = db_table_name
+        if db_schema_name is None:
+            db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
+        if db_table_name is None:
+            db_table_name = dataset_table.db_name()
 
-    final_db_schema_name = (
-        DATABASE_SCHEMA_NAME_DEFAULT if db_schema_name is None else db_schema_name
-    )
-    table_name = f"{final_db_schema_name}.{_db_table_name}"
+    table_name = f"{db_schema_name}.{db_table_name}"
 
     try:
         table_object = _metadata.tables[table_name]
     except KeyError:
         _logger.log_error(f"{table_name} cannot be found.")
 
-    indexes_to_create = []
-
     def make_hash_value(index_name: str) -> str:
         """Create a hash value for index_name.
 
-        Postgres DB holds currently 63 max characters for objectnames.
-        To prevent exceeds and collisions, the index names are shortend
+        Postgres DB holds currently 63 max characters for object names.
+        To prevent exceeds and collisions, the index names are shortened
         based upon a hash.
         With the blake2s algorithm a digest size is set to 20 bytes,
-        which proceduces a 40 character long heximal string plus
+        which produces a 40 character long hexadecimal string plus
         the additional 4 character postfix of '_idx' (TABLE_INDEX_POSTFIX).
         """
         return (
             hashlib.blake2s(index_name.encode(), digest_size=20).hexdigest() + TABLE_INDEX_POSTFIX
         )
 
-    def define_fk_index() -> None:
+    def define_fk_index(
+        dataset_table: DatasetTableSchema, db_table_name: str
+    ) -> Dict[str, List[Index]]:
         """Creates an index on Foreign Keys."""
+        indexes: Dict[str, List[Index]] = {}
+        indexes_to_create: List[Index] = []
         if dataset_table.get_fk_fields():
 
             for field in dataset_table.get_fk_fields():
                 field_name = f"{to_snake_case(field)}_id"
-                index_name = f"{_db_table_name}_{field_name}_idx"
+                index_name = f"{db_table_name}_{field_name}_idx"
                 if len(index_name) > MAX_TABLE_NAME_LENGTH:
                     index_name = make_hash_value(index_name)
                 indexes_to_create.append(Index(index_name, table_object.c[field_name]))
 
         # add Index objects to create
-        indexes[_db_table_name] = indexes_to_create
+        indexes[db_table_name] = indexes_to_create
+        return indexes
 
-    def define_identifier_index() -> None:
+    def define_identifier_index(
+        dataset_table: DatasetTableSchema, db_table_name: str
+    ) -> Dict[str, List[Index]]:
         """Creates index based on the 'identifier' specification in the Amsterdam schema."""
-        identifier_column_snaked = []
+        identifier_column_snaked: List[str] = []
+        indexes: Dict[str, List[Index]] = {}
+        indexes_to_create: List[Index] = []
 
-        if not indexes_to_create and dataset_table.identifier:
-
+        if dataset_table.identifier:
             for identifier_column in dataset_table.identifier:
                 try:
                     identifier_column_snaked.append(
@@ -689,19 +722,23 @@ def index_factory(
                     _logger.log_error(f"{e.__str__} on {dataset_table.id}.{identifier_column}")
                     continue
 
-        index_name = f"{_db_table_name}_identifier_idx"
+        index_name = f"{db_table_name}_identifier_idx"
         if len(index_name) > MAX_TABLE_NAME_LENGTH:
             index_name = make_hash_value(index_name)
         indexes_to_create.append(Index(index_name, *identifier_column_snaked))
 
         # add Index objects to create
-        indexes[_db_table_name] = indexes_to_create
+        indexes[db_table_name] = indexes_to_create
+        return indexes
 
-    def define_throughtable_index() -> None:
+    def define_throughtable_index(
+        dataset_table: DatasetTableSchema, is_versioned_dataset: bool
+    ) -> Dict[str, List[Index]]:
         """Creates index(es) on the many-to-many tables.
 
         Those are based on 'relation' specification in the Amsterdam schema.
         """
+        indexes: Dict[str, List[Index]] = {}
         for table in dataset_table.get_through_tables_by_id():
 
             through_columns: List[str] = []
@@ -721,7 +758,11 @@ def index_factory(
 
             # create the Index objects
             if through_columns:
-                table_id = f"{final_db_schema_name}.{table.db_name()}"
+                if is_versioned_dataset:
+                    table_db_name = table.db_name(with_dataset_prefix=False, with_version=True)
+                else:
+                    table_db_name = table.db_name()
+                table_id = f"{db_schema_name}.{table_db_name}"
                 try:
                     table_object = _metadata.tables[table_id]
 
@@ -744,11 +785,18 @@ def index_factory(
                         continue
 
                 # add Index objects to create
-                indexes[table.db_name()] = indexes_to_create
+                indexes[table_db_name] = indexes_to_create
+        return indexes
+
+    def merge(
+        indexes: DefaultDict[str, List[Index]], defined_indexes: Dict[str, List[Index]]
+    ) -> None:
+        for table_db_name in defined_indexes.keys():
+            indexes[table_db_name].extend(defined_indexes[table_db_name])
 
     if ind_extra_index:
-        define_identifier_index()
-        define_throughtable_index()
-        define_fk_index()
+        merge(indexes, define_identifier_index(dataset_table, db_table_name))
+        merge(indexes, define_throughtable_index(dataset_table, is_versioned_dataset))
+        merge(indexes, define_fk_index(dataset_table, db_table_name))
 
     return indexes
