@@ -592,12 +592,11 @@ def create_identifier_index(db_url: str, schema_url: str, dataset_id: str) -> No
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in dataset_schema.get_tables(include_nested=True, include_through=True):
+    for table in dataset_schema.get_tables():
         importer.generate_db_objects(
             table.id,
             ind_tables=False,
             ind_extra_index=True,
-            limit_tables_to={table.id},
             is_versioned_dataset=importer.is_versioned_dataset,
         )
 
@@ -612,26 +611,24 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
     dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in dataset_schema.get_tables(include_nested=True, include_through=True):
+    for table in dataset_schema.get_tables():
         importer.generate_db_objects(
             table.id,
             ind_extra_index=False,
             ind_tables=True,
-            limit_tables_to={table.id},
             is_versioned_dataset=importer.is_versioned_dataset,
         )
 
 
 @create.command("sql")
+@click.option("--versioned/--no-versioned", default=True)
 @option_db_url
 @click.argument("schema_path")
-def create_sql(db_url: str, schema_path: str) -> None:
+def create_sql(versioned: bool, db_url: str, schema_path: str) -> None:
     """Generate SQL Create from amsterdam schema definition."""
     engine = _get_engine(db_url)
     dataset_schema = dataset_schema_from_path(schema_path)
-    tables = tables_factory(
-        dataset_schema,
-    )
+    tables = tables_factory(dataset_schema, is_versioned_dataset=versioned)
     for table in tables.values():
         table_sql = CreateTable(table).compile(engine)
         click.echo(str(table_sql))
@@ -647,10 +644,9 @@ def create_all_objects(db_url: str, schema_url: str, dataset_id: str) -> None:
     dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
     importer = BaseImporter(dataset_schema, engine)
 
-    for table in dataset_schema.get_tables(include_nested=True, include_through=True):
+    for table in dataset_schema.get_tables():
         importer.generate_db_objects(
             table.id,
-            limit_tables_to={table.id},
             is_versioned_dataset=importer.is_versioned_dataset,
         )
 

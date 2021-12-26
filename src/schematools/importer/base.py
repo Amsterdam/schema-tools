@@ -311,14 +311,6 @@ class BaseImporter:
                     "Versioning is specified, though table name is explicitly overridden. "
                     "Is this really what you want?"
                 )
-            if {table_id} != limit_tables_to:
-                # We don't want to push versioning logic (eg how schema and the tables are
-                # named) deeper into our code base. Hence we don't want the `tables_factory` to
-                # generated (and consequently name) additional tables beyond what we have
-                # explicitly specified.
-                raise Exception(
-                    "When using versioning each table should be specified individually."
-                )
 
         if db_schema_name is not None:
             self.create_schema(db_schema_name)
@@ -343,6 +335,7 @@ class BaseImporter:
                 db_schema_names={table_id: db_schema_name},
                 db_table_names={table_id: db_table_name},
                 limit_tables_to=limit_tables_to,
+                is_versioned_dataset=is_versioned_dataset,
             )
 
         if db_table_name is None:
