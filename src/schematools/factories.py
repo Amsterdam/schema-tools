@@ -4,7 +4,7 @@ from typing import Dict, Optional, Set
 
 from sqlalchemy import Column, MetaData, Table
 
-from schematools import TMP_TABLE_POSTFIX, DATABASE_SCHEMA_NAME_DEFAULT
+from schematools import DATABASE_SCHEMA_NAME_DEFAULT, TMP_TABLE_POSTFIX
 from schematools.importer import fetch_col_type
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
@@ -16,6 +16,7 @@ def tables_factory(
     db_table_names: Optional[Dict[str, Optional[str]]] = None,
     db_schema_names: Optional[Dict[str, Optional[str]]] = None,
     limit_tables_to: Optional[Set] = None,
+    is_versioned_dataset: bool = False,
 ) -> Dict[str, Table]:
     """Generate the SQLAlchemy Table objects base on a `DatasetSchema` definition.
 
@@ -27,6 +28,11 @@ def tables_factory(
         db_schema_names: Optional database schema names, keyed on dataset_table_id.
             If not given, schema names default to `public`.
         limit_tables_to: Only process the indicated tables (based on table.id).
+        is_versioned_dataset: Indicate whether the tables should be created in a private DB
+            schema with a version in their name. See also:
+            :attr:`.BaseImporter.is_versioned_dataset`. The private
+            schema name will be derived from the dataset ID, unless overridden by the
+            ``db_schema_name`` parameter.
 
     The returned tables are keyed on the name of the dataset and table.
     SA Table objects are also created for the junction tables that are needed for relations.
@@ -55,13 +61,21 @@ def tables_factory(
                 and parent_table_name.endswith(TMP_TABLE_POSTFIX)
             )
             postfix = TMP_TABLE_POSTFIX if has_postfix else ""
-            db_table_name = dataset_table.db_name(postfix=postfix)
+            if is_versioned_dataset:
+                db_table_name = dataset_table.db_name(
+                    with_dataset_prefix=False, with_version=True, postfix=postfix
+                )
+            else:
+                db_table_name = dataset_table.db_name(postfix=postfix)
 
         # If schema is None, default to Public. Leave it to None will have a risk that
         # the DB schema that is currently in use will be used to create the table in
         # leading to unwanted/unexepected results
         if (db_schema_name := (db_schema_names or {}).get(dataset_table.id)) is None:
-            db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
+            if is_versioned_dataset:
+                db_schema_name = dataset.id
+            else:
+                db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
         columns = []
         for field in dataset_table.fields:
 
