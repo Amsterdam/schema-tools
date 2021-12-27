@@ -1,7 +1,37 @@
 from datetime import date
+from typing import Final
+
+from sqlalchemy import Boolean, text
+from sqlalchemy.sql.elements import TextClause
 
 from schematools.importer.base import BaseImporter
 from schematools.importer.ndjson import NDJSONImporter
+
+SCHEMA_EXISTS: Final[TextClause] = text(
+    """
+    SELECT EXISTS(SELECT schema_name
+              FROM information_schema.schemata
+              WHERE schema_name = :schema_name) AS exists
+    """
+).columns(exists=Boolean)
+TABLE_EXISTS: Final[TextClause] = text(
+    """
+    SELECT EXISTS(SELECT table_name
+              FROM information_schema.tables
+              WHERE table_schema = :schema_name
+                AND table_name = :table_name
+                AND table_type = 'BASE TABLE') AS exists;
+    """
+).columns(exists=Boolean)
+VIEW_EXISTS: Final[TextClause] = text(
+    """
+    SELECT EXISTS(SELECT table_name
+              FROM information_schema.tables
+              WHERE table_schema = :schema_name
+                AND table_name = :view_name
+                AND table_type = 'VIEW') AS exists;
+    """
+).columns(exists=Boolean)
 
 
 def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsession):
@@ -184,6 +214,31 @@ def test_create_table_no_db_schema(here, engine, woningbouwplannen_schema, dbses
     )
     record = results.fetchone()
     assert record.schemaname == "public"
+
+
+def test_generate_db_objects_is_versioned_dataset(
+    here, engine, woningbouwplannen_schema, dbsession
+):
+    """Prove that dataset is created in private DB schema with versioned tables."""
+    assert not engine.scalar(SCHEMA_EXISTS, schema_name="woningbouwplannen")
+
+    importer = BaseImporter(woningbouwplannen_schema, engine)
+    importer.generate_db_objects(
+        "woningbouwplan", ind_tables=True, ind_extra_index=False, is_versioned_dataset=True
+    )
+    assert engine.scalar(SCHEMA_EXISTS, schema_name="woningbouwplannen")
+    for table_name in (
+        "woningbouwplan_1_0",
+        "woningbouwplan_buurten_1_0",
+        "woningbouwplan_buurten_as_scalar_1_0",
+    ):
+        assert engine.scalar(TABLE_EXISTS, schema_name="woningbouwplannen", table_name=table_name)
+    for view_name in (
+        "woningbouwplannen_woningbouwplan",
+        "woningbouwplannen_woningbouwplan_buurten",
+        "woningbouwplannen_woningbouwplan_buurten_as_scalar",
+    ):
+        assert engine.scalar(VIEW_EXISTS, schema_name="public", view_name=view_name)
 
 
 def test_create_table_temp_name(engine, woningbouwplannen_schema, gebieden_schema):
