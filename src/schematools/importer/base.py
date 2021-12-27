@@ -1,6 +1,7 @@
 import hashlib
 import operator
 from collections import Counter, UserDict, defaultdict
+from contextlib import closing
 from functools import cached_property, reduce
 from itertools import islice
 from logging import Logger
@@ -23,6 +24,7 @@ import click
 import psycopg2
 from jsonpath_rw import parse
 from jsonpath_rw.jsonpath import Child
+from psycopg2 import sql
 from sqlalchemy import Boolean, exc, inspect, text
 from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
@@ -32,7 +34,7 @@ from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.schema import Index, MetaData, Table
 
 from schematools import DATABASE_SCHEMA_NAME_DEFAULT, MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
-from schematools.factories import tables_factory
+from schematools.factories import tables_factory, views_factory
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case, toCamelCase
 
@@ -177,6 +179,7 @@ class BaseImporter:
         self.fields_provenances: Dict[str, str] = {}
         self.db_table_name: Optional[str] = None
         self.tables: Dict[str, Table] = {}
+        self.views: Dict[str, sql.SQL] = {}
         self.indexes: Dict[str, List[Index]] = {}
         self.pk_values_lookup: Dict[str, Set[Any]] = {}
         self.pk_colname_lookup: Dict[str, str] = {}
@@ -337,6 +340,8 @@ class BaseImporter:
                 limit_tables_to=limit_tables_to,
                 is_versioned_dataset=is_versioned_dataset,
             )
+            if is_versioned_dataset:
+                self.views = views_factory(dataset, self.tables)
 
         if db_table_name is None:
             self.db_table_name = self.dataset_table.db_name()
@@ -344,6 +349,7 @@ class BaseImporter:
         if ind_tables:
             self.prepare_tables(self.tables, truncate=truncate)
             self.create_pk_lookup(self.tables)
+            self.prepare_views()
 
         if ind_extra_index:
             try:
@@ -433,6 +439,14 @@ class BaseImporter:
                     table.create()
                 elif truncate:
                     self.engine.execute(table.delete())
+
+    def prepare_views(self) -> None:
+        """Create views, if any."""
+        # sql.SQL requires an actual DBAPI connectionØ
+        with closing(self.engine.raw_connection()) as conn, closing(conn.cursor()) as cur:
+            for view in self.views.values():
+                cur.execute(view)
+            conn.commit()
 
     def prepare_extra_index(
         self,
