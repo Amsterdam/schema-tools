@@ -11,7 +11,9 @@ import pytest
 import sqlalchemy_utils
 from more_ds.network.url import URL
 from sqlalchemy import MetaData
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.ddl import DropTable
 
 from schematools.importer.base import metadata
 from schematools.types import DatasetSchema, Json, ProfileSchema
@@ -23,6 +25,13 @@ HERE = Path(__file__).parent
 # fixtures engine and dbengine provided by pytest-sqlalchemy,
 # automatically discovered by pytest via setuptools entry-points.
 # https://github.com/toirl/pytest-sqlalchemy/blob/master/pytest_sqlalchemy.py
+
+
+@compiles(DropTable, "postgresql")
+def _compile_drop_table(element, compiler, **kwargs):
+    # A simple `engine.drop_all` is no sufficient anymore now that we also create views.
+    # We need a `CASCADE` for these views to be correctly dropped as well.
+    return compiler.visit_drop_table(element) + " CASCADE"
 
 
 @pytest.fixture
