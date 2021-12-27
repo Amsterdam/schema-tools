@@ -3,11 +3,13 @@
 import sys
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Tuple
+from urllib.parse import urlparse
 
 import click
 import jsonschema
 import requests
 import sqlalchemy
+from click import BadArgumentUsage
 from deepdiff import DeepDiff
 from json_encoder import json
 from jsonschema import draft7_format_checker
@@ -637,18 +639,60 @@ def create_sql(versioned: bool, db_url: str, schema_path: str) -> None:
 @create.command("all")
 @option_db_url
 @option_schema_url
-@argument_dataset_id
-def create_all_objects(db_url: str, schema_url: str, dataset_id: str) -> None:
-    """Execute SQLalchemy Index (Identifier fields) and Table objects."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
-    importer = BaseImporter(dataset_schema, engine)
+@click.option(
+    "-x",
+    "--exclude",
+    multiple=True,
+    type=str,
+    default=[],
+    help="dataset_id to exclude. Can be repeated.",
+)
+@click.argument("dataset_id", required=False)
+def create_all_objects(
+    db_url: str, schema_url: str, exclude: List[str], dataset_id: Optional[str]
+) -> None:
+    """Execute SQLalchemy Index (Identifier fields) and Table objects.
 
-    for table in dataset_schema.get_tables():
-        importer.generate_db_objects(
-            table.id,
-            is_versioned_dataset=importer.is_versioned_dataset,
-        )
+    If no DATASET_ID is provide it will process all datasets!
+    """
+    if dataset_id is None:
+        click.echo("No 'dataset_id' provided. Processing all datasets!")
+
+        # I'm kind of lost between the many different ways to load a schema. Some functions tie
+        # in to the SchemaLoader that, depending on the `schema_url`, transparently switches
+        # between loading from the filesystem or from the network . But not all functions that
+        # load schemas have been converted. Nor have they been deprecated. So they are still
+        # valid, do take a `schema_url` but can't load from the filesystem as is the case with
+        # `dataset_schemas_from_url`? Very confusing. So I am testing explicitly for the type of
+        # `schema_url` and if I don't like what I find I bail out.
+        if not urlparse(schema_url).scheme in ("http", "https"):
+            raise BadArgumentUsage(
+                "Can't load all datasets from the filesystem as "
+                "`dataset_schemas_from_url` does not tie in to the "
+                "SchemaLoader framework."
+            )
+        dataset_schemas = dataset_schemas_from_url(schema_url, prefetch_related=True)
+    else:
+        dataset_schemas = {
+            dataset_id: _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
+        }
+
+    engine = _get_engine(db_url)
+    for dataset_id, dataset_schema in dataset_schemas.items():
+        if dataset_id in exclude:
+            msg = f"Skipping dataset {dataset_id!r}"
+            click.echo(msg)
+            click.echo("=" * len(msg))
+            continue
+        msg = f"Processing dataset {dataset_id!r}"
+        click.echo(msg)
+        click.echo("-" * len(msg))
+        importer = BaseImporter(dataset_schema, engine)
+        for table in dataset_schema.get_tables():
+            importer.generate_db_objects(
+                table.id,
+                is_versioned_dataset=importer.is_versioned_dataset,
+            )
 
 
 @diff.command("all")
