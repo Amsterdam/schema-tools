@@ -489,8 +489,7 @@ class DatasetSchema(SchemaType):
 
         sub_table_schema = {
             "id": sub_table_id,
-            "originalID": field.name,
-            "parentTableID": table.id,
+            "originalID": field.id,
             "type": "table",
             "version": str(table.version),
             "auth": list(field.auth | table.auth),  # pass same auth rules as field has
@@ -587,6 +586,7 @@ class DatasetSchema(SchemaType):
             "id": table_id,
             "type": "table",
             "version": str(table.version),
+            "originalID": field.id,
             "throughFields": [left_table_id, target_field_id],
             "description": f"Auto-generated M2M table for {table.id}.{field.id}",
             "schema": {
@@ -749,6 +749,14 @@ class DatasetTableSchema(SchemaType):
         return self.parent_schema
 
     @property
+    def parent_table_field(self) -> Optional[DatasetFieldSchema]:
+        """Provide the NM-relation that generated this through table."""
+        if self.through_table or self.nested_table:
+            return self._parent_table.get_field_by_id(self["originalID"])
+        else:
+            return None
+
+    @property
     def description(self) -> Optional[str]:
         """The description of the table as stated in the schema."""
         return self.get("description")
@@ -907,7 +915,8 @@ class DatasetTableSchema(SchemaType):
 
     @property
     def has_parent_table(self) -> bool:
-        return "parentTableID" in self
+        """For nested or through tables, there is a parent table."""
+        return self.nested_table or self.through_table
 
     @property
     @deprecated("additionalFilters is no longer supported")

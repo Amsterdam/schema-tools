@@ -203,7 +203,7 @@ class DynamicModel(models.Model):
     @classmethod
     def has_parent_table(cls) -> bool:
         """Check if table is sub table for another table."""
-        return cls._table_schema.has_parent_table or cls._table_schema.is_through_table
+        return cls._table_schema.has_parent_table
 
     @classmethod
     def has_display_field(cls) -> bool:
