@@ -544,31 +544,7 @@ class DatasetSchema(SchemaType):
             - bestaat_uit_buurten_identificatie
             - bestaat_uit_buurten_volgnummer
         """
-        from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
-
-        def _get_fk_target_table(dataset_id: str, table_id: str) -> DatasetTableSchema:
-            if table.dataset is not None:
-                return table.dataset.get_dataset_schema(dataset_id).get_table_by_id(
-                    table_id, include_nested=False, include_through=False
-                )
-
-        def _expand_relation_spec(
-            fk_target_table: DatasetTableSchema, sub_table_schema: Json, field_id: str
-        ) -> None:
-            """Changes the spec. of a relation inside a schema to an object.
-
-            Originally, the spec for the relation is based on singular key
-            When the relation has a composite key, the spec needs to be
-            expanded into an object.
-            """
-            if fk_target_table:
-                sub_table_schema = cast(Dict[str, Any], sub_table_schema)
-                spec = sub_table_schema["schema"]["properties"][field_id]
-                spec["type"] = "object"
-                spec["properties"] = {
-                    toCamelCase(idf): {"type": fk_target_table.get_field_by_id(idf).type}
-                    for idf in fk_target_table.identifier
-                }
+        from schematools.utils import get_rel_table_identifier, toCamelCase
 
         # Build the through_table for n-m relation
         # For relations, we have to use the real ids of the tables
@@ -647,16 +623,25 @@ class DatasetSchema(SchemaType):
                 if (camel_dim_field := toCamelCase(dim_field)) in properties:
                     dim_fields[camel_dim_field] = properties[camel_dim_field]
 
+            right_table = self.dataset_collection.get_dataset(right_dataset_id).get_table_by_id(
+                right_table_id, include_nested=False, include_through=False
+            )
             for fk_target_table, relation_field_id in (
                 (table, left_table_id),
-                (_get_fk_target_table(right_dataset_id, right_table_id), target_field_id),
+                (right_table, target_field_id),
             ):
-                if (
-                    fk_target_table
-                    and fk_target_table.has_composite_key
-                    and not field.is_loose_relation
-                ):
-                    _expand_relation_spec(fk_target_table, sub_table_schema, relation_field_id)
+                if fk_target_table.has_composite_key and not field.is_loose_relation:
+                    # Change the spec of a relation inside a schema to an object.
+                    # Originally, the spec for the relation is based on singular key.
+                    # When the relation has a composite key,
+                    # the spec needs to be expanded into an object.
+                    sub_table_schema = cast(Dict[str, Any], sub_table_schema)
+                    spec = sub_table_schema["schema"]["properties"][relation_field_id]
+                    spec["type"] = "object"
+                    spec["properties"] = {
+                        toCamelCase(idf): {"type": fk_target_table.get_field_by_id(idf).type}
+                        for idf in fk_target_table.identifier
+                    }
 
             sub_table_schema["schema"]["properties"].update(dim_fields)
 
