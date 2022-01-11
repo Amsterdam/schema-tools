@@ -373,17 +373,9 @@ def to_snake_case(ident: str) -> str:
     )
 
 
-def get_rel_table_identifier(
-    prefix_length: int, table_identifier: str, through_identifier: str
-) -> str:
-    """Create identifier for related table (FK or M2M) from table_identifier and extra fieldname.
-
-    Take length of prefix (dataset.id) into account, postgresql has maxsize for tablenames.
-    """
-    through_table_name = f"{table_identifier}_{through_identifier}"
-    return through_table_name
-
-    # return through_table_name[: MAX_TABLE_NAME_LENGTH - len(TMP_TABLE_POSTFIX) - prefix_length]
+def get_rel_table_identifier(table_identifier: str, through_identifier: str) -> str:
+    """Create identifier for related table (FK or M2M) from table_identifier and extra fieldname."""
+    return f"{table_identifier}_{through_identifier}"
 
 
 def shorten_name(db_table_name: str, with_postfix: bool = False) -> str:
