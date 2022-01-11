@@ -19,11 +19,11 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, gebieden_schema, dbse
         for r in engine.execute("SELECT * from meetbouten_metingen_refereertaanreferentiepunten")
     ]
     # Should have a field 'id' in the n-m table
-    # an extra _identificatie is not needed, this is not a compound key
+    # an extra _identificatie is not needed, this is not a composite key
     assert "refereertaanreferentiepunten_id" in records[0]
 
 
-def test_ndjson_import_separate_relations_target_compound(
+def test_ndjson_import_separate_relations_target_composite(
     here, engine, meetbouten_schema, gebieden_schema, dbsession
 ):
     ndjson_path = here / "files" / "data" / "meetbouten_ligt_in_buurt.ndjson"
@@ -47,7 +47,7 @@ def test_ndjson_import_separate_relations_target_compound(
     ]
 
 
-def test_ndjson_import_separate_relations_both_compound(
+def test_ndjson_import_separate_relations_both_composite(
     here, engine, ggwgebieden_schema, dbsession
 ):
     ndjson_path = here / "files" / "data" / "ggwgebieden_bestaatuitbuurten.ndjson"
@@ -121,14 +121,14 @@ def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbse
     assert records[0]["merk_omschrijving"] == "De meetbout"
 
 
-def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsession):
+def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "ggwgebieden.ndjson"
     importer = NDJSONImporter(ggwgebieden_schema, engine)
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden")]
     assert len(records) == 1
-    # An "id" should have been generated, concat of the compound key fields
+    # An "id" should have been generated, concat of the composite key fields
     assert "id" in records[0]
     assert records[0]["id"] == "03630950000000.1"
     records = [
@@ -149,14 +149,14 @@ def test_ndjson_import_nm_compound_keys(here, engine, ggwgebieden_schema, dbsess
     assert records[0].keys() == columns
 
 
-def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_schema, dbsession):
+def test_ndjson_import_nm_composite_keys_with_geldigheid(here, engine, gebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "ggwgebieden-with-geldigheid.ndjson"
     importer = NDJSONImporter(gebieden_schema, engine)
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden")]
     assert len(records) == 1
-    # An "id" should have been generated, concat of the compound key fields
+    # An "id" should have been generated, concat of the composite key fields
     assert "id" in records[0]
     assert records[0]["id"] == "03630950000000.1"
 
@@ -192,7 +192,7 @@ def test_ndjson_import_nm_compound_keys_with_geldigheid(here, engine, gebieden_s
     assert set(records[0].keys()) == columns
 
 
-def test_ndjson_import_nm_compound_selfreferencing_keys(
+def test_ndjson_import_nm_composite_selfreferencing_keys(
     here, engine, kadastraleobjecten_schema, dbsession
 ):
     ndjson_path = here / "files" / "data" / "kadastraleobjecten.ndjson"
@@ -202,7 +202,7 @@ def test_ndjson_import_nm_compound_selfreferencing_keys(
 
     records = [dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten")]
     assert len(records) == 2
-    # An "id" should have been generated, concat of the compound key fields
+    # An "id" should have been generated, concat of the composite key fields
     assert "id" in records[0]
     assert records[0]["id"] == "KAD.001.1"
     records = [
@@ -311,7 +311,7 @@ def test_ndjson_import_with_shortnames_in_schema(
     ]
     assert len(records) == 1
     # In this case, the through table does not have extra fields, because the
-    # FK to the target is not a compound key.
+    # FK to the target is not a composite key.
     assert records[0] == {
         "id": 1,
         "activiteiten_id": "90004213",

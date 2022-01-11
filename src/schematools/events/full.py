@@ -246,7 +246,7 @@ class EventsProcessor:
                 elif truncate:
                     with self.conn.begin():
                         self.conn.execute(table.delete())
-                # self.has_compound_key = dataset_table.has_compound_key
+                # self.has_composite_key = dataset_table.has_composite_key
                 # skip the generated nm tables
                 if table_id not in base_tables_ids:
                     continue

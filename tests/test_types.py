@@ -180,14 +180,14 @@ def test_semver_eq() -> None:
 
 
 def test_dataset_schema_get_fields_with_surrogate_pk(
-    compound_key_schema: DatasetSchema, verblijfsobjecten_schema: DatasetSchema
+    composite_key_schema: DatasetSchema, verblijfsobjecten_schema: DatasetSchema
 ):
     """Prove that the surrogate 'id' key is returned once for schemas with a
-    compound key, regardless of whether the surrogate key is already defined
+    composite key, regardless of whether the surrogate key is already defined
     by the schema or generated"""
 
     verblijfsobjecten = verblijfsobjecten_schema.tables[0]
-    compound_key_schema = compound_key_schema.tables[0]
+    composite_key_schema = composite_key_schema.tables[0]
 
     # this schema gets a generated 'id'
     assert sorted([x.id for x in verblijfsobjecten.get_fields(include_subfields=False)]) == [
@@ -202,7 +202,7 @@ def test_dataset_schema_get_fields_with_surrogate_pk(
     ]
 
     # this schema defines an 'id'
-    assert sorted([x.name for x in compound_key_schema.get_fields(include_subfields=False)]) == [
+    assert sorted([x.name for x in composite_key_schema.get_fields(include_subfields=False)]) == [
         "beginGeldigheid",
         "eindGeldigheid",
         "id",
