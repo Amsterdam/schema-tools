@@ -69,7 +69,7 @@ class NDJSONImporter(BaseImporter):
 
         def _map_fields(row: Row) -> Row:
             for field_id, idfs__in_names in field_mapping.items():
-                if len(idfs__in_names) > 1:  # compound key
+                if len(idfs__in_names) > 1:  # composite key
                     row[field_id] = {idf: row[in_name] for idf, in_name in idfs__in_names}
                 else:
                     row[field_id] = row[idfs__in_names[0][1]]
@@ -88,7 +88,7 @@ class NDJSONImporter(BaseImporter):
         """Provide an iterator the reads the NDJSON records."""
         fields_provenances = kwargs.pop("fields_provenances", {})
         identifier = dataset_table.identifier
-        has_compound_key = dataset_table.has_compound_key
+        has_composite_key = dataset_table.has_composite_key
         through_fields_mapper = None
         if is_through_table:
             through_fields_mapper = self._get_through_fields_mapper(dataset_table)
@@ -143,7 +143,7 @@ class NDJSONImporter(BaseImporter):
 
                 if not dataset_table.is_autoincrement:
                     id_value = ".".join(str(row[fn]) for fn in identifier)
-                    if has_compound_key:
+                    if has_composite_key:
                         row["id"] = id_value
 
                 for rel_field in relation_field_info:
@@ -179,7 +179,7 @@ class NDJSONImporter(BaseImporter):
                     if not row[n_field.id]:
                         continue
                     for nested_row in row[n_field.id]:
-                        # When the identifier is compound, we can assume
+                        # When the identifier is composite, we can assume
                         # that an extra 'id' field will be available, because
                         # Django cannot live without it.
                         id_fields = dataset_table.identifier
@@ -216,7 +216,7 @@ class NDJSONImporter(BaseImporter):
                                 f"{dataset_table.name}_id": from_fk,
                             }
 
-                            if dataset_table.has_compound_key:
+                            if dataset_table.has_composite_key:
                                 for id_field in dataset_table.get_fields_by_id(
                                     *dataset_table.identifier
                                 ):

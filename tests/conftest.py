@@ -313,8 +313,8 @@ def profile_brk_read_id_schema(here) -> ProfileSchema:
 
 
 @pytest.fixture
-def compound_key_schema(here) -> ProfileSchema:
-    return DatasetSchema.from_file(here / "files/compound_key.json")
+def composite_key_schema(here) -> ProfileSchema:
+    return DatasetSchema.from_file(here / "files/composite_key.json")
 
 
 @pytest.fixture
