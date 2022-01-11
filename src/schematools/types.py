@@ -467,7 +467,7 @@ class DatasetSchema(SchemaType):
             return table.get_field_by_id(table.identifier[0]).type
 
         snakecased_field_id = to_snake_case(field.id)
-        sub_table_id = get_rel_table_identifier(len(self.id) + 1, table.id, snakecased_field_id)
+        sub_table_id = get_rel_table_identifier(table.id, snakecased_field_id)
 
         sub_table_schema = {
             "id": sub_table_id,
@@ -496,7 +496,7 @@ class DatasetSchema(SchemaType):
         if field.has_shortname or table.has_shortname:
             snakecased_fieldname: str = to_snake_case(field.name)
             sub_table_schema["shortname"] = get_rel_table_identifier(
-                len(self.id) + 1, table.name, snakecased_fieldname
+                table.name, snakecased_fieldname
             )
         return DatasetTableSchema(
             sub_table_schema, _parent_schema=self, _parent_table=table, nested_table=True
@@ -562,7 +562,7 @@ class DatasetSchema(SchemaType):
         right_dataset_id, right_table_id = str(relation).split(":")[:2]
 
         target_field_id = field.id
-        table_id = get_rel_table_identifier(len(self.id) + 1, table.id, target_field_id)
+        table_id = get_rel_table_identifier(table.id, target_field_id)
 
         sub_table_schema: Dict[str, Any] = {
             "id": table_id,

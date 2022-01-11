@@ -71,10 +71,8 @@ class RelationMaker:
 
     def _make_through_classname(self, dataset_id, field_id):
         snakecased_fieldname = to_snake_case(field_id)
-        through_table_id = get_rel_table_identifier(
-            len(dataset_id) + 1, self.table.id, snakecased_fieldname
-        )
-        # dso-api expects the dataset_id separated from the table_id by a point
+        through_table_id = get_rel_table_identifier(self.table.id, snakecased_fieldname)
+        # Give Django app_label.model_name notation
         return f"{dataset_id}.{through_table_id}"
 
     @property
