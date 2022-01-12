@@ -774,6 +774,7 @@ class DatasetTableSchema(SchemaType):
 
     @cached_property
     def fields(self) -> List[DatasetFieldSchema]:
+        # TODO: this should not return sub fields!
         return list(self.get_fields(include_subfields=True))
 
     @lru_cache()  # type: ignore[misc]
@@ -1114,12 +1115,14 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def relation(self) -> Optional[str]:
+        """Give the 1:N relation, if it exists."""
         if self.type == "array":
             return None
         return self.get("relation")
 
     @property
     def nm_relation(self) -> Optional[str]:
+        """Give the N:M relation, if it exists (called M2M in Django)."""
         if self.type != "array":
             return None
         return self.get("relation")
