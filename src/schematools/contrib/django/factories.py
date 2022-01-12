@@ -7,7 +7,6 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.db.models.base import ModelBase
-from more_itertools import first
 
 from schematools.contrib.django import app_config, signals
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
@@ -16,6 +15,7 @@ from schematools.utils import get_rel_table_identifier, to_snake_case
 from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
+    CompositeForeignKeyField,
     Dataset,
     DynamicModel,
     LooseRelationField,
@@ -115,7 +115,11 @@ class LooseFKRelationMaker(RelationMaker):
 class FKRelationMaker(RelationMaker):
     @property
     def field_cls(self):
-        return models.ForeignKey
+        if self.field.is_composite_key:
+            # Make it easier to recognize the keys, e.g. in ``manage.py dump_models``.
+            return CompositeForeignKeyField
+        else:
+            return models.ForeignKey
 
     @property
     def field_args(self):
@@ -144,12 +148,17 @@ class FKRelationMaker(RelationMaker):
     def field_kwargs(self):
         # In schema foreign keys should be specified without _id,
         # but the db_column should be with _id
-        return {
+        kwargs = {
             **super().field_kwargs,
             "db_column": f"{to_snake_case(self.field.name)}_id",
             "db_constraint": False,
             "related_name": self._get_related_name(),
         }
+
+        if self.field.is_composite_key:
+            kwargs["to_fields"] = [to_snake_case(field.id) for field in self.field.subfields]
+
+        return kwargs
 
 
 class M2MRelationMaker(RelationMaker):
