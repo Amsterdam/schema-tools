@@ -1338,19 +1338,16 @@ class DatasetFieldSchema(DatasetType):
         ):
             return False
 
-        # So, target-side of relation is temporal
-        # Determine fieldnames used for temporal
-        sequence_identifier = related_table.temporal.identifier
-        # Table identifier is mandatory and always contains at least one field
-        identifier = first(related_table.identifier)
-
         # If temporal, this implicates that the type is not a scalar
         # but needs to be more complex (object) or array_of_objects
-        if self.type in ["string", "integer"] or self.is_array_of_scalars:
+        if self.type in ("string", "integer") or self.is_array_of_scalars:
             return True
 
-        sequence_field = related_table.get_field_by_id(sequence_identifier)
-        identifier_field = related_table.get_field_by_id(identifier)
+        # So, target-side of relation is temporal
+        # Determine fieldnames used for temporal
+        # Table identifier is mandatory and always contains at least one field
+        identifier_field = related_table.get_field_by_id(related_table.identifier[0])
+        sequence_field = related_table.get_field_by_id(related_table.temporal.identifier)
 
         if self.is_array_of_objects:
             properties = self.field_items["properties"]
@@ -1363,8 +1360,8 @@ class DatasetFieldSchema(DatasetType):
             (prop_name, prop_val["type"]) for prop_name, prop_val in properties.items()
         }
         destination_type_set = {
-            (sequence_field.name, sequence_field.type),
             (identifier_field.name, identifier_field.type),
+            (sequence_field.name, sequence_field.type),
         }
 
         # If all fields of source_type_set are also in destination_type_set
