@@ -564,6 +564,31 @@ class LooseRelationField(models.CharField):
         return apps.all_models[dataset_name][table_name]
 
 
+class CompositeForeignKeyField(models.ForeignKey):
+    """A composite key, based on multiple fields on the target table.
+
+    Note this class is currently backed by a database column
+    that holds a concatenated value in the database.
+    So this acts as a tagging class only to reveal what the field type is.
+    Ideally, this would have to change to an actual compound key field
+    like Django's ``GenericForeignKey`` is. Also note that
+    Django's ForeignObject has a ``to_fields`` attribute that supports
+    referencing multiple fields.
+    """
+
+    def __init__(self, *args, to_fields, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Currently, only used as descriptive data for analysis.
+        # Called as _to_fields to avoid overriding the base class attribute.
+        self._to_fields = to_fields
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        kwargs["to_fields"] = self._to_fields
+        return name, path, args, kwargs
+
+
 class LooseRelationManyToManyField(models.ManyToManyField):
     pass
 

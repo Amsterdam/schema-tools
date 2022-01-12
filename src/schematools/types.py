@@ -1329,6 +1329,11 @@ class DatasetFieldSchema(DatasetType):
         return _normalize_scopes(self.get("auth"))
 
     @property
+    def is_composite_key(self):
+        """Tell whether the relation uses a composite key"""
+        return self.get("relation") and self.is_object and len(self["properties"]) > 1
+
+    @property
     def is_loose_relation(self):
         """Determine if relation is loose or not."""
         related_table = self.related_table
