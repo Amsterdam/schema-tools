@@ -50,7 +50,7 @@ class RelationMaker:
         self.nm_relation = field.nm_relation
 
     @classmethod
-    def fetch_maker(cls, dataset, field: DatasetFieldSchema):
+    def fetch_maker(cls, field: DatasetFieldSchema):
         # determine type of relation (FKLoose, FK, M2M, LooseM2M)
         if field.relation:
             if field.is_loose_relation:
@@ -247,7 +247,7 @@ class FieldMaker:
         **kwargs,
     ) -> TypeAndSignature:
         try:
-            relation_maker_cls = RelationMaker.fetch_maker(dataset, field)
+            relation_maker_cls = RelationMaker.fetch_maker(field)
         except ValueError as e:
             raise ValueError(
                 f"Failed to construct field {dataset.id}.{field.table.id}.{field.name}: {e}"
