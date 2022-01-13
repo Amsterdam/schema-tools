@@ -1036,22 +1036,7 @@ class DatasetTableSchema(SchemaType):
 
 
 class DatasetFieldSchema(DatasetType):
-    """A single field (column) in a table
-
-    This class has an `id` property to uniquely
-    address this datasetfield-schema in the scope of the `DatasetTableSchema`.
-    This `id` is used in lots of places in the dynamic model generation in Django.
-
-    There is also a `name` attribute, that is used for the autogeneration
-    of tablenames that are used in postgreSQL.
-
-    This `name` attribute is equal to the `id`, unless there is a `shortname`
-    defined. In that case `name` is equal to the `shortname`.
-
-    The `shortname` has been added for practical purposes, because there is a hard
-    limitation on the length of column- and tablenames in databases like postgreSQL.
-
-    """
+    """A single field (column) in a table."""
 
     def __init__(
         self,
@@ -1084,6 +1069,7 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def id(self) -> str:
+        """The id of a field uniquely identifies it among the fields of a table."""
         return self._id
 
     @property
@@ -1092,11 +1078,22 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def name(self) -> str:
-        """Table name, for display purposes only."""
+        """
+        The name of a field is used to derive its column name in SQL.
+
+        The name is equal to the id, except when it is overridden by the presence
+        of a shortname.
+
+        The actual column name in SQL is the snake-casing of the name.
+        """
         return cast(str, self.get("shortname", self._id))
 
     @property
     def has_shortname(self) -> bool:
+        """Reports whether this field has a shortname.
+
+        You should never have to call this: name returns the shortname, if present.
+        """
         return self.get("shortname") is not None
 
     @property
