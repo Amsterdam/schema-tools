@@ -46,7 +46,7 @@ import operator
 import re
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, ClassVar, Iterator, List, Set, Type, cast, final
+from typing import Callable, ClassVar, Iterator, List, Optional, Set, Type, cast, final
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.types import DatasetSchema, SemVer, TableVersions
@@ -139,13 +139,13 @@ class CamelCaseValidator(Validator):
                     yield error
 
 
-def _validate_camelcase(ident: str) -> Iterator[ValidationError]:
+def _validate_camelcase(ident: str) -> Optional[ValidationError]:
     if ident == "":
         return ValidationError("CamelCaseValidator", "empty identifier not allowed")
     camel = toCamelCase(to_snake_case(ident))
     if camel == ident:
-        return
-    msg = f"{ident} does not survive conversion to snake case and back, suggestion: {camel}"
+        return None
+    msg = f"{ident} does not survive conversion to snake case and back; suggestion: {camel}"
     return ValidationError("CamelCaseValidator", msg)
 
 
