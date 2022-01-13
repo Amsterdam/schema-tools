@@ -1316,12 +1316,14 @@ class DatasetFieldSchema(DatasetType):
         NM tables always are through tables. For 1N tables, there is a through
         tables if the target of the relation is temporal.
         """
+        return self.nm_relation is not None or self.is_relation_temporal
 
-        if self.nm_relation is not None:
-            return True
-        if (related_table := self.related_table) is None:
-            return False
-        return related_table.is_temporal
+    @property
+    def is_relation_temporal(self):
+        """Tell whether the 1-N relationship is modelled by an intermediate table.
+        This allows tracking multiple versions of the relationship.
+        """
+        return self.relation is not None and self.related_table.is_temporal
 
     @property
     def auth(self) -> FrozenSet[str]:
