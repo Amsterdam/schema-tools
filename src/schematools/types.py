@@ -733,7 +733,12 @@ class DatasetTableSchema(SchemaType):
             raise ValueError("Invalid JSON-schema contents of table")
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self['id']}>"
+        prefix = ""
+        if self._parent_schema is not None:
+            prefix += f"{self._parent_schema.id}."
+        if self._parent_table is not None:
+            prefix += f"{self._parent_table.id}."
+        return f"<{self.__class__.__name__}: {prefix}{self['id']}>"
 
     @property
     def name(self) -> str:
@@ -1110,7 +1115,12 @@ class DatasetFieldSchema(DatasetType):
         self._temporal = _temporal
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self._id}>"
+        prefix = ""
+        if self._parent_table is not None:
+            prefix = f"{self._parent_table.id}."
+        if self._parent_field is not None:
+            prefix += f"{self._parent_field.id}."
+        return f"<{self.__class__.__name__}: {prefix}{self._id}>"
 
     @property
     def table(self) -> Optional[DatasetTableSchema]:
@@ -1206,8 +1216,8 @@ class DatasetFieldSchema(DatasetType):
 
     @cached_property
     def related_table(self) -> Optional[DatasetTableSchema]:
-        """If this field is a relation, return the field this relation references."""
-        relation = self.get("relation")
+        """If this field is a relation, return the table this relation references."""
+        relation = self.get("relation")  # works for both 1:N and N:M relations
         if not relation:
             return None
 
