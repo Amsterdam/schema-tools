@@ -1093,6 +1093,18 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def type(self) -> str:
+        """Returns the type of this field.
+
+        The type is one of the JSON Schema types "string", "integer", "number",
+        "object", "array" or "boolean", or the URL of a schema defining a type
+        (for geo types). "null" is never used by Amsterdam Schemas.
+
+        Dates and URLs have type "string". Check the `format` to distinguish them
+        from free-form text.
+
+        See https://schemas.data.amsterdam.nl/docs/ams-schema-spec.html#data-types
+        for details.
+        """
         value = self.get("type")
         if not value:
             value = self.get("$ref")
