@@ -170,7 +170,9 @@ class DynamicModel(models.Model):
         return cls._table_schema
 
     @classmethod
-    def get_field_schema(cls, model_field: Union[models.Field, models.ForeignObjectRel]):
+    def get_field_schema(
+        cls, model_field: Union[models.Field, models.ForeignObjectRel]
+    ) -> DatasetFieldSchema:
         """Provide access to the underlying amsterdam schema field that created the model field."""
         if isinstance(model_field, models.ForeignObjectRel):
             # When Django auto-creates the related field, it doesn't have `field_schema`,
