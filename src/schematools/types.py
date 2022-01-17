@@ -1230,6 +1230,21 @@ class DatasetFieldSchema(DatasetType):
         )
 
     @property
+    def related_field_ids(self) -> Optional[list[str]]:
+        """If this field is a relation, return which fields this relation references.
+        That can be either the primary key of the related table,
+        or one of the explicitly declared sub-fields.
+        """
+        if not self.get("relation"):
+            return None
+        elif self.is_object:
+            # Relation where the fields are defined as sub-fields
+            return list(self["properties"].keys())
+        else:
+            # References the primary key of the related table.
+            return self.related_table.identifier
+
+    @property
     def reverse_relation(self) -> Optional[AdditionalRelationSchema]:
         """Find the opposite description of a relation.
 
@@ -1428,8 +1443,10 @@ class DatasetFieldSchema(DatasetType):
         related_table = self.related_table
 
         # Short-circuit for non-temporal or on-the-fly (through or nested) schemas
+        # NOTE: this logic also breaks testing for loose relations on through tables!
         if (
-            not related_table.is_temporal
+            related_table is None
+            or not related_table.is_temporal
             or self._parent_table.is_through_table
             or self._parent_table.is_nested_table
         ):

@@ -180,6 +180,23 @@ class FKRelationMaker(RelationMaker):
 
         if self.field.is_composite_key:
             kwargs["to_fields"] = [to_snake_case(field.id) for field in self.field.subfields]
+        elif (
+            # HACK: This complicated logic is needed because self.field.is_loose_relation
+            # has very mixed-up logic that handles things which the callers should have handled.
+            # This makes it impossible to determine whether a through-table has loose relations.
+            # Solving that turns out to be really complex and bring up more issues. However,
+            # reading the NM-field does work, so at least one side of the relation can be fixed.
+            (nm_field := self.field.table.parent_table_field) is not None
+            and nm_field.is_loose_relation
+            and self.field.id == self.field.table["throughFields"][1]
+        ):
+            # A FK in the through table might actually be a partial composite key.
+            # When this is the case, make sure the to_field points to the right field.
+            target_field_ids = nm_field.related_field_ids
+            target_field = self.field.related_table.get_field_by_id(target_field_ids[0])
+
+            if target_field_ids[0] != "id" and not target_field.is_primary:
+                kwargs["to_field"] = to_snake_case(target_field_ids[0])
 
         return kwargs
 
