@@ -209,7 +209,7 @@ class M2MRelationMaker(RelationMaker):
     @property
     def field_kwargs(self):
         snakecased_fieldname = to_snake_case(self.field.name)
-        parent_table = to_snake_case(self.field._parent_table.name)
+        parent_table = to_snake_case(self.field.table.name)
 
         if (additional_relation := self.field.reverse_relation) is not None:
             # The relation is described by the other table, return it
