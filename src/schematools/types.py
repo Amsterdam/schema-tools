@@ -517,7 +517,7 @@ class DatasetSchema(SchemaType):
                 table.name, snakecased_fieldname
             )
         return DatasetTableSchema(
-            sub_table_schema, parent_schema=self, parent_table=table, nested_table=True
+            sub_table_schema, parent_schema=self, _parent_table=table, nested_table=True
         )
 
     def build_through_table(
@@ -666,7 +666,7 @@ class DatasetSchema(SchemaType):
             sub_table_schema["schema"]["properties"].update(dim_fields)
 
         return DatasetTableSchema(
-            sub_table_schema, parent_schema=self, parent_table=table, through_table=True
+            sub_table_schema, parent_schema=self, _parent_table=table, through_table=True
         )
 
     @property
@@ -715,14 +715,14 @@ class DatasetTableSchema(SchemaType):
         self,
         *args: Any,
         parent_schema: DatasetSchema,
-        parent_table: Optional[DatasetTableSchema] = None,
+        _parent_table: Optional[DatasetTableSchema] = None,
         nested_table: bool = False,
         through_table: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.parent_schema = parent_schema
-        self.parent_table = parent_table
+        self._parent_schema = parent_schema
+        self._parent_table = _parent_table
         self.nested_table = nested_table
         self.through_table = through_table
 
@@ -751,7 +751,15 @@ class DatasetTableSchema(SchemaType):
     @property
     def dataset(self) -> DatasetSchema:
         """The dataset that this table is part of."""
-        return self.parent_schema
+        return self._parent_schema
+
+    @property
+    def parent_table(self) -> Optional[DatasetTableSchema]:
+        """The parent table of this table.
+
+        For nested and through tables, the parent table is available.
+        """
+        return self._parent_table
 
     @property
     def parent_table_field(self) -> Optional[DatasetFieldSchema]:
