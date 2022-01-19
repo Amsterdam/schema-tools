@@ -50,10 +50,12 @@ def tables_factory(
     metadata = metadata or MetaData()
 
     for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
-        if limit_tables_to is not None and dataset_table.id not in limit_tables_to:
+        # For comparison and lookups, `dataset_table.id` needs to be snakecased.
+        snaked_dataset_table_id = to_snake_case(dataset_table.id)
+        if limit_tables_to is not None and snaked_dataset_table_id not in limit_tables_to:
             continue
         db_table_description = dataset_table.description
-        if (db_table_name := (db_table_names or {}).get(dataset_table.id)) is None:
+        if (db_table_name := (db_table_names or {}).get(snaked_dataset_table_id)) is None:
             has_postfix = (
                 db_schema_names is not None
                 and (dataset_table.is_nested_table or dataset_table.is_through_table)
@@ -72,7 +74,7 @@ def tables_factory(
         # If schema is None, default to Public. Leave it to None will have a risk that
         # the DB schema that is currently in use will be used to create the table in
         # leading to unwanted/unexepected results
-        if (db_schema_name := (db_schema_names or {}).get(dataset_table.id)) is None:
+        if (db_schema_name := (db_schema_names or {}).get(snaked_dataset_table_id)) is None:
             if is_versioned_dataset:
                 db_schema_name = dataset.id
             else:
