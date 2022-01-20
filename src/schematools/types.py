@@ -41,10 +41,9 @@ from more_itertools import first
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
 from schematools.exceptions import SchemaObjectNotFound
-from schematools.utils import to_snake_case
 
 ST = TypeVar("ST", bound="SchemaType")
-DTS = TypeVar("DTS", bound="DatasetSchemaType")
+DTS = TypeVar("DTS", bound="DatasetTableSchema")
 Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 Ref = str
 
@@ -1034,6 +1033,8 @@ class DatasetTableSchema(SchemaType):
             A derived table name suitable for DB usage.
 
         """
+        from schematools.utils import to_snake_case
+
         dataset_prefix = version_postfix = ""
         if with_version:
             version_postfix = self.version.signif
