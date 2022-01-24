@@ -205,7 +205,7 @@ class FKRelationMaker(RelationMaker):
         # but the db_column should be with _id
         kwargs = {
             **super().field_kwargs,
-            "db_column": f"{to_snake_case(self.field.name)}_id",
+            "db_column": to_snake_case(self.field.name) + "_id",
             "db_constraint": False,
             "related_name": self._get_related_name(),
         }
