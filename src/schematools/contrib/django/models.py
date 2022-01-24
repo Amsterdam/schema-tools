@@ -591,6 +591,28 @@ class CompositeForeignKeyField(models.ForeignKey):
         return name, path, args, kwargs
 
 
+class CompositeForeignKeySubField(models.ForeignKey):
+    """A part of a composite foreign key.
+
+    This acts like a normal foreign key, only will it point to a different field
+    of the referenced table that won't be unique by itself.
+
+    This is typically used for temporal relationships, where the foreign table uses compound keys
+    as identifier. This field type references the first field of that compound relationship.
+    The queryset should filter all relationships to return a single entry.
+    """
+
+    # Disable the unique check made against the target field.
+    # When it's part of a composite key, this can't be unique by itself.
+    # However, we can still have a db constraint on it.
+    requires_unique_target = False
+
+    def __init__(self, *args, **kwargs):
+        if not kwargs.get("to_field"):
+            raise ValueError("to_field must be provided.")
+        super().__init__(*args, **kwargs)
+
+
 class LooseRelationManyToManyField(models.ManyToManyField):
     pass
 

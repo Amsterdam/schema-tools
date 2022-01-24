@@ -16,6 +16,7 @@ from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
     CompositeForeignKeyField,
+    CompositeForeignKeySubField,
     Dataset,
     DynamicModel,
     LooseRelationField,
@@ -118,6 +119,8 @@ class FKRelationMaker(RelationMaker):
         if self.field.is_composite_key:
             # Make it easier to recognize the keys, e.g. in ``manage.py dump_models``.
             return CompositeForeignKeyField
+        elif self._get_to_field_name():
+            return CompositeForeignKeySubField
         else:
             return models.ForeignKey
 
@@ -167,20 +170,16 @@ class FKRelationMaker(RelationMaker):
             # as Django still uses the backwards relation internally.
             return "+"
 
-    @property
-    def field_kwargs(self):
-        # In schema foreign keys should be specified without _id,
-        # but the db_column should be with _id
-        kwargs = {
-            **super().field_kwargs,
-            "db_column": f"{to_snake_case(self.field.name)}_id",
-            "db_constraint": False,
-            "related_name": self._get_related_name(),
-        }
+    def _get_to_field_name(self) -> Optional[str]:
+        """Determine the "to_field" for the foreign key.
 
-        if self.field.is_composite_key:
-            kwargs["to_fields"] = [to_snake_case(field.id) for field in self.field.subfields]
-        elif (
+        This returns a value when the relation doesn't point to the targets's primary key,
+        hence the "to_field" parameter is needed.
+
+        The current implementation only works for the right-side of N-M relations at the moment,
+        other relation types are still created as a loose relation field.
+        """
+        if (
             # HACK: This complicated logic is needed because self.field.is_loose_relation
             # has very mixed-up logic that handles things which the callers should have handled.
             # This makes it impossible to determine whether a through-table has loose relations.
@@ -196,7 +195,26 @@ class FKRelationMaker(RelationMaker):
             target_field = self.field.related_table.get_field_by_id(target_field_ids[0])
 
             if target_field_ids[0] != "id" and not target_field.is_primary:
-                kwargs["to_field"] = to_snake_case(target_field_ids[0])
+                return target_field_ids[0]
+
+        return None
+
+    @property
+    def field_kwargs(self):
+        # In schema foreign keys should be specified without _id,
+        # but the db_column should be with _id
+        kwargs = {
+            **super().field_kwargs,
+            "db_column": f"{to_snake_case(self.field.name)}_id",
+            "db_constraint": False,
+            "related_name": self._get_related_name(),
+        }
+
+        if self.field.is_composite_key:
+            kwargs["to_fields"] = [to_snake_case(field.id) for field in self.field.subfields]
+        elif to_field := self._get_to_field_name():
+            # Field points to a different key of the other table (e.g. "identificatie").
+            kwargs["to_field"] = to_snake_case(to_field)
 
         return kwargs
 
