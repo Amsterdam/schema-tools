@@ -1039,7 +1039,7 @@ class DatasetTableSchema(SchemaType):
         if with_version:
             version_postfix = self.version.signif
         if with_dataset_prefix:
-            dataset_prefix = self.dataset.id
+            dataset_prefix = to_snake_case(self.dataset.id)
         if self.nested_table or self.through_table:
             # We don't automatically shorten user defined table names. Automatically generated
             # names, however, should be shortened as the user has no direct control over them.
