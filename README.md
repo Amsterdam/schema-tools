@@ -97,14 +97,20 @@ However not all `json` files are Amsterdam schema files.
 To exclude files or directories use `exclude` with pattern.
 
 `pre-commit` depends on properly tagged revisions of its hooks.
-Hence we should take care to, not only bump version numbers
-on updates to this package,
-but also commit a tag with the version number.
-This is automated by means of the `tbump` tool.
-Bumping a version from 0.18.1 to 0.18.2
-and generating the appropriate git commits/tags
-is as easy as running:
+Hence, we should not only bump version numbers on updates to this package,
+but also commit a tag with the version number; see below.
 
-```console
-$ tbump 0.18.2
-```
+## Doing a release
+
+(This is for schema-tools developers.)
+
+We use GitHub pull requests. If your PR should produce a new release of
+schema-tools, make sure one of the commit increments the version number in
+``setup.cfg`` appropriately. Then,
+
+* merge the commit in GitHub, after review;
+* pull the code from GitHub and merge it into the master branch,
+  ``git checkout master && git fetch origin && git merge --ff-only origin/master``;
+* tag the release X.Y.Z with ``git tag -a vX.Y.Z -m "Bump to vX.Y.Z"``;
+* push the tag to GitHub with ``git push origin --tags``;
+* release to PyPI: ``make upload`` (requires the PyPI secret).
