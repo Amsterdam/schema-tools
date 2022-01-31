@@ -76,7 +76,7 @@ def tables_factory(
         # leading to unwanted/unexepected results
         if (db_schema_name := (db_schema_names or {}).get(snaked_dataset_table_id)) is None:
             if is_versioned_dataset:
-                db_schema_name = dataset.id
+                db_schema_name = to_snake_case(dataset.id)
             else:
                 db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
         columns = []
