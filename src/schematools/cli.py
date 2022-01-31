@@ -17,7 +17,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateTable
 
-from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL
+from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL, validation
 from schematools.datasetcollection import DatasetCollection, set_schema_loader
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
@@ -42,7 +42,6 @@ from schematools.utils import (
     dataset_schemas_from_url,
     schema_fetch_url_file,
 )
-from schematools.validation import Validator
 
 option_db_url = click.option(
     "--db-url",
@@ -371,8 +370,7 @@ def validate(
 
     click.echo("Semantic validation: ", nl=False)
     semantic_errors = False
-    validator = Validator(dataset=dataset)
-    for error in validator.run_all():
+    for error in validation.run():
         semantic_errors = True
         click.echo(f"\n{error!s}", err=True)
     if not semantic_errors:
@@ -417,8 +415,7 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
         except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
             errors[schema].append(f"{struct_error.message}: ({', '.join(struct_error.path)})")
 
-        validator = Validator(dataset=dataset)
-        for sem_error in validator.run_all():
+        for sem_error in validation.run():
             errors[schema].append(str(sem_error))
     if errors:
         width = len(max(errors.keys()))
