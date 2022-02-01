@@ -12,6 +12,17 @@ PUBLIC_SCOPE = "OPENBAAR"
 existing_roles = set()
 
 
+def is_remote(table_name):
+    """WARNING: UGLY HACK until 265311 is resolved and we
+    can interrogate schematools to find out whether a table
+    is remote."""
+    return (
+        table_name.startswith("haalcentraalbrk")
+        or table_name.startswith("haalcentraalbag")
+        or table_name.startswith("brp")
+    )
+
+
 def introspect_permissions(engine, role):
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
     for schema_relation_info in schema_relation_infolist:
@@ -115,9 +126,9 @@ def set_dataset_write_permissions(session, pg_schema, ams_schema, dry_run, creat
     if create_roles:
         _create_role_if_not_exists(session, grantee, dry_run=dry_run)
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
-        table_name = "{}_{}".format(
-            to_snake_case(table.dataset.id), to_snake_case(table.id)
-        )  # een aantal table.id's zijn camelcase
+        table_name = table.db_name()
+        if is_remote(table_name):
+            continue
         table_privileges = ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"]
         _execute_grant(
             session,
@@ -155,9 +166,9 @@ def set_dataset_read_permissions(
         )
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
-        table_name = "{}_{}".format(
-            to_snake_case(table.dataset.id), to_snake_case(table.id)
-        )  # een aantal table.id's zijn camelcase
+        table_name = table.db_name()
+        if is_remote(table_name):
+            continue
         table_scope = table.auth if table.auth else dataset_scope
         table_scope_set = {table_scope} if isinstance(table_scope, str) else set(table_scope)
         if table.auth:
@@ -170,6 +181,11 @@ def set_dataset_read_permissions(
         fields = [field for field in table.fields if field.name != "schema"]
         for field in fields:
             if field.auth:
+                if field.relation:
+                    # FIXME: field-level grants are broken for relations (example: 1-N meldingen_meldingen_gbdbuurt, NM:
+                    # haalcentraal_kadastraalonroerendezaken.adressen)
+                    # Because the name in the schema is not the same as the field that ends up in the database.
+                    continue
                 field_scope = field.auth
                 field_scope_set = (
                     {field_scope} if isinstance(field_scope, str) else set(field_scope)
@@ -222,6 +238,11 @@ def set_dataset_read_permissions(
                     _create_role_if_not_exists(session, grantee, dry_run=dry_run)
                 for field in fields:
                     if not field.auth:
+                        if field.relation:
+                            # FIXME: field-level grants are broken for relations (example: 1-N meldingen_meldingen_gbdbuurt, NM:
+                            # haalcentraal_kadastraalonroerendezaken.adressen)
+                            continue
+
                         column_name = to_snake_case(field.name)
                         # the space after SELECT is very important:
                         column_priviliges = ["SELECT ({})".format(column_name)]
@@ -389,20 +410,12 @@ def _revoke_all_privileges_from_read_and_write_roles(
 
 
 def _execute_grant(session, grant_statement, echo=True, dry_run=False):
-    """Wrap the grant statement in an anonymous code block to catch reasonable exceptions.
-    We don't want to break out of the session just because a table, column, or user doesn't
-    exist.
-    """
-
     status_msg = "Skipped" if dry_run else "Executed"
     sql_statement = f"""
         DO
         $$
             BEGIN
                 {grant_statement};
-            EXCEPTION
-                WHEN undefined_table OR undefined_column OR undefined_object
-                    THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
             END
         $$
         """

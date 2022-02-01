@@ -1,0 +1,27 @@
+# This compose file is supplied for local dev
+# Since there is no running process, it just starts a bash
+# session in order to run tests etc.
+version: "3.0"
+services:
+  database:
+    image: amsterdam/postgres11
+    environment:
+      POSTGRES_DB: dataservices
+      POSTGRES_USER: dataservices
+      POSTGRES_PASSWORD: insecure
+
+  app:
+    build: .
+    links:
+      - database
+    environment:
+      SECRET_KEY: insecure
+      SCHEMA_URL: https://schemas.data.amsterdam.nl/datasets/
+      DATABASE_URL: "postgres://dataservices:insecure@database/dataservices"
+    volumes:
+      - ".:/app"
+      # Uncomment (and adjust the location of) this mount to experiment with
+      # edited datasets from your local amsterdam-schema clone
+      # - "../amsterdam-schema/datasets:/tmp/datasets"
+    command: >
+      bash
