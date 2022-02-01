@@ -347,3 +347,8 @@ def brk_schema(here) -> DatasetSchema:
 @pytest.fixture
 def hr_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/hr.json")
+
+
+@pytest.fixture
+def hr_schema_auth(here) -> DatasetSchema:
+    return dataset_schema_from_path(here / "files/hr_auth.json")

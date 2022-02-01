@@ -367,6 +367,33 @@ class TestReadPermissions:
         # Check perms again on meetbouten
         _check_select_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten")
 
+    def test_permissions_support_shortnames(self, here, engine, hr_schema_auth, dbsession):
+        """
+        Prove that table, and field permissions are set on the shortnamed field.
+        """
+
+        ndjson_path = here / "files" / "data" / "hr_auth.ndjson"
+        importer = NDJSONImporter(hr_schema_auth, engine)
+        importer.generate_db_objects("sbiactiviteiten", truncate=True, ind_extra_index=False)
+        importer.load_file(ndjson_path)
+
+        # Setup schema and profile
+        ams_schema = {hr_schema_auth.id: hr_schema_auth}
+
+        # Apply the permissions from Schema and Profiles.
+        apply_schema_and_profile_permissions(
+            engine, "public", ams_schema, None, "level_b", "LEVEL/B", create_roles=True
+        )
+        apply_schema_and_profile_permissions(
+            engine, "public", ams_schema, None, "level_c", "LEVEL/C", create_roles=True
+        )
+
+        # Check if the read priviliges are correct
+        _check_select_permission_granted(engine, "level_b", "hr_sbi_ac", "sbi_ac_naam")
+        _check_select_permission_denied(engine, "level_b", "hr_sbi_ac", "sbi_ac_no")
+        _check_select_permission_denied(engine, "level_c", "hr_sbi_ac", "sbi_ac_naam")
+        _check_select_permission_granted(engine, "level_c", "hr_sbi_ac", "sbi_ac_no")
+
 
 class TestWritePermissions:
     def test_dataset_write_role(self, here, engine, gebieden_schema_auth):
@@ -501,6 +528,33 @@ class TestWritePermissions:
         #  afval_tester has NO INSERT permission on parkeervakken datasets
         _check_insert_permission_denied(
             engine, "afval_tester", "parkeervakken_parkeervakken", "id", "'abc'"
+        )
+
+    def test_permissions_support_shortnames(self, here, engine, hr_schema_auth, dbsession):
+        """
+        Prove that table, and field permissions are set on the shortnamed field.
+        """
+
+        ndjson_path = here / "files" / "data" / "hr_auth.ndjson"
+        importer = NDJSONImporter(hr_schema_auth, engine)
+        importer.generate_db_objects("sbiactiviteiten", truncate=True, ind_extra_index=False)
+        importer.load_file(ndjson_path)
+
+        # Setup schema and profile
+        ams_schema = {hr_schema_auth.id: hr_schema_auth}
+
+        # Apply the permissions from Schema and Profiles.
+        apply_schema_and_profile_permissions(
+            engine, "public", ams_schema, None, "AUTO", "ALL", create_roles=True
+        )
+
+        # Check if the write priviliges are correct
+        _check_insert_permission_granted(
+            engine,
+            "write_hr",
+            "hr_sbi_ac",
+            "sbi_ac_naam,sbi_ac_no,identifier",
+            "'berry','14641','15101051'",
         )
 
 
