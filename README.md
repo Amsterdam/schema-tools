@@ -2,23 +2,22 @@
 
 Set of libraries and tools to work with Amsterdam schema.
 
-Install the package with: `pip install amsterdam-schema-tools`
+Install the package with: `pip install amsterdam-schema-tools`. This installs
+the library and a command-line tool called `schema`, with various subcommands.
+A listing can be obtained from `schema --help`.
 
-Currently, the following cli commands are available:
+Subcommands that talk to a PostgreSQL database expect either a `DATABASE_URL`
+environment variable or a command line option `--db-url` with a DSN.
 
-- schema import events
-- schema import ndjson
-- schema show schema <dataset-id>
-- schema show tablenames
-- schema introspect db <dataset-id> <list-of-tablenames>
-- schema introspect geojson <dataset-id> \*.geojson
-- schema validate
-- schema permissions apply
+Many subcommands want to know where to find schema files. Most will look in a
+directory of schemas denoted by the `SCHEMA_URL` environment variable or the
+`--schema-url` command line option. E.g.,
 
-The tools expect either a `DATABASE_URL` environment variable or a command-line option `--db-url` with a DSN.
+    schema create tables --schema-url=myschemas mydataset
 
-The output is a json-schema output according to the Amsterdam schemas
-definition for the tables that are being processed.
+will try to load the schema for `mydataset` from
+`myschemas/mydataset/dataset.json`.
+
 
 ## Generate amsterdam schema from existing database tables
 
