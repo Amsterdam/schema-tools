@@ -536,7 +536,7 @@ class BaseImporter:
         with self.engine.connect() as connection:
             try:
                 connection.execute(CreateSchema(db_schema_name))
-                self.logger.log_info("Created schema '%s'", db_schema_name)
+                self.logger.log_info("Created SQL schema %r", db_schema_name)
             except ProgrammingError as pe:
                 if not isinstance(pe.orig, psycopg2.errors.DuplicateSchema):
                     # `CreateSchema` does not use the 'IF NOT EXISTS` clause.
