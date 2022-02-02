@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Dict, Optional, Union, cast
+from typing import TYPE_CHECKING, Dict, Optional, Union
 from urllib.parse import urlparse
 
 from more_ds.network.url import URL
@@ -23,30 +23,24 @@ class DatasetCollection(metaclass=Singleton):
     a reference to it, without creating redundancy.
     """
 
-    def __init__(self) -> None:
-        """Initialize the DatasetCollection.
-
-        Args:
-            schema_loader: An alternative schema loader can be provided
-                If schema_loader is None, the default url loader is used.
-        """
+    def __init__(self) -> None:  # noqa: D107
         self.datasets_cache: Dict[str, DatasetSchema] = {}
-        self.schema_loader: Optional[loaders.SchemaLoader] = None
+        self._schema_loader: Optional[loaders.SchemaLoader] = None
 
-    def set_schema_loader(self, schema_loader: loaders.SchemaLoader) -> None:
-        """Set the schema loader for the datasetcollection."""
-        self.schema_loader = schema_loader
-
-    def get_schema_loader(self) -> loaders.SchemaLoader:
+    @property
+    def schema_loader(self) -> loaders.SchemaLoader:
         """Get the schema_loader."""
-        if self.schema_loader is None:
+        if self._schema_loader is None:
             raise ValueError("The datasetcollection should be initialized with a schema loader")
-        return self.schema_loader
+        return self._schema_loader
 
-    def _load_dataset(self, dataset_id: str, prefetch_related: bool) -> Optional[DatasetSchema]:
+    @schema_loader.setter
+    def schema_loader(self, schema_loader: loaders.SchemaLoader) -> None:
+        """Set the schema loader for the datasetcollection."""
+        self._schema_loader = schema_loader
+
+    def _load_dataset(self, dataset_id: str, prefetch_related: bool) -> DatasetSchema:
         """Loads the dataset, using the configured loader."""
-        if self.schema_loader is None:
-            return None
         return self.schema_loader.get_dataset(dataset_id, prefetch_related=prefetch_related)
 
     def add_dataset(self, dataset: DatasetSchema) -> None:
@@ -65,10 +59,12 @@ class DatasetCollection(metaclass=Singleton):
             return self.datasets_cache[dataset_id]
         except KeyError:
             dataset = self._load_dataset(dataset_id, prefetch_related=prefetch_related)
-            if dataset is None:
-                raise ValueError(f"Dataset {dataset_id} is missing.") from None
             self.add_dataset(dataset)
             return dataset
+
+    def get_all_datasets(self) -> Dict[str, DatasetSchema]:
+        """Gets all the datasets using the configured schema loader."""
+        return self.schema_loader.get_all_datasets()
 
 
 def set_schema_loader(schema_url: Union[URL, str]) -> None:
@@ -84,7 +80,7 @@ def set_schema_loader(schema_url: Union[URL, str]) -> None:
         loader = loaders.URLSchemaLoader(schema_url)
     else:
         loader = loaders.FileSystemSchemaLoader(schema_url)
-    dataset_collection.set_schema_loader(loader)
+    dataset_collection.schema_loader = loader
 
 
 # The scheme loader is initialized from the `SCHEMA_URL` environment variable,

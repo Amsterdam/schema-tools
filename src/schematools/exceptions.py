@@ -4,3 +4,7 @@ class ParserError(ValueError):
 
 class SchemaObjectNotFound(ValueError):
     """Field does not exist."""
+
+
+class DatasetNotFound(ValueError):
+    """The dataset could not be found."""
