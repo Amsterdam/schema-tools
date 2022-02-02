@@ -144,7 +144,6 @@ def _schema_from_url_with_connection(
     data_type: Type[types.ST],
 ) -> types.ST:
     """Fetch single schema from url with connection."""
-
     response = connection.get(base_url / dataset_path / "dataset")
     response.raise_for_status()
     response_data = response.json()
@@ -237,14 +236,14 @@ def dataset_schema_from_id_and_schemas_path(
         prefetch_related: If True, the related datasets are preloaded.
     """
     dataset_path = Path(schemas_path) / dataset_id / "dataset.json"
-    dataset_schema = dataset_schema_from_path(dataset_path)
+    dataset_schema: types.DatasetSchema = dataset_schema_from_path(dataset_path)
 
     index: Dict[str, Path] = {}
 
     # Build the mapping from dataset -> path with jsonschema file
     if prefetch_related:
         for root, _, files in os.walk(schemas_path):
-            if "dataset.json" in set(files):
+            if "dataset.json" in files:
                 root_path = Path(root)
                 index[root_path.name] = root_path.joinpath("dataset.json")
 
@@ -254,6 +253,25 @@ def dataset_schema_from_id_and_schemas_path(
             dataset_schema_from_path(index[ds_id])
 
     return dataset_schema
+
+
+def dataset_schemas_from_schemas_path(
+    schemas_path: Union[Path, str]
+) -> Dict[str, types.DatasetSchema]:
+    """Read all datasets from the schemas_path.
+
+    Args:
+        schemas_path: Path to the filesystem location with the dataset schemas.
+    """
+    schema_lookup: Dict[str, types.DatasetSchema] = {}
+    for root, _, files in os.walk(schemas_path):
+        if "dataset.json" in files:
+            root_path = Path(root)
+            # fetch the id for the dataset in some way
+            schema_path = root_path.joinpath("dataset.json")
+            dataset_schema: types.DatasetSchema = dataset_schema_from_path(schema_path)
+            schema_lookup[dataset_schema.id] = dataset_schema
+    return schema_lookup
 
 
 def profile_schema_from_file(filename: Union[Path, str]) -> Dict[str, types.ProfileSchema]:
@@ -377,7 +395,7 @@ def to_snake_case(ident: str) -> str:
 
 
 def get_rel_table_identifier(table_identifier: str, through_identifier: str) -> str:
-    """Create identifier for related table (FK or M2M) from table_identifier and extra fieldname."""
+    """Create identifier for related table (FK or M2M)."""
     return f"{table_identifier}_{through_identifier}"
 
 

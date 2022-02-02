@@ -21,7 +21,7 @@ from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL, validation
 from schematools.datasetcollection import DatasetCollection, set_schema_loader
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
-from schematools.exceptions import ParserError
+from schematools.exceptions import DatasetNotFound, ParserError
 from schematools.factories import tables_factory
 from schematools.importer.base import BaseImporter
 from schematools.importer.geojson import GeoJSONImporter
@@ -578,7 +578,21 @@ def _get_dataset_schema(
     """
     set_schema_loader(schema_url)
     dataset_collection = DatasetCollection()
-    return dataset_collection.get_dataset(dataset_id, prefetch_related=prefetch_related)
+    try:
+        return dataset_collection.get_dataset(dataset_id, prefetch_related=prefetch_related)
+    except DatasetNotFound as e:
+        raise click.ClickException(e)
+
+
+def _get_all_dataset_schemas(schema_url: str) -> Dict[str, DatasetSchema]:
+    """Find all the dataset schemas for the given schema_url.
+
+    Args:
+        schema_url: url of the location where the collection of amsterdam schemas is found.
+    """
+    set_schema_loader(schema_url)
+    dataset_collection = DatasetCollection()
+    return dataset_collection.get_all_datasets()
 
 
 @create.command("extra_index")
@@ -654,21 +668,7 @@ def create_all_objects(
     """
     if dataset_id is None:
         click.echo("No 'dataset_id' provided. Processing all datasets!")
-
-        # I'm kind of lost between the many different ways to load a schema. Some functions tie
-        # in to the SchemaLoader that, depending on the `schema_url`, transparently switches
-        # between loading from the filesystem or from the network . But not all functions that
-        # load schemas have been converted. Nor have they been deprecated. So they are still
-        # valid, do take a `schema_url` but can't load from the filesystem as is the case with
-        # `dataset_schemas_from_url`? Very confusing. So I am testing explicitly for the type of
-        # `schema_url` and if I don't like what I find I bail out.
-        if not urlparse(schema_url).scheme in ("http", "https"):
-            raise BadArgumentUsage(
-                "Can't load all datasets from the filesystem as "
-                "`dataset_schemas_from_url` does not tie in to the "
-                "SchemaLoader framework."
-            )
-        dataset_schemas = dataset_schemas_from_url(schema_url, prefetch_related=True)
+        dataset_schemas = _get_all_dataset_schemas(schema_url)
     else:
         dataset_schemas = {
             dataset_id: _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
