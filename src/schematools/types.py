@@ -1438,7 +1438,7 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def auth(self) -> FrozenSet[str]:
-        """Auth of the field, if available, or None"""
+        """Auth of the field, or the empty set if auth is not set."""
         return _normalize_scopes(self.get("auth"))
 
     @property

@@ -27,6 +27,7 @@ from functools import partial, wraps
 from typing import Callable, Iterator, List, Optional, Set, cast
 
 from schematools import MAX_TABLE_NAME_LENGTH
+from schematools.exceptions import SchemaObjectNotFound
 from schematools.types import DatasetSchema, SemVer, TableVersions
 from schematools.utils import to_snake_case, toCamelCase
 
@@ -109,6 +110,22 @@ def _camelcase_ident(ident: str) -> Optional[str]:
     if camel == ident:
         return None
     return f"{ident} does not survive conversion to snake case and back; suggestion: {camel}"
+
+
+@_register_validator("Auth on identifier field")
+def _id_auth(dataset: DatasetSchema) -> Iterator[str]:
+    """Identifier fields should not have "auth" scopes.
+
+    Handling these separately from table scopes is too much work for too little gain.
+    """
+    for table in dataset.tables:
+        for ident in table.identifier:
+            try:
+                field = table.get_field_by_id(ident)
+                if field.auth:
+                    yield f"auth on field {ident!r} should go on the table instead"
+            except SchemaObjectNotFound as e:
+                yield f"{ident!r} listed in identifier list {table.identifier}, but: {e}"
 
 
 @_register_validator("PostgreSQL identifier length")
