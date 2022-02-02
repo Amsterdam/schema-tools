@@ -30,6 +30,19 @@ def test_camelcase() -> None:
         assert error.endswith(f"suggestion: {suggest}")
 
 
+def test_id_auth(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files/id_auth.json")
+
+    errors = validation.run(dataset)
+
+    error = next(errors)
+    assert error
+    assert error.validator_name == "Auth on identifier field"
+    assert """auth on field 'id'""" in error.message
+
+    assert list(errors) == []
+
+
 def test_postgres_identifier_length(here: Path) -> None:
     dataset = dataset_schema_from_path(here / "files/long_ids.json")
 
