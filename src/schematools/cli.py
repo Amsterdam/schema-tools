@@ -358,23 +358,20 @@ def validate(
 
     structural_errors = False
     try:
-        click.echo("Structural validation: ", nl=False)
         jsonschema.validate(
             instance=dataset.json_data(), schema=meta_schema, format_checker=draft7_format_checker
         )
     except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+        click.echo("Structural validation: ", nl=False)
         structural_errors = True
         click.echo(f"\n{e!s}", err=True)
-    else:
-        click.echo("success!")
 
-    click.echo("Semantic validation: ", nl=False)
     semantic_errors = False
-    for error in validation.run():
-        semantic_errors = True
+    for error in validation.run(dataset):
+        if not semantic_errors: # Only print on first error.
+            click.echo("Semantic validation: ", nl=False)
+            semantic_errors = True
         click.echo(f"\n{error!s}", err=True)
-    if not semantic_errors:
-        click.echo("success!")
 
     if structural_errors or semantic_errors:
         sys.exit(1)
@@ -415,7 +412,7 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
         except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
             errors[schema].append(f"{struct_error.message}: ({', '.join(struct_error.path)})")
 
-        for sem_error in validation.run():
+        for sem_error in validation.run(dataset):
             errors[schema].append(str(sem_error))
     if errors:
         width = len(max(errors.keys()))
