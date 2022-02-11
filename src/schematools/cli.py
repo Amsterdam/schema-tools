@@ -370,7 +370,7 @@ def validate(
 
     click.echo("Semantic validation: ", nl=False)
     semantic_errors = False
-    for error in validation.run():
+    for error in validation.run(dataset):
         semantic_errors = True
         click.echo(f"\n{error!s}", err=True)
     if not semantic_errors:
@@ -415,7 +415,7 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
         except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
             errors[schema].append(f"{struct_error.message}: ({', '.join(struct_error.path)})")
 
-        for sem_error in validation.run():
+        for sem_error in validation.run(dataset):
             errors[schema].append(str(sem_error))
     if errors:
         width = len(max(errors.keys()))
