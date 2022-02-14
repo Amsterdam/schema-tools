@@ -97,7 +97,7 @@ def _register_validator(name: str) -> Callable:
 def _camelcase(dataset: DatasetSchema) -> Iterator[str]:
     """Checks that conversion to snake case and back leaves field identifiers unchanged."""
     for table in dataset.tables:
-        for field in table.fields:
+        for field in table.get_fields(include_subfields=False):
             error = _camelcase_ident(field.id)
             if error is not None:
                 yield error
@@ -237,3 +237,20 @@ def _active_versions(dataset: DatasetSchema) -> Iterator[str]:
                     f"does not match with version number '{version_in_table}' of the "
                     "referenced table."
                 )
+
+
+@_register_validator("mainGeometry")
+def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
+    for table in dataset.tables:
+        # We can't use table.main_geometry here, because it has a default value
+        # "geometry". We can't rely on that always existing.
+        main_geo = table["schema"].get("mainGeometry")
+        if main_geo is None:
+            continue
+
+        try:
+            field = table.get_field_by_id(main_geo)
+            if not field.is_geo:
+                yield f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}"
+        except SchemaObjectNotFound as e:
+            yield str(e)

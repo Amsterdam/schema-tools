@@ -122,6 +122,10 @@
           "id": {
             "type": "string",
             "description": "Unieke identificatie voor dit object"
+          },
+          "identificatie": {
+            "type": "string",
+            "description": "Unieke identificatie van de meting"
           }
         }
       }

@@ -91,3 +91,18 @@ def test_active_versions(here: Path) -> None:
     with pytest.raises(StopIteration):
         # no validation error
         next(validation.run(dataset))
+
+
+def test_main_geometry(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "meetbouten.json")
+    assert list(validation.run(dataset)) == []
+
+    dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "not_a_geometry"
+    error = next(validation.run(dataset))
+    assert "Field 'not_a_geometry' does not exist" in error.message
+
+    dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "merkOmschrijving"
+    error = next(validation.run(dataset))
+    assert error.message == (
+        "mainGeometry = 'merkOmschrijving' is not a geometry field, type = 'string'"
+    )
