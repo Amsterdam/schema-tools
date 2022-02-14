@@ -358,23 +358,20 @@ def validate(
 
     structural_errors = False
     try:
-        click.echo("Structural validation: ", nl=False)
         jsonschema.validate(
             instance=dataset.json_data(), schema=meta_schema, format_checker=draft7_format_checker
         )
     except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+        click.echo("Structural validation: ", nl=False)
         structural_errors = True
         click.echo(f"\n{e!s}", err=True)
-    else:
-        click.echo("success!")
 
-    click.echo("Semantic validation: ", nl=False)
     semantic_errors = False
     for error in validation.run(dataset):
-        semantic_errors = True
+        if not semantic_errors: # Only print on first error.
+            click.echo("Semantic validation: ", nl=False)
+            semantic_errors = True
         click.echo(f"\n{error!s}", err=True)
-    if not semantic_errors:
-        click.echo("success!")
 
     if structural_errors or semantic_errors:
         sys.exit(1)
