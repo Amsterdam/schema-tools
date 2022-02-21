@@ -254,3 +254,35 @@ def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
                 yield f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}"
         except SchemaObjectNotFound as e:
             yield str(e)
+
+
+@_register_validator("property formats")
+def _property_formats(dataset: DatasetSchema) -> Iterator[str]:
+    """Properties should have a valid "format", or none at all."""
+    # TODO Should we be validating these in the meta-schema instead of here?
+    ALLOWED = {
+        # Default value for DatasetFieldSchema.format.
+        None,
+        # Listed in the schema spec.
+        "date",
+        "date-time",
+        "duration",
+        "email",
+        "hostname",
+        "idn-email",
+        "idn-hostname",
+        "ipv4",
+        "ipv6",
+        "iri",
+        "iri-reference",
+        "time",
+        "uri",
+        "uri-reference",
+        # XXX In actual use, not sure what it's supposed to mean.
+        "summary",
+    }
+
+    for table in dataset.tables:
+        for field in table.get_fields():
+            if field.type == "str" and field.format not in ALLOWED:
+                yield f"Format {field.format!r} not allowed, must be one of {ALLOWED!r}"
