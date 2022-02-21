@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from schematools.exceptions import SchemaObjectNotFound
 from schematools.types import (
     DatasetSchema,
     Json,
@@ -267,3 +268,15 @@ def test_from_dict(afval_schema_json: Json) -> None:
 
     # However that should not affect the dict that was originally passed in to `from_dict`
     assert all(map(is_tv, dataset["tables"]))
+
+
+def test_subfields(ggwgebieden_schema: DatasetSchema) -> None:
+    field = ggwgebieden_schema.get_table_by_id("buurten").get_field_by_id("ligtInWijk")
+    subfields = sorted(field.subfields, key=operator.attrgetter("id"))
+    assert subfields[0].id == "identificatie"
+    assert subfields[1].id == "volgnummer"
+
+    assert subfields[0] == field.get_field_by_id("identificatie")
+    assert subfields[1] == field.get_field_by_id("volgnummer")
+    with pytest.raises(SchemaObjectNotFound):
+        field.get_field_by_id("iDoNotExist")
