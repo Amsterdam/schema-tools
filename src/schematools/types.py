@@ -1329,6 +1329,19 @@ class DatasetFieldSchema(DatasetType):
 
         return dataset_table.temporal.dimensions
 
+    @lru_cache()  # type: ignore[misc]
+    def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
+        """Finds and returns the subfield with the given id.
+
+        SchemaObjectNotFound is raised when the field does not exist.
+        """
+        for field_schema in self.subfields:
+            if field_schema.id == field_id:
+                return field_schema
+
+        name = self.table.id + "." + self.id
+        raise SchemaObjectNotFound(f"Subfield '{field_id}' does not exist below field '{name}'.")
+
     @cached_property
     def subfields(self) -> List[DatasetFieldSchema]:
         """Return the subfields for a nested structure.
