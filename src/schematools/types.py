@@ -1052,13 +1052,14 @@ class DatasetTableSchema(SchemaType):
                 - additional_underscores
             )
             # Shortening should preserve both postfixes
-            db_table_name = "_".join(
-                filter(None, (db_table_name[:max_length], version_postfix, postfix))
+            db_table_name = (
+                "_".join(filter(None, (db_table_name[:max_length], version_postfix))) + postfix
             )
         else:
-            # User defined table name -> no schortening
-            db_table_name = "_".join(
-                filter(None, (dataset_prefix, to_snake_case(self.name), version_postfix, postfix))
+            # User defined table name -> no shortening
+            db_table_name = (
+                "_".join(filter(None, (dataset_prefix, to_snake_case(self.name), version_postfix)))
+                + postfix
             )
         # We are not shortening user defined table names automatically. Instead we rely on
         # validation code to prevent table ids in Amsterdam Schema's that result in DB table
