@@ -52,8 +52,22 @@ def tables_factory(
     for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
         # For comparison and lookups, `dataset_table.id` needs to be snakecased.
         snaked_dataset_table_id = to_snake_case(dataset_table.id)
-        if limit_tables_to is not None and snaked_dataset_table_id not in limit_tables_to:
+
+        # The junction table for relations are imported separately nowadays.
+        # However, nested tables are implemented using a sub-table
+        # during import of the main table.
+        # So, those nested tables need an SA table object to be able
+        # to craete the table where data has to be imported into.
+        table_object_needed = (
+            limit_tables_to is None
+            or snaked_dataset_table_id in limit_tables_to
+            or dataset_table.is_nested_table
+            and to_snake_case(dataset_table.parent_table.id) in limit_tables_to  # type: ignore
+        )
+
+        if not table_object_needed:
             continue
+
         db_table_description = dataset_table.description
         if (db_table_name := (db_table_names or {}).get(snaked_dataset_table_id)) is None:
             has_postfix = (
