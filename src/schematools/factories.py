@@ -57,7 +57,7 @@ def tables_factory(
         # However, nested tables are implemented using a sub-table
         # during import of the main table.
         # So, those nested tables need an SA table object to be able
-        # to craete the table where data has to be imported into.
+        # to create the table where data has to be imported into.
         table_object_needed = (
             limit_tables_to is None
             or snaked_dataset_table_id in limit_tables_to
