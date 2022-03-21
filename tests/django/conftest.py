@@ -23,6 +23,7 @@ def pytest_configure(config):
             "django.contrib.staticfiles",
             "django.contrib.gis",
             "django.contrib.postgres",
+            "django_db_comments",
             "schematools.contrib.django",
         ],
         DATABASES=databases,
