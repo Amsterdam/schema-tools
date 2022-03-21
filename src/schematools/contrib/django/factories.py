@@ -438,6 +438,9 @@ def model_factory(
         if init_kwargs is None:
             init_kwargs = {}
 
+        if field.title:
+            init_kwargs["verbose_name"] = field.title
+
         # Generate field object
         kls, args, kwargs = FieldMaker(base_class, table_schema, **init_kwargs)(
             field, dataset_schema
@@ -462,7 +465,7 @@ def model_factory(
             "managed": False,
             "db_table": table_schema.db_name(),
             "app_label": app_label,
-            "verbose_name": table_schema.id.title(),
+            "verbose_name": (table_schema.title or table_schema.id).capitalize(),
             "ordering": [to_snake_case(fn) for fn in table_schema.identifier],
         },
     )

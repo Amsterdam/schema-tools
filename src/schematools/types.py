@@ -744,6 +744,11 @@ class DatasetTableSchema(SchemaType):
         return self.get("shortname", self.id)
 
     @property
+    def title(self) -> Optional[str]:
+        """Title of the table."""
+        return self.get("title")
+
+    @property
     def has_shortname(self) -> bool:
         return self.get("shortname") is not None
 
@@ -1162,6 +1167,11 @@ class DatasetFieldSchema(DatasetType):
         The actual column name in SQL is the snake-casing of the name.
         """
         return cast(str, self.get("shortname", self._id))
+
+    @property
+    def title(self) -> Optional[str]:
+        """Title of the field."""
+        return self.get("title")
 
     @property
     def has_shortname(self) -> bool:
