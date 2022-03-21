@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type, Union
 from urllib.parse import urlparse
 
 from django.apps import apps
@@ -399,6 +399,22 @@ def schema_models_factory(
     ]
 
 
+def _fetch_verbose_name(
+    obj: Union[DatasetTableSchema, DatasetTableSchema], with_description: bool = False
+) -> str:
+    """Generate a verbose_name for a table or field.
+
+    For fields, the description goes into `help_text`, so the flag `with_description`
+    can be used to leave it out of the `verbose_name`.
+    """
+    verbose_name_parts = []
+    if title := obj.title:
+        verbose_name_parts.append(title)
+    if with_description and (description := obj.description):
+        verbose_name_parts.append(description)
+    return " | ".join(verbose_name_parts)
+
+
 def model_factory(
     dataset: Dataset, table_schema: DatasetTableSchema, base_app_name: Optional[str] = None
 ) -> Type[DynamicModel]:
@@ -438,8 +454,7 @@ def model_factory(
         if init_kwargs is None:
             init_kwargs = {}
 
-        if field.title:
-            init_kwargs["verbose_name"] = field.title
+        init_kwargs["verbose_name"] = _fetch_verbose_name(field)
 
         # Generate field object
         kls, args, kwargs = FieldMaker(base_class, table_schema, **init_kwargs)(
@@ -465,7 +480,7 @@ def model_factory(
             "managed": False,
             "db_table": table_schema.db_name(),
             "app_label": app_label,
-            "verbose_name": (table_schema.title or table_schema.id).capitalize(),
+            "verbose_name": _fetch_verbose_name(table_schema, with_description=True),
             "ordering": [to_snake_case(fn) for fn in table_schema.identifier],
         },
     )

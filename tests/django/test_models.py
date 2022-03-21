@@ -18,7 +18,7 @@ def test_model_factory_fields(afval_dataset) -> None:
     table = afval_dataset.schema.tables[0]
     model_cls = model_factory(afval_dataset, table, base_app_name="dso_api.dynamic_api")
     meta = model_cls._meta
-    assert meta.verbose_name == "Containers title"
+    assert meta.verbose_name == "Containers title | Containers description"
     assert {f.name for f in meta.get_fields()} == {
         "id",
         "cluster",
@@ -39,7 +39,12 @@ def test_model_factory_fields(afval_dataset) -> None:
     assert geo_field.db_index
     assert meta.app_label == afval_dataset.schema.id
 
+    # Title and description
     assert meta.get_field("eigenaar_naam").verbose_name == "Naam eigenaar"
+    assert meta.get_field("eigenaar_naam").help_text == "Naam van de eigenaar"
+    # Description only
+    assert meta.get_field("datum_creatie").verbose_name == ""
+    assert meta.get_field("datum_creatie").help_text == "Datum aangemaakt"
 
     table_with_id_as_string = afval_dataset.schema.tables[1]
     model_cls = model_factory(
