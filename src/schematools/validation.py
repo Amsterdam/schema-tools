@@ -286,3 +286,23 @@ def _property_formats(dataset: DatasetSchema) -> Iterator[str]:
         for field in table.get_fields():
             if field.type == "str" and field.format not in ALLOWED:
                 yield f"Format {field.format!r} not allowed, must be one of {ALLOWED!r}"
+
+
+@_register_validator("auth across relations")
+def _relation_auth(dataset: DatasetSchema) -> Iterator[str]:
+    """Relation fields should not refer to a field that has an "auth".
+
+    No rule has been defined to handle this case.
+    """
+    for table in dataset.tables:
+        for field in table.get_fields(include_subfields=True):
+            rel = field.related_table
+            if not rel:
+                continue
+
+            if (
+                rel.auth
+                or rel.dataset.auth
+                or any(rel.get_field_by_id(f).auth for f in (field.related_field_ids or []))
+            ):
+                yield f"{table.id}.{field.id} would require authorization"

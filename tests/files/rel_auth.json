@@ -1,0 +1,58 @@
+{
+  "type": "dataset",
+  "id": "relauth",
+  "title": "Relations with auth (to be set inside the test)",
+  "status": "beschikbaar",
+  "version": "1.2.3",
+  "tables": [
+    {
+      "id": "base",
+      "type": "table",
+      "version": "1.2.3",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "identifier": "stop",
+        "required": ["schema", "stop"],
+        "display": "stop",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "stop": {
+            "type": "string",
+            "description": "U can't touch this."
+          }
+        }
+      }
+    },
+    {
+      "id": "refers",
+      "type": "table",
+      "version": "1.2.3",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "identifier": "id",
+        "required": ["schema", "id"],
+        "display": "id",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "id": {
+            "type": "string",
+            "description": "Whatever"
+          },
+          "rel": {
+            "type": "string",
+            "description": "This should not be allowed",
+            "relation": "relauth:base"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 from typing import cast
 
@@ -8,7 +9,7 @@ import pytest
 from more_itertools import first
 
 from schematools import validation
-from schematools.types import Json, TableVersions
+from schematools.types import DatasetSchema, Json, TableVersions
 from schematools.utils import dataset_schema_from_path
 
 
@@ -107,3 +108,38 @@ def test_main_geometry(here: Path) -> None:
     assert error.message == (
         "mainGeometry = 'merkOmschrijving' is not a geometry field, type = 'string'"
     )
+
+
+def test_rel_auth_dataset(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "rel_auth.json")
+    dataset["auth"] = ["HAMMERTIME"]
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1, errors
+    assert "refers.rel would require authorization" in str(errors[0])
+
+
+def test_rel_auth_table(here: Path) -> None:
+    dataset_json = json.load(open(here / "files" / "rel_auth.json"))
+    table = next(t for t in dataset_json["tables"] if t["id"] == "base")
+    table["auth"] = ["HAMMERTIME"]
+    dataset = DatasetSchema.from_dict(dataset_json)
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1, errors
+    assert "refers.rel would require authorization" in str(errors[0])
+
+
+def test_rel_auth_field(here: Path) -> None:
+    dataset_json = json.load(open(here / "files" / "rel_auth.json"))
+    table = next(t for t in dataset_json["tables"] if t["id"] == "base")
+    field = table["schema"]["properties"]["stop"]
+    field["auth"] = ["HAMMERTIME"]
+
+    dataset = DatasetSchema.from_dict(dataset_json)
+    errors = list(validation.run(dataset))
+
+    # We may get multiple errors because we stuck an "auth" on an identifier field.
+    # That's not allowed, but check for it anyway.
+    assert len(errors) >= 1, errors
+    assert any("refers.rel would require authorization" in str(e) for e in errors)
