@@ -1,0 +1,41 @@
+{
+  "type": "dataset",
+  "id": "validationTest",
+  "title": "crs required Validation Test",
+  "status": "beschikbaar",
+  "description": "Schema for unit testing crs validator",
+  "version": "0.0.1",
+  "tables": [
+    {
+      "id": "crsValidation",
+      "title": "Some title",
+      "type": "table",
+      "version": "1.0.0",
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/tests/long_ids.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "identifier": "fubar",
+        "type": "object",
+        "mainGeometry":"geometrie",
+        "additionalProperties": false,
+        "required": [
+          "fubar",
+          "schema"
+        ],
+        "display": "fubar",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "fubar": {
+            "type": "string"
+          },
+          "geometrie": {
+            "$ref": "https://geojson.org/schema/Geometry.json",
+            "description": "Geometrische beschrijving van een object."
+          }
+        }
+      }
+    }
+  ]
+}
