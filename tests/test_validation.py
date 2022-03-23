@@ -99,6 +99,7 @@ def test_main_geometry(here: Path) -> None:
 
     dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "not_a_geometry"
     error = next(validation.run(dataset))
+    assert "mainGeometry = 'not_a_geometry'" in error.message
     assert "Field 'not_a_geometry' does not exist" in error.message
 
     dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "merkOmschrijving"
