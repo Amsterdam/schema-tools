@@ -253,7 +253,7 @@ def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
             if not field.is_geo:
                 yield f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}"
         except SchemaObjectNotFound as e:
-            yield str(e)
+            yield f"mainGeometry = {main_geo!r}, but: {e}"
 
 
 @_register_validator("property formats")
