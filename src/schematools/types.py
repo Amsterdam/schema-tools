@@ -1251,9 +1251,12 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def related_field_ids(self) -> Optional[list[str]]:
-        """If this field is a relation, return which fields this relation references.
-        That can be either the primary key of the related table,
-        or one of the explicitly declared sub-fields.
+        """For a relation field, returns the identifiers of the referenced fields.
+
+        The returned list contains only the fields, e.g., ["id", "volgnummer"].
+        These are fields on the table `self.related_table`.
+
+        If self is not a relation field, the return value is None.
         """
         if not self.get("relation"):
             return None
