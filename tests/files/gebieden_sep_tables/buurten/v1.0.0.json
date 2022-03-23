@@ -32,6 +32,20 @@
           "type": "string",
           "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
         },
+        "volgnummer": {
+            "type": "integer",
+            "description": ""
+        },
+        "beginGeldigheid": {
+           "type": "string",
+           "format": "date",
+           "description": "De datum waarop het object is gecreëerd."
+        },
+        "eindGeldigheid": {
+          "type": "string",
+          "format": "date",
+          "description": "De datum waarop het object is komen te vervallen."
+        },
         "primaireGeometrie": {
           "$ref": "https://geojson.org/schema/Geometry.json",
           "description": "Geometrische beschrijving van een object."
