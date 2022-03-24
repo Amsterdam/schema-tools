@@ -260,13 +260,11 @@ def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
 def _check_crs(dataset: DatasetSchema) -> Iterator[str]:
     """Check dataset has crs property if any of its tables has a geo field."""
     if dataset.data.get("crs") is None:
-        for table in dataset.tables:
-            for field in table.get_fields():
-                if field.is_geo:
-                    yield (
-                        "A 'crs' field is required for datasets with geometric data. "
-                        'suggestion: "EPSG:28992".'
-                    )
+        if any(field.is_geo for table in dataset.tables for field in table.get_fields()):
+            yield (
+                "A 'crs' field is required for datasets with geometric data. "
+                'suggestion: "EPSG:28992".'
+            )
 
 
 @_register_validator("property formats")
