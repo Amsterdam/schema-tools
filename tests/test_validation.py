@@ -44,6 +44,19 @@ def test_id_auth(here: Path) -> None:
     assert list(errors) == []
 
 
+def test_crs(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files/crs_validation.json")
+
+    errors = validation.run(dataset)
+
+    error = next(errors)
+    assert error
+    assert error.validator_name == "crs"
+    assert """A 'crs' field is required""" in error.message
+
+    assert list(errors) == []
+
+
 def test_postgres_identifier_length(here: Path) -> None:
     dataset = dataset_schema_from_path(here / "files/long_ids.json")
 
@@ -83,7 +96,7 @@ def test_active_versions(here: Path) -> None:
     for version in table_version.active:
         incorrect_version = copy.deepcopy(version)
         incorrect_version.major += 1
-        cast(dict[str, Json], table_version.active[version])["version"] = str(incorrect_version)
+        cast("dict[str, Json]", table_version.active[version])["version"] = str(incorrect_version)
     error = next(validation.run(dataset))
     assert error
     assert "does not match with version number" in error.message
