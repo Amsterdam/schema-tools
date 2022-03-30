@@ -5,8 +5,7 @@ The other classes in this module ease to retrieval of permission objects.
 """
 from __future__ import annotations
 
-from functools import wraps
-from typing import Callable, Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 import methodtools
 
@@ -22,54 +21,6 @@ from schematools.types import (
 )
 
 __all__ = ("UserScopes",)
-
-
-def abort_on_highest(func: Callable[..., Permission]):
-    """Decorator to abort searching for permissions when the highest value was found.
-
-    This is an internal helper to make the permission search code DRY.
-    """
-
-    @wraps(func)
-    def _abort_on_highest(*args, **kwargs) -> Permission:
-        try:
-            return func(*args, **kwargs)
-        except HighestPermissionFound as e:
-            return e.permission
-
-    return _abort_on_highest
-
-
-class HighestPermissionFound(Exception):
-    def __init__(self, permission: Permission):
-        self.permission = permission
-
-
-class PermissionCollection:
-    """A helper class to ease collecting permissions from profile objects.
-
-    This reduces the DRY code in permission searches, when used together with ``abort_on_highest``.
-    It helps to find the highest permission level,
-    and automatically aborts when the highest possible value is found.
-    """
-
-    def __init__(self):
-        self._collection = []
-
-    def append(self, permission: Permission):
-        """Add a new discovered permission level to this collection."""
-        self._collection.append(permission)
-        if permission.level is PermissionLevel.highest:
-            # Avoid further code flow.
-            raise HighestPermissionFound(permission)
-
-    @property
-    def highest_value(self) -> Permission:
-        """Return the highest found permission."""
-        return max(self._collection, default=Permission.none)
-
-    def __bool__(self):
-        return bool(self._collection)
 
 
 class UserScopes:
@@ -88,7 +39,7 @@ class UserScopes:
 
     def __init__(
         self,
-        query_params: Dict[str, ...],
+        query_params: Dict[str, object],
         request_scopes: Iterable[str],
         all_profiles: Optional[Iterable[ProfileSchema]] = None,
     ):
@@ -196,7 +147,6 @@ class UserScopes:
         )
 
     @methodtools.lru_cache()
-    @abort_on_highest
     def _has_table_profile_access(self, table: DatasetTableSchema) -> Permission:
         """Give the permission level for a table.
 
@@ -205,25 +155,27 @@ class UserScopes:
         """
         dataset_id = table.dataset.id
         table_id = table.id
-        permissions = PermissionCollection()
+        max_permission = Permission.none
 
         for profile_dataset in self.get_active_profile_datasets(dataset_id):
+            if max_permission.level == PermissionLevel.highest:
+                break
+
             # If a profile defines "read" on the whole dataset, without explicitly
             # mentioning a table, this means the table can also be read unconditionally.
             profile_table = profile_dataset.tables.get(table_id, None)
             if profile_table is None:
                 if dataset_permission := profile_dataset.permissions:
-                    permissions.append(dataset_permission)
+                    max_permission = max(max_permission, dataset_permission)
 
             # Otherwise see if the table can be included (mandatory filters match)
             elif self._may_include_profile_table(profile_table):
-                permissions.append(profile_table.permissions)
+                max_permission = max(max_permission, profile_table.permissions)
 
         # Datasets may a permission that also covers this table,
         # but tables could also define an explicit permission. See who wins.
-        return permissions.highest_value
+        return max_permission
 
-    @abort_on_highest
     def _has_field_profile_access(self, field: DatasetFieldSchema) -> Permission:
         """Give the permission level for a field based on a profile.
 
@@ -232,18 +184,21 @@ class UserScopes:
         but the field may state "encoded" as the level. Since a default is defined for the field,
         that's being used.
         """
-        permissions = PermissionCollection()
         field_id = field.id
         table_id = field.table.id
+        max_permission = Permission.none
 
         # First see if there is an explicit definition for a field:
         for profile_dataset in self.get_active_profile_datasets(field.table.dataset.id):
+            if max_permission.level == PermissionLevel.highest:
+                break
+
             # If a profile defines "read" on the whole dataset, without explicitly
             # mentioning the table, this means the table can also be read unconditionally.
             profile_table = profile_dataset.tables.get(table_id, None)
             if profile_table is None:
                 if dataset_permission := profile_dataset.permissions:
-                    permissions.append(dataset_permission)
+                    max_permission = max(max_permission, dataset_permission)
                 continue
 
             # See if the table can be included (mandatory filters match)
@@ -261,12 +216,12 @@ class UserScopes:
                 # that highest level will be returned instead.
                 table_permission = profile_table.permissions
                 if table_permission and table_permission.level > PermissionLevel.SUBOBJECTS_ONLY:
-                    permissions.append(table_permission)
+                    max_permission = max(max_permission, table_permission)
                 continue
 
-            permissions.append(field_permission)
+            max_permission = max(max_permission, field_permission)
 
-        return permissions.highest_value
+        return max_permission
 
     @methodtools.lru_cache()
     def get_active_profile_datasets(self, dataset_id: str) -> List[ProfileDatasetSchema]:
