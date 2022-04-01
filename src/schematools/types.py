@@ -47,6 +47,8 @@ DTS = TypeVar("DTS", bound="DatasetTableSchema")
 Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 Ref = str
 
+_PUBLIC_SCOPE = "OPENBAAR"
+
 logger = logging.getLogger(__name__)
 
 
@@ -396,7 +398,7 @@ class DatasetSchema(SchemaType):
 
     @property
     def auth(self) -> FrozenSet[str]:
-        """Auth of the dataset (if set)"""
+        """Auth of the dataset, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
 
     def get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
@@ -990,7 +992,7 @@ class DatasetTableSchema(SchemaType):
 
     @property
     def auth(self) -> FrozenSet[str]:
-        """Auth of the table (if set)"""
+        """Auth of the table, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
 
     @property
@@ -1465,7 +1467,7 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def auth(self) -> FrozenSet[str]:
-        """Auth of the field, or the empty set if auth is not set."""
+        """Auth of the field, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
 
     @property
@@ -1883,8 +1885,8 @@ class Temporal:
 def _normalize_scopes(auth: Union[None, str, list, tuple]) -> FrozenSet[str]:
     """Make sure the auth field has a consistent type"""
     if not auth:
-        # Auth defined on schema
-        return frozenset()
+        # No auth implies OPENBAAR.
+        return frozenset({_PUBLIC_SCOPE})
     elif isinstance(auth, (list, tuple, set)):
         # Multiple scopes act choices (OR match).
         return frozenset(auth)
