@@ -9,7 +9,7 @@ from typing import Dict, Iterable, List, Optional
 
 import methodtools
 
-from schematools.types import (
+from ..types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,
@@ -19,6 +19,8 @@ from schematools.types import (
     ProfileSchema,
     ProfileTableSchema,
 )
+
+PUBLIC_SCOPE = "OPENBAAR"
 
 __all__ = ("UserScopes",)
 
@@ -48,13 +50,14 @@ class UserScopes:
         Args:
             query_params: The search query filter (e.g. request.GET).
             request_scopes: The scopes granted to a request.
+                Presence of the public scope "OPENBAAR" is implied.
             all_profiles: All profiles that need to be loaded.
                 If not None, this iterable is stored and converted to list
                 the first time it is needed.
         """
         self._query_param_names = [param for param, value in query_params.items() if value]
         self._all_profiles = all_profiles
-        self._scopes = frozenset(request_scopes)
+        self._scopes = set(request_scopes) | {PUBLIC_SCOPE}
 
     def add_query_params(self, params: List[str]):
         """Tell that the request has extra (implicit) parameters that are satisfied.
@@ -80,7 +83,7 @@ class UserScopes:
         This performs an OR check: having one of the scopes gives access.
         """
         needed_scopes = set(needed_scopes)
-        return not needed_scopes or any(scope in needed_scopes for scope in self._scopes)
+        return any(scope in needed_scopes for scope in self._scopes)
 
     def has_dataset_access(self, dataset: DatasetSchema) -> Permission:
         """Tell whether a dataset can be accessed."""
