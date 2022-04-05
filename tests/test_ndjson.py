@@ -329,6 +329,19 @@ def test_ndjson_import_with_shortnames_in_schema(
     }
 
 
+def test_ndjson_import_with_shortnames_in_identifier(here, engine, hr_schema, dbsession):
+    """Prove that data for schemas with shortnames in an identifier is imported correctly."""
+    ndjson_path = here / "files" / "data" / "hr_sbi_act_nr.ndjson"
+    importer = NDJSONImporter(hr_schema, engine)
+    importer.generate_db_objects("sbiactiviteiten", truncate=True, ind_extra_index=False)
+    importer.load_file(ndjson_path)
+
+    records = [
+        dict(r) for r in engine.execute("SELECT * from hr_sbiactiviteiten ORDER BY sbi_act_nr")
+    ]
+    assert records == [{"sbi_act_nr": "12"}, {"sbi_act_nr": "16"}]
+
+
 def test_provenance_for_schema_field_ids_equal_to_ndjson_keys(
     here, engine, woonplaatsen_schema, dbsession
 ):

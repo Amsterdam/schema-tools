@@ -102,6 +102,7 @@ class NDJSONImporter(BaseImporter):
         relation_field_info = []
         nm_relation_field_info = []
         nested_field_info = []
+        shortname_fields = []
         inactive_relation_info = []
         jsonpath_provenance_info = []
         geo_fields = []
@@ -124,12 +125,18 @@ class NDJSONImporter(BaseImporter):
                 nm_relation_field_info.append(field)
             if field.is_nested_table:
                 nested_field_info.append(field)
+            if field.has_shortname:
+                shortname_fields.append(field)
 
         with open(file_name) as fh:
             for _row in ndjson.reader(fh):
                 if through_fields_mapper is not None:
                     _row = through_fields_mapper(_row)
                 row = Row(_row, fields_provenances=fields_provenances)
+
+                for field in shortname_fields:
+                    row[field.name] = row[field.id]
+
                 for ir_field in inactive_relation_info:
                     row[ir_field.name] = json.dumps(row[ir_field.id])
                 for field_name in jsonpath_provenance_info:

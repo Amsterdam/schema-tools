@@ -122,6 +122,7 @@
           },
           "sbiActiviteitNummer": {
             "type": "string",
+            "shortname": "sbiActNr",
             "description": "Samenstelling van KvK-nummer en/of Vestigingsnummer of {BSN- of RSIN-nummer}"
           }
         }
