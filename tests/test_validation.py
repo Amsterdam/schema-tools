@@ -11,6 +11,7 @@ from more_itertools import first
 from schematools import validation
 from schematools.types import DatasetSchema, Json, TableVersions
 from schematools.utils import dataset_schema_from_path
+from schematools.validation import _active_versions, _check_maingeometry, _identifier_properties
 
 
 def test_camelcase() -> None:
@@ -80,7 +81,7 @@ def test_identifier_properties(here: Path) -> None:
     dataset = dataset_schema_from_path(here / "files/stadsdelen.json")
     with pytest.raises(StopIteration):
         # no validation error
-        next(validation.run(dataset))
+        next(_identifier_properties(dataset))
 
 
 def test_active_versions(here: Path) -> None:
@@ -104,12 +105,12 @@ def test_active_versions(here: Path) -> None:
     dataset = dataset_schema_from_path(here / "files/gebieden_sep_tables/dataset.json")
     with pytest.raises(StopIteration):
         # no validation error
-        next(validation.run(dataset))
+        next(_active_versions(dataset))
 
 
 def test_main_geometry(here: Path) -> None:
     dataset = dataset_schema_from_path(here / "files" / "meetbouten.json")
-    assert list(validation.run(dataset)) == []
+    assert list(_check_maingeometry(dataset)) == []
 
     dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "not_a_geometry"
     error = next(validation.run(dataset))
