@@ -169,7 +169,7 @@ def set_dataset_read_permissions(
         table_name = table.db_name()
         if is_remote(table_name):
             continue
-        table_scope = table.auth if table.auth else dataset_scope
+        table_scope = table.auth if table.auth != {PUBLIC_SCOPE} else dataset_scope
         table_scope_set = {table_scope} if isinstance(table_scope, str) else set(table_scope)
         if table.auth:
             print(f'Found table read permission for "{table_name}" to scopes "{table_scope_set}"')
@@ -180,7 +180,7 @@ def set_dataset_read_permissions(
         contains_field_grants = False
         fields = [field for field in table.fields if field.name != "schema"]
         for field in fields:
-            if field.auth:
+            if field.auth != {PUBLIC_SCOPE}:
                 if field.relation:
                     # FIXME: field-level grants are broken for relations (example: 1-N meldingen_meldingen_gbdbuurt, NM:
                     # haalcentraal_kadastraalonroerendezaken.adressen)
@@ -237,7 +237,7 @@ def set_dataset_read_permissions(
                 if create_roles:
                     _create_role_if_not_exists(session, grantee, dry_run=dry_run)
                 for field in fields:
-                    if not field.auth:
+                    if field.auth == {PUBLIC_SCOPE}:
                         if field.relation:
                             # FIXME: field-level grants are broken for relations (example: 1-N meldingen_meldingen_gbdbuurt, NM:
                             # haalcentraal_kadastraalonroerendezaken.adressen)
