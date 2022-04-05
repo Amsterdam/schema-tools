@@ -31,7 +31,7 @@ def introspect_permissions(engine, role):
             for acl in acl_list:
                 if acl.grantee == role:
                     print(
-                        'role "{}" has priviliges {} on table "{}"'.format(
+                        'role "{}" has privileges {} on table "{}"'.format(
                             role, ",".join(acl.privs), schema_relation_info.name
                         )
                     )
@@ -46,7 +46,7 @@ def revoke_permissions(engine, role):
             for acl in acl_list:
                 if acl.grantee == role:
                     print(
-                        'revoking ALL priviliges of role "{}" on table "{}"'.format(
+                        'revoking ALL privileges of role "{}" on table "{}"'.format(
                             role, schema_relation_info.name
                         )
                     )
@@ -100,7 +100,7 @@ def apply_schema_and_profile_permissions(
 def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
     # NOTE: Rudimentary, not ready for production.
     acl_list = query.get_all_table_acls(engine, schema=pg_schema)
-    priviliges = [
+    privileges = [
         "SELECT",
     ]
     grantee = role
@@ -110,7 +110,7 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
                 for item in acl_list:
                     if item.name.startswith(dataset + "_"):
                         grant_statement = grant(
-                            priviliges,
+                            privileges,
                             PgObjectType.TABLE,
                             item.name,
                             grantee,
@@ -210,11 +210,11 @@ def set_dataset_read_permissions(
                         _create_role_if_not_exists(session, grantee, dry_run=dry_run)
                     column_name = to_snake_case(field.name)
                     # the space after SELECT is very important
-                    column_priviliges = [f"SELECT ({column_name})"]
+                    column_privileges = [f"SELECT ({column_name})"]
                     _execute_grant(
                         session,
                         grant(
-                            column_priviliges,
+                            column_privileges,
                             PgObjectType.TABLE,
                             table_name,
                             grantee,
@@ -245,11 +245,11 @@ def set_dataset_read_permissions(
 
                         column_name = to_snake_case(field.name)
                         # the space after SELECT is very important:
-                        column_priviliges = ["SELECT ({})".format(column_name)]
+                        column_privileges = ["SELECT ({})".format(column_name)]
                         _execute_grant(
                             session,
                             grant(
-                                column_priviliges,
+                                column_privileges,
                                 PgObjectType.TABLE,
                                 table_name,
                                 grantee,
