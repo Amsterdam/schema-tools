@@ -122,7 +122,7 @@ def _id_auth(dataset: DatasetSchema) -> Iterator[str]:
         for ident in table.identifier:
             try:
                 field = table.get_field_by_id(ident)
-                if field.auth:
+                if field.auth != {"OPENBAAR"}:
                     yield f"auth on field {ident!r} should go on the table instead"
             except SchemaObjectNotFound as e:
                 yield f"{ident!r} listed in identifier list {table.identifier}, but: {e}"
