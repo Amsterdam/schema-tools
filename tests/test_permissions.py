@@ -309,7 +309,37 @@ class TestReadPermissions:
         _check_select_permission_granted(
             engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
         )
+        _check_select_permission_granted(
+            engine, "scope_level_d", "gebieden_bouwblokken", "ligt_in_buurt_loose_id"
+        )
+        _check_select_permission_granted(
+            engine, "scope_level_d", "gebieden_bouwblokken", "ligt_in_buurt_id"
+        )
+        _check_select_permission_granted(
+            engine, "scope_level_d", "gebieden_bouwblokken", "ligt_in_buurt_identificatie"
+        )
+        _check_select_permission_granted(
+            engine, "scope_level_d", "gebieden_bouwblokken", "ligt_in_buurt_volgnummer"
+        )
         _check_select_permission_denied(engine, "scope_level_c", "gebieden_buurten")
+        _check_select_permission_denied(engine, "scope_level_d", "gebieden_buurten")
+
+        # Check the through table, for all columns
+        _check_select_permission_granted(
+            engine, "scope_level_e", "gebieden_ggwgebieden_bestaat_uit_buurten"
+        )
+        # Check the nested table, for all columns
+        _check_select_permission_granted(
+            engine, "scope_level_f", "gebieden_ggwgebieden_gebieds_grenzen"
+        )
+        # Check the through table
+        _check_select_permission_denied(
+            engine, "scope_level_a", "gebieden_ggwgebieden_bestaat_uit_buurten"
+        )
+        # Check the nested table
+        _check_select_permission_denied(
+            engine, "scope_level_a", "gebieden_ggwgebieden_gebieds_grenzen"
+        )
 
     def test_single_dataset_permissions(
         self, here, engine, gebieden_schema_auth, meetbouten_schema, dbsession

@@ -1,4 +1,6 @@
 """Create GRANT statements to give roles very specific access to the database."""
+from collections import defaultdict
+
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
 from sqlalchemy import text
@@ -38,6 +40,7 @@ def introspect_permissions(engine, role):
 
 
 def revoke_permissions(engine, role):
+    """Revoke all privileges for the indicated role."""
     grantee = role
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
     for schema_relation_info in schema_relation_infolist:
@@ -147,127 +150,89 @@ def set_dataset_write_permissions(session, pg_schema, ams_schema, dry_run, creat
 def set_dataset_read_permissions(
     session, pg_schema, ams_schema, role, scope, dry_run, create_roles
 ):
+    def _fetch_grantees(scopes):
+        if role == "AUTO":
+            grantees = [scope_to_role(scope) for scope in scopes]
+        elif scope in scopes:
+            grantees = [role]
+        else:
+            grantees = []
+        return grantees
+
     grantee = None if role == "AUTO" else role
     if create_roles and grantee:
         _create_role_if_not_exists(session, grantee)
-    dataset_scope = (
-        ams_schema.auth
-        if ams_schema.auth
-        else {
-            PUBLIC_SCOPE,
-        }
-    )
-    dataset_scope_set = {dataset_scope} if isinstance(dataset_scope, str) else set(dataset_scope)
-    if dataset_scope_set - {PUBLIC_SCOPE}:
-        print(
-            'Found dataset read permission for "{}" to scopes "{}"'.format(
-                ams_schema.id, dataset_scope_set
-            )
-        )
 
+    all_scopes = defaultdict(list)
+
+    dataset_scopes = ams_schema.auth
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = table.db_name()
         if is_remote(table_name):
             continue
-        table_scope = table.auth if table.auth != {PUBLIC_SCOPE} else dataset_scope
-        table_scope_set = {table_scope} if isinstance(table_scope, str) else set(table_scope)
-        if table.auth:
-            print(f'Found table read permission for "{table_name}" to scopes "{table_scope_set}"')
-            print(
-                f'"{table_scope_set}" overrules "{dataset_scope_set}"'
-                f' for read permission of "{table_name}"'
-            )
-        contains_field_grants = False
+
+        table_scopes = table.auth
         fields = [field for field in table.fields if field.name != "schema"]
+
+        column_scopes = {}
+
+        # First process all fields, to know if any fields has a non-public scope
         for field in fields:
-            if field.auth != {PUBLIC_SCOPE}:
-                if field.relation:
-                    # FIXME: field-level grants are broken for relations (example: 1-N meldingen_meldingen_gbdbuurt, NM:
-                    # haalcentraal_kadastraalonroerendezaken.adressen)
-                    # Because the name in the schema is not the same as the field that ends up in the database.
-                    continue
-                field_scope = field.auth
-                field_scope_set = (
-                    {field_scope} if isinstance(field_scope, str) else set(field_scope)
-                )
-                print(
-                    f'Found field read permission for "{field.name}" in'
-                    f' table "{table_name}" for scopes {field_scope_set}'
-                )
-                contains_field_grants = True
-                print(
-                    f'"{field_scope_set}" overrules "{table_scope_set}" for read'
-                    f' permission of field {field.name} in table {table_name}"'
-                )
-                if role == "AUTO":
-                    grantees = [scope_to_role(scope) for scope in field_scope_set]
-                elif scope in field_scope_set:
-                    grantees = [role]
-                else:
-                    grantees = []
-                for grantee in grantees:
-                    if create_roles:
-                        _create_role_if_not_exists(session, grantee, dry_run=dry_run)
-                    column_name = to_snake_case(field.name)
-                    # the space after SELECT is very important
-                    column_privileges = [f"SELECT ({column_name})"]
-                    _execute_grant(
-                        session,
-                        grant(
-                            column_privileges,
-                            PgObjectType.TABLE,
-                            table_name,
-                            grantee,
-                            grant_option=False,
-                            schema=pg_schema,
-                        ),
-                        dry_run=dry_run,
+            column_name = field.db_name()
+            # Object type relations have subfields, in that case
+            # the auth scope on the relation is leading.
+            parent_field_scopes = set()
+            if field.parent_field is not None:
+                parent_field_scopes = field.parent_field.auth - {PUBLIC_SCOPE}
+
+            field_scopes = field.auth - {PUBLIC_SCOPE}
+            final_scopes = parent_field_scopes or field_scopes
+
+            if final_scopes:
+                if field.is_nested_table:
+                    nested_table = ams_schema.build_nested_table(table, field)
+                    all_scopes[nested_table.db_name()].append(
+                        {"privileges": ["SELECT"], "grantees": _fetch_grantees(final_scopes)}
                     )
-        if role == "AUTO":
-            grantees = [scope_to_role(scope) for scope in table_scope_set]
-        elif scope in table_scope_set:
-            grantees = [role]
-        else:
-            grantees = []
+                    continue
+                if field.nm_relation is not None:
+                    through_table = ams_schema.build_through_table(table, field)
+                    all_scopes[through_table.db_name()].append(
+                        {"privileges": ["SELECT"], "grantees": _fetch_grantees(final_scopes)}
+                    )
+                    continue
+                column_scopes[column_name] = final_scopes
 
-        if contains_field_grants:
-            # Only grant those fields without their own scope.
-            # The other field have already been granted above
-            for grantee in grantees:
+        if column_scopes:
+            for field in fields:
+                column_name = field.db_name()
+                all_scopes[table_name].append(
+                    {
+                        "privileges": [f"SELECT ({column_name})"],
+                        "grantees": _fetch_grantees(column_scopes.get(column_name, table_scopes)),
+                    }
+                )
+        else:
+            if table_name not in all_scopes:
+                all_scopes[table_name].append(
+                    {
+                        "privileges": ["SELECT"],
+                        "grantees": _fetch_grantees(
+                            table_scopes - {PUBLIC_SCOPE} or dataset_scopes
+                        ),
+                    }
+                )
+
+    for table_name, grant_params in all_scopes.items():
+
+        for grant_param in grant_params:
+            for grantee in grant_param["grantees"]:
                 if create_roles:
                     _create_role_if_not_exists(session, grantee, dry_run=dry_run)
-                for field in fields:
-                    if field.auth == {PUBLIC_SCOPE}:
-                        if field.relation:
-                            # FIXME: field-level grants are broken for relations (example: 1-N meldingen_meldingen_gbdbuurt, NM:
-                            # haalcentraal_kadastraalonroerendezaken.adressen)
-                            continue
-
-                        column_name = to_snake_case(field.name)
-                        # the space after SELECT is very important:
-                        column_privileges = ["SELECT ({})".format(column_name)]
-                        _execute_grant(
-                            session,
-                            grant(
-                                column_privileges,
-                                PgObjectType.TABLE,
-                                table_name,
-                                grantee,
-                                grant_option=False,
-                                schema=pg_schema,
-                            ),
-                            dry_run=dry_run,
-                        )
-        else:
-            # we can grant the whole table instead of field by field
-            for grantee in grantees:
-                if create_roles:
-                    _create_role_if_not_exists(session, grantee, dry_run=dry_run)
-                table_privileges = ["SELECT"]
                 _execute_grant(
                     session,
                     grant(
-                        table_privileges,
+                        grant_param["privileges"],
                         PgObjectType.TABLE,
                         table_name,
                         grantee,

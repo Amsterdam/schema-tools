@@ -1170,6 +1170,17 @@ class DatasetFieldSchema(DatasetType):
         """
         return cast(str, self.get("shortname", self._id))
 
+    def db_name(self) -> str:
+        """Return the name that is being used in the database.
+
+        For regular fields, this should juist be the `name`,
+        the only exception is an FK relation, because in that
+        case there is an `_id` postfixed field in the base table.
+        """
+        from schematools.utils import to_snake_case
+
+        return to_snake_case(self.name + "_id" if self.relation is not None else self.name)
+
     @property
     def title(self) -> Optional[str]:
         """Title of the field."""

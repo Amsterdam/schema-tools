@@ -47,10 +47,26 @@
             "description": "De datum waarop het object is komen te vervallen.",
             "provenance": "eindgeldigheid"
           },
-          "ligtInBuurt": {
+          "ligtInBuurtLoose": {
             "type": "string",
             "relation": "gebieden:buurten",
             "provenance": "ligtinbuurt",
+            "auth": "LEVEL/D",
+            "description": "De buurt waar het bouwblok in ligt."
+          },
+          "ligtInBuurt": {
+            "type": "object",
+            "properties": {
+                "identificatie": {
+                    "type": "string"
+                },
+                "volgnummer": {
+                    "type": "integer"
+                }
+            },
+            "relation": "gebieden:buurten",
+            "provenance": "ligtinbuurt",
+            "auth": "LEVEL/D",
             "description": "De buurt waar het bouwblok in ligt."
           }
         }
@@ -187,6 +203,82 @@
           "geometrie": {
             "$ref": "https://geojson.org/schema/Polygon.json",
             "description": "Geometrische beschrijving van een object."
+          }
+        }
+      }
+    },
+{
+      "id": "ggwgebieden",
+      "type": "table",
+      "version": "1.0.0",
+      "temporal": {
+        "identifier": "volgnummer",
+        "dimensions": {
+          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+        }
+      },
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/gebieden/ggwgebieden.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "identifier": ["identificatie", "volgnummer"],
+        "required": ["schema", "id", "identificatie", "volgnummer"],
+        "display": "id",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "volgnummer": {
+            "type": "integer",
+            "description": "Uniek volgnummer van de toestand van het object."
+          },
+          "identificatie": {
+            "type": "string",
+            "description": "Unieke identificatie van het object."
+          },
+          "begingeldigheid": {
+            "type": "string",
+            "format": "date",
+            "description": "De datum waarop het object is gecreëerd."
+          },
+          "eindgeldigheid": {
+            "type": "string",
+            "format": "date",
+            "description": "De datum waarop het object is komen te vervallen."
+          },
+          "bestaatUitBuurten": {
+            "relation": "gebieden:buurten",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "identificatie": {
+                  "type": "string"
+                },
+                "volgnummer": {
+                  "type": "integer"
+                }
+              }
+            },
+            "auth": "LEVEL/E",
+            "description": "De buurten waaruit het object bestaat."
+          },
+          "gebiedsGrenzen": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "diemen": {
+                  "type": "string"
+                },
+                "zaanstad": {
+                  "type": "integer"
+                }
+              }
+            },
+            "auth": "LEVEL/F",
+            "description": "De gemeentes waaraan het gebied grenst. Fictief veld ivm nested."
           }
         }
       }
