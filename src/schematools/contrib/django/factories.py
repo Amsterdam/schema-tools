@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Collection, Dict, Tuple, Type, TypeVar
+from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type, TypeVar, Union
 from urllib.parse import urlparse
 
 from django.apps import apps
@@ -13,6 +13,7 @@ from schematools.contrib.django import app_config, signals
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 from schematools.utils import get_rel_table_identifier, to_snake_case
 
+from .mockers import DynamicModelMocker
 from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
@@ -27,6 +28,7 @@ from .models import (
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 M = TypeVar("M", bound=DynamicModel)
 MODEL_CREATION_COUNTER = 1
+MODEL_MOCKER_CREATION_COUNTER = 1
 
 
 class RelationMaker:
@@ -384,6 +386,35 @@ def schema_models_factory(
     ]
 
 
+def schema_model_mockers_factory(
+    dataset: Dataset,
+    tables: Optional[Collection[str]] = None,
+    base_app_name: Optional[str] = None,
+) -> List[Type[DynamicModelMocker]]:
+    """Generate Django model mockers from the data of the schema."""
+    return [
+        model_mocker_factory(dataset=dataset, table_schema=table, base_app_name=base_app_name)
+        for table in dataset.schema.get_tables(include_nested=True, include_through=True)
+        if tables is None or table.id in tables
+    ]
+
+
+def _fetch_verbose_name(
+    obj: Union[DatasetTableSchema, DatasetTableSchema], with_description: bool = False
+) -> str:
+    """Generate a verbose_name for a table or field.
+
+    For fields, the description goes into `help_text`, so the flag `with_description`
+    can be used to leave it out of the `verbose_name`.
+    """
+    verbose_name_parts = []
+    if title := obj.title:
+        verbose_name_parts.append(title)
+    if with_description and (description := obj.description):
+        verbose_name_parts.append(description)
+    return " | ".join(verbose_name_parts)
+
+
 def model_factory(
     dataset: Dataset,
     table_schema: DatasetTableSchema,
@@ -487,5 +518,45 @@ def model_factory(
             "Meta": meta_cls,
         },
     )
+
     app_config.register_model(app_label, model_class)
     return model_class
+
+
+def model_mocker_factory(
+    dataset: Dataset, table_schema: DatasetTableSchema, base_app_name: Optional[str] = None
+) -> Type[DynamicModelMocker]:
+    """Generate a Django model mocker class from a JSON Schema definition."""
+    dataset_schema = dataset.schema
+    app_label = f"{dataset_schema.id}"
+    base_app_name = base_app_name or "dso_api.dynamic_api"
+    module_name = f"{base_app_name}.{app_label}.mockers"
+
+    # Bootstrap for the model_factory is implemented in the DynamicRouter, so on startup
+    # of the DSO-API. We have no desire to bootstrap the DynamicModelMocker for DSO runtime,
+    # just in the test suite and in the relevant management commands. As the DynamicModelMocker
+    # wraps around the DynamicModel, we must initiate it here to feed to the DjangoModelFactory
+    # Meta class: https://factoryboy.readthedocs.io/en/stable/orms.html#the-djangomodelfactory-subclass.
+    model_cls = model_factory(dataset, table_schema, base_app_name=base_app_name)
+
+    # Generate Meta part
+    meta_cls = type(
+        "Meta",
+        (),
+        {
+            "model": f"{app_label}.{table_schema.model_name()}",
+            "database": "default"
+            # "django_get_or_create":  ('username',)
+        },
+    )
+
+    model_mocker_class = type(
+        f"{module_name}.{table_schema.model_name()}",
+        (DynamicModelMocker,),
+        {
+            "CREATION_COUNTER": MODEL_MOCKER_CREATION_COUNTER,  # for debugging recreation
+            "Meta": meta_cls,
+        },
+    )
+
+    return model_mocker_class

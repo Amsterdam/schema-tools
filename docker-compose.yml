@@ -5,6 +5,8 @@ version: "3.0"
 services:
   database:
     image: amsterdam/postgres11
+    ports:
+      - "5415:5432"
     environment:
       POSTGRES_DB: dataservices
       POSTGRES_USER: dataservices

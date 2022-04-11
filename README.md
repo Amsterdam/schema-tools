@@ -77,10 +77,10 @@ in the project with the schema file defintions as follows:
 
 ```yaml
   - repo: https://github.com/Amsterdam/schema-tools
-    rev: v0.20.2
+    rev: v3.5.0
     hooks:
       - id: validate-schema
-        args: ['https://schemas.data.amsterdam.nl/schema@v1.1.1#']
+        args: ['https://schemas.data.amsterdam.nl/schema@v1.2.0#']
         exclude: |
             (?x)^(
                 schema.+|             # exclude meta schemas
