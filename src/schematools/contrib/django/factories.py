@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from django.apps import apps
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.db.models import CheckConstraint, Q
 from django.db.models.base import ModelBase
 
 from schematools.contrib.django import app_config, signals
@@ -431,6 +432,8 @@ def model_factory(
 
     # Generate fields
     fields = {}
+    constraints = []
+
     for field in table_schema.fields:
         type_ = field.type
         # skip schema field for now
@@ -472,6 +475,16 @@ def model_factory(
         model_field.field_schema = field  # avoid extra lookups.
         fields[field_name] = model_field
 
+        # Non-composite string identifiers may not contain forwardslashes, since this
+        # breaks URL matching when they are used in URL paths.
+        if field.is_primary and field.type == "string":
+            constraints.append(
+                CheckConstraint(
+                    check=~Q(**{f"{field.name}__contains": "/"}),
+                    name=f"{field.name}_not_contains_slash",
+                )
+            )
+
     # Generate Meta part
     meta_cls = type(
         "Meta",
@@ -482,6 +495,7 @@ def model_factory(
             "app_label": app_label,
             "verbose_name": _fetch_verbose_name(table_schema, with_description=True),
             "ordering": [to_snake_case(fn) for fn in table_schema.identifier],
+            "constraints": constraints,
         },
     )
 

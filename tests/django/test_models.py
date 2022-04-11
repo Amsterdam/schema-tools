@@ -1,5 +1,7 @@
 import pytest
 from django.contrib.gis.db import models
+from django.core.management import call_command
+from django.db import IntegrityError
 from django.db.models.base import ModelBase
 from django.db.models.fields import DateTimeField
 from django_postgres_unlimited_varchar import UnlimitedCharField
@@ -338,3 +340,22 @@ def test_temporal_subfields_are_skipped(verblijfsobjecten_dataset):
 
     begin_geldigheid_field = model_dict["verblijfsobjecten"]._meta.get_field("begin_geldigheid")
     assert isinstance(begin_geldigheid_field, DateTimeField)
+
+
+@pytest.mark.django_db
+def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_dataset, here):
+    call_command("import_schemas", here / "files" / "parkeervakken.json", create_tables=True)
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            parkeervakken_dataset, base_app_name="dso_api.dynamic_api"
+        )
+    }
+
+    model = model_dict["parkeervakken"]
+
+    with pytest.raises(
+        IntegrityError,
+        match=r'^new row for relation "parkeervakken_parkeervakken" violates check constraint "id_not_contains_slash".*',
+    ):
+        model.objects.create(id="forbidden/slash")
