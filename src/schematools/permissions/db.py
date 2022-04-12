@@ -82,6 +82,7 @@ def apply_schema_and_profile_permissions(
     create_roles=False,
     revoke=False,
 ):
+    """Apply permissions for schema and profile."""
     Session = sessionmaker(bind=engine)
     session = Session()
     try:
@@ -111,7 +112,10 @@ def apply_schema_and_profile_permissions(
 
 
 def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
-    # NOTE: Rudimentary, not ready for production.
+    """Create an ACL from profile list.
+
+    NOTE: Rudimentary, not ready for production!
+    """
     acl_list = query.get_all_table_acls(engine, schema=pg_schema)
     privileges = [
         "SELECT",
@@ -135,6 +139,7 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
 
 
 def set_dataset_write_permissions(session, pg_schema, ams_schema, dry_run, create_roles):
+    """Sets write permissions for the indicated dataset."""
     grantee = f"write_{to_snake_case(ams_schema.id)}"
     if create_roles:
         _create_role_if_not_exists(session, grantee, dry_run=dry_run)
@@ -196,7 +201,7 @@ def set_dataset_read_permissions(
     """
     grantee: Optional[str] = f"write_{to_snake_case(ams_schema.id)}"
 
-    def _fetch_grantees(scopes: frozenset[str]) -> list[str]:
+    def _fetch_grantees(scopes):
         if role == "AUTO":
             grantees = [scope_to_role(scope) for scope in scopes]
         elif scope in scopes:
@@ -303,12 +308,12 @@ def create_acl_from_schemas(
     revoke,
 ):
     """Create and set the ACL for automatically generated roles based on Amsterdam Schema.
+
     Read permissions are granted to roles 'scope_X', where X are scopes found in Amsterdam Schema
     Write permissions are granted to roles 'write_Y', where Y are dataset ids,
     for all tables belonging to the dataset.
     Revoke old privileges before assigning new in case new privileges are more restrictive.
     """
-
     if revoke:
         if role == "AUTO":
             if isinstance(schemas, DatasetSchema):
@@ -385,11 +390,12 @@ def _revoke_all_privileges_from_role(
 def _revoke_all_privileges_from_read_and_write_roles(
     session, pg_schema, dataset_name=None, echo=True, dry_run=False
 ):
-    """Revoke all privileges that may have been previously granted to the scope_{} and write_{}
-    roles. If dataset_name is provided, revoke only rights to the tables belonging to
+    """Revoke all privileges that may have been previously granted.
+
+    This is about grants to the scope_* and write_* roles.
+    If dataset_name is provided, revoke only rights to the tables belonging to
     dataset_name.
     """
-
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
     result = session.execute(
@@ -438,10 +444,11 @@ def _execute_grant(session, grant_statement, echo=True, dry_run=False):
 
 
 def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
-    """Wrap the create role statement in an anonymous code block to be able to catch exception
+    """Wrap the create role statement in an anonymous code block.
+
+    Reason is to be able to catch exceptions.
     Don't break out of the session just because the role already exists
     """
-
     status_msg = "Skipped" if dry_run else "Executed"
     create_role_statement = f"CREATE ROLE {role}"
     if role not in existing_roles:
@@ -463,4 +470,5 @@ def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
 
 
 def scope_to_role(scope):
+    """Return rolename for the postgres database."""
     return f"scope_{scope.lower().replace('/', '_')}"
