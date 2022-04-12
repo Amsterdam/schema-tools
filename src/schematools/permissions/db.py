@@ -1,11 +1,13 @@
 """Create GRANT statements to give roles very specific access to the database."""
 import logging
 from collections import defaultdict
+from typing import Any, Optional, Union, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
 from sqlalchemy import text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
@@ -19,7 +21,7 @@ PUBLIC_SCOPE = "OPENBAAR"
 existing_roles = set()
 
 
-def is_remote(table_name):
+def is_remote(table_name: str) -> bool:
     """Test if table_name refers a remote table.
 
     WARNING: UGLY HACK until 265311 is resolved and we
@@ -33,7 +35,7 @@ def is_remote(table_name):
     )
 
 
-def introspect_permissions(engine, role):
+def introspect_permissions(engine: Engine, role: str) -> None:
     """Shows the table permissions."""
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
     for schema_relation_info in schema_relation_infolist:
@@ -49,7 +51,7 @@ def introspect_permissions(engine, role):
                     )
 
 
-def revoke_permissions(engine, role):
+def revoke_permissions(engine: Engine, role: str) -> None:
     """Revoke all privileges for the indicated role."""
     grantee = role
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
@@ -70,21 +72,21 @@ def revoke_permissions(engine, role):
 
 
 def apply_schema_and_profile_permissions(
-    engine,
-    pg_schema,
-    ams_schema,
-    profiles,
-    role,
-    scope,
-    set_read_permissions=True,
-    set_write_permissions=True,
-    dry_run=False,
-    create_roles=False,
-    revoke=False,
-):
+    engine: Engine,
+    pg_schema: str,
+    ams_schema: Union[DatasetSchema, dict[str, DatasetSchema]],
+    profiles: dict[str, Any],
+    role: str,
+    scope: str,
+    set_read_permissions: bool = True,
+    set_write_permissions: bool = True,
+    dry_run: bool = False,
+    create_roles: bool = False,
+    revoke: bool = False,
+) -> None:
     """Apply permissions for schema and profile."""
-    Session = sessionmaker(bind=engine)
-    session = Session()
+    SessionCls = sessionmaker(bind=engine)
+    session = SessionCls()
     try:
         if ams_schema:
             create_acl_from_schemas(
@@ -100,7 +102,7 @@ def apply_schema_and_profile_permissions(
                 revoke,
             )
         if profiles:
-            profile_list = profiles.values()
+            profile_list = cast(list[dict[str, Any]], profiles.values())
             create_acl_from_profiles(engine, pg_schema, profile_list, role, scope)
         session.commit()
     except Exception:
@@ -111,7 +113,9 @@ def apply_schema_and_profile_permissions(
         session.close()
 
 
-def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
+def create_acl_from_profiles(
+    engine: Engine, pg_schema: str, profile_list: list[dict[str, Any]], role: str, scope: str
+) -> None:
     """Create an ACL from profile list.
 
     NOTE: Rudimentary, not ready for production!
@@ -138,7 +142,9 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
                         engine.execute(grant_statement)
 
 
-def set_dataset_write_permissions(session, pg_schema, ams_schema, dry_run, create_roles):
+def set_dataset_write_permissions(
+    session: Session, pg_schema: str, ams_schema: DatasetSchema, dry_run: bool, create_roles: bool
+) -> None:
     """Sets write permissions for the indicated dataset."""
     grantee = f"write_{to_snake_case(ams_schema.id)}"
     if create_roles:
@@ -201,7 +207,7 @@ def set_dataset_read_permissions(
     """
     grantee: Optional[str] = f"write_{to_snake_case(ams_schema.id)}"
 
-    def _fetch_grantees(scopes):
+    def _fetch_grantees(scopes: frozenset[str]) -> list[str]:
         if role == "AUTO":
             grantees = [scope_to_role(scope) for scope in scopes]
         elif scope in scopes:
@@ -232,12 +238,12 @@ def set_dataset_read_permissions(
             column_name = field.db_name()
             # Object type relations have subfields, in that case
             # the auth scope on the relation is leading.
-            parent_field_scopes = set()
+            parent_field_scopes: frozenset[str] = frozenset()
             if field.parent_field is not None:
                 parent_field_scopes = field.parent_field.auth - {PUBLIC_SCOPE}
 
             field_scopes = field.auth - {PUBLIC_SCOPE}
-            final_scopes = parent_field_scopes or field_scopes
+            final_scopes: frozenset[str] = parent_field_scopes or field_scopes
 
             if final_scopes:
                 if field.is_nested_table:
@@ -278,16 +284,16 @@ def set_dataset_read_permissions(
     for table_name, grant_params in all_scopes.items():
 
         for grant_param in grant_params:
-            for grantee in grant_param["grantees"]:
+            for _grantee in grant_param["grantees"]:
                 if create_roles:
-                    _create_role_if_not_exists(session, grantee, dry_run=dry_run)
+                    _create_role_if_not_exists(session, _grantee, dry_run=dry_run)
                 _execute_grant(
                     session,
                     grant(
                         grant_param["privileges"],
                         PgObjectType.TABLE,
                         table_name,
-                        grantee,
+                        _grantee,
                         grant_option=False,
                         schema=pg_schema,
                     ),
@@ -296,17 +302,17 @@ def set_dataset_read_permissions(
 
 
 def create_acl_from_schemas(
-    session,
-    pg_schema,
-    schemas,
-    role,
-    scopes,
-    set_read_permissions,
-    set_write_permissions,
-    dry_run,
-    create_roles,
-    revoke,
-):
+    session: Session,
+    pg_schema: str,
+    schemas: Union[DatasetSchema, dict[str, DatasetSchema]],
+    role: str,
+    scope: str,
+    set_read_permissions: bool,
+    set_write_permissions: bool,
+    dry_run: bool,
+    create_roles: bool,
+    revoke: bool,
+) -> None:
     """Create and set the ACL for automatically generated roles based on Amsterdam Schema.
 
     Read permissions are granted to roles 'scope_X', where X are scopes found in Amsterdam Schema
@@ -338,12 +344,12 @@ def create_acl_from_schemas(
         if isinstance(schemas, DatasetSchema):
             # for a single dataset
             set_dataset_read_permissions(
-                session, pg_schema, schemas, role, scopes, dry_run, create_roles
+                session, pg_schema, schemas, role, scope, dry_run, create_roles
             )
         else:
             for _dataset_name, dataset_schema in schemas.items():
                 set_dataset_read_permissions(
-                    session, pg_schema, dataset_schema, role, scopes, dry_run, create_roles
+                    session, pg_schema, dataset_schema, role, scope, dry_run, create_roles
                 )
 
     if set_write_permissions:
@@ -358,13 +364,18 @@ def create_acl_from_schemas(
 
 
 def _revoke_all_privileges_from_role(
-    session, pg_schema, role, dataset_name=None, echo=True, dry_run=False
-):
+    session: Session,
+    pg_schema: str,
+    role: str,
+    dataset: Optional[DatasetSchema] = None,
+    echo: bool = True,
+    dry_run: bool = False,
+) -> None:
     status_msg = "Skipped" if dry_run else "Executed"
-    if dataset_name:
+    if dataset:
         # for a single dataset
         revoke_statements = []
-        for table in dataset_name.tables:
+        for table in dataset.tables:
             revoke_statements.append(
                 f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name()} FROM {role}"
             )
@@ -388,13 +399,17 @@ def _revoke_all_privileges_from_role(
 
 
 def _revoke_all_privileges_from_read_and_write_roles(
-    session, pg_schema, dataset_name=None, echo=True, dry_run=False
-):
+    session: Session,
+    pg_schema: str,
+    dataset: Optional[DatasetSchema] = None,
+    echo: bool = True,
+    dry_run: bool = False,
+) -> None:
     """Revoke all privileges that may have been previously granted.
 
     This is about grants to the scope_* and write_* roles.
-    If dataset_name is provided, revoke only rights to the tables belonging to
-    dataset_name.
+    If datasetis provided, revoke only rights to the tables belonging to
+    dataset.
     """
     status_msg = "Skipped" if dry_run else "Executed"
     # with engine.begin() as connection:
@@ -409,10 +424,10 @@ def _revoke_all_privileges_from_read_and_write_roles(
         )
     )
     for rolname in result:
-        if dataset_name:
+        if dataset:
             # for a single dataset
             revoke_statements = []
-            for table in dataset_name.tables:
+            for table in dataset.tables:
                 revoke_statements.append(
                     f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name()} FROM {rolname[0]}"
                 )
@@ -427,7 +442,9 @@ def _revoke_all_privileges_from_read_and_write_roles(
             session.execute(text(revoke_statement))  # .execution_options(autocommit=True))
 
 
-def _execute_grant(session, grant_statement, echo=True, dry_run=False):
+def _execute_grant(
+    session: Session, grant_statement: str, echo: bool = True, dry_run: bool = False
+) -> None:
     status_msg = "Skipped" if dry_run else "Executed"
     sql_statement = f"""
         DO
@@ -443,7 +460,9 @@ def _execute_grant(session, grant_statement, echo=True, dry_run=False):
         session.execute(sql_statement)
 
 
-def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
+def _create_role_if_not_exists(
+    session: Session, role: str, echo: bool = True, dry_run: bool = False
+) -> None:
     """Wrap the create role statement in an anonymous code block.
 
     Reason is to be able to catch exceptions.
@@ -469,6 +488,6 @@ def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
         existing_roles.add(role)
 
 
-def scope_to_role(scope):
+def scope_to_role(scope: str) -> str:
     """Return rolename for the postgres database."""
     return f"scope_{scope.lower().replace('/', '_')}"
