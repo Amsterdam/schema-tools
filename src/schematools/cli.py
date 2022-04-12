@@ -1,15 +1,14 @@
 """Cli tools."""
 
+import logging
 import sys
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Tuple
-from urllib.parse import urlparse
 
 import click
 import jsonschema
 import requests
 import sqlalchemy
-from click import BadArgumentUsage
 from deepdiff import DeepDiff
 from json_encoder import json
 from jsonschema import draft7_format_checker
@@ -42,6 +41,16 @@ from schematools.utils import (
     dataset_schemas_from_url,
     schema_fetch_url_file,
 )
+
+# Configure a simple stdout logger for permissions output
+logger = logging.getLogger("schematools.permissions")
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+# Add simple formatting for cli useage
+formatter = logging.Formatter("%(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 option_db_url = click.option(
     "--db-url",
@@ -368,7 +377,7 @@ def validate(
 
     semantic_errors = False
     for error in validation.run(dataset):
-        if not semantic_errors: # Only print on first error.
+        if not semantic_errors:  # Only print on first error.
             click.echo("Semantic validation: ", nl=False)
             semantic_errors = True
         click.echo(f"\n{error!s}", err=True)

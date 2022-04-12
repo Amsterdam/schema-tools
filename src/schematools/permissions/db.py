@@ -1,4 +1,5 @@
 """Create GRANT statements to give roles very specific access to the database."""
+import logging
 from collections import defaultdict
 
 from pg_grant import PgObjectType, parse_acl_item, query
@@ -9,15 +10,22 @@ from sqlalchemy.orm import sessionmaker
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
 
+# Create a module-level logger, so calling code can
+# configure the logger, if needed.
+logger = logging.getLogger(__name__)
+
 PUBLIC_SCOPE = "OPENBAAR"
 
 existing_roles = set()
 
 
 def is_remote(table_name):
-    """WARNING: UGLY HACK until 265311 is resolved and we
+    """Test if table_name refers a remote table.
+
+    WARNING: UGLY HACK until 265311 is resolved and we
     can interrogate schematools to find out whether a table
-    is remote."""
+    is remote.
+    """
     return (
         table_name.startswith("haalcentraalbrk")
         or table_name.startswith("haalcentraalbag")
@@ -26,16 +34,18 @@ def is_remote(table_name):
 
 
 def introspect_permissions(engine, role):
+    """Shows the table permissions."""
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
     for schema_relation_info in schema_relation_infolist:
         if schema_relation_info.acl:
             acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
             for acl in acl_list:
                 if acl.grantee == role:
-                    print(
-                        'role "{}" has privileges {} on table "{}"'.format(
-                            role, ",".join(acl.privs), schema_relation_info.name
-                        )
+                    logger.info(
+                        'role "%s" has privileges %s on table "%s"',
+                        role,
+                        ",".join(acl.privs),
+                        schema_relation_info.name,
                     )
 
 
@@ -48,10 +58,10 @@ def revoke_permissions(engine, role):
             acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
             for acl in acl_list:
                 if acl.grantee == role:
-                    print(
-                        'revoking ALL privileges of role "{}" on table "{}"'.format(
-                            role, schema_relation_info.name
-                        )
+                    logger.info(
+                        'revoking ALL privileges of role "%s" on table "%s"',
+                        role,
+                        schema_relation_info.name,
                     )
                     revoke_statement = revoke(
                         "ALL", PgObjectType.TABLE, schema_relation_info.name, grantee
@@ -94,7 +104,7 @@ def apply_schema_and_profile_permissions(
         session.commit()
     except Exception:
         session.rollback()
-        print("warning: session rolled back")
+        logger.info("warning: session rolled back")
         raise
     finally:
         session.close()
@@ -120,7 +130,7 @@ def create_acl_from_profiles(engine, pg_schema, profile_list, role, scope):
                             grant_option=False,
                             schema=pg_schema,
                         )
-                        print(grant_statement)
+                        logger.info(grant_statement)
                         engine.execute(grant_statement)
 
 
@@ -148,9 +158,45 @@ def set_dataset_write_permissions(session, pg_schema, ams_schema, dry_run, creat
 
 
 def set_dataset_read_permissions(
-    session, pg_schema, ams_schema, role, scope, dry_run, create_roles
-):
-    def _fetch_grantees(scopes):
+    session: Session,
+    pg_schema: str,
+    ams_schema: DatasetSchema,
+    role: str,
+    scope: str,
+    dry_run: bool,
+    create_roles: bool,
+) -> None:
+    """Sets read permissions for the indicated dataset.
+
+    Args:
+        session: SQLAlchemy type session
+        pg_schema: schema in the postgres database
+        ams_schema: the amsterdam schema that needs to be processed
+        role: the role that needs the grants that are calculated from the schema
+            A special value `AUTO` can be used to apply grants for all scopes
+        scope: only apply grants for a specific scope, value can be empty string ("")
+        dry_run: do not apply the grants
+        create_roles: boolean indicating that if certain roles are not in the postgres db,
+            these roles need to be created.
+
+        The grants will be applied according to the configuration of the auth scopes
+        in the amsterdam schema.
+        If not auth scopes are defined, all tables get the `scope_openbaar` grant.
+        If only the dataset has as scope `foo`, alle tables get the `scope_foo` grant.
+        If a table has as scope `bar`, this overrules the dataset scope,
+        so this table gets the `scope_bar` grant.
+        If one or more fields have a scope, this scope overrules both the
+        dataset and the table scope. The other fields in the same table
+        get a `scope_openbaar` grant in that case.
+        If a 1-N relation field has a scope, the foreign key field get the associated
+        grant. In case this relation field is of type `object`` (e.g. for temporal fields),
+        the additional columns (usually identificatie/volgnummer postfixed) get the same grant.
+        If NM and nested relation fields (type `array` in the schema) have a scope `bar`
+        the associated sub-table gets the grant `scope_bar`.
+    """
+    grantee: Optional[str] = f"write_{to_snake_case(ams_schema.id)}"
+
+    def _fetch_grantees(scopes: frozenset[str]) -> list[str]:
         if role == "AUTO":
             grantees = [scope_to_role(scope) for scope in scopes]
         elif scope in scopes:
@@ -207,6 +253,7 @@ def set_dataset_read_permissions(
             for field in fields:
                 column_name = field.db_name()
                 all_scopes[table_name].append(
+                    # NB. space after SELECT is significant!
                     {
                         "privileges": [f"SELECT ({column_name})"],
                         "grantees": _fetch_grantees(column_scopes.get(column_name, table_scopes)),
@@ -330,7 +377,7 @@ def _revoke_all_privileges_from_role(
         "$$"
     )
     if echo:
-        print(f"{status_msg} --> {revoke_statement}")
+        logger.info("%s --> %s", status_msg, revoke_statement)
     if not dry_run:
         session.execute(sql_statement)
 
@@ -369,7 +416,7 @@ def _revoke_all_privileges_from_read_and_write_roles(
                 f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]};"
             )
         if echo:
-            print(f"{status_msg} --> {revoke_statement}")
+            logger.info("%s --> %s", status_msg, revoke_statement)
         if not dry_run:
             session.execute(text(revoke_statement))  # .execution_options(autocommit=True))
 
@@ -385,7 +432,7 @@ def _execute_grant(session, grant_statement, echo=True, dry_run=False):
         $$
         """
     if echo:
-        print(f"{status_msg} --> {grant_statement}")
+        logger.info("%s --> %s", status_msg, grant_statement)
     if not dry_run:
         session.execute(sql_statement)
 
@@ -409,7 +456,7 @@ def _create_role_if_not_exists(session, role, echo=True, dry_run=False):
             "$$"
         )
         if echo:
-            print(f"{status_msg} --> {create_role_statement}")
+            logger.info("%s --> %s", status_msg, create_role_statement)
         if not dry_run:
             session.execute(text(sql_statement))
         existing_roles.add(role)
