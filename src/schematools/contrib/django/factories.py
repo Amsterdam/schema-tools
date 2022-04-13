@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.gis.db import models
 from django.db.models import CheckConstraint, Q
 from django.db.models.base import ModelBase
+from faker import Factory
 
 from schematools.contrib.django import app_config, signals
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
@@ -29,6 +30,7 @@ TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 M = TypeVar("M", bound=DynamicModel)
 MODEL_CREATION_COUNTER = 1
 MODEL_MOCKER_CREATION_COUNTER = 1
+FAKER = Factory.create("nl_NL")
 
 
 class RelationMaker:
@@ -509,7 +511,6 @@ def model_factory(
             **fields,
             "__doc__": table_schema.description or "",
             "_dataset": dataset,
-            "_dataset_schema": dataset_schema,
             "_table_schema": table_schema,
             "_display_field": display_field,
             "_is_temporal": is_temporal,
@@ -539,6 +540,24 @@ def model_mocker_factory(
     # Meta class: https://factoryboy.readthedocs.io/en/stable/orms.html#the-djangomodelfactory-subclass.
     model_cls = model_factory(dataset, table_schema, base_app_name=base_app_name)
 
+    # Generate fields
+    fields = {}
+    for field in table_schema.fields:
+        type_ = field.type
+        # skip schema field for now
+        if type_.endswith("definitions/schema"):
+            continue
+        # skip nested tables and fields that are only added for temporality
+        if field.is_nested_table or field.is_temporal:
+            continue
+        # reduce amsterdam schema refs to their fragment
+        if type_.startswith(settings.SCHEMA_DEFS_URL):
+            type_ = urlparse(type_).fragment
+
+        # Generate name, fix if needed.
+        field_name = _fetch_verbose_name(field)
+        fields[field_name] = FAKER.name()
+
     # Generate Meta part
     meta_cls = type(
         "Meta",
@@ -554,6 +573,7 @@ def model_mocker_factory(
         f"{module_name}.{table_schema.model_name()}",
         (DynamicModelMocker,),
         {
+            **fields,
             "CREATION_COUNTER": MODEL_MOCKER_CREATION_COUNTER,  # for debugging recreation
             "Meta": meta_cls,
         },
