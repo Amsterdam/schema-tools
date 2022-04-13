@@ -4,7 +4,8 @@ from __future__ import annotations
 import logging
 import sys
 from collections import defaultdict
-from typing import Any, DefaultDict, Iterable
+from pathlib import PosixPath
+from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Tuple
 
 import click
 import jsonschema
@@ -453,13 +454,13 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
 
 @show.command("provenance")
 @click.argument("dataset_id")
-def show_provenance(dataset_id: str) -> None:
+def show_provenance(dataset_id: str, schema_url: str) -> None:
     """Retrieve the key-values pairs of the source column.
 
     (specified as a 'provenance' property of an attribute)
     and its translated name (the attribute name itself)
     """
-    dataset = _get_dataset_schema(dataset_id, prefetch_related=True)
+    dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
     try:
         instance = ProvenanceIteration(dataset)
         click.echo(instance.final_dic)
@@ -515,7 +516,7 @@ def introspect_db(
 @introspect.command("geojson")
 @click.argument("dataset_id")
 @click.argument("files", nargs=-1, required=True)
-def introspect_geojson(dataset_id: str, files: Iterable[str]) -> None:
+def introspect_geojson(dataset_id: str, files: List[str]) -> None:
     """Generate a schema from a GeoJSON file."""
     aschema = introspect_geojson_files(dataset_id, files)
     click.echo(json.dumps(aschema, indent=2))
@@ -525,44 +526,44 @@ def introspect_geojson(dataset_id: str, files: Iterable[str]) -> None:
 @option_db_url
 @option_schema_url
 @argument_dataset_id
-@click.argument("table_name")
+@click.argument("batch_size")
 @click.argument("ndjson_path")
 @click.option("--truncate-table", is_flag=True)
 def import_ndjson(
     db_url: str,
     schema_url: str,
     dataset_id: str,
-    table_name: str,
-    ndjson_path: str,
+    batch_size: int,
+    ndjson_path: PosixPath,
     truncate_table: bool,
 ) -> None:
     """Import a NDJSON file into a table."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = NDJSONImporter(dataset_schema, engine)
-    importer.load_file(ndjson_path, table_name, truncate=truncate_table)
+    importer.load_file(ndjson_path, batch_size, truncate=truncate_table)
 
 
 @import_.command("geojson")
 @option_db_url
 @option_schema_url
 @argument_dataset_id
-@click.argument("table_name")
+@click.argument("batch_size")
 @click.argument("geojson_path")
 @click.option("--truncate-table", is_flag=True)
 def import_geojson(
     db_url: str,
     schema_url: str,
     dataset_id: str,
-    table_name: str,
-    geojson_path: str,
+    batch_size: int,
+    geojson_path: PosixPath,
     truncate_table: bool,
 ) -> None:
     """Import a GeoJSON file into a table."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = GeoJSONImporter(dataset_schema, engine)
-    importer.load_file(geojson_path, table_name, truncate=truncate_table)
+    importer.load_file(geojson_path, batch_size=batch_size, truncate=truncate_table)
 
 
 @import_.command("events")
@@ -607,7 +608,7 @@ def _get_dataset_schema(
     try:
         return dataset_collection.get_dataset(dataset_id, prefetch_related=prefetch_related)
     except DatasetNotFound as e:
-        raise click.ClickException(e)
+        raise click.ClickException(str(e))
 
 
 def _get_all_dataset_schemas(schema_url: str) -> dict[str, DatasetSchema]:

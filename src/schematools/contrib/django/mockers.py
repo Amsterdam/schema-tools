@@ -11,11 +11,12 @@ as the primary aim of the ModelFactory is to generate Mock data for development 
 
 from factory.django import DjangoModelFactory
 
+from schematools.contrib.django.models import Dataset
+from schematools.types import DatasetTableSchema
+
 
 class DynamicModelMocker(DjangoModelFactory):
     """Base class to tag and detect dynamically generated model mockers."""
 
     #: Overwritten by subclasses / factory
     CREATION_COUNTER = None
-
-    my_field = "Timo"
