@@ -11,7 +11,12 @@ from more_itertools import first
 from schematools import validation
 from schematools.types import DatasetSchema, Json, TableVersions
 from schematools.utils import dataset_schema_from_path
-from schematools.validation import _active_versions, _check_maingeometry, _identifier_properties
+from schematools.validation import (
+    _active_versions,
+    _check_display,
+    _check_maingeometry,
+    _identifier_properties,
+)
 
 
 def test_camelcase() -> None:
@@ -122,6 +127,22 @@ def test_main_geometry(here: Path) -> None:
     assert error.message == (
         "mainGeometry = 'merkOmschrijving' is not a geometry field, type = 'string'"
     )
+
+
+def test_display(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "meetbouten.json")
+    assert list(_check_display(dataset)) == []
+
+    table = dataset.get_table_by_id("meetbouten")
+    table["schema"]["display"] = "not_a_field"
+    error = next(validation.run(dataset))
+    assert "display = 'not_a_field'" in error.message
+    assert "Field 'not_a_field' does not exist" in error.message
+
+    table["schema"]["display"] = "merkCode"
+    table["schema"]["properties"]["merkCode"]["auth"] = "some_scope"
+    error = next(validation.run(dataset))
+    assert "'auth' property on the display field: 'merkCode' is not allowed." in error.message
 
 
 def test_rel_auth_dataset(here: Path) -> None:

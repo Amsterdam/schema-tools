@@ -267,6 +267,24 @@ def _check_crs(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
+@_register_validator("display")
+def _check_display(dataset: DatasetSchema) -> Iterator[str]:
+    for table in dataset.tables:
+        display_field_id = table["schema"].get("display")
+        if display_field_id is None:
+            continue
+
+        try:
+            field = table.get_field_by_id(display_field_id)
+            if field.auth != {"OPENBAAR"}:
+                yield (
+                    f"'auth' property on the display field: {display_field_id!r} is not allowed. "
+                    " Display fields can not have an 'auth' property."
+                )
+        except SchemaObjectNotFound as e:
+            yield f"display = {display_field_id!r}, but: {e}"
+
+
 @_register_validator("property formats")
 def _property_formats(dataset: DatasetSchema) -> Iterator[str]:
     """Properties should have a valid "format", or none at all."""
