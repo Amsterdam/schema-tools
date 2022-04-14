@@ -1005,6 +1005,10 @@ class DatasetTableSchema(SchemaType):
         """Indicates if table is an nested table"""
         return self.nested_table
 
+    @cached_property
+    def has_geometry_fields(self) -> bool:
+        return any(field.is_geo for field in self.fields)
+
     def model_name(self) -> str:
         """Returns model name for this table. Including version number, if needed."""
 
