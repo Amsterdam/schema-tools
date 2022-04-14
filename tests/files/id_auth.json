@@ -29,7 +29,7 @@
           "schema",
           "id"
         ],
-        "display": "id",
+        "display": "title",
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
@@ -40,6 +40,10 @@
             ],
             "type": "integer",
             "description": "Unieke aanduiding van het record."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titel van het record."
           }
         }
       }
