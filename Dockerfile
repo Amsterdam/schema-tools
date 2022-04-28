@@ -1,13 +1,4 @@
-# Start runtime image,
-FROM amsterdam/python:3.9-slim-buster
-
-RUN apt-get update \
- && apt-get autoremove -y \
- && apt-get install --no-install-recommends -y \
-        libpq-dev \
-        python-dev \
-        gcc \
-        git
+FROM amsterdam/python:3.9-buster
 
 WORKDIR /app
 COPY . ./
