@@ -1,7 +1,6 @@
 # Start runtime image,
 FROM amsterdam/python:3.9-slim-buster
 
-RUN apt update
 RUN apt-get update \
  && apt-get autoremove -y \
  && apt-get install --no-install-recommends -y \
