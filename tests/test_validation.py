@@ -9,6 +9,7 @@ import pytest
 from more_itertools import first
 
 from schematools import validation
+from schematools.permissions import PUBLIC_SCOPE
 from schematools.types import DatasetSchema, Json, TableVersions
 from schematools.utils import dataset_schema_from_path
 from schematools.validation import (
@@ -154,6 +155,14 @@ def test_rel_auth_dataset(here: Path) -> None:
     assert "refers.rel would require authorization" in str(errors[0])
 
 
+def test_rel_auth_dataset_public(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "rel_auth.json")
+    dataset["auth"] = [PUBLIC_SCOPE]
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 0, errors
+
+
 def test_rel_auth_table(here: Path) -> None:
     dataset_json = json.load(open(here / "files" / "rel_auth.json"))
     table = next(t for t in dataset_json["tables"] if t["id"] == "base")
@@ -163,6 +172,16 @@ def test_rel_auth_table(here: Path) -> None:
     errors = list(validation.run(dataset))
     assert len(errors) == 1, errors
     assert "refers.rel would require authorization" in str(errors[0])
+
+
+def test_rel_auth_table_public(here: Path) -> None:
+    dataset_json = json.load(open(here / "files" / "rel_auth.json"))
+    table = next(t for t in dataset_json["tables"] if t["id"] == "base")
+    table["auth"] = [PUBLIC_SCOPE]
+    dataset = DatasetSchema.from_dict(dataset_json)
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 0, errors
 
 
 def test_rel_auth_field(here: Path) -> None:
@@ -178,3 +197,15 @@ def test_rel_auth_field(here: Path) -> None:
     # That's not allowed, but check for it anyway.
     assert len(errors) >= 1, errors
     assert any("refers.rel would require authorization" in str(e) for e in errors)
+
+
+def test_rel_auth_field_public(here: Path) -> None:
+    dataset_json = json.load(open(here / "files" / "rel_auth.json"))
+    table = next(t for t in dataset_json["tables"] if t["id"] == "base")
+    field = table["schema"]["properties"]["stop"]
+    field["auth"] = [PUBLIC_SCOPE]
+
+    dataset = DatasetSchema.from_dict(dataset_json)
+    errors = list(validation.run(dataset))
+
+    assert len(errors) == 0, errors
