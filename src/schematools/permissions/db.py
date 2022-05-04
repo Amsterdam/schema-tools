@@ -9,14 +9,13 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from schematools.permissions import PUBLIC_SCOPE
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
 
 # Create a module-level logger, so calling code can
 # configure the logger, if needed.
 logger = logging.getLogger(__name__)
-
-PUBLIC_SCOPE = "OPENBAAR"
 
 existing_roles = set()
 

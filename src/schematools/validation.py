@@ -28,6 +28,7 @@ from typing import Callable, Iterator, List, Optional, Set, cast
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
+from schematools.permissions import PUBLIC_SCOPE
 from schematools.types import DatasetSchema, SemVer, TableVersions
 from schematools.utils import to_snake_case, toCamelCase
 
@@ -330,8 +331,12 @@ def _relation_auth(dataset: DatasetSchema) -> Iterator[str]:
                 continue
 
             if (
-                rel.auth
-                or rel.dataset.auth
-                or any(rel.get_field_by_id(f).auth for f in (field.related_field_ids or []))
+                rel.auth - {PUBLIC_SCOPE}
+                or rel.dataset.auth - {PUBLIC_SCOPE}
+                or any(
+                    rel.get_field_by_id(f).auth - {PUBLIC_SCOPE}
+                    for f in (field.related_field_ids or [])
+                )
             ):
+
                 yield f"{table.id}.{field.id} would require authorization"
