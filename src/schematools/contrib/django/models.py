@@ -77,6 +77,7 @@ JSON_TYPE_TO_DJANGO = {
     "string": (UnlimitedCharField, None),
     "integer": (models.BigIntegerField, None),
     "integer/autoincrement": (models.AutoField, None),
+    "string/autoincrement": (UnlimitedCharField, None),
     "date": (models.DateField, None),
     "datetime": (models.DateTimeField, None),
     "time": (models.TimeField, None),
