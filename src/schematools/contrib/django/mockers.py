@@ -18,5 +18,4 @@ from schematools.types import DatasetTableSchema
 class DynamicModelMocker(DjangoModelFactory):
     """Base class to tag and detect dynamically generated model mockers."""
 
-    #: Overwritten by subclasses / factory
-    CREATION_COUNTER = None
+    pass

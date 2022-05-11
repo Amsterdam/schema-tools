@@ -282,7 +282,7 @@ class SchemaType(UserDict):
         return cast(str, self["id"])
 
     @property
-    def type(self) -> str:
+    def type(self) -> str:  # noqa: A003
         return cast(str, self["type"])
 
     def json(self) -> str:
@@ -742,6 +742,10 @@ class DatasetTableSchema(SchemaType):
         return self.get("shortname") is not None
 
     @property
+    def crs(self) -> str:
+        return self._parent_schema.get("crs")
+
+    @property
     def dataset(self) -> DatasetSchema:
         """The dataset that this table is part of."""
         return self._parent_schema
@@ -1169,6 +1173,10 @@ class DatasetFieldSchema(DatasetType):
     @property
     def description(self) -> str | None:
         return self.get("description")
+
+    @property
+    def faker(self) -> str | None:
+        return self.get("faker")
 
     @property
     def required(self) -> bool:
