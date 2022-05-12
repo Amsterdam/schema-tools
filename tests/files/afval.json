@@ -8,7 +8,6 @@
     {
       "id": "containers",
       "title": "Containers title",
-      "description": "Containers description",
       "type": "table",
       "version": "1.0.0",
       "schema": {
@@ -38,7 +37,7 @@
           "eigenaar naam": {
             "type": "string",
             "title": "Naam eigenaar",
-            "description": "Naam van de eigenaar"
+            "description": "Naam van eigenaar"
           },
           "datum creatie": {
             "type": "string",
