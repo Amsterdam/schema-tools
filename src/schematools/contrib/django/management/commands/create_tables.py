@@ -1,17 +1,12 @@
 import re
 from collections import defaultdict
-from typing import Iterable, List, Optional, Type
+from typing import Iterable, List, Optional
 
 from django.core.management import BaseCommand, CommandError
-from django.db import DEFAULT_DB_ALIAS, DatabaseError, connection, router, transaction
-from django_db_comments.db_comments import (
-    add_column_comments_to_database,
-    add_table_comments_to_database,
-    get_comments_for_model,
-)
+from django.db import DatabaseError, connection, router, transaction
 
 from schematools.contrib.django.factories import schema_models_factory
-from schematools.contrib.django.models import Dataset, DynamicModel
+from schematools.contrib.django.models import Dataset
 
 
 class Command(BaseCommand):
@@ -31,34 +26,13 @@ class Command(BaseCommand):
         create_tables(self, Dataset.objects.db_enabled(), allow_unmanaged=True, skip=skip)
 
 
-def _add_comments_to_database(used_models: List[DynamicModel]) -> None:
-    """Add comments for tables and fields to the database.
-
-    The code below is coming from the `django_db_comments` package.
-    https://pypi.org/project/django-db-comments/
-
-    Because we are creating models dynamically, the standard approach that is
-    used (a `post_migrate` signal) in this package, does not apply in our case.
-    So, we re-use the packages' code as much as possible in our own approach.
-    """
-    columns_comments = {m._meta.db_table: get_comments_for_model(m) for m in used_models}
-    if columns_comments:
-        add_column_comments_to_database(columns_comments, DEFAULT_DB_ALIAS)
-    table_comments = {
-        m._meta.db_table: m._meta.verbose_name.title() for m in used_models if m._meta.verbose_name
-    }
-
-    if table_comments:
-        add_table_comments_to_database(table_comments, DEFAULT_DB_ALIAS)
-
-
 def create_tables(
     command: BaseCommand,
     datasets: Iterable[Dataset],
     allow_unmanaged: bool = False,
     base_app_name: Optional[str] = None,
     skip: Optional[List[str]] = None,
-) -> None:  # noqa: C901
+) -> None:  # noqa:C901
     """Create tables for all updated datasets.
     This is a separate function to allow easy reuse.
     """
@@ -81,8 +55,6 @@ def create_tables(
 
         models.extend(schema_models_factory(dataset, base_app_name=base_app_name))
 
-    # We need to collect the models for later re-use in adding comments to db.
-    used_models = []
     # Grouping multiple versions of same model by table name
     models_by_table = defaultdict(list)
     for model in models:
@@ -110,15 +82,11 @@ def create_tables(
             try:
                 command.stdout.write(f"* Creating table {model._meta.db_table}")
                 with transaction.atomic():
-                    used_models.append(model)
                     schema_editor.create_model(model)
             except (DatabaseError, ValueError) as e:
                 command.stderr.write(f"  Tables not created: {e}")
                 if not re.search(r'relation "[^"]+" already exists', str(e)):
                     errors += 1
-
-    # Add the comments for tables/fields for the models that have been created.
-    _add_comments_to_database(used_models)
 
     if errors:
         raise CommandError("Not all tables could be created")
