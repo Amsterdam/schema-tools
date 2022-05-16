@@ -1,7 +1,7 @@
 """Create GRANT statements to give roles very specific access to the database."""
 import logging
 from collections import defaultdict
-from typing import Any, Optional, Union, cast
+from typing import Any, Dict, Optional, Union, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from schematools.permissions import PUBLIC_SCOPE
+from schematools.permissions import PUBLIC_SCOPE  # type: ignore [attr-defined]
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
 
@@ -73,8 +73,8 @@ def revoke_permissions(engine: Engine, role: str) -> None:
 def apply_schema_and_profile_permissions(
     engine: Engine,
     pg_schema: str,
-    ams_schema: Union[DatasetSchema, dict[str, DatasetSchema]],
-    profiles: dict[str, Any],
+    ams_schema: Union[DatasetSchema, Dict[str, DatasetSchema]],
+    profiles: Dict[str, Any],
     role: str,
     scope: str,
     set_read_permissions: bool = True,
@@ -101,7 +101,7 @@ def apply_schema_and_profile_permissions(
                 revoke,
             )
         if profiles:
-            profile_list = cast(list[dict[str, Any]], profiles.values())
+            profile_list = cast(list[Dict[str, Any]], profiles.values())
             create_acl_from_profiles(engine, pg_schema, profile_list, role, scope)
         session.commit()
     except Exception:
@@ -113,7 +113,7 @@ def apply_schema_and_profile_permissions(
 
 
 def create_acl_from_profiles(
-    engine: Engine, pg_schema: str, profile_list: list[dict[str, Any]], role: str, scope: str
+    engine: Engine, pg_schema: str, profile_list: list[Dict[str, Any]], role: str, scope: str
 ) -> None:
     """Create an ACL from profile list.
 
@@ -303,7 +303,7 @@ def set_dataset_read_permissions(
 def create_acl_from_schemas(
     session: Session,
     pg_schema: str,
-    schemas: Union[DatasetSchema, dict[str, DatasetSchema]],
+    schemas: Union[DatasetSchema, Dict[str, DatasetSchema]],
     role: str,
     scope: str,
     set_read_permissions: bool,
