@@ -1,7 +1,7 @@
 """Create GRANT statements to give roles very specific access to the database."""
 import logging
 from collections import defaultdict
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
@@ -101,7 +101,7 @@ def apply_schema_and_profile_permissions(
                 revoke,
             )
         if profiles:
-            profile_list = cast(list[Dict[str, Any]], profiles.values())
+            profile_list = cast(List[Dict[str, Any]], profiles.values())
             create_acl_from_profiles(engine, pg_schema, profile_list, role, scope)
         session.commit()
     except Exception:
@@ -113,7 +113,7 @@ def apply_schema_and_profile_permissions(
 
 
 def create_acl_from_profiles(
-    engine: Engine, pg_schema: str, profile_list: list[Dict[str, Any]], role: str, scope: str
+    engine: Engine, pg_schema: str, profile_list: List[Dict[str, Any]], role: str, scope: str
 ) -> None:
     """Create an ACL from profile list.
 
@@ -206,7 +206,7 @@ def set_dataset_read_permissions(
     """
     grantee: Optional[str] = f"write_{to_snake_case(ams_schema.id)}"
 
-    def _fetch_grantees(scopes: frozenset[str]) -> list[str]:
+    def _fetch_grantees(scopes: frozenset[str]) -> List[str]:
         if role == "AUTO":
             grantees = [scope_to_role(scope) for scope in scopes]
         elif scope in scopes:

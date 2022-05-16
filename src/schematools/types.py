@@ -1267,7 +1267,7 @@ class DatasetFieldSchema(DatasetType):
         )
 
     @property
-    def related_field_ids(self) -> Optional[list[str]]:
+    def related_field_ids(self) -> Optional[List[str]]:
         """For a relation field, returns the identifiers of the referenced fields.
 
         The returned list contains only the fields, e.g., ["id", "volgnummer"].

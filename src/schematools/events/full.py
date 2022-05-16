@@ -61,7 +61,7 @@ class DataSplitter:
         relational_data, self.row_data = self._split_data(event_data)
         self.process_relational_data(relational_data)
 
-    def _split_data(self, event_data: dict) -> list[dict]:
+    def _split_data(self, event_data: dict) -> List[dict]:
         """Split the event_data in 2 parts, one with scalars, the other with relations."""
         data_bags = [{}, {}]
         for field in self.dataset_table.fields:
@@ -111,7 +111,7 @@ class DataSplitter:
 
         self.row_data.update(fk_row_data)
 
-    def _fetch_target_identifier_fields(self, relation: str) -> list[str]:
+    def _fetch_target_identifier_fields(self, relation: str) -> List[str]:
         """Fetch the identifier fields for the target side of a relation.
 
         These fields will be ordered with the main identifier first, and

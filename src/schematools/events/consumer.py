@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from typing import List
 
 from confluent_kafka import Consumer, Message
 from sqlalchemy.engine import Connection
@@ -42,7 +43,7 @@ def _fetch_consumer_params() -> dict:
 
 
 def consume_events(
-    dataset_schemas: list[DatasetSchema],
+    dataset_schemas: List[DatasetSchema],
     srid: str,
     connection: Connection,
     topics: tuple(str),

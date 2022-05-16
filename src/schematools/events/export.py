@@ -101,7 +101,7 @@ def fetch_nm_embeds(
     table_id: str,
     nm_embed_rows: Dict[str, Any],
     complex_fields_metadata: List[ComplexFieldAttrs],
-) -> Dict[str, list[Dict[str, Any]]]:
+) -> Dict[str, List[Dict[str, Any]]]:
     """Fetch row info as lists of embeddables."""
     nm_embeds = defaultdict(list)
     for field_metadata in complex_fields_metadata:
