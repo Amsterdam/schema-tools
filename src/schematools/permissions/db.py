@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from schematools.permissions import PUBLIC_SCOPE
+from schematools.permissions import PUBLIC_SCOPE  # type: ignore [attr-defined]
 from schematools.types import DatasetSchema
 from schematools.utils import to_snake_case
 
