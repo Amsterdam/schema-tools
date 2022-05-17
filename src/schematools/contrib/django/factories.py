@@ -465,7 +465,7 @@ def model_factory(
         if field.is_primary and field.type == "string":
             constraints.append(
                 CheckConstraint(
-                    check=~Q(**{f"{field.name}__contains": "/"}),
+                    check=~Q(**{f"{field_name}__contains": "/"}),
                     name=f"{field.name}_not_contains_slash",
                 )
             )
