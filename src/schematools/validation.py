@@ -221,11 +221,13 @@ def _active_versions(dataset: DatasetSchema) -> Iterator[str]:
     # etc) more definitely. And as a result can rely on those abstractions for our
     # validation instead of some internal representation.
     for tv in dataset["tables"]:
-        assert isinstance(  # noqa: S101
-            tv, TableVersions
-        ), 'Someone messed with the internal representation of DatasetSchema["tables"].'
+        if not isinstance(tv, TableVersions):
+            raise TypeError(
+                'Someone messed with the internal representation of DatasetSchema["tables"].'
+            )
         for version, table in tv.active.items():
-            assert isinstance(table, dict)  # noqa: S101
+            if not isinstance(table, dict):
+                raise TypeError(f"table is a {type(table).__name__} instead of a dict")
             if tv.id != table["id"]:
                 yield (
                     f"Table {tv.id!r} with version number '{version}' does not match with "

@@ -1086,8 +1086,8 @@ class DatasetTableSchema(SchemaType):
             len(db_table_name),
             MAX_TABLE_NAME_LENGTH,
         )
-        if check_assert:
-            assert len(db_table_name) <= MAX_TABLE_NAME_LENGTH, (
+        if check_assert and len(db_table_name) > MAX_TABLE_NAME_LENGTH:
+            raise ValueError(
                 f"table name {db_table_name!r} is too long, having {len(db_table_name)} chars. "
                 f"Max allowed length is {MAX_TABLE_NAME_LENGTH} chars."
             )

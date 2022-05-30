@@ -157,7 +157,11 @@ def views_factory(dataset: DatasetSchema, tables: Dict[str, Table]) -> Dict[str,
         to_snake_case(dst.name): dst
         for dst in dataset.get_tables(include_nested=True, include_through=True)
     }
-    assert set(dataset_tables) == set(tables)  # noqa: S101
+    if set(dataset_tables) != set(tables):
+        raise ValueError(
+            f"mismatch: dataset_tables has {set(dataset_tables)}, tables has {set(tables)}"
+        )
+
     CREATE_VIEW = sql.SQL(
         """
         CREATE OR REPLACE VIEW "public".{view_name} AS

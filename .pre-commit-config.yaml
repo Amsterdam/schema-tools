@@ -13,6 +13,11 @@ repos:
       - id: black
         additional_dependencies:
           - click==8.0.2  # Pin click, latest version is missing `_unicodefun` needed by black
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.4
+    hooks:
+      - id: bandit
+        args: [--quiet, --exclude, tests]
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.9.2
     hooks:
