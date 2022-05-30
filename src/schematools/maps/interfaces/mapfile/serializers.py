@@ -34,7 +34,7 @@ class JinjaSerializer:
 
     @property
     def env(self) -> Environment:
-        env = Environment(loader=FileSystemLoader(self.template_dir))
+        env = Environment(loader=FileSystemLoader(self.template_dir))  # nosec
         env.trim_blocks = True
         env.lstrip_blocks = True
         return env
