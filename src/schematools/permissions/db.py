@@ -167,27 +167,18 @@ def set_dataset_write_permissions(
         )
 
 
-def set_dataset_read_permissions(
-    session: Session,
-    pg_schema: str,
+def get_all_dataset_scopes(
     ams_schema: DatasetSchema,
     role: str,
     scope: str,
-    dry_run: bool,
-    create_roles: bool,
-) -> None:
-    """Sets read permissions for the indicated dataset.
+) -> defaultdict[str, list]:
+    """Returns all scopes that should be applied to the tables of a dataset.
 
     Args:
-        session: SQLAlchemy type session
-        pg_schema: schema in the postgres database
         ams_schema: the amsterdam schema that needs to be processed
         role: the role that needs the grants that are calculated from the schema
             A special value `AUTO` can be used to apply grants for all scopes
-        scope: only apply grants for a specific scope, value can be empty string ("")
-        dry_run: do not apply the grants
-        create_roles: boolean indicating that if certain roles are not in the postgres db,
-            these roles need to be created.
+        scope: only return grants for a specific scope, value can be empty string ("")
 
         The grants will be applied according to the configuration of the auth scopes
         in the amsterdam schema.
@@ -203,8 +194,30 @@ def set_dataset_read_permissions(
         the additional columns (usually identificatie/volgnummer postfixed) get the same grant.
         If NM and nested relation fields (type `array` in the schema) have a scope `bar`
         the associated sub-table gets the grant `scope_bar`.
+
+    Returns:
+        all_scopes (defaultdict): Contains for each table in the dataset a list of scopes with
+            priviliges and grants:
+
+            '"table1":[
+                        {
+                            "privileges": ["SELECT"],
+                            "grantees": ["scope_openbaar"]),
+                        }
+                    ],
+            "table2":
+                    [
+                        {
+                            "privileges": ["SELECT columnA"],
+                            "grantees": ["scope_openbaar"]),
+                        },
+                        {
+                            "privileges": ["SELECT columnB"],
+                            "grantees": ["scope_A", "scope_B"]),
+                        }
+                    ]
+                    '
     """
-    grantee: Optional[str] = f"write_{to_snake_case(ams_schema.id)}"
 
     def _fetch_grantees(scopes: frozenset[str]) -> List[str]:
         if role == "AUTO":
@@ -215,13 +228,9 @@ def set_dataset_read_permissions(
             grantees = []
         return grantees
 
-    grantee = None if role == "AUTO" else role
-    if create_roles and grantee:
-        _create_role_if_not_exists(session, grantee)
-
     all_scopes = defaultdict(list)
-
     dataset_scopes = ams_schema.auth
+
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = table.db_name()
         if is_remote(table_name):
@@ -279,6 +288,53 @@ def set_dataset_read_permissions(
                         ),
                     }
                 )
+    return all_scopes
+
+
+def set_dataset_read_permissions(
+    session: Session,
+    pg_schema: str,
+    ams_schema: DatasetSchema,
+    role: str,
+    scope: str,
+    dry_run: bool,
+    create_roles: bool,
+) -> None:
+    """Sets read permissions for the indicated dataset.
+
+    Args:
+        session: SQLAlchemy type session
+        pg_schema: schema in the postgres database
+        ams_schema: the amsterdam schema that needs to be processed
+        role: the role that needs the grants that are calculated from the schema
+            A special value `AUTO` can be used to apply grants for all scopes
+        scope: only apply grants for a specific scope, value can be empty string ("")
+        dry_run: do not apply the grants
+        create_roles: boolean indicating that if certain roles are not in the postgres db,
+            these roles need to be created.
+
+        The grants will be applied according to the configuration of the auth scopes
+        in the amsterdam schema.
+        If not auth scopes are defined, all tables get the `scope_openbaar` grant.
+        If only the dataset has as scope `foo`, alle tables get the `scope_foo` grant.
+        If a table has as scope `bar`, this overrules the dataset scope,
+        so this table gets the `scope_bar` grant.
+        If one or more fields have a scope, this scope overrules both the
+        dataset and the table scope. The other fields in the same table
+        get a `scope_openbaar` grant in that case.
+        If a 1-N relation field has a scope, the foreign key field get the associated
+        grant. In case this relation field is of type `object`` (e.g. for temporal fields),
+        the additional columns (usually identificatie/volgnummer postfixed) get the same grant.
+        If NM and nested relation fields (type `array` in the schema) have a scope `bar`
+        the associated sub-table gets the grant `scope_bar`.
+    """
+    grantee: Optional[str] = f"write_{to_snake_case(ams_schema.id)}"
+
+    grantee = None if role == "AUTO" else role
+    if create_roles and grantee:
+        _create_role_if_not_exists(session, grantee)
+
+    all_scopes = get_all_dataset_scopes(ams_schema, role, scope)
 
     for table_name, grant_params in all_scopes.items():
 
