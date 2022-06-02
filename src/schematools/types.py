@@ -836,6 +836,17 @@ class DatasetTableSchema(SchemaType):
 
         raise SchemaObjectNotFound(f"Field '{field_id}' does not exist in table '{self.id}'.")
 
+    @lru_cache()  # type: ignore[misc]
+    def get_additional_relation_by_id(self, relation_id: str) -> AdditionalRelationSchema:
+        """Get the reverse relation based on the ids of the relation."""
+        for additional_relation in self.additional_relations:
+            if additional_relation.id == relation_id:
+                return additional_relation
+
+        raise SchemaObjectNotFound(
+            f"Relation '{relation_id}' does not exist in table '{self.id}'."
+        )
+
     def get_through_tables_by_id(self) -> List[DatasetTableSchema]:
         """Access list of through_tables (for n-m relations) for a single base table."""
         if self.dataset is None:
@@ -1550,7 +1561,7 @@ class DatasetRow(DatasetType):
 
 
 class AdditionalRelationSchema(DatasetType):
-    """Data class describing the additional relation block"""
+    """Data class describing the additional relation block."""
 
     def __init__(self, _id: str, _parent_table: Optional[DatasetTableSchema] = None, **kwargs):
         super().__init__(**kwargs)
