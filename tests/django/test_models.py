@@ -351,6 +351,6 @@ def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_da
 
     with pytest.raises(
         IntegrityError,
-        match=r'^new row for relation "parkeervakken_parkeervakken" violates check constraint "id_not_contains_slash".*',
+        match=r'^new row for relation "parkeervakken_parkeervakken" violates check constraint "parkeervakken_parkeervakken_id_not_contains_slash".*',
     ):
         model.objects.create(id="forbidden/slash")
