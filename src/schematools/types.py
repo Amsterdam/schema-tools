@@ -1557,6 +1557,12 @@ class AdditionalRelationSchema(DatasetType):
         self._id = _id
         self._parent_table = _parent_table
 
+    def __repr__(self) -> str:
+        prefix = ""
+        if self._parent_table is not None:
+            prefix = f"{self._parent_table.id}."
+        return f"<{self.__class__.__name__}: {prefix}{self._id}>"
+
     @property
     def id(self):
         return self._id
@@ -1586,9 +1592,12 @@ class AdditionalRelationSchema(DatasetType):
     def related_table(self) -> DatasetTableSchema:
         """Return the table this relation references."""
         # NOTE: currently doesn't cross datasets
-        return self._parent_table.dataset.get_table_by_id(
-            self["table"], include_nested=False, include_through=False
-        )
+        try:
+            return self._parent_table.dataset.get_table_by_id(
+                self["table"], include_nested=False, include_through=False
+            )
+        except SchemaObjectNotFound as e:
+            raise RuntimeError(f"Unable to resolve {self}.related_table: {e}") from e
 
     @cached_property
     def related_field(self) -> DatasetFieldSchema:
