@@ -152,7 +152,7 @@ def set_dataset_write_permissions(
         table_name = table.db_name()
         if is_remote(table_name):
             continue
-        table_privileges = ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"]
+        table_privileges = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"]
         _execute_grant(
             session,
             grant(
