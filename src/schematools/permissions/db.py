@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Union, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
+from psycopg2.errors import UndefinedTable
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -437,16 +438,16 @@ def _revoke_all_privileges_from_role(
         revoke_statement = ";".join(revoke_statements)
     else:
         revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN {pg_schema} FROM {role}"
-    sql_statement = (
-        "DO $$ "
-        "BEGIN "
-        f"{revoke_statement}; "
-        "EXCEPTION"
-        " WHEN undefined_object"
-        " THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
-        "END "
-        "$$"
-    )
+    sql_statement = f"""
+        DO $$
+        BEGIN
+        f{revoke_statement};
+        EXCEPTION
+         WHEN undefined_object
+         THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
+        END
+        $$
+    """
     if echo:
         logger.info("%s --> %s", status_msg, revoke_statement)
     if not dry_run:
@@ -463,7 +464,7 @@ def _revoke_all_privileges_from_read_and_write_roles(
     """Revoke all privileges that may have been previously granted.
 
     This is about grants to the scope_* and write_* roles.
-    If datasetis provided, revoke only rights to the tables belonging to
+    If dataset is provided, revoke only rights to the tables belonging to
     dataset.
     """
     status_msg = "Skipped" if dry_run else "Executed"
@@ -489,12 +490,24 @@ def _revoke_all_privileges_from_read_and_write_roles(
             revoke_statement = ";".join(revoke_statements)
         else:
             revoke_statement = (
-                f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]};"
+                f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]}"
             )
+        revoke_block_statement = f"""
+            DO
+            $$
+                BEGIN
+                    {revoke_statement};
+                EXCEPTION
+                    WHEN insufficient_privilege THEN
+                        RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
+                END
+            $$
+        """
+
         if echo:
             logger.info("%s --> %s", status_msg, revoke_statement)
         if not dry_run:
-            session.execute(text(revoke_statement))  # .execution_options(autocommit=True))
+            session.execute(revoke_block_statement)
 
 
 def _execute_grant(
@@ -506,6 +519,9 @@ def _execute_grant(
         $$
             BEGIN
                 {grant_statement};
+            EXCEPTION
+              WHEN undefined_table THEN
+                RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
             END
         $$
         """
@@ -526,16 +542,18 @@ def _create_role_if_not_exists(
     status_msg = "Skipped" if dry_run else "Executed"
     create_role_statement = f"CREATE ROLE {role}"
     if role not in existing_roles:
-        sql_statement = (
-            "DO $$ "
-            "BEGIN "
-            f"{create_role_statement}; "
-            "EXCEPTION"
-            " WHEN duplicate_object"
-            " THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE; "
-            "END "
-            "$$"
-        )
+        sql_statement = f"""
+            DO $$
+            BEGIN
+            {create_role_statement};
+            EXCEPTION
+             WHEN duplicate_object
+             THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
+             WHEN undefined_object
+             THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
+            END
+            $$
+        """
         if echo:
             logger.info("%s --> %s", status_msg, create_role_statement)
         if not dry_run:
