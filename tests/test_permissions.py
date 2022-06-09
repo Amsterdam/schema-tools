@@ -472,21 +472,18 @@ class TestWritePermissions:
         #  It is now possible to INSERT data into the dataset tables
         _check_insert_permission_granted(engine, "testuser", "gebieden_bouwblokken", "id", "'abc'")
 
-        #  The write_ roles do not have SELECT permissions, therefore testuser should not have it
-        _check_select_permission_denied(engine, "testuser", "gebieden_bouwblokken")
+        #  The write_ roles do have SELECT permissions, therefore testuser should not have it
+        _check_select_permission_granted(engine, "testuser", "gebieden_bouwblokken")
 
-        #  Without SELECT it is not possible to UPDATE or DELETE on given condition
-        _check_update_permission_denied(
+        #  With SELECT it is possible to UPDATE or DELETE on given condition
+        _check_update_permission_granted(
             engine, "testuser", "gebieden_bouwblokken", "id", "'def'", "id = 'abc'"
         )
-        _check_delete_permission_denied(engine, "testuser", "gebieden_bouwblokken", "id = 'abc'")
+        _check_delete_permission_granted(engine, "testuser", "gebieden_bouwblokken", "id = 'abc'")
 
         # Add SELECT permissions by granting the appropriate scope to the user
         with engine.begin() as connection:
             connection.execute("GRANT scope_level_b TO testuser")
-
-        # Still not possible to SELECT * because not all columns are within scope
-        _check_select_permission_denied(engine, "testuser", "gebieden_bouwblokken", "*")
 
         # But now it's possible to SELECT the columns within scope level_b
         _check_select_permission_granted(
