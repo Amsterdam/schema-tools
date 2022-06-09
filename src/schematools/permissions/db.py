@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Union, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
-from psycopg2.errors import UndefinedTable
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
