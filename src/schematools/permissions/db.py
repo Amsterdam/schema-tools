@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -86,6 +86,12 @@ def apply_schema_and_profile_permissions(
     """Apply permissions for schema and profile."""
     SessionCls = sessionmaker(bind=engine)
     session = SessionCls()
+
+    @event.listens_for(engine, "after_cursor_execute")
+    def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+        for notice in cursor.connection.notices:
+            logger.info(notice.strip())
+
     try:
         if ams_schema:
             create_acl_from_schemas(
