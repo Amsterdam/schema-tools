@@ -165,10 +165,11 @@ def permissions_introspect(db_url: str, role: str) -> None:
 @permissions.command("revoke")
 @option_db_url
 @argument_role
-def permissions_revoke(db_url: str, role: str) -> None:
+@click.option("-v", "--verbose", count=True)
+def permissions_revoke(db_url: str, role: str, verbose: int) -> None:
     """Revoke all table select priviliges for role."""
     engine = _get_engine(db_url)
-    revoke_permissions(engine, role)
+    revoke_permissions(engine, role, verbose=verbose)
 
 
 @permissions.command("apply")
@@ -235,6 +236,7 @@ def permissions_revoke(db_url: str, role: str) -> None:
     default=False,
     help="Before granting new permissions, revoke first all previous table and column permissions",
 )
+@click.option("-v", "--verbose", count=True)
 def permissions_apply(
     db_url: str,
     schema_url: str,
@@ -247,9 +249,10 @@ def permissions_apply(
     scope: str,
     execute: bool,
     create_roles: bool,
-    revoke: bool,
     set_read_permissions: bool,
     set_write_permissions: bool,
+    revoke: bool,
+    verbose: int,
 ) -> None:
     """Set permissions for a postgres role.
 
@@ -290,6 +293,7 @@ def permissions_apply(
             dry_run,
             create_roles,
             revoke,
+            verbose=verbose,
         )
     else:
         click.echo(
