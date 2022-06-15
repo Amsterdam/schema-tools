@@ -50,7 +50,7 @@ def introspect_permissions(engine: Engine, role: str) -> None:
                     )
 
 
-def revoke_permissions(engine: Engine, role: str) -> None:
+def revoke_permissions(engine: Engine, role: str, verbose: int = 0) -> None:
     """Revoke all privileges for the indicated role."""
     grantee = role
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
@@ -59,11 +59,12 @@ def revoke_permissions(engine: Engine, role: str) -> None:
             acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
             for acl in acl_list:
                 if acl.grantee == role:
-                    logger.info(
-                        'revoking ALL privileges of role "%s" on table "%s"',
-                        role,
-                        schema_relation_info.name,
-                    )
+                    if verbose:
+                        logger.info(
+                            'revoking ALL privileges of role "%s" on table "%s"',
+                            role,
+                            schema_relation_info.name,
+                        )
                     revoke_statement = revoke(
                         "ALL", PgObjectType.TABLE, schema_relation_info.name, grantee
                     )
@@ -82,15 +83,18 @@ def apply_schema_and_profile_permissions(
     dry_run: bool = False,
     create_roles: bool = False,
     revoke: bool = False,
+    verbose: int = 0,
 ) -> None:
     """Apply permissions for schema and profile."""
     SessionCls = sessionmaker(bind=engine)
     session = SessionCls()
 
-    @event.listens_for(engine, "after_cursor_execute")
-    def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-        for notice in cursor.connection.notices:
-            logger.info(notice.strip())
+    if verbose:
+
+        @event.listens_for(engine, "after_cursor_execute")
+        def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+            for notice in cursor.connection.notices:
+                logger.info(notice.strip())
 
     try:
         if ams_schema:
@@ -105,21 +109,27 @@ def apply_schema_and_profile_permissions(
                 dry_run,
                 create_roles,
                 revoke,
+                verbose,
             )
         if profiles:
             profile_list = cast(List[Dict[str, Any]], profiles.values())
-            create_acl_from_profiles(engine, pg_schema, profile_list, role, scope)
+            create_acl_from_profiles(engine, pg_schema, profile_list, role, scope, verbose)
         session.commit()
     except Exception:
         session.rollback()
-        logger.info("warning: session rolled back")
+        logger.warning("Session rolled back")
         raise
     finally:
         session.close()
 
 
 def create_acl_from_profiles(
-    engine: Engine, pg_schema: str, profile_list: List[Dict[str, Any]], role: str, scope: str
+    engine: Engine,
+    pg_schema: str,
+    profile_list: List[Dict[str, Any]],
+    role: str,
+    scope: str,
+    verbose: int = 0,
 ) -> None:
     """Create an ACL from profile list.
 
@@ -143,12 +153,18 @@ def create_acl_from_profiles(
                             grant_option=False,
                             schema=pg_schema,
                         )
-                        logger.info(grant_statement)
+                        if verbose:
+                            logger.info(grant_statement)
                         engine.execute(grant_statement)
 
 
 def set_dataset_write_permissions(
-    session: Session, pg_schema: str, ams_schema: DatasetSchema, dry_run: bool, create_roles: bool
+    session: Session,
+    pg_schema: str,
+    ams_schema: DatasetSchema,
+    dry_run: bool,
+    create_roles: bool,
+    echo: bool = False,
 ) -> None:
     """Sets write permissions for the indicated dataset."""
     grantee = f"write_{to_snake_case(ams_schema.id)}"
@@ -169,6 +185,7 @@ def set_dataset_write_permissions(
                 grant_option=False,
                 schema=pg_schema,
             ),
+            echo=echo,
             dry_run=dry_run,
         )
 
@@ -305,6 +322,7 @@ def set_dataset_read_permissions(
     scope: str,
     dry_run: bool,
     create_roles: bool,
+    echo: bool = False,
 ) -> None:
     """Sets read permissions for the indicated dataset.
 
@@ -358,6 +376,7 @@ def set_dataset_read_permissions(
                         grant_option=False,
                         schema=pg_schema,
                     ),
+                    echo=echo,
                     dry_run=dry_run,
                 )
 
@@ -373,6 +392,7 @@ def create_acl_from_schemas(
     dry_run: bool,
     create_roles: bool,
     revoke: bool,
+    verbose: int = 0,
 ) -> None:
     """Create and set the ACL for automatically generated roles based on Amsterdam Schema.
 
@@ -386,41 +406,52 @@ def create_acl_from_schemas(
             if isinstance(schemas, DatasetSchema):
                 # for a single dataset
                 _revoke_all_privileges_from_read_and_write_roles(
-                    session, pg_schema, schemas, dry_run=dry_run
+                    session, pg_schema, schemas, dry_run=dry_run, echo=bool(verbose)
                 )
             else:
                 _revoke_all_privileges_from_read_and_write_roles(
-                    session, pg_schema, dry_run=dry_run
+                    session, pg_schema, dry_run=dry_run, echo=bool(verbose)
                 )
         else:
             if isinstance(schemas, DatasetSchema):
                 # for a single dataset
                 _revoke_all_privileges_from_role(
-                    session, pg_schema, role, schemas, dry_run=dry_run
+                    session, pg_schema, role, schemas, dry_run=dry_run, echo=bool(verbose)
                 )
             else:
-                _revoke_all_privileges_from_role(session, pg_schema, role, dry_run=dry_run)
+                _revoke_all_privileges_from_role(
+                    session, pg_schema, role, dry_run=dry_run, echo=bool(verbose)
+                )
 
     if set_read_permissions:
         if isinstance(schemas, DatasetSchema):
             # for a single dataset
             set_dataset_read_permissions(
-                session, pg_schema, schemas, role, scope, dry_run, create_roles
+                session, pg_schema, schemas, role, scope, dry_run, create_roles, echo=bool(verbose)
             )
         else:
             for _dataset_name, dataset_schema in schemas.items():
                 set_dataset_read_permissions(
-                    session, pg_schema, dataset_schema, role, scope, dry_run, create_roles
+                    session,
+                    pg_schema,
+                    dataset_schema,
+                    role,
+                    scope,
+                    dry_run,
+                    create_roles,
+                    echo=bool(verbose),
                 )
 
     if set_write_permissions:
         if isinstance(schemas, DatasetSchema):
             # for a single dataset
-            set_dataset_write_permissions(session, pg_schema, schemas, dry_run, create_roles)
+            set_dataset_write_permissions(
+                session, pg_schema, schemas, dry_run, create_roles, echo=bool(verbose)
+            )
         else:
             for _dataset_name, dataset_schema in schemas.items():
                 set_dataset_write_permissions(
-                    session, pg_schema, dataset_schema, dry_run, create_roles
+                    session, pg_schema, dataset_schema, dry_run, create_roles, echo=bool(verbose)
                 )
 
 
