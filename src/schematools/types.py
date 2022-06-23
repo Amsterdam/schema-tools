@@ -488,6 +488,9 @@ class DatasetSchema(SchemaType):
         snakecased_field_id = to_snake_case(field.id)
         sub_table_id = get_rel_table_identifier(table.id, snakecased_field_id)
 
+        if "properties" not in field["items"]:
+            raise KeyError(f"Key 'properties' not defined in '{table.name}.{field.name}'")
+
         sub_table_schema = {
             "id": sub_table_id,
             "originalID": field.id,
@@ -503,7 +506,10 @@ class DatasetSchema(SchemaType):
                 "properties": {
                     "id": {"type": "integer/autoincrement", "description": ""},
                     "schema": {"$ref": "#/definitions/schema"},
-                    "parent": {"type": _get_parent_fk_type(), "relation": f"{self.id}:{table.id}"},
+                    "parent": {
+                        "type": _get_parent_fk_type(),
+                        "relation": f"{self.id}:{table.id}"
+                    },
                     **field["items"]["properties"],
                 },
             },
@@ -798,7 +804,7 @@ class DatasetTableSchema(SchemaType):
 
             # Add extra fields for relations of type object
             # These fields are added to identify the different
-            # components of a composite FK to a another table
+            # components of a composite FK to another table
             if field_schema.relation is not None and field_schema.is_object and include_subfields:
                 for subfield in field_schema.get_subfields(add_prefixes=True):
                     # We exclude temporal fields, they need not to be merged into the table fields
