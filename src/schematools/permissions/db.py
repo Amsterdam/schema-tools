@@ -1,7 +1,7 @@
 """Create GRANT statements to give roles very specific access to the database."""
 import logging
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast, DefaultDict
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
@@ -194,7 +194,7 @@ def get_all_dataset_scopes(
     ams_schema: DatasetSchema,
     role: str,
     scope: str,
-) -> defaultdict[str, list]:
+) -> DefaultDict[str, list]:
     """Returns all scopes that should be applied to the tables of a dataset.
 
     Args:
