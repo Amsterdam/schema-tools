@@ -16,7 +16,7 @@ import json
 import logging
 import re
 import warnings
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from django.apps import apps
 from django.conf import settings
@@ -223,6 +223,9 @@ class DynamicModel(models.Model):
         return cls._is_temporal
 
 
+M = TypeVar("M", bound=DynamicModel)
+
+
 class Dataset(models.Model):
     """A registry of all available datasets that are uploaded in the API server.
 
@@ -369,14 +372,16 @@ class Dataset(models.Model):
             and self.schema_data != self._old_schema_data
         )
 
-    def create_models(self, base_app_name: Optional[str] = None) -> List[Type[DynamicModel]]:
+    def create_models(
+        self, base_app_name: Optional[str] = None, base_model: Type[M] = DynamicModel
+    ) -> List[Type[M]]:
         """Extract the models found in the schema"""
         from schematools.contrib.django.factories import schema_models_factory
 
         if not self.enable_db:
             return []
         else:
-            return schema_models_factory(self, base_app_name=base_app_name)
+            return schema_models_factory(self, base_app_name=base_app_name, base_model=base_model)
 
 
 class DatasetTable(models.Model):

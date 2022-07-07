@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type, TypeVar
 from urllib.parse import urlparse
 
 from django.apps import apps
@@ -26,6 +26,7 @@ from .models import (
 )
 
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
+M = TypeVar("M", bound=DynamicModel)
 MODEL_CREATION_COUNTER = 1
 
 
@@ -391,18 +392,27 @@ def schema_models_factory(
     dataset: Dataset,
     tables: Optional[Collection[str]] = None,
     base_app_name: Optional[str] = None,
-) -> List[Type[DynamicModel]]:
+    base_model: Type[M] = DynamicModel,
+) -> List[Type[M]]:
     """Generate Django models from the data of the schema."""
     return [
-        model_factory(dataset=dataset, table_schema=table, base_app_name=base_app_name)
+        model_factory(
+            dataset=dataset,
+            table_schema=table,
+            base_app_name=base_app_name,
+            base_model=base_model,
+        )
         for table in dataset.schema.get_tables(include_nested=True, include_through=True)
         if tables is None or table.id in tables
     ]
 
 
 def model_factory(
-    dataset: Dataset, table_schema: DatasetTableSchema, base_app_name: Optional[str] = None
-) -> Type[DynamicModel]:
+    dataset: Dataset,
+    table_schema: DatasetTableSchema,
+    base_app_name: Optional[str] = None,
+    base_model: Type[M] = DynamicModel,
+) -> Type[M]:
     """Generate a Django model class from a JSON Schema definition."""
     dataset_schema = dataset.schema
     app_label = dataset_schema.id
@@ -486,7 +496,7 @@ def model_factory(
 
     model_class = ModelBase(
         table_schema.model_name(),
-        (DynamicModel,),
+        (base_model,),
         {
             **fields,
             "__doc__": table_schema.description or "",
