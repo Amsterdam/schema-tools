@@ -4,6 +4,7 @@
   "title": "Relations with auth (to be set inside the test)",
   "status": "beschikbaar",
   "version": "1.2.3",
+  "auth": ["OPENBAAR"],
   "tables": [
     {
       "id": "base",

@@ -28,7 +28,6 @@ from typing import Callable, Iterator, List, Optional, Set, cast
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
-from schematools.permissions import PUBLIC_SCOPE
 from schematools.types import DatasetSchema, SemVer, TableVersions
 from schematools.utils import to_snake_case, toCamelCase
 
@@ -322,23 +321,25 @@ def _property_formats(dataset: DatasetSchema) -> Iterator[str]:
 
 @_register_validator("auth across relations")
 def _relation_auth(dataset: DatasetSchema) -> Iterator[str]:
-    """Relation fields should not refer to a field that has an "auth".
-
-    No rule has been defined to handle this case.
-    """
+    """Relation fields should have at least the auth scopes of the field they refer to."""
     for table in dataset.tables:
         for field in table.get_fields(include_subfields=True):
-            rel = field.related_table
-            if not rel:
+            our_auth = table.dataset.auth | table.auth | field.auth
+
+            rel_table = field.related_table
+            if not rel_table:
                 continue
 
             if (
-                rel.auth - {PUBLIC_SCOPE}
-                or rel.dataset.auth - {PUBLIC_SCOPE}
-                or any(
-                    rel.get_field_by_id(f).auth - {PUBLIC_SCOPE}
+                not our_auth.issuperset(rel_table.dataset.auth)
+                or not our_auth.issuperset(rel_table.auth)
+                or not all(
+                    our_auth.issuperset(rel_table.get_field_by_id(f).auth)
                     for f in (field.related_field_ids or [])
                 )
             ):
-
-                yield f"{table.id}.{field.id} would require authorization"
+                scopes = set(rel_table.dataset.auth) | set(rel_table.auth)
+                for f in field.related_field_ids:
+                    scopes |= rel_table.get_field_by_id(f).auth
+                scopes.remove("OPENBAAR")  # Not very interesting.
+                yield f"{table.id}.{field.id} requires scopes {sorted(scopes)}"

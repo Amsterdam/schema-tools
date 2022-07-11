@@ -152,7 +152,7 @@ def test_rel_auth_dataset(here: Path) -> None:
 
     errors = list(validation.run(dataset))
     assert len(errors) == 1, errors
-    assert "refers.rel would require authorization" in str(errors[0])
+    assert "requires scopes ['HAMMERTIME']" in str(errors[0])
 
 
 def test_rel_auth_dataset_public(here: Path) -> None:
@@ -171,17 +171,7 @@ def test_rel_auth_table(here: Path) -> None:
 
     errors = list(validation.run(dataset))
     assert len(errors) == 1, errors
-    assert "refers.rel would require authorization" in str(errors[0])
-
-
-def test_rel_auth_table_public(here: Path) -> None:
-    dataset_json = json.load(open(here / "files" / "rel_auth.json"))
-    table = next(t for t in dataset_json["tables"] if t["id"] == "base")
-    table["auth"] = [PUBLIC_SCOPE]
-    dataset = DatasetSchema.from_dict(dataset_json)
-
-    errors = list(validation.run(dataset))
-    assert len(errors) == 0, errors
+    assert "requires scopes ['HAMMERTIME']" in str(errors[0])
 
 
 def test_rel_auth_field(here: Path) -> None:
@@ -193,19 +183,5 @@ def test_rel_auth_field(here: Path) -> None:
     dataset = DatasetSchema.from_dict(dataset_json)
     errors = list(validation.run(dataset))
 
-    # We may get multiple errors because we stuck an "auth" on an identifier field.
-    # That's not allowed, but check for it anyway.
     assert len(errors) >= 1, errors
-    assert any("refers.rel would require authorization" in str(e) for e in errors)
-
-
-def test_rel_auth_field_public(here: Path) -> None:
-    dataset_json = json.load(open(here / "files" / "rel_auth.json"))
-    table = next(t for t in dataset_json["tables"] if t["id"] == "base")
-    field = table["schema"]["properties"]["stop"]
-    field["auth"] = [PUBLIC_SCOPE]
-
-    dataset = DatasetSchema.from_dict(dataset_json)
-    errors = list(validation.run(dataset))
-
-    assert len(errors) == 0, errors
+    assert any("requires scopes ['HAMMERTIME']" in str(e) for e in errors)
