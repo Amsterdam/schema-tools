@@ -118,6 +118,10 @@ def test_main_geometry(here: Path) -> None:
     dataset = dataset_schema_from_path(here / "files" / "meetbouten.json")
     assert list(_check_maingeometry(dataset)) == []
 
+    dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = None
+    error = next(validation.run(dataset))
+    assert "'mainGeometry' is required but not defined in table" in error.message
+
     dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "not_a_geometry"
     error = next(validation.run(dataset))
     assert "mainGeometry = 'not_a_geometry'" in error.message

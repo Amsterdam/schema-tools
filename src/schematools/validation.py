@@ -249,6 +249,16 @@ def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
         # "geometry". We can't rely on that always existing.
         main_geo = table["schema"].get("mainGeometry")
         if main_geo is None:
+            # mainGeometry should exist if a geometry field exists
+            # but none of the geometry fields is called "geometry"
+            if table.has_geometry_fields and not any(
+                field.is_geo and field.id == "geometry" for field in table.fields
+            ):
+                yield (
+                    f"'mainGeometry' is required but not defined in table ${table.id}."
+                    "This table has fields of type geometry,"
+                    "but none of these fields is called 'geometry'."
+                )
             continue
 
         try:
