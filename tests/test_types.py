@@ -286,7 +286,6 @@ def test_raise_exception_on_missing_properties_in_array(here):
     """Test if a human-readable error is raised on missing properties key."""
     schema = dataset_schema_from_path(here / "files" / "missing_properties.json")
     with pytest.raises(
-            KeyError,
-            match=r"Key 'properties' not defined in 'meetbouten.broken_array'"
+        KeyError, match=r"Key 'properties' not defined in 'meetbouten.broken_array'"
     ):
         schema.get_table_by_id("meetbouten")

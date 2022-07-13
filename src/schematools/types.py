@@ -506,10 +506,7 @@ class DatasetSchema(SchemaType):
                 "properties": {
                     "id": {"type": "integer/autoincrement", "description": ""},
                     "schema": {"$ref": "#/definitions/schema"},
-                    "parent": {
-                        "type": _get_parent_fk_type(),
-                        "relation": f"{self.id}:{table.id}"
-                    },
+                    "parent": {"type": _get_parent_fk_type(), "relation": f"{self.id}:{table.id}"},
                     **field["items"]["properties"],
                 },
             },
