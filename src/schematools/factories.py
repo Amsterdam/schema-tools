@@ -1,6 +1,7 @@
 """Module to hold factories."""
+from __future__ import annotations
+
 from collections import defaultdict
-from typing import Dict, Optional, Set
 
 from psycopg2 import sql
 from sqlalchemy import Column, MetaData, Table
@@ -13,12 +14,12 @@ from schematools.utils import to_snake_case
 
 def tables_factory(
     dataset: DatasetSchema,
-    metadata: Optional[MetaData] = None,
-    db_table_names: Optional[Dict[str, Optional[str]]] = None,
-    db_schema_names: Optional[Dict[str, Optional[str]]] = None,
-    limit_tables_to: Optional[Set] = None,
+    metadata: MetaData | None = None,
+    db_table_names: dict[str, str | None] | None = None,
+    db_schema_names: dict[str, str | None] | None = None,
+    limit_tables_to: set | None = None,
     is_versioned_dataset: bool = False,
-) -> Dict[str, Table]:
+) -> dict[str, Table]:
     """Generate the SQLAlchemy Table objects base on a `DatasetSchema` definition.
 
     Args:
@@ -136,7 +137,7 @@ def tables_factory(
     return tables
 
 
-def views_factory(dataset: DatasetSchema, tables: Dict[str, Table]) -> Dict[str, sql.SQL]:
+def views_factory(dataset: DatasetSchema, tables: dict[str, Table]) -> dict[str, sql.SQL]:
     """Create VIEW statements.
 
     The views these statements define are there to provide the illusion that the tables they
@@ -153,7 +154,7 @@ def views_factory(dataset: DatasetSchema, tables: Dict[str, Table]) -> Dict[str,
 
     Returns: A dict mapping table names to VIEW statements.
     """
-    dataset_tables: Dict[str, DatasetTableSchema] = {
+    dataset_tables: dict[str, DatasetTableSchema] = {
         to_snake_case(dst.name): dst
         for dst in dataset.get_tables(include_nested=True, include_through=True)
     }
@@ -169,7 +170,7 @@ def views_factory(dataset: DatasetSchema, tables: Dict[str, Table]) -> Dict[str,
           FROM {src_schema}.{src_table};
         """
     )
-    views: Dict[str, sql.SQL] = {
+    views: dict[str, sql.SQL] = {
         tn: CREATE_VIEW.format(
             view_name=sql.Identifier(dataset_tables[tn].db_name()),
             src_schema=sql.Identifier(tables[tn].schema),

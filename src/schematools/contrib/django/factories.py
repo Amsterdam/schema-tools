@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Collection, Dict, Tuple, Type, TypeVar
 from urllib.parse import urlparse
 
 from django.apps import apps
@@ -172,7 +172,7 @@ class FKRelationMaker(RelationMaker):
             # as Django still uses the backwards relation internally.
             return "+"
 
-    def _get_to_field_name(self) -> Optional[str]:
+    def _get_to_field_name(self) -> str | None:
         """Determine the "to_field" for the foreign key.
 
         This returns a value when the relation doesn't point to the targets's primary key,
@@ -258,9 +258,9 @@ class FieldMaker:
 
     def __init__(
         self,
-        field_cls: Type[models.Field],
+        field_cls: type[models.Field],
         table_schema: DatasetTableSchema,
-        value_getter: Callable[[DatasetSchema], Dict[str, Any]] = None,
+        value_getter: Callable[[DatasetSchema], dict[str, Any]] = None,
         **kwargs,
     ):
         self.field_cls = field_cls
@@ -383,17 +383,17 @@ def remove_dynamic_models() -> None:
     MODEL_CREATION_COUNTER += 1
 
 
-def is_dangling_model(model: Type[DynamicModel]) -> bool:
+def is_dangling_model(model: type[DynamicModel]) -> bool:
     """Tell whether the model should have been removed, as everything reloaded."""
     return model.CREATION_COUNTER < MODEL_CREATION_COUNTER
 
 
 def schema_models_factory(
     dataset: Dataset,
-    tables: Optional[Collection[str]] = None,
-    base_app_name: Optional[str] = None,
-    base_model: Type[M] = DynamicModel,
-) -> List[Type[M]]:
+    tables: Collection[str] | None = None,
+    base_app_name: str | None = None,
+    base_model: type[M] = DynamicModel,
+) -> list[type[M]]:
     """Generate Django models from the data of the schema."""
     return [
         model_factory(
@@ -410,9 +410,9 @@ def schema_models_factory(
 def model_factory(
     dataset: Dataset,
     table_schema: DatasetTableSchema,
-    base_app_name: Optional[str] = None,
-    base_model: Type[M] = DynamicModel,
-) -> Type[M]:
+    base_app_name: str | None = None,
+    base_model: type[M] = DynamicModel,
+) -> type[M]:
     """Generate a Django model class from a JSON Schema definition."""
     dataset_schema = dataset.schema
     app_label = dataset_schema.id

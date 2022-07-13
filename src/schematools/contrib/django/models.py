@@ -16,7 +16,7 @@ import json
 import logging
 import re
 import warnings
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, Tuple, Type, TypeVar
 
 from django.apps import apps
 from django.conf import settings
@@ -69,7 +69,7 @@ class ObjectMarker:
     pass
 
 
-def _fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> Dict[str, Any]:
+def _fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> dict[str, Any]:
     return {"srid": CRS.from_string(dataset.data["crs"]).srid}
 
 
@@ -171,7 +171,7 @@ class DynamicModel(models.Model):
 
     @classmethod
     def get_field_schema(
-        cls, model_field: Union[models.Field, models.ForeignObjectRel]
+        cls, model_field: models.Field | models.ForeignObjectRel
     ) -> DatasetFieldSchema:
         """Provide access to the underlying amsterdam schema field that created the model field."""
         if isinstance(model_field, models.ForeignObjectRel):
@@ -213,7 +213,7 @@ class DynamicModel(models.Model):
         return cls._display_field is not None
 
     @classmethod
-    def get_display_field(cls) -> Optional[str]:
+    def get_display_field(cls) -> str | None:
         """Return the name of the display field, for usage by Django models."""
         return cls._display_field
 
@@ -274,7 +274,7 @@ class Dataset(models.Model):
         return name
 
     @classmethod
-    def create_for_schema(cls, schema: DatasetSchema, path: Optional[str] = None) -> Dataset:
+    def create_for_schema(cls, schema: DatasetSchema, path: str | None = None) -> Dataset:
         """Create the schema based on the Amsterdam Schema JSON input"""
         name = cls.name_from_schema(schema)
         if path is None:
@@ -373,8 +373,8 @@ class Dataset(models.Model):
         )
 
     def create_models(
-        self, base_app_name: Optional[str] = None, base_model: Type[M] = DynamicModel
-    ) -> List[Type[M]]:
+        self, base_app_name: str | None = None, base_model: type[M] = DynamicModel
+    ) -> list[type[M]]:
         """Extract the models found in the schema"""
         from schematools.contrib.django.factories import schema_models_factory
 
@@ -567,7 +567,7 @@ class LooseRelationField(models.CharField):
     @property
     def related_model(self):
         """Add ``related_model`` like all other Django relational fields do."""
-        dataset_name, table_name, *_ = [to_snake_case(part) for part in self.relation.split(":")]
+        dataset_name, table_name, *_ = (to_snake_case(part) for part in self.relation.split(":"))
         return apps.all_models[dataset_name][table_name]
 
 
@@ -622,9 +622,7 @@ class LooseRelationManyToManyField(models.ManyToManyField):
     pass
 
 
-def get_field_schema(
-    model_field: Union[models.Field, models.ForeignObjectRel]
-) -> DatasetFieldSchema:
+def get_field_schema(model_field: models.Field | models.ForeignObjectRel) -> DatasetFieldSchema:
     # Backwards compatibility code.
     warnings.warn(
         "get_field_schema() is deprecated, use DynamicModel.get_field_schema() instead",

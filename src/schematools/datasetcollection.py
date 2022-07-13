@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from more_ds.network.url import URL
@@ -24,8 +24,8 @@ class DatasetCollection(metaclass=Singleton):
     """
 
     def __init__(self) -> None:  # noqa: D107
-        self.datasets_cache: Dict[str, DatasetSchema] = {}
-        self._schema_loader: Optional[loaders.SchemaLoader] = None
+        self.datasets_cache: dict[str, DatasetSchema] = {}
+        self._schema_loader: loaders.SchemaLoader | None = None
 
     @property
     def schema_loader(self) -> loaders.SchemaLoader:
@@ -62,12 +62,12 @@ class DatasetCollection(metaclass=Singleton):
             self.add_dataset(dataset)
             return dataset
 
-    def get_all_datasets(self) -> Dict[str, DatasetSchema]:
+    def get_all_datasets(self) -> dict[str, DatasetSchema]:
         """Gets all the datasets using the configured schema loader."""
         return self.schema_loader.get_all_datasets()
 
 
-def set_schema_loader(schema_url: Union[URL, str]) -> None:
+def set_schema_loader(schema_url: URL | str) -> None:
     """Initialize the schema loader at module load time.
 
     schema_url:
@@ -75,7 +75,7 @@ def set_schema_loader(schema_url: Union[URL, str]) -> None:
         can be a web url, or a filesystem path.
     """
     dataset_collection = DatasetCollection()
-    loader: Optional[loaders.SchemaLoader] = None  # pleasing mypy
+    loader: loaders.SchemaLoader | None = None  # pleasing mypy
     if urlparse(schema_url).scheme in ("http", "https"):
         loader = loaders.URLSchemaLoader(schema_url)
     else:

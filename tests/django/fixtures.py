@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from django.test import RequestFactory
 
 from schematools.contrib.django.factories import remove_dynamic_models
 from schematools.contrib.django.models import Dataset, Profile

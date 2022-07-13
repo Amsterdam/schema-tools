@@ -1,7 +1,9 @@
 """Create GRANT statements to give roles very specific access to the database."""
+from __future__ import annotations
+
 import logging
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union, cast, DefaultDict
+from typing import Any, DefaultDict, Dict, List, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
@@ -74,8 +76,8 @@ def revoke_permissions(engine: Engine, role: str, verbose: int = 0) -> None:
 def apply_schema_and_profile_permissions(
     engine: Engine,
     pg_schema: str,
-    ams_schema: Union[DatasetSchema, Dict[str, DatasetSchema]],
-    profiles: Dict[str, Any],
+    ams_schema: DatasetSchema | dict[str, DatasetSchema],
+    profiles: dict[str, Any],
     role: str,
     scope: str,
     set_read_permissions: bool = True,
@@ -126,7 +128,7 @@ def apply_schema_and_profile_permissions(
 def create_acl_from_profiles(
     engine: Engine,
     pg_schema: str,
-    profile_list: List[Dict[str, Any]],
+    profile_list: list[dict[str, Any]],
     role: str,
     scope: str,
     verbose: int = 0,
@@ -242,7 +244,7 @@ def get_all_dataset_scopes(
                     '
     """
 
-    def _fetch_grantees(scopes: frozenset[str]) -> List[str]:
+    def _fetch_grantees(scopes: frozenset[str]) -> list[str]:
         if role == "AUTO":
             grantees = [scope_to_role(scope) for scope in scopes]
         elif scope in scopes:
@@ -352,7 +354,7 @@ def set_dataset_read_permissions(
         If NM and nested relation fields (type `array` in the schema) have a scope `bar`
         the associated sub-table gets the grant `scope_bar`.
     """
-    grantee: Optional[str] = f"write_{to_snake_case(ams_schema.id)}"
+    grantee: str | None = f"write_{to_snake_case(ams_schema.id)}"
 
     grantee = None if role == "AUTO" else role
     if create_roles and grantee:
@@ -384,7 +386,7 @@ def set_dataset_read_permissions(
 def create_acl_from_schemas(
     session: Session,
     pg_schema: str,
-    schemas: Union[DatasetSchema, Dict[str, DatasetSchema]],
+    schemas: DatasetSchema | dict[str, DatasetSchema],
     role: str,
     scope: str,
     set_read_permissions: bool,
@@ -459,7 +461,7 @@ def _revoke_all_privileges_from_role(
     session: Session,
     pg_schema: str,
     role: str,
-    dataset: Optional[DatasetSchema] = None,
+    dataset: DatasetSchema | None = None,
     echo: bool = True,
     dry_run: bool = False,
 ) -> None:
@@ -493,7 +495,7 @@ def _revoke_all_privileges_from_role(
 def _revoke_all_privileges_from_read_and_write_roles(
     session: Session,
     pg_schema: str,
-    dataset: Optional[DatasetSchema] = None,
+    dataset: DatasetSchema | None = None,
     echo: bool = True,
     dry_run: bool = False,
 ) -> None:

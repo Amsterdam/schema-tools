@@ -6,7 +6,7 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Final, Match, Optional, Pattern, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, Match, Pattern, cast
 
 import requests
 from cachetools.func import ttl_cache
@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 
 @ttl_cache(ttl=16)  # type: ignore[misc]
 def dataset_schemas_from_url(
-    schemas_url: Union[URL, str],
-    dataset_name: Optional[str] = None,
+    schemas_url: URL | str,
+    dataset_name: str | None = None,
     prefetch_related: bool = False,
-) -> Dict[str, types.DatasetSchema]:
+) -> dict[str, types.DatasetSchema]:
     """Fetch all dataset schemas from a remote file (or single dataset if specified).
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
@@ -50,7 +50,7 @@ def dataset_schemas_from_url(
 
 
 def dataset_schema_from_url(
-    schemas_url: Union[URL, str],
+    schemas_url: URL | str,
     dataset_name: str,
     prefetch_related: bool = False,
 ) -> types.DatasetSchema:
@@ -63,7 +63,7 @@ def dataset_schema_from_url(
     )
 
 
-def profile_schemas_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.ProfileSchema]:
+def profile_schemas_from_url(profiles_url: URL | str) -> dict[str, types.ProfileSchema]:
     """Fetch all profile schemas from a remote file.
 
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
@@ -71,7 +71,7 @@ def profile_schemas_from_url(profiles_url: Union[URL, str]) -> Dict[str, types.P
     return schemas_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
 
 
-def dataset_paths_from_url(base_url: Union[URL, str]) -> Dict[str, str]:
+def dataset_paths_from_url(base_url: URL | str) -> dict[str, str]:
     """Fetch all dataset paths from a remote location.
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
@@ -84,12 +84,12 @@ def dataset_paths_from_url(base_url: Union[URL, str]) -> Dict[str, str]:
         return cast(Dict[str, str], response.json())
 
 
-def schemas_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Dict[str, types.ST]:
+def schemas_from_url(base_url: URL | str, data_type: type[types.ST]) -> dict[str, types.ST]:
     """Fetch all schema definitions from a remote file.
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup: Dict[str, types.ST] = {}
+    schema_lookup: dict[str, types.ST] = {}
     base_url = URL(base_url)
 
     with requests.Session() as connection:
@@ -107,8 +107,8 @@ def schemas_from_url(base_url: Union[URL, str], data_type: Type[types.ST]) -> Di
 
 
 def schema_from_url(
-    base_url: Union[URL, str],
-    data_type: Type[types.ST],
+    base_url: URL | str,
+    data_type: type[types.ST],
     dataset_id: str,
     prefetch_related: bool = False,
 ) -> types.ST:
@@ -141,7 +141,7 @@ def _schema_from_url_with_connection(
     connection: requests.Session,
     base_url: URL,
     dataset_path: str,
-    data_type: Type[types.ST],
+    data_type: type[types.ST],
 ) -> types.ST:
     """Fetch single schema from url with connection."""
     response = connection.get(base_url / dataset_path / "dataset")
@@ -179,14 +179,14 @@ def _schema_from_url_with_connection(
     reason="""The `dataset_schema_from_file` is replaced by `dataset_schema_from_path`.""",
 )
 def dataset_schema_from_file(
-    file_path: Union[Path, str], prefetch_related: bool = False
+    file_path: Path | str, prefetch_related: bool = False
 ) -> types.DatasetSchema:
     """Gets a dataset scheme from a file path."""
     return dataset_schema_from_path(file_path)
 
 
 def dataset_schema_from_path(
-    dataset_path: Union[Path, str],
+    dataset_path: Path | str,
 ) -> types.DatasetSchema:
     """Read a dataset schema from the filesystem.
 
@@ -225,7 +225,7 @@ def dataset_schema_from_path(
 
 def dataset_schema_from_id_and_schemas_path(
     dataset_id: str,
-    schemas_path: Union[Path, str],
+    schemas_path: Path | str,
     prefetch_related: bool = False,
 ) -> types.DatasetSchema:
     """Read a dataset schema from a file on local drive.
@@ -238,7 +238,7 @@ def dataset_schema_from_id_and_schemas_path(
     dataset_path = Path(schemas_path) / dataset_id / "dataset.json"
     dataset_schema: types.DatasetSchema = dataset_schema_from_path(dataset_path)
 
-    index: Dict[str, Path] = {}
+    index: dict[str, Path] = {}
 
     # Build the mapping from dataset -> path with jsonschema file
     if prefetch_related:
@@ -255,15 +255,13 @@ def dataset_schema_from_id_and_schemas_path(
     return dataset_schema
 
 
-def dataset_schemas_from_schemas_path(
-    schemas_path: Union[Path, str]
-) -> Dict[str, types.DatasetSchema]:
+def dataset_schemas_from_schemas_path(schemas_path: Path | str) -> dict[str, types.DatasetSchema]:
     """Read all datasets from the schemas_path.
 
     Args:
         schemas_path: Path to the filesystem location with the dataset schemas.
     """
-    schema_lookup: Dict[str, types.DatasetSchema] = {}
+    schema_lookup: dict[str, types.DatasetSchema] = {}
     for root, _, files in os.walk(schemas_path):
         if "dataset.json" in files:
             root_path = Path(root)
@@ -274,9 +272,9 @@ def dataset_schemas_from_schemas_path(
     return schema_lookup
 
 
-def profile_schema_from_file(filename: Union[Path, str]) -> Dict[str, types.ProfileSchema]:
+def profile_schema_from_file(filename: Path | str) -> dict[str, types.ProfileSchema]:
     """Read a profile schema from a file on local drive."""
-    with open(filename, "r") as file_handler:
+    with open(filename) as file_handler:
         schema_info = json.load(file_handler)
         return {schema_info["name"]: types.ProfileSchema.from_dict(schema_info)}
 
@@ -287,7 +285,7 @@ def profile_schema_from_file(filename: Union[Path, str]) -> Dict[str, types.Prof
     "out into separate files. Use something like "
     "`schematools.cli._get_dataset_schema` instead.",
 )
-def schema_fetch_url_file(schema_url_file: Union[URL, str]) -> Dict[str, Any]:
+def schema_fetch_url_file(schema_url_file: URL | str) -> dict[str, Any]:
     """Return schemadata from URL or File."""
     if not schema_url_file.startswith("http"):
         with open(schema_url_file) as f:

@@ -277,7 +277,7 @@ def test_table_shortname(verblijfsobjecten_dataset, hr_dataset):
         "hr_activiteiten_wordt_uitgeoefend_in_commerciele_vestiging",
     }
 
-    assert db_table_names == set(m._meta.db_table for m in model_dict.values())
+    assert db_table_names == {m._meta.db_table for m in model_dict.values()}
 
 
 @pytest.mark.django_db
@@ -294,13 +294,13 @@ def test_column_shortnames_in_nm_throughtables(verblijfsobjecten_dataset, hr_dat
     }
 
     db_colnames = {"activiteiten_id", "sbi_voor_activiteit_id"}
-    assert db_colnames == set(
+    assert db_colnames == {
         f.db_column
         for f in model_dict[
             "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"
         ]._meta.fields
         if f.db_column is not None
-    )
+    }
 
 
 @pytest.mark.django_db

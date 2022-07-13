@@ -24,7 +24,7 @@ import operator
 import re
 from dataclasses import dataclass
 from functools import partial, wraps
-from typing import Callable, Iterator, List, Optional, Set, cast
+from typing import Callable, Iterator, Set, cast
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
@@ -58,7 +58,7 @@ class ValidationException(Exception):
         self.message = message
 
 
-_all: List[tuple[str, Callable[[DatasetSchema], Iterator[str]]]] = []
+_all: list[tuple[str, Callable[[DatasetSchema], Iterator[str]]]] = []
 
 
 def run(dataset: DatasetSchema) -> Iterator[ValidationError]:
@@ -103,7 +103,7 @@ def _camelcase(dataset: DatasetSchema) -> Iterator[str]:
                 yield error
 
 
-def _camelcase_ident(ident: str) -> Optional[str]:
+def _camelcase_ident(ident: str) -> str | None:
     if ident == "":
         return "empty identifier not allowed"
     camel = toCamelCase(to_snake_case(ident))

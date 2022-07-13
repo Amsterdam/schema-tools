@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import logging
 from collections import defaultdict
-from typing import Dict, List
 
 from sqlalchemy.engine import Connection
 
@@ -61,7 +60,7 @@ class DataSplitter:
         relational_data, self.row_data = self._split_data(event_data)
         self.process_relational_data(relational_data)
 
-    def _split_data(self, event_data: dict) -> List[dict]:
+    def _split_data(self, event_data: dict) -> list[dict]:
         """Split the event_data in 2 parts, one with scalars, the other with relations."""
         data_bags = [{}, {}]
         for field in self.dataset_table.fields:
@@ -101,7 +100,7 @@ class DataSplitter:
 
         # id for target side of relation
         if field_data:
-            id_value = ".".join((str(field_data[fn]) for fn in target_identifier_fields))
+            id_value = ".".join(str(field_data[fn]) for fn in target_identifier_fields)
         else:
             id_value = None
 
@@ -111,7 +110,7 @@ class DataSplitter:
 
         self.row_data.update(fk_row_data)
 
-    def _fetch_target_identifier_fields(self, relation: str) -> List[str]:
+    def _fetch_target_identifier_fields(self, relation: str) -> list[str]:
         """Fetch the identifier fields for the target side of a relation.
 
         These fields will be ordered with the main identifier first, and
@@ -163,7 +162,7 @@ class DataSplitter:
             nm_row_data[snaked_source_table_id] = id_value
 
             # id for target side of relation
-            target_id_value = ".".join((str(row_data[fn]) for fn in target_identifier_fields))
+            target_id_value = ".".join(str(row_data[fn]) for fn in target_identifier_fields)
             nm_row_data[f"{snaked_field_id}_id"] = target_id_value
 
             # PK field, needed by Django
@@ -212,7 +211,7 @@ class EventsProcessor:
 
     def __init__(
         self,
-        datasets: List[DatasetSchema],
+        datasets: list[DatasetSchema],
         srid: str,
         connection: Connection,
         local_metadata=None,
@@ -230,7 +229,7 @@ class EventsProcessor:
                 in unit tests.
             truncate: indicates if the relational tables need to be truncated
         """
-        self.datasets: Dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
+        self.datasets: dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
         self.srid = srid
         self.conn = connection
         _metadata = local_metadata or metadata  # mainly for testing

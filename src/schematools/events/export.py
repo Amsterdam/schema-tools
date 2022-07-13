@@ -6,12 +6,11 @@ to test the event-importer that is also part of the `schematools.events` package
 
 The `schematools` cli interface had an entry to use the code in this module.
 """
-
 from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Iterator
 
 from geoalchemy2.shape import to_shape
 from json_encoder import json
@@ -27,13 +26,13 @@ from schematools.utils import to_snake_case
 @dataclass
 class ComplexFieldAttrs:
     field_name: str
-    is_many: Optional[bool] = None
-    relation_ds: Optional[str] = None
-    identifier_names: List[str] = field(default_factory=list)
-    subfield_names: List[str] = field(default_factory=list)
+    is_many: bool | None = None
+    relation_ds: str | None = None
+    identifier_names: list[str] = field(default_factory=list)
+    subfield_names: list[str] = field(default_factory=list)
 
 
-def fetch_complex_fields_metadata(dataset_table: DatasetTableSchema) -> List[ComplexFieldAttrs]:
+def fetch_complex_fields_metadata(dataset_table: DatasetTableSchema) -> list[ComplexFieldAttrs]:
     """Collect info about complex fields (mainly relations)."""
     complex_fields_metadata = []
 
@@ -73,11 +72,11 @@ def fetch_complex_fields_metadata(dataset_table: DatasetTableSchema) -> List[Com
 def collect_nm_embed_rows(
     dataset_id: str,
     table_id: str,
-    datasets_lookup: Dict[str, DatasetSchema],
-    tables: Dict[str, Dict[str, Table]],
-    complex_fields_metadata: List[ComplexFieldAttrs],
+    datasets_lookup: dict[str, DatasetSchema],
+    tables: dict[str, dict[str, Table]],
+    complex_fields_metadata: list[ComplexFieldAttrs],
     connection: Connection,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Fetch row info as list of embeddable objects."""
     nm_embeds = defaultdict(lambda: defaultdict(list))
     for field_metadata in complex_fields_metadata:
@@ -97,11 +96,11 @@ def collect_nm_embed_rows(
 
 
 def fetch_nm_embeds(
-    row: Dict[str, Any],
+    row: dict[str, Any],
     table_id: str,
-    nm_embed_rows: Dict[str, Any],
-    complex_fields_metadata: List[ComplexFieldAttrs],
-) -> Dict[str, List[Dict[str, Any]]]:
+    nm_embed_rows: dict[str, Any],
+    complex_fields_metadata: list[ComplexFieldAttrs],
+) -> dict[str, list[dict[str, Any]]]:
     """Fetch row info as lists of embeddables."""
     nm_embeds = defaultdict(list)
     for field_metadata in complex_fields_metadata:
@@ -114,8 +113,8 @@ def fetch_nm_embeds(
 
 
 def fetch_1n_embeds(
-    row: Dict[str, Any], complex_fields_metadata: List[ComplexFieldAttrs]
-) -> Dict[str, Dict[str, Any]]:
+    row: dict[str, Any], complex_fields_metadata: list[ComplexFieldAttrs]
+) -> dict[str, dict[str, Any]]:
     """Fetch row info as embeddable object(s)."""
     embeddable_objs = {}
     for field_metadata in complex_fields_metadata:
@@ -131,18 +130,18 @@ def export_events(
     datasets, dataset_id: str, table_id: str, connection: Connection
 ) -> Iterator[str]:
     """Export the events from the indicated dataset and table."""
-    tables: Dict[str, Dict[str, Table]] = {}
-    datasets_lookup: Dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
+    tables: dict[str, dict[str, Table]] = {}
+    datasets_lookup: dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
     dataset_table: DatasetTableSchema = datasets_lookup[dataset_id].get_table_by_id(table_id)
     geo_fields = [to_snake_case(field.name) for field in dataset_table.fields if field.is_geo]
 
-    complex_fields_metadata: List[ComplexFieldAttrs] = fetch_complex_fields_metadata(dataset_table)
+    complex_fields_metadata: list[ComplexFieldAttrs] = fetch_complex_fields_metadata(dataset_table)
 
     for ds_id, dataset in datasets_lookup.items():
         tables[ds_id] = tables_factory(dataset, metadata)
 
     # Collect in one go (to prevent multiple queries)
-    nm_embed_rows: Dict[str, Any] = collect_nm_embed_rows(
+    nm_embed_rows: dict[str, Any] = collect_nm_embed_rows(
         dataset_id, table_id, datasets_lookup, tables, complex_fields_metadata, connection
     )
     for r in connection.execute(tables[dataset_id][table_id].select()):

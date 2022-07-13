@@ -17,7 +17,6 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    FrozenSet,
     Iterable,
     Iterator,
     List,
@@ -25,8 +24,6 @@ from typing import (
     NoReturn,
     Optional,
     Pattern,
-    Set,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -216,7 +213,7 @@ class TableVersions:
     default_version_number: SemVer
     """Version number of the default table version."""
 
-    active: Dict[SemVer, Json]
+    active: dict[SemVer, Json]
     """All active table versions."""
 
     @property
@@ -296,7 +293,7 @@ class SchemaType(UserDict):
         return json.loads(self.json())
 
     @classmethod
-    def from_dict(cls: Type[ST], obj: Json) -> ST:
+    def from_dict(cls: type[ST], obj: Json) -> ST:
         return cls(copy.deepcopy(obj))
 
 
@@ -346,14 +343,14 @@ class DatasetSchema(SchemaType):
         reason="""The `DatasetSchema.from_file` has been replaced by
             `schematools.utils.dataset_schema_from_path`.""",
     )
-    def from_file(cls, filename: Union[Path, str]) -> DatasetSchema:
+    def from_file(cls, filename: Path | str) -> DatasetSchema:
         """Open an Amsterdam schema from a file and any table files referenced therein"""
         from schematools.utils import dataset_schema_from_path
 
         return dataset_schema_from_path(filename)
 
     @classmethod
-    def from_dict(cls, obj: Dict[str, Any]) -> DatasetSchema:
+    def from_dict(cls, obj: dict[str, Any]) -> DatasetSchema:
         """Parses given dict and validates the given schema"""
         if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Dataset schema file")
@@ -361,17 +358,17 @@ class DatasetSchema(SchemaType):
         return cls(copy.deepcopy(obj))
 
     @property
-    def title(self) -> Optional[str]:
+    def title(self) -> str | None:
         """Title of the dataset (if set)"""
         return self.get("title")
 
     @property
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         """Description of the dataset (if set)"""
         return self.get("description")
 
     @property
-    def license(self) -> Optional[str]:
+    def license(self) -> str | None:
         """The license of the table as stated in the schema."""
         return self.get("license")
 
@@ -397,7 +394,7 @@ class DatasetSchema(SchemaType):
         return self.default_version == self.version
 
     @property
-    def auth(self) -> FrozenSet[str]:
+    def auth(self) -> frozenset[str]:
         """Auth of the dataset, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
 
@@ -405,9 +402,9 @@ class DatasetSchema(SchemaType):
         return self.dataset_collection.get_dataset(dataset_id)
 
     @property
-    def tables(self) -> List[DatasetTableSchema]:
+    def tables(self) -> list[DatasetTableSchema]:
         """Access the tables within the file"""
-        tables: List[DatasetTableSchema] = []
+        tables: list[DatasetTableSchema] = []
         for tv in self["tables"]:
             if isinstance(tv, TableVersions):
                 # Dataset was likely loaded using the path or URL loader that properly resolves
@@ -425,7 +422,7 @@ class DatasetSchema(SchemaType):
         self,
         include_nested: bool = False,
         include_through: bool = False,
-    ) -> List[DatasetTableSchema]:
+    ) -> list[DatasetTableSchema]:
         """List tables, including nested"""
         tables = self.tables
         if include_nested:
@@ -453,7 +450,7 @@ class DatasetSchema(SchemaType):
         )
 
     @property
-    def nested_tables(self) -> List[DatasetTableSchema]:
+    def nested_tables(self) -> list[DatasetTableSchema]:
         """Access list of nested tables."""
         return [
             self.build_nested_table(table=t, field=f)
@@ -463,7 +460,7 @@ class DatasetSchema(SchemaType):
         ]
 
     @property
-    def through_tables(self) -> List[DatasetTableSchema]:
+    def through_tables(self) -> list[DatasetTableSchema]:
         """Access list of through_tables, for n-m relations."""
         return [
             self.build_through_table(table=t, field=f)
@@ -586,7 +583,7 @@ class DatasetSchema(SchemaType):
         target_field_id = field.id
         table_id = get_rel_table_identifier(table.id, target_field_id)
 
-        sub_table_schema: Dict[str, Any] = {
+        sub_table_schema: dict[str, Any] = {
             "id": table_id,
             "type": "table",
             "version": str(table.version),
@@ -674,7 +671,7 @@ class DatasetSchema(SchemaType):
         )
 
     @property
-    def related_dataset_schema_ids(self) -> Set[str]:
+    def related_dataset_schema_ids(self) -> set[str]:
         """Fetch a list or related schema ids.
 
         When a dataset has relations,
@@ -719,7 +716,7 @@ class DatasetTableSchema(SchemaType):
         self,
         *args: Any,
         parent_schema: DatasetSchema,
-        _parent_table: Optional[DatasetTableSchema] = None,
+        _parent_table: DatasetTableSchema | None = None,
         nested_table: bool = False,
         through_table: bool = False,
         **kwargs: Any,
@@ -749,7 +746,7 @@ class DatasetTableSchema(SchemaType):
         return self.get("shortname", self.id)
 
     @property
-    def title(self) -> Optional[str]:
+    def title(self) -> str | None:
         """Title of the table."""
         return self.get("title")
 
@@ -763,7 +760,7 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema
 
     @property
-    def parent_table(self) -> Optional[DatasetTableSchema]:
+    def parent_table(self) -> DatasetTableSchema | None:
         """The parent table of this table.
 
         For nested and through tables, the parent table is available.
@@ -771,7 +768,7 @@ class DatasetTableSchema(SchemaType):
         return self._parent_table
 
     @property
-    def parent_table_field(self) -> Optional[DatasetFieldSchema]:
+    def parent_table_field(self) -> DatasetFieldSchema | None:
         """Provide the NM-relation that generated this through table."""
         if self.through_table or self.nested_table:
             return self._parent_table.get_field_by_id(self["originalID"])
@@ -779,7 +776,7 @@ class DatasetTableSchema(SchemaType):
             return None
 
     @property
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         """The description of the table as stated in the schema."""
         return self.get("description")
 
@@ -815,19 +812,19 @@ class DatasetTableSchema(SchemaType):
             yield DatasetFieldSchema(_parent_table=self, _required=True, type="string", id="id")
 
     @cached_property
-    def fields(self) -> List[DatasetFieldSchema]:
+    def fields(self) -> list[DatasetFieldSchema]:
         # TODO: this should not return sub fields!
         return list(self.get_fields(include_subfields=True))
 
     @lru_cache()  # type: ignore[misc]
-    def get_fields_by_id(self, *field_ids: str) -> List[DatasetFieldSchema]:
+    def get_fields_by_id(self, *field_ids: str) -> list[DatasetFieldSchema]:
         """Get the fields based on the ids of the fields.
 
         args:
             field_ids: The ids of the fields.
             NB. This needs to be a tuple, lru_cache only works on immutable arguments.
         """
-        field_ids_set: Set[str] = set(field_ids)
+        field_ids_set: set[str] = set(field_ids)
         return [field for field in self.fields if field.id in field_ids_set]
 
     @lru_cache()  # type: ignore[misc]
@@ -850,7 +847,7 @@ class DatasetTableSchema(SchemaType):
             f"Relation '{relation_id}' does not exist in table '{self.id}'."
         )
 
-    def get_through_tables_by_id(self) -> List[DatasetTableSchema]:
+    def get_through_tables_by_id(self) -> list[DatasetTableSchema]:
         """Access list of through_tables (for n-m relations) for a single base table."""
         if self.dataset is None:
             return []
@@ -861,16 +858,16 @@ class DatasetTableSchema(SchemaType):
         ]
 
     @property
-    def display_field(self) -> Optional[str]:
+    def display_field(self) -> str | None:
         """Tell which fields can be used as display field."""
         return cast(Optional[str], self["schema"].get("display"))
 
-    def get_dataset_schema(self, dataset_id: str) -> Optional[DatasetSchema]:
+    def get_dataset_schema(self, dataset_id: str) -> DatasetSchema | None:
         """Return the associated parent datasetschema for this table."""
         return self.dataset.get_dataset_schema(dataset_id) if self.dataset is not None else None
 
     @cached_property
-    def temporal(self) -> Optional[Temporal]:
+    def temporal(self) -> Temporal | None:
         """The temporal property of a Table.
         Describes validity of objects for tables where
         different versions of objects are valid over time.
@@ -912,7 +909,7 @@ class DatasetTableSchema(SchemaType):
         return str(self["schema"].get("mainGeometry", "geometry"))
 
     @property
-    def identifier(self) -> List[str]:
+    def identifier(self) -> list[str]:
         """The main identifier field, if there is an identifier field available.
         Default to "id" for existing schemas without an identifier field.
         """
@@ -966,7 +963,7 @@ class DatasetTableSchema(SchemaType):
 
     @property
     @deprecated("additionalFilters is no longer supported")
-    def additional_filters(self) -> Dict[str, Dict[str, str]]:
+    def additional_filters(self) -> dict[str, dict[str, str]]:
         """Fetch list of additional filters.
         Example value:
 
@@ -979,7 +976,7 @@ class DatasetTableSchema(SchemaType):
         return dict(self["schema"].get("additionalFilters", {}))
 
     @cached_property
-    def additional_relations(self) -> List[AdditionalRelationSchema]:
+    def additional_relations(self) -> list[AdditionalRelationSchema]:
         """Fetch list of additional (backwards or N-N) relations.
 
         This is a dictionary of names for existing forward relations
@@ -991,9 +988,7 @@ class DatasetTableSchema(SchemaType):
             for name, relation in self["schema"].get("additionalRelations", {}).items()
         ]
 
-    def get_reverse_relation(
-        self, field: DatasetFieldSchema
-    ) -> Optional[AdditionalRelationSchema]:
+    def get_reverse_relation(self, field: DatasetFieldSchema) -> AdditionalRelationSchema | None:
         """Find the description of a reverse relation for a field."""
         if not field.relation and not field.nm_relation:
             raise ValueError("Field is not a relation")
@@ -1005,7 +1000,7 @@ class DatasetTableSchema(SchemaType):
         return None
 
     @property
-    def auth(self) -> FrozenSet[str]:
+    def auth(self) -> frozenset[str]:
         """Auth of the table, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
 
@@ -1123,7 +1118,7 @@ class DatasetTableSchema(SchemaType):
         return SemVer(self["version"])
 
     @classmethod
-    def from_dict(cls: Type[DTS], obj: Json) -> DTS:  # noqa: D102
+    def from_dict(cls: type[DTS], obj: Json) -> DTS:  # noqa: D102
         raise Exception(
             f"A dict is not sufficient anymore to instantiate a {cls.__name__!r}. "
             "Use regular class instantiation instead and supply all required parameters!"
@@ -1136,8 +1131,8 @@ class DatasetFieldSchema(DatasetType):
     def __init__(
         self,
         *args: Any,
-        _parent_table: Optional[DatasetTableSchema],
-        _parent_field: Optional[DatasetFieldSchema] = None,
+        _parent_table: DatasetTableSchema | None,
+        _parent_field: DatasetFieldSchema | None = None,
         _required: bool = False,
         _temporal: bool = False,
         **kwargs: Any,
@@ -1158,12 +1153,12 @@ class DatasetFieldSchema(DatasetType):
         return f"<{self.__class__.__name__}: {prefix}{self._id}>"
 
     @property
-    def table(self) -> Optional[DatasetTableSchema]:
+    def table(self) -> DatasetTableSchema | None:
         """The table that this field is a part of"""
         return self._parent_table
 
     @property
-    def parent_field(self) -> Optional[DatasetFieldSchema]:
+    def parent_field(self) -> DatasetFieldSchema | None:
         """Provide access to the top-level field where it is a property for."""
         return self._parent_field
 
@@ -1200,7 +1195,7 @@ class DatasetFieldSchema(DatasetType):
         return to_snake_case(self.name + "_id" if self.relation is not None else self.name)
 
     @property
-    def title(self) -> Optional[str]:
+    def title(self) -> str | None:
         """Title of the field."""
         return self.get("title")
 
@@ -1213,7 +1208,7 @@ class DatasetFieldSchema(DatasetType):
         return self.get("shortname") is not None
 
     @property
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         return self.get("description")
 
     @property
@@ -1252,21 +1247,21 @@ class DatasetFieldSchema(DatasetType):
         return self.name == "id" or [self.name] == self.table.identifier
 
     @property
-    def relation(self) -> Optional[str]:
+    def relation(self) -> str | None:
         """Give the 1:N relation, if it exists."""
         if self.type == "array":
             return None
         return self.get("relation")
 
     @property
-    def nm_relation(self) -> Optional[str]:
+    def nm_relation(self) -> str | None:
         """Give the N:M relation, if it exists (called M2M in Django)."""
         if self.type != "array":
             return None
         return self.get("relation")
 
     @cached_property
-    def related_table(self) -> Optional[DatasetTableSchema]:
+    def related_table(self) -> DatasetTableSchema | None:
         """If this field is a relation, return the table this relation references."""
         relation = self.get("relation")  # works for both 1:N and N:M relations
         if not relation:
@@ -1281,7 +1276,7 @@ class DatasetFieldSchema(DatasetType):
         )
 
     @property
-    def related_field_ids(self) -> Optional[List[str]]:
+    def related_field_ids(self) -> list[str] | None:
         """For a relation field, returns the identifiers of the referenced fields.
 
         The returned list contains only the fields, e.g., ["id", "volgnummer"].
@@ -1299,7 +1294,7 @@ class DatasetFieldSchema(DatasetType):
             return self.related_table.identifier
 
     @property
-    def reverse_relation(self) -> Optional[AdditionalRelationSchema]:
+    def reverse_relation(self) -> AdditionalRelationSchema | None:
         """Find the opposite description of a relation.
 
         When there is a relation, this only returns a description
@@ -1312,11 +1307,11 @@ class DatasetFieldSchema(DatasetType):
         return related_table.get_reverse_relation(self)
 
     @property
-    def format(self) -> Optional[str]:
+    def format(self) -> str | None:
         return self.get("format")
 
     @property
-    def multipleof(self) -> Optional[float]:
+    def multipleof(self) -> float | None:
         return self.get("multipleOf")
 
     @property
@@ -1340,16 +1335,16 @@ class DatasetFieldSchema(DatasetType):
         return "geojson.org" in self.get("$ref", "")
 
     @property
-    def provenance(self) -> Optional[str]:
+    def provenance(self) -> str | None:
         """Get the provenance info, if available, or None"""
         return self.get("provenance")
 
     @property
-    def field_items(self) -> Optional[Json]:
+    def field_items(self) -> Json | None:
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
 
-    def get_dimension_fieldnames(self) -> Dict[str, TemporalDimensionFields]:
+    def get_dimension_fieldnames(self) -> dict[str, TemporalDimensionFields]:
         """Gets the dimension fieldnames."""
         if self.relation is None and self.nm_relation is None:
             return {}
@@ -1388,7 +1383,7 @@ class DatasetFieldSchema(DatasetType):
         raise SchemaObjectNotFound(f"Subfield '{field_id}' does not exist below field '{name}'.")
 
     @cached_property
-    def subfields(self) -> List[DatasetFieldSchema]:
+    def subfields(self) -> list[DatasetFieldSchema]:
         """Return the subfields for a nested structure.
 
         Calls the `get_subfields` method without argument,
@@ -1434,7 +1429,7 @@ class DatasetFieldSchema(DatasetType):
         if relation is not None or nm_relation is not None:
             field_name_prefix = self.name + RELATION_INDICATOR
 
-        combined_dimension_fieldnames: Set[str] = set()
+        combined_dimension_fieldnames: set[str] = set()
         for (_dimension, field_names) in self.get_dimension_fieldnames().items():
             combined_dimension_fieldnames |= {toCamelCase(fieldname) for fieldname in field_names}
 
@@ -1495,7 +1490,7 @@ class DatasetFieldSchema(DatasetType):
         return self.relation is not None and self.related_table.is_temporal
 
     @property
-    def auth(self) -> FrozenSet[str]:
+    def auth(self) -> frozenset[str]:
         """Auth of the field, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
 
@@ -1566,7 +1561,7 @@ class DatasetRow(DatasetType):
 class AdditionalRelationSchema(DatasetType):
     """Data class describing the additional relation block."""
 
-    def __init__(self, _id: str, _parent_table: Optional[DatasetTableSchema] = None, **kwargs):
+    def __init__(self, _id: str, _parent_table: DatasetTableSchema | None = None, **kwargs):
         super().__init__(**kwargs)
         self._id = _id
         self._parent_table = _parent_table
@@ -1640,7 +1635,7 @@ class PermissionLevel(Enum):
     highest = READ
 
     @classmethod
-    def from_string(cls, value: Optional[str]) -> PermissionLevel:
+    def from_string(cls, value: str | None) -> PermissionLevel:
         """Cast the string value to a permission level object."""
         if value is None:
             return cls.NONE
@@ -1677,10 +1672,10 @@ class Permission:
     level: PermissionLevel
 
     #: The extra parameter for the level (e.g. "letters:3")
-    sub_value: Optional[str] = None
+    sub_value: str | None = None
 
     #: Who authenticated this (added for easier debugging. typically tested against)
-    source: Optional[str] = field(default=None, compare=False)
+    source: str | None = field(default=None, compare=False)
 
     def __post_init__(self) -> None:
         if self.level is PermissionLevel.NONE:
@@ -1689,7 +1684,7 @@ class Permission:
             self.source = "schema"
 
     @classmethod
-    def from_string(cls, value: Optional[str], source: Optional[str] = None) -> Permission:
+    def from_string(cls, value: str | None, source: str | None = None) -> Permission:
         """Cast the string value to a permission level object."""
         if value is None:
             return cls(PermissionLevel.NONE, source=source)
@@ -1704,7 +1699,7 @@ class Permission:
     def __bool__(self):
         return bool(self.level)
 
-    def transform_function(self) -> Optional[Callable[[Json], Json]]:
+    def transform_function(self) -> Callable[[Json], Json] | None:
         """Adjust the value, when the permission level requires this.
         This is needed for "letters:3", and things like "encoded".
         """
@@ -1738,17 +1733,17 @@ class ProfileSchema(SchemaType):
         return cls(copy.deepcopy(obj))
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> str | None:
         """Name of Profile (if set)"""
         return self.get("name")
 
     @property
-    def scopes(self) -> FrozenSet[str]:
+    def scopes(self) -> frozenset[str]:
         """All these scopes should match in order to activate the profile."""
         return _normalize_scopes(self.get("scopes"))
 
     @cached_property
-    def datasets(self) -> Dict[str, ProfileDatasetSchema]:
+    def datasets(self) -> dict[str, ProfileDatasetSchema]:
         """The datasets that this profile provides additional access rules for."""
         return {
             id: ProfileDatasetSchema(id, self, data)
@@ -1778,7 +1773,7 @@ class ProfileDatasetSchema(DatasetType):
         return self._id
 
     @property
-    def profile(self) -> Optional[ProfileSchema]:
+    def profile(self) -> ProfileSchema | None:
         """The profile that this definition is part of."""
         return self._parent_schema
 
@@ -1790,7 +1785,7 @@ class ProfileDatasetSchema(DatasetType):
         )
 
     @cached_property
-    def tables(self) -> Dict[str, ProfileTableSchema]:
+    def tables(self) -> dict[str, ProfileTableSchema]:
         """The tables that this profile provides additional access rules for."""
         return {
             id: ProfileTableSchema(id, self, data) for id, data in self.get("tables", {}).items()
@@ -1821,7 +1816,7 @@ class ProfileTableSchema(DatasetType):
         return self._id
 
     @property
-    def dataset(self) -> Optional[ProfileDatasetSchema]:
+    def dataset(self) -> ProfileDatasetSchema | None:
         """The profile that this definition is part of."""
         return self._parent_schema
 
@@ -1849,7 +1844,7 @@ class ProfileTableSchema(DatasetType):
             return Permission.from_string(permissions, source=source)
 
     @cached_property
-    def fields(self) -> Dict[str, Permission]:
+    def fields(self) -> dict[str, Permission]:
         """The fields with their granted permission level.
         This can be "read" or things like "letters:3".
         """
@@ -1863,7 +1858,7 @@ class ProfileTableSchema(DatasetType):
         }
 
     @property
-    def mandatory_filtersets(self) -> List[List[str]]:
+    def mandatory_filtersets(self) -> list[list[str]]:
         """Tell whether the listing can only be requested with certain inputs.
         E.g. an API user may only list data when they supply the lastname + birthdate.
 
@@ -1917,10 +1912,10 @@ class Temporal:
     """
 
     identifier: str
-    dimensions: Dict[str, TemporalDimensionFields] = field(default_factory=dict)
+    dimensions: dict[str, TemporalDimensionFields] = field(default_factory=dict)
 
 
-def _normalize_scopes(auth: Union[None, str, list, tuple]) -> FrozenSet[str]:
+def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
     """Make sure the auth field has a consistent type"""
     if not auth:
         # No auth implies OPENBAAR.

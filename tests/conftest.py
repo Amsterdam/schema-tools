@@ -4,7 +4,7 @@ import json
 import os
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, ContextManager, Dict
+from typing import Any, ContextManager
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -171,7 +171,7 @@ class DummySessionMaker:
     """
 
     def __init__(self):
-        self.routes: Dict[URL, Json] = {}
+        self.routes: dict[URL, Json] = {}
 
     def add_route(self, path: URL, content: Json) -> None:
         self.routes[path] = content
