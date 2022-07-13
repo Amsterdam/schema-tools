@@ -29,7 +29,7 @@ class JsonStrategicLoader(jsonref.JsonLoader):
 
 def local_strategy(uri: str) -> str:
     if uri.startswith("./"):
-        return open(uri, "r").read()
+        return open(uri).read()
     raise ValueError
 
 
@@ -42,6 +42,6 @@ def load(document_file: typing.IO[str], base_uri: str = "", loader=None, backend
 @click.argument("document_path", type=click.types.Path(), required=True)
 def main(document_path):
     base_uri = f"file://{os.path.dirname(os.path.realpath(document_path))}/"
-    with open(document_path, "r") as document:
+    with open(document_path) as document:
         result = load(document, base_uri)
         pprint.pprint(result)

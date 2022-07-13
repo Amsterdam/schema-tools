@@ -1,9 +1,10 @@
 """Cli tools."""
+from __future__ import annotations
 
 import logging
 import sys
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Tuple
+from typing import Any, DefaultDict, Iterable
 
 import click
 import jsonschema
@@ -92,7 +93,7 @@ argument_role = click.argument(
 )
 
 
-def _get_engine(db_url: str, pg_schemas: Optional[List[str]] = None) -> sqlalchemy.engine.Engine:
+def _get_engine(db_url: str, pg_schemas: list[str] | None = None) -> sqlalchemy.engine.Engine:
     """Initialize the SQLAlchemy engine, and report click errors."""
     kwargs = {}
     if pg_schemas is not None:
@@ -112,7 +113,7 @@ def main() -> None:
     """
     try:
         schema()
-    except (EnvironmentError, SQLAlchemyError, ParserError) as e:
+    except (OSError, SQLAlchemyError, ParserError) as e:
         click.echo(f"{e.__class__.__name__}: {e}", err=True)
         exit(1)
 
@@ -319,7 +320,7 @@ def diff() -> None:
     pass
 
 
-def _fetch_json(location: str) -> Dict[str, Any]:
+def _fetch_json(location: str) -> dict[str, Any]:
     """Fetch JSON from file or URL.
 
     Args:
@@ -350,7 +351,7 @@ def _fetch_json(location: str) -> Dict[str, Any]:
 )
 @click.argument("meta_schema_url")
 def validate(
-    schema_url: str, dataset_id: str, additional_schemas: List[str], meta_schema_url: str
+    schema_url: str, dataset_id: str, additional_schemas: list[str], meta_schema_url: str
 ) -> None:
     """Validate a schema against the Amsterdam Schema meta schema.
 
@@ -393,7 +394,7 @@ def validate(
 @schema.command()
 @click.argument("meta_schema_url")
 @click.argument("schema_files", nargs=-1)
-def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
+def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
     """Batch validate schema's.
 
     This command was tailored so that it could be run from a pre-commit hook. As a result,
@@ -408,7 +409,7 @@ def batch_validate(meta_schema_url: str, schema_files: Tuple[str]) -> None:
         SCHEMA_FILES: one or more schema files to be validated
     """  # noqa: D301,D412,D417
     meta_schema = _fetch_json(meta_schema_url)
-    errors: DefaultDict[str, List[str]] = defaultdict(list)
+    errors: DefaultDict[str, list[str]] = defaultdict(list)
     for schema in schema_files:
         try:
             dataset = dataset_schema_from_path(schema)
@@ -594,7 +595,7 @@ def _get_dataset_schema(
         raise click.ClickException(e)
 
 
-def _get_all_dataset_schemas(schema_url: str) -> Dict[str, DatasetSchema]:
+def _get_all_dataset_schemas(schema_url: str) -> dict[str, DatasetSchema]:
     """Find all the dataset schemas for the given schema_url.
 
     Args:
@@ -670,7 +671,7 @@ def create_sql(versioned: bool, db_url: str, schema_path: str) -> None:
 )
 @click.argument("dataset_id", required=False)
 def create_all_objects(
-    db_url: str, schema_url: str, exclude: List[str], dataset_id: Optional[str]
+    db_url: str, schema_url: str, exclude: list[str], dataset_id: str | None
 ) -> None:
     """Execute SQLalchemy Index (Identifier fields) and Table objects.
 

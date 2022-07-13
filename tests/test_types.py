@@ -1,5 +1,4 @@
 import operator
-from functools import partial
 from pathlib import Path
 
 import pytest
@@ -191,7 +190,7 @@ def test_dataset_schema_get_fields_with_surrogate_pk(
     composite_key_schema = composite_key_schema.tables[0]
 
     # this schema gets a generated 'id'
-    assert sorted([x.id for x in verblijfsobjecten.get_fields(include_subfields=False)]) == [
+    assert sorted(x.id for x in verblijfsobjecten.get_fields(include_subfields=False)) == [
         "beginGeldigheid",
         "eindGeldigheid",
         "gebruiksdoel",
@@ -203,7 +202,7 @@ def test_dataset_schema_get_fields_with_surrogate_pk(
     ]
 
     # this schema defines an 'id'
-    assert sorted([x.name for x in composite_key_schema.get_fields(include_subfields=False)]) == [
+    assert sorted(x.name for x in composite_key_schema.get_fields(include_subfields=False)) == [
         "beginGeldigheid",
         "eindGeldigheid",
         "id",

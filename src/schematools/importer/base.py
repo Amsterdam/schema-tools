@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import operator
 from collections import Counter, UserDict, defaultdict
@@ -6,19 +8,7 @@ from functools import cached_property, reduce
 from itertools import islice
 from logging import Logger
 from pathlib import PosixPath
-from typing import (
-    Any,
-    DefaultDict,
-    Dict,
-    Final,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, DefaultDict, Final, Iterator, TypeVar, cast
 
 import click
 import psycopg2
@@ -69,7 +59,7 @@ IS_VERSIONED_DATASET_SQL: Final[TextClause] = text(
 T = TypeVar("T")
 
 
-def chunked(stream: Iterator[T], size: int) -> Iterator[List[T]]:
+def chunked(stream: Iterator[T], size: int) -> Iterator[list[T]]:
     """Read parts of the generator, pause each time after a chunk."""
     # Based on more-itertools. islice returns results until 'size',
     # iter() repeatedly calls make_chunk until the '[]' sentinel is returned.
@@ -87,20 +77,20 @@ class Row(UserDict):
     """Dict-based class that used provenance to find values."""
 
     # class-level cache for jsonpath expressions
-    _expr_cache: Dict[str, Child] = {}
+    _expr_cache: dict[str, Child] = {}
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initializer that sets the provenance information."""
         fields_provenances = kwargs.pop("fields_provenances", {})
-        self.rev_provenances: Dict[str, str] = {
+        self.rev_provenances: dict[str, str] = {
             name: prov_name for prov_name, name in fields_provenances.items()
         }
-        self.field_provenanced_by_id: Optional[str] = fields_provenances.get("id")
+        self.field_provenanced_by_id: str | None = fields_provenances.get("id")
         # Provenanced keys are stored in a cache. This is not only for efficiency.
         # Sometimes, the key that is 'provenanced' is the same key that is in the ndjson
         # import data. When this key gets replaced, the original object structure
         # is not available anymore, so subsequent jsonpath lookups will fail.
-        self.provenances_cache: Dict[str, str] = {}
+        self.provenances_cache: dict[str, str] = {}
 
         super().__init__(*args, **kwargs)
 
@@ -144,7 +134,7 @@ class Row(UserDict):
         self._expr_cache[prov_key] = expr
         return expr
 
-    def _fetch_value_for_jsonpath(self, key: str) -> Optional[Union[int, str]]:
+    def _fetch_value_for_jsonpath(self, key: str) -> int | str | None:
         prov_key = self.rev_provenances.get(key)
         if prov_key is None:
             return None
@@ -165,7 +155,7 @@ class BaseImporter:
     """Base importer that holds common data."""
 
     def __init__(
-        self, dataset_schema: DatasetSchema, engine: Engine, logger: Optional[Logger] = None
+        self, dataset_schema: DatasetSchema, engine: Engine, logger: Logger | None = None
     ) -> None:
         """Initializes the BaseImporter.
 
@@ -175,17 +165,17 @@ class BaseImporter:
         self.engine = engine
         self.dataset_schema = dataset_schema
         self.srid = dataset_schema["crs"].split(":")[-1]
-        self.dataset_table: Optional[DatasetTableSchema] = None
-        self.fields_provenances: Dict[str, str] = {}
-        self.db_table_name: Optional[str] = None
-        self.tables: Dict[str, Table] = {}
-        self.views: Dict[str, sql.SQL] = {}
-        self.indexes: Dict[str, List[Index]] = {}
-        self.pk_values_lookup: Dict[str, Set[Any]] = {}
-        self.pk_colname_lookup: Dict[str, str] = {}
+        self.dataset_table: DatasetTableSchema | None = None
+        self.fields_provenances: dict[str, str] = {}
+        self.db_table_name: str | None = None
+        self.tables: dict[str, Table] = {}
+        self.views: dict[str, sql.SQL] = {}
+        self.indexes: dict[str, list[Index]] = {}
+        self.pk_values_lookup: dict[str, set[Any]] = {}
+        self.pk_colname_lookup: dict[str, str] = {}
         self.logger = LogfileLogger(logger) if logger else CliLogger()
 
-    def fetch_fields_provenances(self, dataset_table: DatasetTableSchema) -> Dict[str, str]:
+    def fetch_fields_provenances(self, dataset_table: DatasetTableSchema) -> dict[str, str]:
         """Create mapping from provenance to camelcased fieldname."""
         fields_provenances = {}
         for field in dataset_table.fields:
@@ -194,7 +184,7 @@ class BaseImporter:
         return fields_provenances
 
     def fix_fieldnames(
-        self, fields_provenances: Dict[str, str], table_records: Iterator[Any]
+        self, fields_provenances: dict[str, str], table_records: Iterator[Any]
     ) -> Any:
         """Fixes the fieldname.
 
@@ -216,13 +206,13 @@ class BaseImporter:
     def deduplicate(
         self,
         table_name: str,
-        table_records: List[Row],
+        table_records: list[Row],
     ) -> Iterator[Row]:
         """Removes duplicates from a set of records."""
         this_batch_pk_values = set()
         pk_name = self.pk_colname_lookup.get(table_name)
 
-        values_lookup: Set[Any] = self.pk_values_lookup.get(table_name, set())
+        values_lookup: set[Any] = self.pk_values_lookup.get(table_name, set())
 
         for record in table_records:
             if pk_name is None:
@@ -238,7 +228,7 @@ class BaseImporter:
             this_batch_pk_values.add(value)
             values_lookup.add(value)
 
-    def create_pk_lookup(self, tables: Dict[str, Table]) -> None:
+    def create_pk_lookup(self, tables: dict[str, Table]) -> None:
         """Generate a lookup to avoid primary_key clashes."""
         for table_name, table in tables.items():
             if isinstance(table, Table):
@@ -259,12 +249,12 @@ class BaseImporter:
     def generate_db_objects(
         self,
         table_id: str,
-        db_schema_name: Optional[str] = None,
-        db_table_name: Optional[str] = None,
+        db_schema_name: str | None = None,
+        db_table_name: str | None = None,
         truncate: bool = False,
         ind_tables: bool = True,
         ind_extra_index: bool = True,
-        limit_tables_to: Optional[Set] = None,
+        limit_tables_to: set | None = None,
         is_versioned_dataset: bool = False,
     ) -> None:
         """Generate the tablemodels, tables and indexes.
@@ -378,7 +368,7 @@ class BaseImporter:
         batch_size: int = 100,
         is_through_table: bool = False,
         **kwargs: Any,
-    ) -> Optional[Row]:
+    ) -> Row | None:
         """Import a file into the database table, returns the last record, if available."""
         if self.dataset_table is None:
             raise ValueError("Import needs to be initialized with table info")
@@ -396,11 +386,11 @@ class BaseImporter:
             table_name: table.insert() for table_name, table in self.tables.items()
         }
 
-        last_record: Optional[Row] = None
+        last_record: Row | None = None
         for records in chunked(data_generator, size=batch_size):
             # every record is keyed on tablename + inside there is a list
             for table_name, insert_statement in insert_statements.items():
-                table_records: List[Row] = reduce(
+                table_records: list[Row] = reduce(
                     operator.add, [record.get(table_name, []) for record in records], []
                 )
                 table_records = self.fix_fieldnames(
@@ -424,14 +414,14 @@ class BaseImporter:
         self,
         filename: PosixPath,
         dataset_table: DatasetTableSchema,
-        db_table_name: Optional[str] = None,
+        db_table_name: str | None = None,
         is_through_table: bool = False,
         **kwargs: Any,
-    ) -> Iterator[Dict[str, List[Row]]]:
+    ) -> Iterator[dict[str, list[Row]]]:
         """Yield all records from the filename."""
         raise NotImplementedError()
 
-    def prepare_tables(self, tables: Dict[str, Table], truncate: bool = False) -> None:
+    def prepare_tables(self, tables: dict[str, Table], truncate: bool = False) -> None:
         """Create the tables if needed."""
         for table in tables.values():
             if isinstance(table, Table):
@@ -450,11 +440,11 @@ class BaseImporter:
 
     def prepare_extra_index(
         self,
-        indexes: Dict[str, List[Index]],
+        indexes: dict[str, list[Index]],
         inspector: PGInspector,
         engine: Engine,
-        db_schema_name: Optional[str] = None,
-        logger: Optional[Logger] = None,
+        db_schema_name: str | None = None,
+        logger: Logger | None = None,
     ) -> None:
         """Create extra indexes.
 
@@ -609,12 +599,12 @@ class LogfileLogger(CliLogger):
 def index_factory(
     dataset_table: DatasetTableSchema,
     ind_extra_index: bool,
-    metadata: Optional[MetaData] = None,
-    db_table_name: Optional[str] = None,
-    db_schema_name: Optional[str] = None,
-    logger: Optional[Logger] = None,
+    metadata: MetaData | None = None,
+    db_table_name: str | None = None,
+    db_schema_name: str | None = None,
+    logger: Logger | None = None,
     is_versioned_dataset: bool = False,
-) -> Dict[str, List[Index]]:
+) -> dict[str, list[Index]]:
     """Generates one or more SQLAlchemy Index objects to work with the JSON Schema.
 
     Args:
@@ -648,7 +638,7 @@ def index_factory(
 
     The returned Index objects are keyed on the name of table
     """
-    indexes: DefaultDict[str, List[Index]] = defaultdict(list)
+    indexes: DefaultDict[str, list[Index]] = defaultdict(list)
     _metadata = cast(MetaData, metadata or MetaData())
     _logger = LogfileLogger(logger) if logger else CliLogger()
 
@@ -692,10 +682,10 @@ def index_factory(
 
     def define_fk_index(
         dataset_table: DatasetTableSchema, db_table_name: str
-    ) -> Dict[str, List[Index]]:
+    ) -> dict[str, list[Index]]:
         """Creates an index on Foreign Keys."""
-        indexes: Dict[str, List[Index]] = {}
-        indexes_to_create: List[Index] = []
+        indexes: dict[str, list[Index]] = {}
+        indexes_to_create: list[Index] = []
         if dataset_table.get_fk_fields():
 
             for field in dataset_table.get_fk_fields():
@@ -711,11 +701,11 @@ def index_factory(
 
     def define_identifier_index(
         dataset_table: DatasetTableSchema, db_table_name: str
-    ) -> Dict[str, List[Index]]:
+    ) -> dict[str, list[Index]]:
         """Creates index based on the 'identifier' specification in the Amsterdam schema."""
-        identifier_column_snaked: List[str] = []
-        indexes: Dict[str, List[Index]] = {}
-        indexes_to_create: List[Index] = []
+        identifier_column_snaked: list[str] = []
+        indexes: dict[str, list[Index]] = {}
+        indexes_to_create: list[Index] = []
 
         if dataset_table.identifier:
             for identifier_column in dataset_table.identifier:
@@ -740,16 +730,16 @@ def index_factory(
 
     def define_throughtable_index(
         dataset_table: DatasetTableSchema, is_versioned_dataset: bool
-    ) -> Dict[str, List[Index]]:
+    ) -> dict[str, list[Index]]:
         """Creates index(es) on the many-to-many tables.
 
         Those are based on 'relation' specification in the Amsterdam schema.
         """
-        indexes: Dict[str, List[Index]] = {}
+        indexes: dict[str, list[Index]] = {}
         for table in dataset_table.get_through_tables_by_id():
 
-            through_columns: List[str] = []
-            indexes_to_create: List[Index] = []
+            through_columns: list[str] = []
+            indexes_to_create: list[Index] = []
 
             # make a dictionary of the indexes to create
             if table.is_through_table:
@@ -796,7 +786,7 @@ def index_factory(
         return indexes
 
     def merge(
-        indexes: DefaultDict[str, List[Index]], defined_indexes: Dict[str, List[Index]]
+        indexes: DefaultDict[str, list[Index]], defined_indexes: dict[str, list[Index]]
     ) -> None:
         for table_db_name in defined_indexes.keys():
             indexes[table_db_name].extend(defined_indexes[table_db_name])

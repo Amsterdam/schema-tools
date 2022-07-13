@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import inspect
 import textwrap
 from argparse import ArgumentParser
 from datetime import date, datetime
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any
 
 from django.apps import AppConfig, apps
 from django.core.management import BaseCommand
@@ -18,7 +20,7 @@ class Command(BaseCommand):
 
     help = "Dump the (dynamic) model definitions that Django holds in-memory."  # noqa: A003
 
-    model_meta_args: List[Tuple[str, Any]] = [
+    model_meta_args: list[tuple[str, Any]] = [
         # All possible options in Meta, with their defaults.
         # https://docs.djangoproject.com/en/3.2/ref/models/options/
         # The original model.Meta or Options.meta is not available after construction,
@@ -43,7 +45,7 @@ class Command(BaseCommand):
         ("verbose_name_plural", ""),  # is {modelname}s by default
     ]
 
-    path_aliases: List[Tuple[str, str]] = [
+    path_aliases: list[tuple[str, str]] = [
         ("django.db.models.", "models."),
         ("django.contrib.gis.db.models.fields.", ""),
         ("django_postgres_unlimited_varchar.", ""),
@@ -70,7 +72,7 @@ class Command(BaseCommand):
         """Write app start header."""
         self.stdout.write(f"# ---- App: {app.verbose_name or app.label}\n\n\n")
 
-    def write_model(self, model: Type[models.Model]) -> None:
+    def write_model(self, model: type[models.Model]) -> None:
         """Write the representation of a complete Django model to the output."""
         bases = ", ".join(base_class.__name__ for base_class in model.__bases__)
         self.stdout.write(f"class {model.__name__}({bases}):\n")
@@ -113,7 +115,7 @@ class Command(BaseCommand):
                 doc += "\n"
         self.stdout.write(f'    """{doc}"""\n\n')
 
-    def write_dynamic_model_attrs(self, model: Type[DynamicModel]) -> None:
+    def write_dynamic_model_attrs(self, model: type[DynamicModel]) -> None:
         """Write the attributes defined by model_factory() for completeness."""
         self.stdout.write("    # Set by model_factory()\n")
         self.stdout.write(f"    # _dataset = {model._dataset!r}\n")
@@ -123,7 +125,7 @@ class Command(BaseCommand):
             self.stdout.write("    _is_temporal = True\n")
         self.stdout.write("\n")
 
-    def write_model_meta(self, model: Type[models.Model]) -> None:
+    def write_model_meta(self, model: type[models.Model]) -> None:
         """Write the 'class Meta' section."""
         self.stdout.write("    class Meta:\n")
         for meta_arg, default in self.model_meta_args:
@@ -131,7 +133,7 @@ class Command(BaseCommand):
             if value != default:
                 self.stdout.write(f"        {meta_arg} = {value!r}\n")
 
-    def write_model_str(self, model: Type[DynamicModel]) -> None:
+    def write_model_str(self, model: type[DynamicModel]) -> None:
         """For dynamic model, we know how __str__() looks like."""
         self.stdout.write("\n")
         self.stdout.write("    def __str__(self):\n")
@@ -148,7 +150,7 @@ class Command(BaseCommand):
         name, path, args, kwargs = field.deconstruct()
         return self._get_deconstructable_repr(path, args, kwargs)
 
-    def _get_deconstructable_repr(self, path: str, args: List[Any], kwargs: Dict[str, Any]) -> str:
+    def _get_deconstructable_repr(self, path: str, args: list[Any], kwargs: dict[str, Any]) -> str:
         for prefix, alias in self.path_aliases:
             if path.startswith(prefix):
                 path = alias + path[len(prefix) :]
@@ -182,7 +184,7 @@ class Command(BaseCommand):
             return self._get_deconstructable_repr(*value.deconstruct())
         elif isinstance(value, list):
             # for validators=[...]
-            return "[{0}]".format(",".join(self._format_value(v) for v in value))
+            return "[{}]".format(",".join(self._format_value(v) for v in value))
         elif callable(value):
             if value is datetime.now:
                 return "datetime.now"
@@ -207,5 +209,5 @@ class Command(BaseCommand):
         return repr(value)
 
 
-def _format_model_name(model: Type[models.Model]) -> str:
+def _format_model_name(model: type[models.Model]) -> str:
     return f"{model._meta.app_label}.{model._meta.model_name}"

@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import List
 
 from confluent_kafka import Consumer, Message
 from sqlalchemy.engine import Connection
@@ -43,7 +42,7 @@ def _fetch_consumer_params() -> dict:
 
 
 def consume_events(
-    dataset_schemas: List[DatasetSchema],
+    dataset_schemas: list[DatasetSchema],
     srid: str,
     connection: Connection,
     topics: tuple(str),
@@ -85,7 +84,7 @@ def consume_events(
                 logger.debug("Waiting for message or event/error in poll()")
                 continue
             elif msg.error():
-                logger.error("error: {}".format(msg.error()))
+                logger.error(f"error: {msg.error()}")
             else:
                 process_message(importer, msg)
     except KeyboardInterrupt:

@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from schematools.permissions import Permission, UserScopes
 from schematools.types import PermissionLevel
 
 
 def _active_profiles(
-    user_scopes: UserScopes, dataset_id: str, table_id: Optional[str] = None
+    user_scopes: UserScopes, dataset_id: str, table_id: str | None = None
 ) -> set[str]:
     """Shorthand to get active profile names"""
     if table_id is not None:

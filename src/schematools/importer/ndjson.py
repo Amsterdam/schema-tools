@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 from pathlib import PosixPath
-from typing import Any, Callable, Dict, Iterator, List, Optional, cast
+from typing import Any, Callable, Iterator, List, cast
 
 import ndjson
 from shapely.geometry import shape
@@ -18,7 +20,7 @@ class NDJSONImporter(BaseImporter):
 
     def _get_through_fields_mapper(
         self, dataset_table: DatasetTableSchema
-    ) -> Optional[Callable[[Row], Row]]:
+    ) -> Callable[[Row], Row] | None:
         """Maps fields in ndjson to proper fieldnames and structure.
 
         When through tables (1-N and NM relations) are imported directly
@@ -81,10 +83,10 @@ class NDJSONImporter(BaseImporter):
         self,
         file_name: PosixPath,
         dataset_table: DatasetTableSchema,
-        db_table_name: Optional[str] = None,
+        db_table_name: str | None = None,
         is_through_table: bool = False,
         **kwargs: Any,
-    ) -> Iterator[Dict[str, List[Row]]]:
+    ) -> Iterator[dict[str, list[Row]]]:
         """Provide an iterator the reads the NDJSON records."""
         fields_provenances = kwargs.pop("fields_provenances", {})
         identifier = dataset_table.identifier

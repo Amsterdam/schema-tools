@@ -5,11 +5,11 @@ The other classes in this module ease to retrieval of permission objects.
 """
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Optional
+from typing import Iterable
 
 import methodtools
 
-from ..types import (
+from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,
@@ -41,9 +41,9 @@ class UserScopes:
 
     def __init__(
         self,
-        query_params: Dict[str, object],
+        query_params: dict[str, object],
         request_scopes: Iterable[str],
-        all_profiles: Optional[Iterable[ProfileSchema]] = None,
+        all_profiles: Iterable[ProfileSchema] | None = None,
     ):
         """Initialize the user scopes object.
 
@@ -59,7 +59,7 @@ class UserScopes:
         self._all_profiles = all_profiles
         self._scopes = set(request_scopes) | {PUBLIC_SCOPE}
 
-    def add_query_params(self, params: List[str]):
+    def add_query_params(self, params: list[str]):
         """Tell that the request has extra (implicit) parameters that are satisfied.
 
         For example, the detail URL of a resource already implicitly passes the
@@ -227,7 +227,7 @@ class UserScopes:
         return max_permission
 
     @methodtools.lru_cache()
-    def get_active_profile_datasets(self, dataset_id: str) -> List[ProfileDatasetSchema]:
+    def get_active_profile_datasets(self, dataset_id: str) -> list[ProfileDatasetSchema]:
         """Find all profiles that mention a dataset and match the scopes.
 
         This already checks whether the mandatory user scopes are set.
@@ -250,7 +250,7 @@ class UserScopes:
     @methodtools.lru_cache()
     def get_active_profile_tables(
         self, dataset_id: str, table_id: str
-    ) -> List[ProfileTableSchema]:
+    ) -> list[ProfileTableSchema]:
         """Find all profiles that mention a particular table and give access.
 
         This already checks whether the table passes the `mandatoryFilterSets` check,
