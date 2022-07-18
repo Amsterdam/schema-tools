@@ -155,8 +155,7 @@ def test_rel_auth_dataset(here: Path) -> None:
     dataset["auth"] = ["HAMMERTIME"]
 
     errors = list(validation.run(dataset))
-    assert len(errors) == 1, errors
-    assert "requires scopes ['HAMMERTIME']" in str(errors[0])
+    assert errors == []
 
 
 def test_rel_auth_dataset_public(here: Path) -> None:
