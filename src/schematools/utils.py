@@ -196,7 +196,7 @@ def dataset_schema_from_path(
     with open(dataset_path) as fh:
         try:
             ds = json.load(fh)
-        except Exception as exc:
+        except json.JSONDecodeError as exc:
             raise ValueError("Invalid Amsterdam Dataset schema file") from exc
 
         if ds["type"] == "dataset":
