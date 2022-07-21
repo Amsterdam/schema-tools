@@ -59,6 +59,12 @@ class UserScopes:
         self._all_profiles = all_profiles
         self._scopes = set(request_scopes) | {PUBLIC_SCOPE}
 
+    def __repr__(self):
+        return f"<UserScopes: {self._scopes!r}>"
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._scopes)
+
     def add_query_params(self, params: list[str]):
         """Tell that the request has extra (implicit) parameters that are satisfied.
 
@@ -280,13 +286,6 @@ class UserScopes:
         return not mandatory_filtersets or any(
             _match_filter_rule(rule, self._query_param_names) for rule in mandatory_filtersets
         )
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._scopes)
-
-    def __str__(self) -> str:
-        scopes = ", ".join(repr(scope) for scope in self._scopes)
-        return f"UserScopes({scopes})"
 
 
 def _match_filter_rule(rule: Iterable[str], query_param_names: Iterable[str]) -> bool:
