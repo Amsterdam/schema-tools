@@ -17,7 +17,6 @@ from .models import (
     FORMAT_MODELS_LOOKUP,
     JSON_TYPE_TO_DJANGO,
     CompositeForeignKeyField,
-    CompositeForeignKeySubField,
     Dataset,
     DynamicModel,
     LooseRelationField,
@@ -56,10 +55,7 @@ class RelationMaker:
     def fetch_maker(cls, field: DatasetFieldSchema):
         # determine type of relation (FKLoose, FK, M2M, LooseM2M)
         if field.relation:
-            if field.is_loose_relation:
-                return LooseFKRelationMaker
-            else:
-                return FKRelationMaker
+            return FKRelationMaker
         elif field.nm_relation:
             if field.is_loose_relation:
                 return LooseM2MRelationMaker
@@ -95,40 +91,17 @@ class RelationMaker:
         return self.field_cls, self.field_args, self.field_kwargs
 
 
-class LooseFKRelationMaker(RelationMaker):
-    @property
-    def field_cls(self):
-        return LooseRelationField
-
-    @property
-    def field_args(self):
-        # NB overrides default behaviour in superclass
-        return self._args
-
-    @property
-    def field_kwargs(self):
-        target_table = self.field.related_table
-        kwargs = {}
-        kwargs["db_column"] = f"{to_snake_case(self.field.name)}_id"
-        kwargs["relation"] = self.fk_relation
-        kwargs["to_field"] = target_table.identifier[0]  # temporal identifier
-        return {**super().field_kwargs, **kwargs}
-
-
 class FKRelationMaker(RelationMaker):
     @property
     def field_cls(self):
         if self.field.is_composite_key:
             # Make it easier to recognize the keys, e.g. in ``manage.py dump_models``.
             return CompositeForeignKeyField
-        elif self._get_to_field_name():
-            return CompositeForeignKeySubField
+        elif self.field.is_loose_relation or self._get_to_field_name():
+            # Points to the first part of a composite key.
+            return LooseRelationField
         else:
             return models.ForeignKey
-
-    @property
-    def field_args(self):
-        return super().field_args + [models.CASCADE if self.field.required else models.SET_NULL]
 
     def _get_related_name(self):
         """Find the name of the backwards relationship.
@@ -198,6 +171,9 @@ class FKRelationMaker(RelationMaker):
 
             if target_field_ids[0] != "id" and not target_field.is_primary:
                 return target_field_ids[0]
+        elif self.field.is_loose_relation:
+            # Loose relation points to the first field of a composite foreign key
+            return self.field.related_table.identifier[0]
 
         return None
 
@@ -207,6 +183,7 @@ class FKRelationMaker(RelationMaker):
         # but the db_column should be with _id
         kwargs = {
             **super().field_kwargs,
+            "on_delete": models.CASCADE if self.field.required else models.SET_NULL,
             "db_column": to_snake_case(self.field.name) + "_id",
             "db_constraint": False,
             "related_name": self._get_related_name(),
