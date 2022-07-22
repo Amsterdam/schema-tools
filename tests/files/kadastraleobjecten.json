@@ -38,6 +38,11 @@
             "type": "integer",
             "description": "Uniek volgnummer van de toestand van het object."
           },
+          "koopsom": {
+            "type": "integer",
+            "description": "Uniek volgnummer van de toestand van het object.",
+            "auth": "BRK/RO"
+          },
           "registratiedatum": {
             "type": "string",
             "format": "date-time",

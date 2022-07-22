@@ -41,6 +41,58 @@ class TestReadPermissions:
             engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
         )
 
+    def test_nm_relations_permissions(self, here, engine, kadastraleobjecten_schema, dbsession):
+        importer = NDJSONImporter(kadastraleobjecten_schema, engine)
+        importer.generate_db_objects("kadastraleobjecten", truncate=True, ind_extra_index=False)
+
+        # Setup schema and profile
+        # This schema has auth on dataset level, not on table
+        ams_schema = {kadastraleobjecten_schema.id: kadastraleobjecten_schema}
+
+        _create_role(engine, "openbaar")
+        _create_role(engine, "brk_rsn")
+        _create_role(engine, "brk_ro")
+
+        # Check if the roles exist, the tables exist,
+        # and the roles have no read privilege on the tables.
+        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten")
+        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten")
+        _check_select_permission_denied(engine, "brk_ro", "brk_kadastraleobjecten")
+
+        apply_schema_and_profile_permissions(
+            engine, "public", ams_schema, {}, "openbaar", "OPENBAAR"
+        )
+        apply_schema_and_profile_permissions(
+            engine, "public", ams_schema, {}, "brk_rsn", "BRK/RSN"
+        )
+        apply_schema_and_profile_permissions(engine, "public", ams_schema, {}, "brk_ro", "BRK/RO")
+
+        # table denied
+        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten")
+        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten", "koopsom")
+
+        # table denied, column granted, auth level dataset
+        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten")
+        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten", "koopsom")
+        _check_select_permission_granted(
+            engine, "brk_rsn", "brk_kadastraleobjecten", "identificatie"
+        )
+
+        # table denied, column granted, auth level field
+        _check_select_permission_denied(engine, "brk_ro", "brk_kadastraleobjecten")
+        _check_select_permission_granted(engine, "brk_ro", "brk_kadastraleobjecten", "koopsom")
+
+        # nm relations table tests, should have dataset auth level: brk_rsn
+        _check_select_permission_denied(
+            engine, "openbaar", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject"
+        )
+        _check_select_permission_denied(
+            engine, "brk_ro", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject"
+        )
+        _check_select_permission_granted(
+            engine, "brk_rsn", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject"
+        )
+
     def test_openbaar_permissions(self, here, engine, afval_schema, dbsession):
         """
         Prove that the default auth scope is "OPENBAAR".
