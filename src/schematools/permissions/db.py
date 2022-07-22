@@ -262,6 +262,7 @@ def get_all_dataset_scopes(
             continue
 
         table_scopes = table.auth
+        fallback_scope = (table_scopes - {PUBLIC_SCOPE}) or dataset_scopes
         fields = [field for field in table.fields if field.name != "schema"]
 
         column_scopes = {}
@@ -279,28 +280,40 @@ def get_all_dataset_scopes(
             final_scopes: frozenset[str] = parent_field_scopes or field_scopes
 
             if final_scopes:
-                if field.is_nested_table:
-                    nested_table = ams_schema.build_nested_table(table, field)
-                    all_scopes[nested_table.db_name()].append(
-                        {"privileges": ["SELECT"], "grantees": _fetch_grantees(final_scopes)}
-                    )
-                    continue
-                if field.nm_relation is not None:
-                    through_table = ams_schema.build_through_table(table, field)
-                    all_scopes[through_table.db_name()].append(
-                        {"privileges": ["SELECT"], "grantees": _fetch_grantees(final_scopes)}
-                    )
-                    continue
                 column_scopes[column_name] = final_scopes
+
+            if field.is_nested_table:
+                nested_table = ams_schema.build_nested_table(table, field)
+                all_scopes[nested_table.db_name()].append(
+                    {
+                        "privileges": ["SELECT"],
+                        "grantees": _fetch_grantees(final_scopes or fallback_scope),
+                    }
+                )
+
+            if field.nm_relation is not None:
+                through_table = ams_schema.build_through_table(table, field)
+                all_scopes[through_table.db_name()].append(
+                    {
+                        "privileges": ["SELECT"],
+                        "grantees": _fetch_grantees(final_scopes or fallback_scope),
+                    }
+                )
 
         if column_scopes:
             for field in fields:
+                if field.nm_relation or field.is_nested_table:
+                    # field is not in view when nm or nested
+                    continue
+
                 column_name = field.db_name()
                 all_scopes[table_name].append(
                     # NB. space after SELECT is significant!
                     {
                         "privileges": [f"SELECT ({column_name})"],
-                        "grantees": _fetch_grantees(column_scopes.get(column_name, table_scopes)),
+                        "grantees": _fetch_grantees(
+                            column_scopes.get(column_name, fallback_scope)
+                        ),
                     }
                 )
         else:
@@ -308,9 +321,7 @@ def get_all_dataset_scopes(
                 all_scopes[table_name].append(
                     {
                         "privileges": ["SELECT"],
-                        "grantees": _fetch_grantees(
-                            table_scopes - {PUBLIC_SCOPE} or dataset_scopes
-                        ),
+                        "grantees": _fetch_grantees(fallback_scope),
                     }
                 )
     return all_scopes
