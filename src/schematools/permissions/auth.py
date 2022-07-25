@@ -5,7 +5,7 @@ The other classes in this module ease to retrieval of permission objects.
 """
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, Iterator
 
 import methodtools
 
@@ -281,8 +281,10 @@ class UserScopes:
             _match_filter_rule(rule, self._query_param_names) for rule in mandatory_filtersets
         )
 
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._scopes)
+
     def __str__(self) -> str:
-        """str implementation, for debugging purposes."""
         scopes = ", ".join(repr(scope) for scope in self._scopes)
         return f"UserScopes({scopes})"
 
