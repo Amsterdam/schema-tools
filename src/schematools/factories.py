@@ -101,7 +101,6 @@ def tables_factory(
             # and fields that are added only for temporality
             if field.type.endswith("#/definitions/schema") or field.is_array or field.is_temporal:
                 continue
-            field_name = to_snake_case(field.name)
             try:
                 col_type = fetch_col_type(field)
             except KeyError:
@@ -114,11 +113,8 @@ def tables_factory(
                 col_kwargs["primary_key"] = True
                 col_kwargs["nullable"] = False
                 col_kwargs["autoincrement"] = field.type.endswith("autoincrement")
-            id_postfix = "_id" if field.relation else ""
             columns.append(
-                Column(
-                    f"{field_name}{id_postfix}", col_type, comment=field.description, **col_kwargs
-                )
+                Column(field.db_name(), col_type, comment=field.description, **col_kwargs)
             )
 
         # The table_name has to be snakecased here, because
