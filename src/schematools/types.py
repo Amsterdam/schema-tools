@@ -1241,13 +1241,22 @@ class DatasetFieldSchema(DatasetType):
         The returned list contains only the fields, e.g., ["id", "volgnummer"].
         These are fields on the table `self.related_table`.
 
+        For loose relations, it will only return
+        the first field of the related table.
+
         If self is not a relation field, the return value is None.
         """
         if not self.get("relation"):
             return None
         elif self.is_object:
             # Relation where the fields are defined as sub-fields
-            return list(self["properties"].keys())
+            return [
+                subfield_id
+                for subfield_id, subfield in self["properties"].items()
+                if not subfield.get("format") in ("date", "date-time")
+            ]
+        elif self.is_loose_relation:
+            return self.related_table.identifier[:1]
         else:
             # References the primary key of the related table.
             return self.related_table.identifier
