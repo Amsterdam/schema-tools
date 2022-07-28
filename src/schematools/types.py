@@ -30,7 +30,6 @@ from typing import (
 )
 
 import jsonschema
-from deprecated import deprecated
 from jsonschema import draft7_format_checker
 from methodtools import lru_cache
 from more_itertools import first
@@ -336,18 +335,6 @@ class DatasetSchema(SchemaType):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self['id']}>"
-
-    @classmethod
-    @deprecated(
-        version="2.3.1",
-        reason="""The `DatasetSchema.from_file` has been replaced by
-            `schematools.utils.dataset_schema_from_path`.""",
-    )
-    def from_file(cls, filename: Path | str) -> DatasetSchema:
-        """Open an Amsterdam schema from a file and any table files referenced therein"""
-        from schematools.utils import dataset_schema_from_path
-
-        return dataset_schema_from_path(filename)
 
     @classmethod
     def from_dict(cls, obj: dict[str, Any]) -> DatasetSchema:
@@ -948,33 +935,6 @@ class DatasetTableSchema(SchemaType):
         """For nested or through tables, there is a parent table."""
         return self.nested_table or self.through_table
 
-    @property
-    @deprecated("additionalFilters is no longer supported")
-    def filters(self):
-        return dict(self["schema"].get("additionalFilters", {}))
-
-    @property
-    def relations(self):
-        warnings.warn(
-            "Using DatasetTableSchema.relations is deprecated, use additional_relations instead.",
-            DeprecationWarning,
-        )
-        return dict(self["schema"].get("additionalRelations", {}))
-
-    @property
-    @deprecated("additionalFilters is no longer supported")
-    def additional_filters(self) -> dict[str, dict[str, str]]:
-        """Fetch list of additional filters.
-        Example value:
-
-            "regimes.inWerkingOp": {
-              "type": "range",
-              "start": "regimes.beginTijd",
-              "end": "regimes.eindTijd"
-            }
-        """
-        return dict(self["schema"].get("additionalFilters", {}))
-
     @cached_property
     def additional_relations(self) -> list[AdditionalRelationSchema]:
         """Fetch list of additional (backwards or N-N) relations.
@@ -1102,14 +1062,13 @@ class DatasetTableSchema(SchemaType):
             )
         return db_table_name
 
-    def get_fk_fields(self) -> Iterator[str]:
-        """Generates fields names that contain a 1:N relation to a parent table"""
-        fields_items = self["schema"]["properties"].items()
-        field_schema = (
-            DatasetFieldSchema(_parent_table=self, **{**spec, "id": _id})
-            for _id, spec in fields_items
+    def _get_fk_fields(self) -> Iterator[DatasetFieldSchema]:
+        """Generates all fields in this table that have a 1:N relation to a parent table."""
+        fields = self["schema"]["properties"].items()
+        fields = (
+            DatasetFieldSchema(_parent_table=self, **{**spec, "id": _id}) for _id, spec in fields
         )
-        return (f.name for f in field_schema if f.relation)
+        return (f for f in fields if f.relation)
 
     @property
     def version(self) -> SemVer:
@@ -1548,14 +1507,6 @@ class DatasetFieldSchema(DatasetType):
         #  {1, 2}                   {1, 2}       False
         #  {1, 2}                   {0}          True
         return not destination_type_set <= source_type_set
-
-
-class DatasetRow(DatasetType):
-    """An actual instance of data"""
-
-    def validate(self, schema: DatasetSchema) -> None:
-        table = schema.get_table_by_id(self["table"])
-        table.validate(self.data)
 
 
 class AdditionalRelationSchema(DatasetType):

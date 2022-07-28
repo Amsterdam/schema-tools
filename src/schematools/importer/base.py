@@ -686,10 +686,10 @@ def index_factory(
         """Creates an index on Foreign Keys."""
         indexes: dict[str, list[Index]] = {}
         indexes_to_create: list[Index] = []
-        if dataset_table.get_fk_fields():
+        if dataset_table._get_fk_fields():
 
-            for field in dataset_table.get_fk_fields():
-                field_name = f"{to_snake_case(field)}_id"
+            for field in dataset_table._get_fk_fields():
+                field_name = field.db_name()
                 index_name = f"{db_table_name}_{field_name}_idx"
                 if len(index_name) > MAX_TABLE_NAME_LENGTH:
                     index_name = make_hash_value(index_name)

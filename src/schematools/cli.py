@@ -40,7 +40,6 @@ from schematools.utils import (
     dataset_schema_from_path,
     dataset_schema_from_url,
     dataset_schemas_from_url,
-    schema_fetch_url_file,
 )
 
 # Configure a simple stdout logger for permissions output
@@ -274,7 +273,7 @@ def permissions_apply(
         ams_schema = dataset_schemas_from_url(schemas_url=schema_url)
 
     if profile_filename:
-        profile = schema_fetch_url_file(profile_filename)
+        profile = _schema_fetch_url_file(profile_filename)
         profiles = {profile["name"]: profile}
     else:
         # Profiles not live yet, temporarilly commented out
@@ -300,6 +299,22 @@ def permissions_apply(
         click.echo(
             "Choose --auto or specify both a --role and a --scope to be able to grant permissions"
         )
+
+
+def _schema_fetch_url_file(schema_url_file: URL | str) -> dict[str, Any]:
+    """Return schemadata from URL or File."""
+    # XXX Does not work with datasets that have their tables split
+    # out into separate files. Should use _get_dataset_schema instead.
+
+    if not schema_url_file.startswith("http"):
+        with open(schema_url_file) as f:
+            schema_data = json.load(f)
+    else:
+        response = requests.get(schema_url_file)
+        response.raise_for_status()
+        schema_data = response.json()
+
+    return cast(Dict[str, Any], schema_data)
 
 
 @schema.group()

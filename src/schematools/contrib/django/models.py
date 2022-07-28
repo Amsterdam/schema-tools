@@ -620,13 +620,3 @@ class CompositeForeignKeySubField(models.ForeignKey):
 
 class LooseRelationManyToManyField(models.ManyToManyField):
     pass
-
-
-def get_field_schema(model_field: models.Field | models.ForeignObjectRel) -> DatasetFieldSchema:
-    # Backwards compatibility code.
-    warnings.warn(
-        "get_field_schema() is deprecated, use DynamicModel.get_field_schema() instead",
-        DeprecationWarning,
-    )
-
-    return DynamicModel.get_field_schema(model_field)

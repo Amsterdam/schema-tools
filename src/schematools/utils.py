@@ -174,17 +174,6 @@ def _schema_from_url_with_connection(
     return schema
 
 
-@deprecated(
-    version="2.3.1",
-    reason="""The `dataset_schema_from_file` is replaced by `dataset_schema_from_path`.""",
-)
-def dataset_schema_from_file(
-    file_path: Path | str, prefetch_related: bool = False
-) -> types.DatasetSchema:
-    """Gets a dataset scheme from a file path."""
-    return dataset_schema_from_path(file_path)
-
-
 def dataset_schema_from_path(
     dataset_path: Path | str,
 ) -> types.DatasetSchema:
@@ -277,25 +266,6 @@ def profile_schema_from_file(filename: Path | str) -> dict[str, types.ProfileSch
     with open(filename) as file_handler:
         schema_info = json.load(file_handler)
         return {schema_info["name"]: types.ProfileSchema.from_dict(schema_info)}
-
-
-@deprecated(
-    version="1.0.4",
-    reason="Does not work with datasets that have their tables split "
-    "out into separate files. Use something like "
-    "`schematools.cli._get_dataset_schema` instead.",
-)
-def schema_fetch_url_file(schema_url_file: URL | str) -> dict[str, Any]:
-    """Return schemadata from URL or File."""
-    if not schema_url_file.startswith("http"):
-        with open(schema_url_file) as f:
-            schema_data = json.load(f)
-    else:
-        response = requests.get(schema_url_file)
-        response.raise_for_status()
-        schema_data = response.json()
-
-    return cast(Dict[str, Any], schema_data)
 
 
 _CAMEL_CASE_REPLACE_PAT: Final[Pattern[str]] = re.compile(
