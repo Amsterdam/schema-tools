@@ -59,7 +59,7 @@ def test_crs(here: Path) -> None:
     error = next(errors)
     assert error
     assert error.validator_name == "crs"
-    assert """A 'crs' field is required""" in error.message
+    assert """No coordinate reference system defined for field""" in error.message
 
     assert list(errors) == []
 
