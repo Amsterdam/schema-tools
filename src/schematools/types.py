@@ -1303,6 +1303,13 @@ class DatasetFieldSchema(DatasetType):
         return "geojson.org" in self.get("$ref", "")
 
     @property
+    def crs(self) -> str | None:
+        if self.is_geo:
+            if self.table:
+                return self.get("crs") or self.table.get("crs") or self.table.dataset.get("crs")
+            return self.get("crs")
+
+    @property
     def provenance(self) -> str | None:
         """Get the provenance info, if available, or None"""
         return self.get("provenance")
