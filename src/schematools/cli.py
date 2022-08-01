@@ -425,11 +425,11 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
     """  # noqa: D301,D412,D417
     meta_schema = _fetch_json(meta_schema_url)
     errors: DefaultDict[str, list[str]] = defaultdict(list)
-    for schema in schema_files:
+    for schema_file in schema_files:
         try:
-            dataset = dataset_schema_from_path(schema)
+            dataset = dataset_schema_from_path(schema_file)
         except ValueError as ve:
-            errors[schema].append(str(ve))
+            errors[schema_file].append(str(ve))
             # No sense in continuing if we can't read the schema file.
             break
         try:
@@ -439,15 +439,15 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
                 format_checker=draft7_format_checker,
             )
         except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
-            errors[schema].append(f"{struct_error.message}: ({', '.join(struct_error.path)})")
+            errors[schema_file].append(f"{struct_error.message}: ({', '.join(struct_error.path)})")
 
-        for sem_error in validation.run(dataset):
-            errors[schema].append(str(sem_error))
+        for sem_error in validation.run(dataset, schema_file):
+            errors[schema_file].append(str(sem_error))
     if errors:
         width = len(max(errors.keys()))
-        for schema, error_messages in errors.items():
+        for schema_file, error_messages in errors.items():
             for err_msg in error_messages:
-                click.echo(f"{schema:>{width}}: {err_msg}")
+                click.echo(f"{schema_file:>{width}}: {err_msg}")
         sys.exit(1)
 
 
