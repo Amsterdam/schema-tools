@@ -24,7 +24,8 @@ import operator
 import re
 from dataclasses import dataclass
 from functools import partial, wraps
-from typing import Callable, Iterator, Set, cast
+from pathlib import Path
+from typing import Callable, Iterator, Optional, Set, cast
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
@@ -58,10 +59,10 @@ class ValidationException(Exception):
         self.message = message
 
 
-_all: list[tuple[str, Callable[[DatasetSchema], Iterator[str]]]] = []
+_all: list[tuple[str, Callable[[DatasetSchema, Optional[str]], Iterator[str]]]] = []
 
 
-def run(dataset: DatasetSchema) -> Iterator[ValidationError]:
+def run(dataset: DatasetSchema, location: str | None = None) -> Iterator[ValidationError]:
     r"""Run all registered validators.
 
     Yields:
@@ -69,7 +70,7 @@ def run(dataset: DatasetSchema) -> Iterator[ValidationError]:
 
     """  # noqa: W605
     for name, validator in _all:
-        for msg in validator(dataset):
+        for msg in validator(dataset, location):
             yield ValidationError(validator_name=name, message=msg)
 
 
@@ -82,10 +83,13 @@ def _register_validator(name: str) -> Callable:
     if not name:
         raise ValueError("validator must have a name")
 
-    def decorator(func: Callable[[DatasetSchema], Iterator[str]]) -> Callable:
+    def decorator(func: Callable[[DatasetSchema, Optional[str]], Iterator[str]]) -> Callable:
         @wraps(func)
-        def decorated(dataset: DatasetSchema) -> Iterator[str]:
-            return func(dataset)
+        def decorated(dataset: DatasetSchema, location: str | None = None) -> Iterator[str]:
+            if func.__code__.co_argcount == 1:
+                return func(dataset)
+            else:
+                return func(dataset, location)
 
         _all.append((name, decorated))
         return decorated
@@ -110,6 +114,35 @@ def _camelcase_ident(ident: str) -> str | None:
     if camel == ident:
         return None
     return f"{ident} does not survive conversion to snake case and back; suggestion: {camel}"
+
+
+@_register_validator("ID does not match file path")
+def _id_matches_path(dataset: DatasetSchema, location: str | None) -> Iterator[str]:
+    """Dataset Identifiers should equal the parent paths to assure uniqueness.
+
+    For datasets is subdirectories the path components should match the id like:
+    'my/nested/location/dataset.json' -> 'myNestedLocation'
+
+    """
+    if location is not None:
+        path = Path(location)
+        id = to_snake_case(dataset.id)
+
+        # Ids are allowed to end with a number,
+        # but the number should not be camelCased in the path.
+        # So in this case the last instance of '_' is removed
+        if id.split("_")[-1].isdigit():
+            id = "".join(id.rsplit("_", 1))
+        temp_path = path
+        while len(id):
+            temp_path = temp_path.parent
+            if not id.endswith(temp_path.name):
+                yield (
+                    f"Id of the dataset {dataset.id} does not match "
+                    f"the parent directory {temp_path.name}."
+                )
+                break
+            id = id[: -len(temp_path.name) - 1]
 
 
 @_register_validator("Auth on identifier field")

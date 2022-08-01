@@ -51,8 +51,47 @@ def test_id_auth(here: Path) -> None:
     assert list(errors) == []
 
 
+def test_id_matches_path(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "stadsdelen.json")
+
+    # No errors when id equals parent path name
+    errors = validation.run(dataset, here / "gebieden" / "dataset.json")
+    assert list(errors) == []
+
+    # Error when not equal
+    errors = validation.run(dataset, here / "regios" / "dataset.json")
+    error = next(errors)
+    assert error
+    assert error.validator_name == "ID does not match file path"
+    assert (
+        """Id of the dataset gebieden does not match the parent directory regios."""
+        in error.message
+    )
+    assert list(errors) == []
+
+    # Test datasets in sub directory
+    dataset.__setitem__("id", "beheerkaartCbsGrid")
+    errors = validation.run(dataset, here / "bierkaart" / "cbs_grid" / "dataset.json")
+    error = next(errors)
+    assert error
+    assert error.validator_name == "ID does not match file path"
+    assert (
+        """Id of the dataset beheerkaartCbsGrid does not match the parent directory bierkaart."""
+        in error.message
+    )
+    assert list(errors) == []
+
+    errors = validation.run(dataset, here / "beheerkaart" / "cbs_grid" / "dataset.json")
+    assert list(errors) == []
+
+    # Test identifiers ending with a number
+    dataset.__setitem__("id", "covid19")
+    errors = validation.run(dataset, here / "covid19" / "dataset.json")
+    assert list(errors) == []
+
+
 def test_crs(here: Path) -> None:
-    dataset = dataset_schema_from_path(here / "files/crs_validation.json")
+    dataset = dataset_schema_from_path(here / "files" / "crs_validation.json")
 
     errors = validation.run(dataset)
 
