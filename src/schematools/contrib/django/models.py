@@ -54,6 +54,7 @@ FORMAT_MODELS_LOOKUP = {
 }
 
 RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
+CRSs_3D = ["EPSG:7415"]  # Supported 3D coordinate reference systems
 
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 
@@ -70,7 +71,10 @@ class ObjectMarker:
 
 
 def _fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> dict[str, Any]:
-    return {"srid": CRS.from_string(dataset.data["crs"]).srid}
+    dimensions = 2
+    if field.crs in CRSs_3D:
+        dimensions = 3
+    return {"srid": CRS.from_string(field.crs).srid, "dim": dimensions}
 
 
 JSON_TYPE_TO_DJANGO = {
