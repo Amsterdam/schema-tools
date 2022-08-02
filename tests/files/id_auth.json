@@ -3,7 +3,7 @@
   "type": "dataset",
   "description": "Dataset with auth on an identifier field",
   "license": "public",
-  "status": "beschikbaar",
+  "status": "niet_beschikbaar",
   "version": "1.2.3",
   "publisher": "us",
   "owner": "us",
@@ -16,6 +16,9 @@
       "title": "Base",
       "auth": [
         "BASE"
+      ],
+      "reasonsNonPublic": [
+        "nader te bepalen"
       ],
       "version": "1.2.4",
       "schema": {
@@ -37,6 +40,9 @@
           "id": {
             "auth": [
               "BASE/ID"
+            ],
+            "reasonsNonPublic": [
+              "nader te bepalen"
             ],
             "type": "integer",
             "description": "Unieke aanduiding van het record."

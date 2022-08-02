@@ -311,8 +311,8 @@ def _check_crs(dataset: DatasetSchema) -> Iterator[str]:
                     if field.is_geo and field.crs is None:
                         yield (
                             f"No coordinate reference system defined for field {field.name}. "
-                            "A crs property should exist on the field or its parent table or parent dataset"
-                            'suggestion: "EPSG:28992".'
+                            "A crs property should exist on the field or its parent table "
+                            'or parent dataset. suggestion: "EPSG:28992".'
                         )
 
 
@@ -390,3 +390,58 @@ def _relation_auth(dataset: DatasetSchema) -> Iterator[str]:
                     scopes |= rel_table.get_field_by_id(f).auth
                 scopes.remove("OPENBAAR")  # Not very interesting.
                 yield f"{table.id}.{field.id} requires scopes {sorted(scopes)}"
+
+
+@_register_validator("reasons non public exists")
+def _reasons_non_public_exists(dataset: DatasetSchema) -> Iterator[str]:
+    """A ReasonsNonPublic field should be present on the highest non-public scope.
+
+    For non-public fields in a public table, reasonsNonPublic can be set on table
+    level. This is less verbose when all the non-public fields have the same
+    reason for being non-public.
+
+    """
+    if dataset.auth == {"OPENBAAR"}:
+        for table in dataset.tables:
+            if table.data.get("reasonsNonPublic") is None:
+                if table.auth == {"OPENBAAR"}:
+                    for field in table.get_fields():
+                        if (
+                            field.auth != {"OPENBAAR"}
+                            and field.data.get("reasonsNonPublic") is None
+                        ):
+                            yield (
+                                f"Non-public field {field.id} or it's parent table "
+                                "should have a 'reasonsNonPublic' property."
+                            )
+                else:
+                    yield (
+                        f"Non-public table {table.id} should have a 'reasonsNonPublic' property."
+                    )
+    elif dataset.data.get("reasonsNonPublic") is None:
+        yield (f"Non-public dataset {dataset.id} should have a 'reasonsNonPublic' property.")
+
+
+@_register_validator("reasons non public value")
+def _reasons_non_public_value(dataset: DatasetSchema) -> Iterator[str]:
+    """A reasonsNonPublic field in a published dataset should not contain a placeholder."""
+    placeholder_value = "nader te bepalen"
+    if dataset.data.get("status") != "beschikbaar":
+        return
+    if placeholder_value in dataset.data.get("reasonsNonPublic", []):
+        yield (
+            f"Placeholder value '{placeholder_value}' not allowed in "
+            f"ReasonsNonPublic property of dataset {dataset.id}."
+        )
+    for table in dataset.tables:
+        if placeholder_value in table.data.get("reasonsNonPublic", []):
+            yield (
+                f"Placeholder value '{placeholder_value}' not allowed "
+                f"ReasonsNonPublic property of table {table.id}."
+            )
+        for field in table.get_fields():
+            if placeholder_value in field.data.get("reasonsNonPublic", []):
+                yield (
+                    f"Placeholder value '{placeholder_value}' not allowed "
+                    f"ReasonsNonPublic property of field {field.id}."
+                )
