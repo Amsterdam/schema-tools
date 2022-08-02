@@ -192,6 +192,7 @@ def test_display(here: Path) -> None:
 def test_rel_auth_dataset(here: Path) -> None:
     dataset = dataset_schema_from_path(here / "files" / "rel_auth.json")
     dataset["auth"] = ["HAMMERTIME"]
+    dataset["reasonsNonPublic"] = ["U can't touch this"]
 
     errors = list(validation.run(dataset))
     assert errors == []
@@ -209,6 +210,7 @@ def test_rel_auth_table(here: Path) -> None:
     dataset_json = json.load(open(here / "files" / "rel_auth.json"))
     table = next(t for t in dataset_json["tables"] if t["id"] == "base")
     table["auth"] = ["HAMMERTIME"]
+    table["reasonsNonPublic"] = ["U can't touch this"]
     dataset = DatasetSchema.from_dict(dataset_json)
 
     errors = list(validation.run(dataset))
@@ -227,3 +229,50 @@ def test_rel_auth_field(here: Path) -> None:
 
     assert len(errors) >= 1, errors
     assert any("requires scopes ['HAMMERTIME']" in str(e) for e in errors)
+
+
+def test_reasons_non_public_exists(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "hr_auth.json")
+    errors = list(validation.run(dataset))
+
+    # Test an error is given for the highest non-public scope
+    # and only for the highest non-public scope.
+    assert len(errors) == 1
+    assert errors[0].message == "Non-public dataset hr should have a 'reasonsNonPublic' property."
+
+    dataset["auth"] = [PUBLIC_SCOPE]
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1
+    assert (
+        errors[0].message
+        == "Non-public table sbiactiviteiten should have a 'reasonsNonPublic' property."
+    )
+
+    # Test no error is given when a reason is present
+    dataset_json = json.load(open(here / "files" / "hr_auth.json"))
+    dataset_json["tables"][0]["reasonsNonPublic"] = ["5.1 1c: Bevat persoonsgegevens"]
+    dataset = DatasetSchema.from_dict(dataset_json)
+    dataset["auth"] = [PUBLIC_SCOPE]
+    errors = list(validation.run(dataset))
+    assert len(errors) == 0
+
+
+def test_reasons_non_public_value(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "hr_auth.json")
+    dataset["reasonsNonPublic"] = ["5.1 1c: Bevat persoonsgegevens", "nader te bepalen"]
+    errors = list(validation.run(dataset))
+
+    # Test an error is given for the placeholder value in a dataset with status = beschikbaar.
+    assert len(errors) == 1
+    assert "not allowed in ReasonsNonPublic property of dataset hr." in errors[0].message
+
+    # Test no error is given for the placeholder value in a dataset with status != beschikbaar.
+    dataset["status"] = "niet_beschikbaar"
+    errors = list(validation.run(dataset))
+    assert len(errors) == 0
+
+    # Test no error is given for other values of reasonsNonPublic
+    dataset["status"] = "beschikbaar"
+    dataset["reasonsNonPublic"] = ["5.1 1c: Bevat persoonsgegevens"]
+    errors = list(validation.run(dataset))
+    assert len(errors) == 0

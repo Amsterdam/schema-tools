@@ -20,7 +20,7 @@
         "additionalProperties": false,
         "identifier": "identifier",
         "required": ["schema", "sbiActiviteitNummer"],
-        "display": "sbiActiviteitNummer",
+        "display": "identifier",
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
