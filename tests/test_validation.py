@@ -276,3 +276,16 @@ def test_reasons_non_public_value(here: Path) -> None:
     dataset["reasonsNonPublic"] = ["5.1 1c: Bevat persoonsgegevens"]
     errors = list(validation.run(dataset))
     assert len(errors) == 0
+
+
+def test_schema_ref(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "schema_ref_validation.json")
+
+    errors = validation.run(dataset)
+
+    error = next(errors)
+    assert error
+    assert error.validator_name == "schema ref"
+    assert """Incorrect `$ref` for""" in error.message
+
+    assert list(errors) == []
