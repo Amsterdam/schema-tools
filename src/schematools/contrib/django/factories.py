@@ -546,9 +546,6 @@ def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
         id_post_fix = ""
         field_definition = field.data
         if field.relation is not None:
-            # if field.id == "heeftBetrekkingOpKadastraalObject":
-            #     breakpoint()
-
             id_post_fix = "_id"
             del field_definition["relation"]
             try:
