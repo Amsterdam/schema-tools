@@ -59,7 +59,7 @@ class ValidationException(Exception):
         self.message = message
 
 
-_all: list[tuple[str, Callable[[DatasetSchema, Optional[str]], Iterator[str]]]] = []
+_all: list[tuple[str, Callable[[DatasetSchema, str | None], Iterator[str]]]] = []
 
 
 def run(dataset: DatasetSchema, location: str | None = None) -> Iterator[ValidationError]:
