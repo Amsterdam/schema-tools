@@ -70,7 +70,8 @@ class Command(BaseCommand):
         bases = ", ".join(base_class.__name__ for base_class in model.__bases__)
         self.stdout.write(f"class {model.__name__}({bases}):\n")
 
-        void = [print(repr(f)) for f in model._meta.get_fields()]
+        for field in model._meta.get_fields():
+            print(repr(field))
         # <django.db.models.fields.BigIntegerField: id>
         # <django.contrib.gis.db.models.fields.GeometryField: geometry>
         # <django_postgres_unlimited_varchar.UnlimitedCharField: buurt_code>
