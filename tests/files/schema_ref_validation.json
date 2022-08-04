@@ -1,0 +1,62 @@
+{
+  "type": "dataset",
+  "id": "schemrefvalidation",
+  "title": "Schema $ref hostname Validation Test",
+  "status": "beschikbaar",
+  "description": "Schema for unit testing schema $ref validator",
+  "version": "0.0.1",
+  "tables": [
+    {
+      "id": "incorrect",
+      "title": "Some title",
+      "type": "table",
+      "version": "1.0.0",
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/tests/invalid.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "identifier": "foo",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "foo",
+          "schema"
+        ],
+        "display": "foo",
+        "properties": {
+          "schema": {
+            "$ref": "https://invalid.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "foo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "id": "correct",
+      "title": "Some other title",
+      "type": "table",
+      "version": "1.0.0",
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/tests/valid.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "identifier": "bar",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bar",
+          "schema"
+        ],
+        "display": "bar",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "bar": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

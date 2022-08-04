@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from functools import partial, wraps
 from pathlib import Path
 from typing import Callable, Iterator, Optional, Set, cast
+from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
@@ -445,3 +446,15 @@ def _reasons_non_public_value(dataset: DatasetSchema) -> Iterator[str]:
                     f"Placeholder value '{placeholder_value}' not allowed "
                     f"ReasonsNonPublic property of field {field.id}."
                 )
+
+
+@_register_validator("schema ref")
+def _check_schema_ref(dataset: DatasetSchema) -> Iterator[str]:
+    """Check that $ref field for all tables has correct hostname."""
+    for table in dataset.tables:
+        fragments = urlparse(table["schema"]["properties"]["schema"]["$ref"])
+        if fragments.hostname != "schemas.data.amsterdam.nl" or fragments.scheme != "https":
+            yield (
+                f"Incorrect `$ref` for {table.name}. "
+                "Value should be `https://data.amsterdam.nl`"
+            )
