@@ -262,7 +262,7 @@ def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
 
 
 def test_inactive_relation_that_are_commented_out(here, engine, stadsdelen_schema, dbsession):
-    """Prove that relations that are commented out in the schema are flattened to strings"""
+    """Prove that relations that are commented out in the schema are flattened to strings."""
     ndjson_path = here / "files" / "data" / "stadsdelen.ndjson"
     importer = NDJSONImporter(stadsdelen_schema, engine)
     importer.generate_db_objects("stadsdelen", truncate=True, ind_extra_index=False)
@@ -273,7 +273,7 @@ def test_inactive_relation_that_are_commented_out(here, engine, stadsdelen_schem
 
 
 def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema, dbsession):
-    """Prove that missing fields in jsonpath provenance fields do not crash"""
+    """Prove that missing fields in jsonpath provenance fields do not crash."""
     ndjson_path = here / "files" / "data" / "woonplaatsen.ndjson"
     importer = NDJSONImporter(woonplaatsen_schema, engine)
     importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
@@ -281,6 +281,28 @@ def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema
     records = [dict(r) for r in engine.execute("SELECT * from baggob_woonplaatsen ORDER BY id")]
     assert len(records) == 2
     assert records[1]["status_code"] is None
+
+
+def test_ndjson_import_with_shortnames_missing_data(
+    here, engine, hr_schema, verblijfsobjecten_schema, dbsession
+):
+    """Prove that rows with missing fields with shortnames are imported correctly."""
+    ndjson_path = here / "files" / "data" / "hr_missing_nmrelation.ndjson"
+    importer = NDJSONImporter(hr_schema, engine)
+    importer.generate_db_objects(
+        "maatschappelijkeactiviteiten", truncate=True, ind_extra_index=False
+    )
+    importer.load_file(ndjson_path)
+    records = [dict(r) for r in engine.execute("SELECT * from hr_activiteiten")]
+
+    assert len(records) == 1
+    assert records[0]["kvknummer"] == "90004213"
+    assert records[0]["gevestigd_in_identificatie"] == "01002"
+    assert records[0]["gevestigd_in_volgnummer"] == 3
+    assert records[0]["gevestigd_in_id"] == "01002.3"
+
+    # shortname for heeftEenRelatieMetVerblijfsobject, not in hr_missing_nmrelation.ndjson
+    assert "verblijfsobjecten" not in records[0]
 
 
 def test_ndjson_import_with_shortnames_in_schema(
