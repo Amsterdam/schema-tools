@@ -137,6 +137,8 @@ class NDJSONImporter(BaseImporter):
                 row = Row(_row, fields_provenances=fields_provenances)
 
                 for field in shortname_fields:
+                    if field.name not in row and field.nm_relation:
+                        continue
                     row[field.name] = row[field.id]
 
                 for ir_field in inactive_relation_info:
