@@ -36,7 +36,7 @@ from more_itertools import first
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
-from schematools.exceptions import SchemaObjectNotFound
+from schematools.exceptions import ParserError, SchemaObjectNotFound
 
 ST = TypeVar("ST", bound="SchemaType")
 DTS = TypeVar("DTS", bound="DatasetTableSchema")
@@ -310,6 +310,11 @@ class DatasetSchema(SchemaType):
     This is a collection of JSON Schema's within a single file.
     """
 
+    class Status(Enum):
+        "The allowed status values according to the Amsterdam schema spec"
+        beschikbaar = "beschikbaar"
+        niet_beschikbaar = "niet_beschikbaar"
+
     def __init__(
         self,
         *args: Any,
@@ -384,6 +389,14 @@ class DatasetSchema(SchemaType):
     def auth(self) -> frozenset[str]:
         """Auth of the dataset, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
+
+    @property
+    def status(self) -> DatasetSchema.Status:
+        value = self.get("status")
+        try:
+            return DatasetSchema.Status[self.get("status")]
+        except KeyError:
+            raise ParserError(f"Status field contains an unknown value: {value}")
 
     def get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
         return self.dataset_collection.get_dataset(dataset_id)

@@ -291,6 +291,7 @@ class Dataset(models.Model):
             path=path,
             version=schema.version,
             is_default_version=schema.is_default_version,
+            enable_api=cls.has_api_enabled(schema),
         )
 
     def save_path(self, path: str) -> bool:
@@ -304,9 +305,10 @@ class Dataset(models.Model):
         """Update this model with schema data"""
         self.schema_data = schema.json()
         self.auth = " ".join(schema.auth)
+        self.enable_api = Dataset.has_api_enabled(schema)
 
         if self.schema_data_changed():
-            self.save(update_fields=["schema_data", "auth", "is_default_version"])
+            self.save(update_fields=["schema_data", "auth", "is_default_version", "enable_api"])
             return True
         else:
             return False
@@ -369,6 +371,18 @@ class Dataset(models.Model):
     @cached_property
     def has_geometry_fields(self) -> bool:
         return any(table.has_geometry_fields for table in self.schema.tables)
+
+    @classmethod
+    def has_api_enabled(cls, schema: DatasetSchema) -> bool:
+        dataset_status = schema.status
+        if dataset_status == DatasetSchema.Status.beschikbaar:
+            return True
+        elif dataset_status == DatasetSchema.Status.niet_beschikbaar:
+            return False
+
+        raise ValueError(
+            f"Cannot determine whether to enable REST api based on given status: {dataset_status}"
+        )
 
     def schema_data_changed(self):
         """Check whether the schema_data attribute changed"""
