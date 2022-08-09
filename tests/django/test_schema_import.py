@@ -29,7 +29,11 @@ def test_import_schema_twice(here):
 
 @pytest.mark.django_db
 def test_import_schema_enables_and_disables_api_based_on_status(here):
-    """Prove that importing a dataset schema twice does not fail"""
+    """Prove that the enable_api flag is set at schema import time based on
+    the 'status' field of he dataset.
+        baggob has status: niet_beschikbaar
+        hr has status: bechikbaar
+    """
     hr_json_path = here / "files" / "hr.json"
     woonplaatsen_json_path = here / "files" / "woonplaatsen.json"
     args = [hr_json_path, woonplaatsen_json_path]

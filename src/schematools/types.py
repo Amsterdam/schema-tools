@@ -394,7 +394,7 @@ class DatasetSchema(SchemaType):
     def status(self) -> DatasetSchema.Status:
         value = self.get("status")
         try:
-            return DatasetSchema.Status[self.get("status")]
+            return DatasetSchema.Status[value]
         except KeyError:
             raise ParserError(f"Status field contains an unknown value: {value}")
 
