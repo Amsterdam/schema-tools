@@ -512,6 +512,7 @@ def model_factory(
             "__doc__": table_schema.description or "",
             "_dataset": dataset,
             "_table_schema": table_schema,
+            "_dataset_schema": dataset_schema,
             "_display_field": display_field,
             "_is_temporal": is_temporal,
             "CREATION_COUNTER": MODEL_CREATION_COUNTER,  # for debugging recreation
