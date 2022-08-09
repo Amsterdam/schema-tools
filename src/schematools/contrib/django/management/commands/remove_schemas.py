@@ -10,7 +10,7 @@ class Command(BaseCommand):
     """Remove Dataset objects and optionally their underlying tables."""
 
     help = "Drop the specified schemas"  # noqa: A003
-    requires_system_checks = False
+    requires_system_checks = []
 
     def add_arguments(self, parser):
         """Django hook."""

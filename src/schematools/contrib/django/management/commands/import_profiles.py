@@ -11,7 +11,7 @@ from schematools.utils import schemas_from_url
 
 class Command(BaseCommand):
     help = "Import all known profiles from Amsterdam schema files."
-    requires_system_checks = False
+    requires_system_checks = []
 
     def add_arguments(self, parser) -> None:
         parser.add_argument("profile", nargs="*", help="Local profile files to import")

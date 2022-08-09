@@ -3,15 +3,16 @@ from typing import Any, Dict, List
 from django.conf import settings
 from django.core.management import BaseCommand, CommandParser
 
-from schematools.contrib.django.datasets import get_datasets_from_files, get_datasets_from_url
-from schematools.contrib.django.faker.create import create_data_for
+from schematools.contrib.django.faker.relate import relate_datasets
+from schematools.contrib.django.schemas import get_schemas_for_url
+from schematools.utils import dataset_schema_from_path
 
 
 class Command(BaseCommand):  # noqa: D101
-    help = """Create mock data for Amsterdam schema files.
+    help = """Relate mock records.
 
-    Datasets (in DSO db) + dataset tables should already have been created,
-    usually with the `import_schemas --create-tables` mgm. command.
+    When mock data is created, the relations are filled with `null` values.
+    Using this command, the relations can be added to the records.
     """  # noqa: A003
     requires_system_checks = []
 
@@ -22,26 +23,22 @@ class Command(BaseCommand):  # noqa: D101
             default=settings.SCHEMA_URL,
             help=f"Schema URL (default: {settings.SCHEMA_URL})",
         )
-        parser.add_argument("-s", "--size", type=int, default=50, help="Number of rows")
         parser.add_argument("--sql", action="store_true", help="Generate the sql statements.")
-        parser.add_argument(
-            "--start-at", type=int, default=1, help="Starting number for sequences."
-        )
         parser.add_argument("--skip", nargs="*", default=[], help="Dataset ids to be skipped.")
         parser.add_argument(
-            "--limit-to", nargs="*", default=[], help="Dataset ids to be included exclusively."
+            "--limit_to", nargs="*", default=[], help="Dataset ids to be included exclusively."
         )
 
     def handle(self, *args: List[Any], **options: Dict[str, Any]) -> None:  # noqa: D102
+
         if options["schema"]:
-            datasets = get_datasets_from_files(list(options["schema"]))
+            schemas = [dataset_schema_from_path(filename) for filename in list(options["schema"])]
         else:
-            datasets = get_datasets_from_url(
+            schemas = get_schemas_for_url(
                 options["schema_url"], limit_to=options["limit_to"], skip=options["skip"]
             )
 
-        sql_lines = create_data_for(
-            *datasets, start_at=options["start_at"], size=options["size"], sql=options["sql"]
-        )
-        if sql_lines:
+        as_sql = options["sql"]
+        sql_lines = relate_datasets(*schemas, as_sql=as_sql)
+        if as_sql:
             self.stdout.write("\n".join(sql_lines))

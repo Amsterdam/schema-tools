@@ -11,11 +11,14 @@ as the primary aim of the ModelFactory is to generate Mock data for development 
 
 from factory.django import DjangoModelFactory
 
-from schematools.contrib.django.models import Dataset
-from schematools.types import DatasetTableSchema
-
 
 class DynamicModelMocker(DjangoModelFactory):
     """Base class to tag and detect dynamically generated model mockers."""
 
-    pass
+    @classmethod
+    def _setup_next_sequence(cls):
+        # Instead of defaulting to starting at 0, we start at > 0
+        # this is more appropriate for database keys
+        # NB This classmethod can be replaced in the dango mgm command
+        # to be able to start at a higher sequence number.
+        return 1

@@ -251,6 +251,16 @@ def afval_schema(here) -> DatasetSchema:
 
 
 @pytest.fixture
+def afvalwegingen_schema(here) -> DatasetSchema:
+    return dataset_schema_from_path(here / "files/afvalwegingen.json")
+
+
+@pytest.fixture
+def kadastraleobjecten_schema(here) -> DatasetSchema:
+    return dataset_schema_from_path(here / "files/kadastraleobjecten.json")
+
+
+@pytest.fixture
 def meetbouten_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/meetbouten.json")
 
