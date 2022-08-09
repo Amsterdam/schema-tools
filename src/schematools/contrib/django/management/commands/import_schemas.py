@@ -17,7 +17,7 @@ class Command(BaseCommand):
     import_schemas imports all schemas from $SCHEMA_URL,
     unless schema files/URLs are given as positional arguments.
     """
-    requires_system_checks = False
+    requires_system_checks = []
 
     def add_arguments(self, parser):
         parser.add_argument("schema", nargs="*", help="Local schema files to import")

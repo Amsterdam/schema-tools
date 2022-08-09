@@ -79,7 +79,8 @@ def test_model_mocker_factory_sets_model_mocker_dataset_and_table_schema_through
     # For mocks, relations will be replaced by plain `_id` fields
     assert mocked_schema_dict["schema"]["properties"]["cluster_id"] == {
         "description": "Cluster-ID",
-        "type": "string/autoincrement",
+        "faker": "nuller",
+        "type": "string",
     }
     del mocked_schema_dict["schema"]["properties"]["cluster_id"]
     del table_schema_dict["schema"]["properties"]["cluster"]

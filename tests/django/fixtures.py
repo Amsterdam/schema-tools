@@ -37,18 +37,9 @@ def profile_brk_read_id(profile_brk_read_id_schema) -> Profile:
 
 
 @pytest.fixture
-def kadastraleobjecten_schema_json(here: Path) -> Any:
-    """Fixture for kadastraleobjecten schema."""
-    path = here / "files" / "kadastraleobjecten.json"
-    return json.loads(path.read_text())
-
-
-@pytest.fixture
-def kadastraleobjecten_dataset(kadastraleobjecten_schema_json: dict) -> Dataset:
+def kadastraleobjecten_dataset(kadastraleobjecten_schema: DatasetSchema) -> Dataset:
     """Fixture for kadastraleobjecten dataset."""
-    return Dataset.objects.create(
-        name="brk", path="brk", schema_data=kadastraleobjecten_schema_json
-    )
+    return Dataset.create_for_schema(kadastraleobjecten_schema)
 
 
 @pytest.fixture
@@ -76,6 +67,12 @@ def brp_dataset(brp_schema_json: dict) -> Dataset:
 def afval_dataset(afval_schema: DatasetSchema) -> Dataset:
     """Create Afvalwegingen dataset."""
     return Dataset.create_for_schema(afval_schema)
+
+
+@pytest.fixture
+def afvalwegingen_dataset(afvalwegingen_schema: DatasetSchema) -> Dataset:
+    """Create Afvalwegingen dataset."""
+    return Dataset.create_for_schema(afvalwegingen_schema)
 
 
 @pytest.fixture

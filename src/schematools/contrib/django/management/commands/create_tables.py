@@ -11,7 +11,7 @@ from schematools.contrib.django.models import Dataset
 
 class Command(BaseCommand):
     help = "Create the tables based on the uploaded Amsterdam schema's."
-    requires_system_checks = False  # don't test URLs (which create models)
+    requires_system_checks = []  # don't test URLs (which create models)
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -32,7 +32,7 @@ def create_tables(
     allow_unmanaged: bool = False,
     base_app_name: Optional[str] = None,
     skip: Optional[List[str]] = None,
-) -> None:  # noqa:C901
+) -> None:  # noqa: C901
     """Create tables for all updated datasets.
     This is a separate function to allow easy reuse.
     """

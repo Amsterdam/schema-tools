@@ -61,7 +61,8 @@
           },
           "afvalfractie": {
             "type": "string",
-            "description": "Afvalfractie"
+            "description": "Afvalfractie",
+            "enum": ["Rest", "Glas", "Papier", "Plastic", "Textiel"]
           },
           "datum creatie": {
             "type": "string",
@@ -152,6 +153,10 @@
           "status": {
             "type": "string",
             "description": "Status"
+          },
+          "bagHoofdadresVerblijfsobject": {
+            "type": "string",
+            "relation": "baggob:verblijfsobjecten"
           }
         }
       }
@@ -260,7 +265,9 @@
           "volume": {
             "type": "number",
             "description": "Volume",
-            "unit": "m3"
+            "unit": "m3",
+            "minimum": 5,
+            "maximum": 12
           },
           "gewicht": {
             "type": "string",

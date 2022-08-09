@@ -449,6 +449,7 @@ def model_factory(
         if field.is_nested_table or field.is_temporal_range:
             continue
         # reduce amsterdam schema refs to their fragment
+        # only relevant for `/definitions/id` types atm.
         if type_.startswith(settings.SCHEMA_DEFS_URL):
             type_ = urlparse(type_).fragment
 
@@ -560,8 +561,8 @@ def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
                 del field_definition["properties"]
 
             # Add autoincrementing behaviour to the identifier fields
-            # as a hint during selection of a proper faker factory
-            field_definition["type"] = field_definition["type"] + "/autoincrement"
+            # by adding a `faker` attribute
+            field_definition["faker"] = "nuller"
 
         new_table_data["schema"]["properties"][f"{field.id}{id_post_fix}"] = field_definition
     return DatasetTableSchema(new_table_data, parent_schema=table_schema._parent_schema)
@@ -600,27 +601,10 @@ def model_mocker_factory(
         # skip nested tables and fields that are only added for temporality
         if field.is_nested_table or field.is_temporal_range:
             continue
-        # reduce amsterdam schema refs to their fragment
-        if type_.startswith(settings.SCHEMA_DEFS_URL):
-            type_ = urlparse(type_).fragment
 
-        # If, in addition to a type, a format has been defined
-        # for a field, the format will be used to look up the
-        # appropriate provider.
-        if (format_ := field.format) is not None:
-            type_ = format_
-
-        # If a faker has been defined for the field, this
-        # faker is used for the provider lookup.
-        if (faker := field.faker) is not None:
-            type_ = faker
-
-        kwargs = {"crs": table_schema.crs}
-
-        # If a field has enums, those are used during mock generation.
-        if (elements := field.get("enum")) is not None:
-            kwargs["elements"] = elements
-        fields[field.python_name] = get_field_factory(type_, **kwargs)
+        # Generate name, fix if needed.
+        field_name = to_snake_case(field.name)
+        fields[field_name] = get_field_factory(field)
 
     # Generate Meta part
     meta_cls = type(
@@ -629,12 +613,18 @@ def model_mocker_factory(
         {"model": f"{app_label}.{stripped_table_schema.model_name()}", "database": "default"},
     )
 
+    # The `Params` class in an inner class on the mocker,
+    # it is needed during lazy evaluation, to provide schema information
+    # during the mocking process.
+    params_cls = type("Params", (), {"table_schema": table_schema})
+
     model_mocker_class = type(
         f"{stripped_table_schema.model_name()}".capitalize(),
         (DynamicModelMocker,),
         {
             **fields,
             "Meta": meta_cls,
+            "Params": params_cls,
             "__module__": "schematools.contrib.django.factories",
         },
     )

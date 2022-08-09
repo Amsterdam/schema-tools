@@ -768,7 +768,7 @@ class DatasetTableSchema(SchemaType):
 
     @property
     def crs(self) -> str:
-        return self._parent_schema.get("crs")
+        return self.get("crs") or self._parent_schema.get("crs")
 
     @property
     def dataset(self) -> DatasetSchema:
@@ -1252,7 +1252,15 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def faker(self) -> str | None:
-        return self.get("faker")
+        """Return faker name and properties used for mocking data."""
+        faker = self.get("faker")
+        if faker is None:
+            return None
+        if isinstance(faker, str):
+            return Faker(name=faker)
+        else:
+            name = faker.pop("name")
+            return Faker(name=name, properties=faker)
 
     @property
     def required(self) -> bool:
@@ -1983,7 +1991,7 @@ class Temporal:
 
 
 def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
-    """Make sure the auth field has a consistent type"""
+    """Make sure the auth field has a consistent type."""
     if not auth:
         # No auth implies OPENBAAR.
         return frozenset({_PUBLIC_SCOPE})
@@ -1993,3 +2001,11 @@ def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
     else:
         # Normalize single scope to set return type too.
         return frozenset({auth})
+
+
+@dataclass
+class Faker:
+    """Name and properties that can be used for mock data."""
+
+    name: str
+    properties: dict[str, Any] = field(default_factory=dict)

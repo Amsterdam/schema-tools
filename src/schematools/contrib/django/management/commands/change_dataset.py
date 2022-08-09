@@ -18,7 +18,7 @@ def _strtobool(value: str) -> bool:
 
 class Command(BaseCommand):  # noqa: D101
     help = "Modify the settings for a dataset."  # noqa: A003
-    requires_system_checks = False
+    requires_system_checks = []
     setting_options = (
         "auth",
         "enable_api",

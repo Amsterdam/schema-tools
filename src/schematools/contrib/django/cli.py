@@ -6,8 +6,14 @@ from django.conf import settings
 
 env = environ.Env()
 
+db_url = env.db_url("DATABASE_URL")
+# Django needs an explicit `postgis` engine, however,
+# using `postgis` in the DSN is not supported by SQLAlchemy.
+db_url["ENGINE"] = "django.contrib.gis.db.backends.postgis"
+
+
 settings.configure(
-    DATABASES={"default": env.db_url("DATABASE_URL")},
+    DATABASES={"default": db_url},
     DEBUG=True,
     INSTALLED_APPS=["schematools.contrib.django"],
     SCHEMA_URL=env.str("SCHEMA_URL"),
@@ -17,7 +23,7 @@ settings.configure(
 django.setup()
 
 
-def main():
+def main() -> None:  # noqa: D103
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
