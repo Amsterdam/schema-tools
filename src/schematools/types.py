@@ -5,13 +5,11 @@ import copy
 import json
 import logging
 import re
-import warnings
 from collections import UserDict
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, total_ordering
 from json import JSONEncoder
-from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -274,7 +272,7 @@ class SchemaType(UserDict):
     def __missing__(self, key: str) -> NoReturn:
         raise KeyError(f"No field named '{key}' exists in {self!r}")
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return id(self)  # allow usage in lru_cache()
 
     @property
@@ -338,7 +336,7 @@ class DatasetSchema(SchemaType):
             )
         self.dataset_collection.add_dataset(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self['id']}>"
 
     @classmethod
@@ -656,7 +654,6 @@ class DatasetSchema(SchemaType):
                     # Originally, the spec for the relation is based on singular key.
                     # When the relation has a composite key,
                     # the spec needs to be expanded into an object.
-                    sub_table_schema = cast(Dict[str, Any], sub_table_schema)
                     spec = sub_table_schema["schema"]["properties"][relation_field_id]
                     spec["type"] = "object"
                     spec["properties"] = {
@@ -1325,10 +1322,11 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def crs(self) -> str | None:
-        if self.is_geo:
-            if self.table:
-                return self.get("crs") or self.table.get("crs") or self.table.dataset.get("crs")
-            return self.get("crs")
+        if not self.is_geo:
+            return None
+        if self.table:
+            return self.get("crs") or self.table.get("crs") or self.table.dataset.get("crs")
+        return self.get("crs")
 
     @property
     def provenance(self) -> str | None:
