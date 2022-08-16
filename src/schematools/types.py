@@ -5,13 +5,11 @@ import copy
 import json
 import logging
 import re
-import warnings
 from collections import UserDict
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, total_ordering
 from json import JSONEncoder
-from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -274,7 +272,7 @@ class SchemaType(UserDict):
     def __missing__(self, key: str) -> NoReturn:
         raise KeyError(f"No field named '{key}' exists in {self!r}")
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return id(self)  # allow usage in lru_cache()
 
     @property
@@ -311,7 +309,8 @@ class DatasetSchema(SchemaType):
     """
 
     class Status(Enum):
-        "The allowed status values according to the Amsterdam schema spec"
+        """The allowed status values according to the Amsterdam schema spec."""
+
         beschikbaar = "beschikbaar"
         niet_beschikbaar = "niet_beschikbaar"
 
@@ -322,7 +321,7 @@ class DatasetSchema(SchemaType):
     ) -> None:
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
-        about the related datasets
+        about the related datasets.
         """
         super().__init__(*args, **kwargs)
         self.dataset_collection = DatasetCollection()
@@ -338,12 +337,12 @@ class DatasetSchema(SchemaType):
             )
         self.dataset_collection.add_dataset(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self['id']}>"
 
     @classmethod
     def from_dict(cls, obj: dict[str, Any]) -> DatasetSchema:
-        """Parses given dict and validates the given schema"""
+        """Parses given dict and validates the given schema."""
         if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
             raise ValueError("Invalid Amsterdam Dataset schema file")
 
@@ -356,7 +355,7 @@ class DatasetSchema(SchemaType):
 
     @property
     def description(self) -> str | None:
-        """Description of the dataset (if set)"""
+        """Description of the dataset (if set)."""
         return self.get("description")
 
     @property
@@ -366,17 +365,17 @@ class DatasetSchema(SchemaType):
 
     @property
     def identifier(self) -> str:
-        """Which fields acts as identifier. (default is Django "pk" field)"""
+        """Which fields acts as identifier. (default is Django "pk" field)."""
         return self.get("identifier", "pk")
 
     @property
     def version(self) -> str:
-        """Dataset Schema Version"""
+        """Dataset Schema version."""
         return self.get("version", None)
 
     @property
     def default_version(self) -> str:
-        """Default version for this schema"""
+        """Default version for this schema."""
         return self.get("default_version", self.version)
 
     @property
@@ -403,7 +402,7 @@ class DatasetSchema(SchemaType):
 
     @property
     def tables(self) -> list[DatasetTableSchema]:
-        """Access the tables within the file"""
+        """Access the tables within the file."""
         tables: list[DatasetTableSchema] = []
         for tv in self["tables"]:
             if isinstance(tv, TableVersions):
@@ -423,7 +422,7 @@ class DatasetSchema(SchemaType):
         include_nested: bool = False,
         include_through: bool = False,
     ) -> list[DatasetTableSchema]:
-        """List tables, including nested"""
+        """List tables, including nested."""
         tables = self.tables
         if include_nested:
             tables += self.nested_tables
@@ -656,7 +655,6 @@ class DatasetSchema(SchemaType):
                     # Originally, the spec for the relation is based on singular key.
                     # When the relation has a composite key,
                     # the spec needs to be expanded into an object.
-                    sub_table_schema = cast(Dict[str, Any], sub_table_schema)
                     spec = sub_table_schema["schema"]["properties"][relation_field_id]
                     spec["type"] = "object"
                     spec["properties"] = {
@@ -988,7 +986,7 @@ class DatasetTableSchema(SchemaType):
 
     @property
     def is_nested_table(self) -> bool:
-        """Indicates if table is an nested table"""
+        """Indicates if table is a nested table."""
         return self.nested_table
 
     @cached_property
@@ -1325,14 +1323,16 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def crs(self) -> str | None:
-        if self.is_geo:
-            if self.table:
-                return self.get("crs") or self.table.get("crs") or self.table.dataset.get("crs")
-            return self.get("crs")
+        """CRS for this field, or None if not a geo field."""
+        if not self.is_geo:
+            return None
+        if self.table:
+            return self.get("crs") or self.table.get("crs") or self.table.dataset.get("crs")
+        return self.get("crs")
 
     @property
     def provenance(self) -> str | None:
-        """Get the provenance info, if available, or None"""
+        """Get the provenance info, if available, or None."""
         return self.get("provenance")
 
     @property
@@ -1442,30 +1442,22 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def is_array(self) -> bool:
-        """
-        Checks if field is an array field
-        """
+        """Checks if field is an array field."""
         return self.get("type") == "array"
 
     @property
     def is_array_of_objects(self) -> bool:
-        """
-        Checks if field is an array of objects
-        """
+        """Checks if field is an array of objects."""
         return self.is_array and self.get("items", {}).get("type") == "object"
 
     @property
     def is_array_of_scalars(self) -> bool:
-        """
-        Checks if field is an array of scalars
-        """
+        """Checks if field is an array of scalars."""
         return self.is_array and self.get("items", {}).get("type") != "object"
 
     @property
     def is_nested_table(self) -> bool:
-        """
-        Checks if field is a possible nested table.
-        """
+        """Checks if field is a possible nested table."""
         return self.is_array_of_objects and self.nm_relation is None
 
     @property
@@ -1581,7 +1573,7 @@ class AdditionalRelationSchema(DatasetType):
 
     @property
     def relation(self) -> str:
-        """Provide the relation identifier"""
+        """Relation identifier."""
         # Currently generated, will change in schema later
         return f"{self._parent_table.dataset.id}:{self['table']}:{self['field']}"
 
@@ -1652,6 +1644,7 @@ class PermissionLevel(Enum):
 @dataclass(order=True)
 class Permission:
     """The result of an authorisation check.
+
     The extra fields in this dataclass are mainly provided for debugging purposes.
     The dataclass can also be ordered; they get sorted by access level.
     """
@@ -1834,6 +1827,7 @@ class ProfileTableSchema(DatasetType):
     @cached_property
     def fields(self) -> dict[str, Permission]:
         """The fields with their granted permission level.
+
         This can be "read" or things like "letters:3".
         """
         source_table = (
@@ -1848,7 +1842,8 @@ class ProfileTableSchema(DatasetType):
     @property
     def mandatory_filtersets(self) -> list[list[str]]:
         """Tell whether the listing can only be requested with certain inputs.
-        E.g. an API user may only list data when they supply the lastname + birthdate.
+
+        E.g., an API user may only list data when they supply the lastname + birthdate.
 
         Example value::
 
@@ -1862,6 +1857,7 @@ class ProfileTableSchema(DatasetType):
 
 class TemporalDimensionFields(NamedTuple):
     """A tuple that describes the start field and end field of a range.
+
     This could be something like ``("beginGeldigheid", "eindGeldigheid")``.
     """
 
@@ -1872,6 +1868,7 @@ class TemporalDimensionFields(NamedTuple):
 @dataclass
 class Temporal:
     """The temporal property of a Table.
+
     Describes validity of objects for tables where
     different versions of objects are valid over time.
 
