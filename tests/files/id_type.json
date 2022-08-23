@@ -1,0 +1,42 @@
+{
+  "id": "idtype",
+  "type": "dataset",
+  "description": "Dataset with an identifier field that is not integer or string",
+  "license": "public",
+  "status": "niet_beschikbaar",
+  "version": "1.2.3",
+  "publisher": "us",
+  "owner": "us",
+  "authorizationGrantor": "us",
+  "crs": "EPSG:28992",
+  "tables": [
+    {
+      "id": "base",
+      "type": "table",
+      "title": "Base",
+      "version": "1.2.4",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "identifier": [
+          "uniqid"
+        ],
+        "required": [
+          "schema",
+          "uniqid"
+        ],
+        "display": "uniqid",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "uniqid": {
+            "type": "number",
+            "description": "A number can be a float"
+          }
+        }
+      }
+    }
+  ]
+}
