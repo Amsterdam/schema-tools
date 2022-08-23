@@ -162,6 +162,22 @@ def _id_auth(dataset: DatasetSchema) -> Iterator[str]:
                 yield f"{ident!r} listed in identifier list {table.identifier}, but: {e}"
 
 
+@_register_validator("Identifier field with the wrong type")
+def _id_type(dataset: DatasetSchema) -> Iterator[str]:
+    """Identifier fields should have type integer or string."""
+    for table in dataset.tables:
+        for ident in table.identifier:
+            try:
+                field = table.get_field_by_id(ident)
+                if field.type not in ["integer", "string"]:
+                    yield (
+                        f"identifier field {ident!r} should be a string or integer,"
+                        f" is {field.type!r}"
+                    )
+            except SchemaObjectNotFound as e:
+                yield f"{ident!r} listed in identifier list {table.identifier}, but: {e}"
+
+
 @_register_validator("PostgreSQL identifier length")
 def _postgres_identifier_length(dataset: DatasetSchema) -> Iterator[str]:
     """Validate inferred PostgreSQL table names for not exceeding max length.
@@ -220,10 +236,7 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
             # explicitly.
             remove_id_suffix = cast(Callable[[str], str], partial(re.sub, r"(.+)Id", r"\1"))
             derived_fields = tuple(
-                map(
-                    lambda f: DerivedField(original=remove_id_suffix(f), derived=f),
-                    missing_fields,
-                )
+                DerivedField(original=remove_id_suffix(f), derived=f) for f in missing_fields
             )
             for df in derived_fields:
                 if df.original in table_fields:

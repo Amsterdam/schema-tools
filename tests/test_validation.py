@@ -39,7 +39,7 @@ def test_camelcase() -> None:
 
 
 def test_id_auth(here: Path) -> None:
-    dataset = dataset_schema_from_path(here / "files/id_auth.json")
+    dataset = dataset_schema_from_path(here / "files" / "id_auth.json")
 
     errors = validation.run(dataset)
 
@@ -47,6 +47,20 @@ def test_id_auth(here: Path) -> None:
     assert error
     assert error.validator_name == "Auth on identifier field"
     assert """auth on field 'id'""" in error.message
+
+    assert list(errors) == []
+
+
+def test_id_type(here: Path) -> None:
+    dataset = dataset_schema_from_path(here / "files" / "id_type.json")
+
+    errors = validation.run(dataset)
+
+    error = next(errors)
+    assert error
+    assert error.validator_name == "Identifier field with the wrong type"
+    assert """field 'uniqid'""" in error.message
+    assert """'number'""" in error.message
 
     assert list(errors) == []
 
