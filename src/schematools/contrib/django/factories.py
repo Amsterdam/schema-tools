@@ -14,7 +14,6 @@ from schematools.contrib.django import app_config, signals
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 from schematools.utils import get_rel_table_identifier, to_snake_case
 
-from .faker import get_field_factory
 from .mockers import DynamicModelMocker
 from .models import (
     FORMAT_MODELS_LOOKUP,
@@ -571,6 +570,10 @@ def model_mocker_factory(
     dataset: Dataset, table_schema: DatasetTableSchema, base_app_name: Optional[str] = None
 ) -> Type[DynamicModelMocker]:
     """Generate a Django model mocker class from a JSON Schema definition."""
+    # delayed import so Faker/shapely etc are not loaded for every application,
+    # but only when mocker functionality is used.
+    from .faker import get_field_factory
+
     dataset_schema = dataset.schema
     app_label = f"{dataset_schema.id}"
     base_app_name = base_app_name or "dso_api.dynamic_api"
