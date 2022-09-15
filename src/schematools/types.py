@@ -1492,11 +1492,10 @@ class DatasetFieldSchema(DatasetType):
         """Determine if relation is loose or not."""
         related_table = self.related_table
 
-        # Short-circuit for non-temporal or on-the-fly (through or nested) schemas
+        # Short-circuit for on-the-fly (through or nested) schemas.
         # NOTE: this logic also breaks testing for loose relations on through tables!
         if (
             related_table is None
-            or not related_table.is_temporal
             or self._parent_table.is_through_table
             or self._parent_table.is_nested_table
         ):
@@ -1511,7 +1510,10 @@ class DatasetFieldSchema(DatasetType):
         # Determine fieldnames used for temporal
         # Table identifier is mandatory and always contains at least one field
         identifier_field = related_table.get_field_by_id(related_table.identifier[0])
-        sequence_field = related_table.get_field_by_id(related_table.temporal.identifier)
+        if related_table.is_temporal:
+            sequence_field = related_table.get_field_by_id(related_table.temporal.identifier)
+        else:
+            sequence_field = related_table.get_field_by_id(related_table.identifier[0])
 
         if self.is_array_of_objects:
             properties = self.field_items["properties"]
