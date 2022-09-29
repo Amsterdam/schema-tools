@@ -45,16 +45,6 @@ repos:
       - id: trailing-whitespace  # trims trailing whitespace
         args: [--markdown-linebreak-ext=md]
       - id: check-docstring-first  # Checks a common error of defining a docstring after code
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.942
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - types-requests
-          - types-cachetools
-          - types-Deprecated
-          - types-click
-          - types-python-dateutil
   -   repo: https://github.com/pre-commit/pygrep-hooks
       rev: v1.9.0  # Use the ref you want to point at
       hooks:

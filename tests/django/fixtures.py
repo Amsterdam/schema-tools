@@ -8,9 +8,6 @@ from schematools.contrib.django.factories import remove_dynamic_models
 from schematools.contrib.django.models import Dataset, Profile
 from schematools.types import DatasetSchema, ProfileSchema
 
-# Pytest decorators are untyped
-# mypy: allow-untyped-decorators
-
 
 @pytest.fixture(autouse=True)
 def _remove_dynamic_models():

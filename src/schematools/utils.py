@@ -6,11 +6,10 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Final, Match, Pattern, cast
+from typing import TYPE_CHECKING, Dict, Final, Match, Pattern, cast
 
 import requests
 from cachetools.func import ttl_cache
-from deprecated import deprecated
 from more_ds.network.url import URL
 from more_itertools import last
 from string_utils import slugify
