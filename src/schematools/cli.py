@@ -5,7 +5,7 @@ import logging
 import sys
 from collections import defaultdict
 from pathlib import PosixPath
-from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Tuple
+from typing import Any, DefaultDict, Iterable, List
 
 import click
 import jsonschema
@@ -302,7 +302,7 @@ def permissions_apply(
         )
 
 
-def _schema_fetch_url_file(schema_url_file: URL | str) -> dict[str, Any]:
+def _schema_fetch_url_file(schema_url_file: str) -> dict[str, Any]:
     """Return schemadata from URL or File."""
     # XXX Does not work with datasets that have their tables split
     # out into separate files. Should use _get_dataset_schema instead.
@@ -315,7 +315,7 @@ def _schema_fetch_url_file(schema_url_file: URL | str) -> dict[str, Any]:
         response.raise_for_status()
         schema_data = response.json()
 
-    return cast(Dict[str, Any], schema_data)
+    return schema_data
 
 
 @schema.group()

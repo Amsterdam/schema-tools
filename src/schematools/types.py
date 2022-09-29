@@ -919,7 +919,7 @@ class DatasetTableSchema(SchemaType):
         # Convert identifier to a list, to be backwards compatible with older schemas
         if not isinstance(identifier, list):
             identifier = [identifier]
-        return cast(list, identifier)  # mypy pleaser
+        return identifier
 
     @property
     def is_autoincrement(self) -> bool:
@@ -931,10 +931,6 @@ class DatasetTableSchema(SchemaType):
     @property
     def has_composite_key(self) -> bool:
         """Tell whether the table uses multiple attributes together as it's identifier."""
-        # Mypy bug that has been resolved but not merged
-        # https://github.com/python/mypy/issues/9907
-        if isinstance(self.identifier, str):  # type: ignore[unreachable]
-            return False  # type: ignore[unreachable]
         return len(self.identifier) > 1
 
     def validate(self, row: Json) -> None:
