@@ -28,7 +28,7 @@ class SchemaLoader:
         """Gets a dataset for dataset_id."""
         raise NotImplementedError
 
-    def get_all_datasets(self) -> dict[str, DatasetSchema]:
+    def get_all_datasets(self) -> list[DatasetSchema]:
         """Gets all datasets from the schema_url location."""
         raise NotImplementedError
 
@@ -49,11 +49,11 @@ class FileSystemSchemaLoader(SchemaLoader):
         except FileNotFoundError as e:
             raise DatasetNotFound(f"Dataset `{dataset_id}` not found.") from e
 
-    def get_all_datasets(self) -> dict[str, DatasetSchema]:
+    def get_all_datasets(self) -> list[DatasetSchema]:
         """Gets all datasets from the filesystem based on the `self.schema_url` path."""
         from schematools.utils import dataset_schemas_from_schemas_path
 
-        return dataset_schemas_from_schemas_path(self.schema_url)
+        return list(dataset_schemas_from_schemas_path(self.schema_url))
 
 
 class URLSchemaLoader(SchemaLoader):
@@ -70,8 +70,8 @@ class URLSchemaLoader(SchemaLoader):
         except KeyError:
             raise DatasetNotFound(f"Dataset `{dataset_id}` not found.") from None
 
-    def get_all_datasets(self) -> dict[str, DatasetSchema]:
+    def get_all_datasets(self) -> list[DatasetSchema]:
         """Gets all datasets from a web url based on the `self.schema_url` path."""
         from schematools.utils import dataset_schemas_from_url
 
-        return dataset_schemas_from_url(self.schema_url)  # type: ignore[no-any-return]
+        return dataset_schemas_from_url(self.schema_url)

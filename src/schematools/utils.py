@@ -6,7 +6,7 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Final, Match, Pattern, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, Iterable, Match, Pattern, cast
 
 import requests
 from cachetools.func import ttl_cache
@@ -32,7 +32,7 @@ def dataset_schemas_from_url(
     schemas_url: URL | str,
     dataset_name: str | None = None,
     prefetch_related: bool = False,
-) -> dict[str, types.DatasetSchema]:
+) -> list[types.DatasetSchema]:
     """Fetch all dataset schemas from a remote file (or single dataset if specified).
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
@@ -44,9 +44,9 @@ def dataset_schemas_from_url(
             dataset_id=dataset_name,
             prefetch_related=prefetch_related,
         )
-        return {dataset_name: schema}
+        return [schema]
 
-    return schemas_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
+    return _schemas_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
 
 
 def dataset_schema_from_url(
@@ -63,12 +63,12 @@ def dataset_schema_from_url(
     )
 
 
-def profile_schemas_from_url(profiles_url: URL | str) -> dict[str, types.ProfileSchema]:
+def profile_schemas_from_url(profiles_url: URL | str) -> list[types.ProfileSchema]:
     """Fetch all profile schemas from a remote file.
 
     The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
     """
-    return schemas_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
+    return list(_schemas_from_url(base_url=profiles_url, data_type=types.ProfileSchema))
 
 
 def dataset_paths_from_url(base_url: URL | str) -> dict[str, str]:
@@ -84,12 +84,11 @@ def dataset_paths_from_url(base_url: URL | str) -> dict[str, str]:
         return cast(Dict[str, str], response.json())
 
 
-def schemas_from_url(base_url: URL | str, data_type: type[types.ST]) -> dict[str, types.ST]:
+def _schemas_from_url(base_url: URL | str, data_type: type[types.ST]) -> Iterable[types.ST]:
     """Fetch all schema definitions from a remote file.
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup: dict[str, types.ST] = {}
     base_url = URL(base_url)
 
     with requests.Session() as connection:
@@ -100,10 +99,10 @@ def schemas_from_url(base_url: URL | str, data_type: type[types.ST]) -> dict[str
         for i, schema_id in enumerate(response_data):
             schema_path = response_data[schema_id]
             logger.debug("Looking up dataset %3d of %d: %s.", i, len(response_data), schema_id)
-            schema_lookup[schema_id] = _schema_from_url_with_connection(
-                connection, base_url, schema_path, data_type
-            )
-    return schema_lookup
+            schema = _schema_from_url_with_connection(connection, base_url, schema_path, data_type)
+            if schema.id != schema_id:
+                raise ValueError(f"expected schema with id {schema_id!r}, got {schema.id!r}")
+            yield schema
 
 
 def schema_from_url(
@@ -244,21 +243,18 @@ def dataset_schema_from_id_and_schemas_path(
     return dataset_schema
 
 
-def dataset_schemas_from_schemas_path(schemas_path: Path | str) -> dict[str, types.DatasetSchema]:
+def dataset_schemas_from_schemas_path(schemas_path: Path | str) -> Iterable[types.DatasetSchema]:
     """Read all datasets from the schemas_path.
 
     Args:
         schemas_path: Path to the filesystem location with the dataset schemas.
     """
-    schema_lookup: dict[str, types.DatasetSchema] = {}
     for root, _, files in os.walk(schemas_path):
         if "dataset.json" in files:
             root_path = Path(root)
             # fetch the id for the dataset in some way
             schema_path = root_path.joinpath("dataset.json")
-            dataset_schema: types.DatasetSchema = dataset_schema_from_path(schema_path)
-            schema_lookup[dataset_schema.id] = dataset_schema
-    return schema_lookup
+            yield dataset_schema_from_path(schema_path)
 
 
 def profile_schema_from_file(filename: Path | str) -> dict[str, types.ProfileSchema]:

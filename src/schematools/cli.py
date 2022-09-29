@@ -5,7 +5,7 @@ import logging
 import sys
 from collections import defaultdict
 from pathlib import PosixPath
-from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Tuple
+from typing import Any, DefaultDict, Dict, Iterable, List
 
 import click
 import jsonschema
@@ -611,7 +611,7 @@ def _get_dataset_schema(
         raise click.ClickException(str(e))
 
 
-def _get_all_dataset_schemas(schema_url: str) -> dict[str, DatasetSchema]:
+def _get_all_dataset_schemas(schema_url: str) -> list[DatasetSchema]:
     """Find all the dataset schemas for the given schema_url.
 
     Args:
@@ -697,13 +697,11 @@ def create_all_objects(
         click.echo("No 'dataset_id' provided. Processing all datasets!")
         dataset_schemas = _get_all_dataset_schemas(schema_url)
     else:
-        dataset_schemas = {
-            dataset_id: _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
-        }
+        dataset_schemas = [_get_dataset_schema(dataset_id, schema_url, prefetch_related=True)]
 
     engine = _get_engine(db_url)
-    for dataset_id, dataset_schema in dataset_schemas.items():
-        if dataset_id in exclude:
+    for dataset_schema in dataset_schemas:
+        if dataset_schema.id in exclude:
             msg = f"Skipping dataset {dataset_id!r}"
             click.echo(msg)
             click.echo("=" * len(msg))

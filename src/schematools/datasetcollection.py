@@ -62,7 +62,7 @@ class DatasetCollection(metaclass=Singleton):
             self.add_dataset(dataset)
             return dataset
 
-    def get_all_datasets(self) -> dict[str, DatasetSchema]:
+    def get_all_datasets(self) -> list[DatasetSchema]:
         """Gets all the datasets using the configured schema loader."""
         return self.schema_loader.get_all_datasets()
 
@@ -75,7 +75,6 @@ def set_schema_loader(schema_url: URL | str) -> None:
         can be a web url, or a filesystem path.
     """
     dataset_collection = DatasetCollection()
-    loader: loaders.SchemaLoader | None = None  # pleasing mypy
     if urlparse(schema_url).scheme in ("http", "https"):
         loader = loaders.URLSchemaLoader(schema_url)
     else:
