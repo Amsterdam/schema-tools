@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from collections import defaultdict
 from pathlib import PosixPath
@@ -18,7 +19,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateTable
 
-from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL, validation
+from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL, ckan, validation
 from schematools.datasetcollection import DatasetCollection, set_schema_loader
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
@@ -450,6 +451,61 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
             for err_msg in error_messages:
                 click.echo(f"{schema_file:>{width}}: {err_msg}")
         sys.exit(1)
+
+
+@schema.command("ckan")
+@option_schema_url
+@click.option(
+    "--upload-url",
+    "-u",
+    default=None,
+    help="URL for uploading, e.g., https://data.overheid.nl/data/ (none to print to stdout)",
+)
+def to_ckan(schema_url: str, upload_url: str):
+    """Convert all schemas to CKAN format, and optionally upload them.
+
+    The API key for CKAN is taken from the environment variable CKAN_API_KEY.
+    """
+    api_key = os.getenv("CKAN_API_KEY")
+    if upload_url is not None and api_key is None:
+        click.echo("CKAN_API_KEY not set in environment", err=True)
+        exit(1)
+
+    status = 0
+
+    datasets = _get_all_dataset_schemas(schema_url).values()
+
+    data = []
+    for ds in datasets:
+        try:
+            data.append(ckan.from_dataset(ds))
+        except Exception as e:
+            logger.error("in dataset %s: %s", ds.identifier, str(e))
+            status = 1
+
+    if upload_url is None:
+        for ds in data:
+            print(ds)
+        exit(0)
+
+    headers = {"Authorization": api_key}
+    for ds in data:
+        ident = ds["identifier"]
+        url = f"{upload_url}/api/3/action/package_update?id={ident}"
+        response = requests.post(url, headers=headers, json=ds)
+        logger.debug("%s: %d, %s", url, response.status_code, response.json())
+
+        if response.status_code == 404:
+            # 404 *can* mean no such dataset. Try again with package_create.
+            url = upload_url + "/api/3/action/package_create"
+            response = requests.post(url, headers=headers, json=ds)
+            logger.debug("%s: %d, %s", url, response.status_code, response.json())
+
+        if not (200 <= response.status_code < 300):
+            logger.error("uploading %s: %s", ident, response.json())
+            status = 1
+
+    exit(status)
 
 
 @show.command("provenance")
