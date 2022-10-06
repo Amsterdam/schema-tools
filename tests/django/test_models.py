@@ -131,22 +131,16 @@ def test_model_factory_sub_objects_for_shortened_names(verblijfsobjecten_dataset
 
     # XXX Change: one field is now nested, the other is changed to a relation
     # Check a relation where the fieldname is intact and one where fieldname is shortened
-    fields_dict = {
-        f.name: f
-        for f in model_dict[
-            "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_maatschappelijke_activiteit"
-        ]._meta.fields
-    }
+    model = model_dict[
+        "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_maatschappelijke_activiteit"
+    ]
+    fields_dict = {f.name: f for f in model._meta.fields}
 
     # Field is nested, should have a parent field
     assert isinstance(fields_dict["parent"], models.ForeignKey)
 
-    fields_dict = {
-        f.name: f
-        for f in model_dict[
-            "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"
-        ]._meta.fields
-    }
+    model = model_dict["maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"]
+    fields_dict = {f.name: f for f in model._meta.fields}
 
     # Field is a related, should have 2 FKs to both sides of the relation
     assert isinstance(fields_dict["activiteiten"], models.ForeignKey)
@@ -294,13 +288,8 @@ def test_column_shortnames_in_nm_throughtables(verblijfsobjecten_dataset, hr_dat
     }
 
     db_colnames = {"activiteiten_id", "sbi_voor_activiteit_id"}
-    assert db_colnames == {
-        f.db_column
-        for f in model_dict[
-            "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"
-        ]._meta.fields
-        if f.db_column is not None
-    }
+    model = model_dict["maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"]
+    assert db_colnames == {f.db_column for f in model._meta.fields if f.db_column is not None}
 
 
 @pytest.mark.django_db
@@ -351,6 +340,9 @@ def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_da
 
     with pytest.raises(
         IntegrityError,
-        match=r'^new row for relation "parkeervakken_parkeervakken" violates check constraint "parkeervakken_parkeervakken_id_not_contains_slash".*',
+        match=(
+            r'^new row for relation "parkeervakken_parkeervakken" violates'
+            r' check constraint "parkeervakken_parkeervakken_id_not_contains_slash".*'
+        ),
     ):
         model.objects.create(id="forbidden/slash")

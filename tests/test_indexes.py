@@ -48,7 +48,7 @@ def test_index_creation(engine, db_schema):
     data = test_data
     parent_schema = SchemaType(data)
     dataset_schema = DatasetSchema(parent_schema)
-    ind_index_exists = False
+    index_names = set()
 
     for table in data["tables"]:
         importer = BaseImporter(dataset_schema, engine)
@@ -62,13 +62,9 @@ def test_index_creation(engine, db_schema):
         indexes = metadata_inspector.get_indexes(
             f"{parent_schema['id']}_{table.default['id']}", schema=None
         )
-        indexes_name = []
+        index_names.update(index["name"] for index in indexes)
 
-        for index in indexes:
-            indexes_name.append(index["name"])
-        if any("identifier_idx" in i for i in indexes_name):
-            ind_index_exists = True
-        assert ind_index_exists
+    assert index_names == {"test_test_identifier_idx", "idx_test_test_geometry"}
 
 
 def test_index_troughtables_creation(engine, db_schema):
@@ -168,7 +164,7 @@ def test_index_troughtables_creation(engine, db_schema):
     data = test_data
     parent_schema = SchemaType(data)
     dataset_schema = DatasetSchema(parent_schema)
-    indexes_name = []
+    indexes_names = set()
 
     for table in data["tables"]:
 
@@ -191,13 +187,14 @@ def test_index_troughtables_creation(engine, db_schema):
             meta_data.reflect()
             metadata_inspector = inspect(meta_data.bind)
             indexes = metadata_inspector.get_indexes(table.db_name(), schema=None)
-            for index in indexes:
-                indexes_name.append(index["name"])
+            indexes_names.update(index["name"] for index in indexes)
 
-    number_of_indexes = len(indexes_name)
-
-    # Many-to-many tables must have at least one index
-    assert number_of_indexes > 0
+    assert indexes_names == {
+        "public.test_test_1_heeft_onderzoeken_heeft_onderzoeken_id_idx",
+        "public.test_test_1_heeft_onderzoeken_test_1_id_idx",
+        "public.test_test_1_some_random_name_some_random_name_id_idx",
+        "public.test_test_1_some_random_name_test_1_id_idx",
+    }
 
 
 def test_fk_index_creation(engine, db_schema):
@@ -262,31 +259,25 @@ def test_fk_index_creation(engine, db_schema):
     data = test_data
     parent_schema = SchemaType(data)
     dataset_schema = DatasetSchema(parent_schema)
-    ind_index_exists = False
 
-    for table in data["tables"]:
-        if table.default["id"] == "child_test":
+    table = next(table for table in data["tables"] if table.default["id"] == "child_test")
 
-            importer = BaseImporter(dataset_schema, engine)
-            # the generate_table and create index
-            importer.generate_db_objects(
-                table.default["id"], ind_tables=True, ind_extra_index=True
-            )
+    importer = BaseImporter(dataset_schema, engine)
+    # the generate_table and create index
+    importer.generate_db_objects(table.default["id"], ind_tables=True, ind_extra_index=True)
 
-            conn = create_engine(engine.url, client_encoding="UTF-8")
-            meta_data = MetaData(bind=conn)
-            meta_data.reflect()
-            metadata_inspector = inspect(meta_data.bind)
-            indexes = metadata_inspector.get_indexes(
-                f"{parent_schema['id']}_{table.default['id']}", schema=None
-            )
-            indexes_name = []
-
-            for index in indexes:
-                indexes_name.append(index["name"])
-            if any("fk_column_reference" in i for i in indexes_name):
-                ind_index_exists = True
-            assert ind_index_exists
+    conn = create_engine(engine.url, client_encoding="UTF-8")
+    meta_data = MetaData(bind=conn)
+    meta_data.reflect()
+    metadata_inspector = inspect(meta_data.bind)
+    indexes = metadata_inspector.get_indexes(
+        f"{parent_schema['id']}_{table.default['id']}", schema=None
+    )
+    indexes_name = {index["name"] for index in indexes}
+    assert indexes_name == {
+        "test_child_test_identifier_idx",
+        "test_child_test_fk_column_reference_id_idx",
+    }
 
 
 def test_size_of_index_name(engine, db_schema):
@@ -395,9 +386,5 @@ def test_index_creation_db_schema2(engine, stadsdelen_schema):
     indexes = metadata_inspector.get_indexes(
         f"{parent_schema['id']}_stadsdelen", schema="schema_foo_bar"
     )
-    indexes_name = []
-    for index in indexes:
-        indexes_name.append(index["name"])
-    if any("identifier_idx" in i for i in indexes_name):
-        ind_index_exists = True
-    assert ind_index_exists
+    index_names = {index["name"] for index in indexes}
+    assert index_names == {"gebieden_stadsdelen_identifier_idx"}
