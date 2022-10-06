@@ -241,7 +241,7 @@ def test_generate_db_objects_is_versioned_dataset(
         assert engine.scalar(VIEW_EXISTS, schema_name="public", view_name=view_name)
 
 
-def test_create_table_temp_name(engine, woningbouwplannen_schema, gebieden_schema):
+def test_create_table_temp_name(engine, db_schema, woningbouwplannen_schema, gebieden_schema):
     """Prove that a table is created in DB schema with the temporary name
     as definied in a dictionary."""
     importer = BaseImporter(woningbouwplannen_schema, engine)
@@ -251,10 +251,6 @@ def test_create_table_temp_name(engine, woningbouwplannen_schema, gebieden_schem
         ind_tables=True,
         ind_extra_index=False,
     )
-    results = engine.execute(
-        """
-        SELECT tablename FROM pg_tables WHERE tablename = 'foo_bar'
-        """
-    )
-    record = results.fetchone()
-    assert record.tablename == "foo_bar"
+    results = engine.execute("SELECT tablename FROM pg_tables WHERE tablename LIKE 'foo_%%'")
+    names = {r[0] for r in results.fetchall()}
+    assert names == {"foo_bar"}
