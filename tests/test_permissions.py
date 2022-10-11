@@ -59,8 +59,10 @@ class TestReadPermissions:
         _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten")
         _check_select_permission_denied(engine, "brk_ro", "brk_kadastraleobjecten")
 
+        # make sure role 'write_brk' exists with create_roles=True
+        # The role exists now for all test following this statement
         apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, {}, "openbaar", "OPENBAAR"
+            engine, "public", ams_schema, {}, "openbaar", "OPENBAAR", create_roles=True
         )
         apply_schema_and_profile_permissions(
             engine, "public", ams_schema, {}, "brk_rsn", "BRK/RSN"
