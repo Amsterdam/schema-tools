@@ -526,13 +526,15 @@ def introspect_geojson(dataset_id: str, files: List[str]) -> None:
 @option_db_url
 @option_schema_url
 @argument_dataset_id
-@click.argument("batch_size")
+@click.argument("table_id")
 @click.argument("ndjson_path")
+@click.option("--batch_size", default=100, type=int)
 @click.option("--truncate-table", is_flag=True)
 def import_ndjson(
     db_url: str,
     schema_url: str,
     dataset_id: str,
+    table_id: str,
     batch_size: int,
     ndjson_path: PosixPath,
     truncate_table: bool,
@@ -541,6 +543,7 @@ def import_ndjson(
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = NDJSONImporter(dataset_schema, engine)
+    importer.generate_db_objects(table_id, truncate=False, ind_tables=True, ind_extra_index=False)
     importer.load_file(ndjson_path, batch_size, truncate=truncate_table)
 
 
@@ -548,13 +551,15 @@ def import_ndjson(
 @option_db_url
 @option_schema_url
 @argument_dataset_id
-@click.argument("batch_size")
+@click.argument("table_id")
 @click.argument("geojson_path")
+@click.option("--batch_size", default=100, type=int)
 @click.option("--truncate-table", is_flag=True)
 def import_geojson(
     db_url: str,
     schema_url: str,
     dataset_id: str,
+    table_id: str,
     batch_size: int,
     geojson_path: PosixPath,
     truncate_table: bool,
@@ -563,6 +568,7 @@ def import_geojson(
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     importer = GeoJSONImporter(dataset_schema, engine)
+    importer.generate_db_objects(table_id, truncate=False, ind_tables=True, ind_extra_index=False)
     importer.load_file(geojson_path, batch_size=batch_size, truncate=truncate_table)
 
 
