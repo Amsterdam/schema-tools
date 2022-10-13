@@ -1326,6 +1326,14 @@ class DatasetFieldSchema(DatasetType):
             return self.get("crs") or self.table.get("crs") or self.table.dataset.get("crs")
         return self.get("crs")
 
+    @cached_property
+    def srid(self) -> int | None:
+        """The integer value for the spatial reference ID (for geometry fields)."""
+        # Note that it still requires EPSG:### notation, and none of the other URN formats
+        # that the gisserver CRS class parses (which uses GDAL / Django's SpatialReference for it)
+        crs = self.crs
+        return int(crs.split("EPSG:")[1]) if crs else None
+
     @property
     def provenance(self) -> str | None:
         """Get the provenance info, if available, or None."""

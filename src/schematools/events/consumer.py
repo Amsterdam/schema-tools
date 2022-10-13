@@ -43,9 +43,8 @@ def _fetch_consumer_params() -> dict:
 
 def consume_events(
     dataset_schemas: list[DatasetSchema],
-    srid: str,
     connection: Connection,
-    topics: tuple(str),
+    topics: list[str],
     truncate: bool = False,
 ):
     """Consume events.
@@ -68,7 +67,7 @@ def consume_events(
     logger.debug("Consumer made")
     # Transform and Load
 
-    importer = EventsProcessor(dataset_schemas, srid, connection, truncate=truncate)
+    importer = EventsProcessor(dataset_schemas, connection, truncate=truncate)
     logger.debug("Created importer")
     # Subscribe to topic, confluent_kafka explictly needs a list
     consumer.subscribe(list(topics))
@@ -84,7 +83,7 @@ def consume_events(
                 logger.debug("Waiting for message or event/error in poll()")
                 continue
             elif msg.error():
-                logger.error(f"error: {msg.error()}")
+                logger.error("error: %s", msg.error())
             else:
                 process_message(importer, msg)
     except KeyboardInterrupt:
@@ -115,7 +114,3 @@ def process_message(importer: EventsProcessor, msg: Message):
         header_data,
         event_data,
     )
-
-
-if __name__ == "__main__":
-    consume_events()

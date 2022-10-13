@@ -12,7 +12,7 @@ def test_event_process_insert(here, db_schema, tconn, local_metadata, gebieden_s
     """Prove that event gets inserted."""
     events_path = here / "files" / "data" / "bouwblokken.gobevents"
     importer = EventsProcessor(
-        [gebieden_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
@@ -27,7 +27,7 @@ def test_event_process_update(here, tconn, local_metadata, gebieden_schema):
     """Prove that event gets updated."""
     events_path = here / "files" / "data" / "bouwblokken_update.gobevents"
     importer = EventsProcessor(
-        [gebieden_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
@@ -41,7 +41,7 @@ def test_event_process_delete(here, tconn, local_metadata, gebieden_schema):
     """Prove that event gets deleted."""
     events_path = here / "files" / "data" / "bouwblokken_delete.gobevents"
     importer = EventsProcessor(
-        [gebieden_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
@@ -55,7 +55,6 @@ def test_event_process_1n_relation_insert(here, tconn, local_metadata, gebieden_
 
     importer = EventsProcessor(
         [gebieden_schema],
-        28992,
         tconn,
         local_metadata=local_metadata,
         truncate=True,
@@ -93,7 +92,7 @@ def test_event_process_1n_relation_delete(here, tconn, local_metadata, gebieden_
     """Prove that 1-N relation gets deleted by modifying the embedded relation."""
     events_path = here / "files" / "data" / "gebieden_bouwblokken_ligt_in_buurt_delete.gobevents"
     importer = EventsProcessor(
-        [gebieden_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from gebieden_bouwblokken")]
@@ -112,7 +111,7 @@ def test_event_process_nm_relation_insert(
     """Prove that NM relations of an event get inserted."""
     events_path = here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten.gobevents"
     importer = EventsProcessor(
-        [gebieden_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [
@@ -146,7 +145,7 @@ def test_event_process_nm_relation_update(here, tconn, local_metadata, gebieden_
         here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten_update.gobevents"
     )
     importer = EventsProcessor(
-        [gebieden_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [
@@ -167,7 +166,7 @@ def test_event_process_nm_relation_delete(here, tconn, local_metadata, gebieden_
         here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten_delete.gobevents"
     )
     importer = EventsProcessor(
-        [gebieden_schema], 28992, tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
     )
     importer.load_events_from_file(events_path)
     records = [

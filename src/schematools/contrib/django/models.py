@@ -15,10 +15,8 @@ from __future__ import annotations
 import json
 import logging
 import re
-import warnings
 from typing import Any, Dict, Tuple, Type, TypeVar
 
-from django.apps import apps
 from django.conf import settings
 from django.contrib.gis.db import models as gis_models
 from django.contrib.postgres.fields import ArrayField
@@ -74,7 +72,7 @@ def _fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> dict[str, 
     dimensions = 2
     if field.crs in CRSs_3D:
         dimensions = 3
-    return {"srid": CRS.from_string(field.crs).srid, "dim": dimensions}
+    return {"srid": field.srid, "dim": dimensions}
 
 
 JSON_TYPE_TO_DJANGO = {
@@ -191,7 +189,7 @@ class DynamicModel(models.Model):
             # Easier to ask for forgiveness than permission;
             if not issubclass(model_field.model, DynamicModel):
                 raise ValueError(
-                    f"get_field_schema() is only usable on fields from on DynamicModel instances."
+                    "get_field_schema() is only usable on fields from on DynamicModel instances."
                 ) from None
 
             if model_field.auto_created:

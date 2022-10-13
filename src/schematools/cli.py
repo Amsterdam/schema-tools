@@ -648,10 +648,9 @@ def import_events(
     dataset_schemas = [_get_dataset_schema(dataset_id, schema_url)]
     for schema in additional_schemas:
         dataset_schemas.append(_get_dataset_schema(schema, schema_url))
-    srid = dataset_schemas[0]["crs"].split(":")[-1]
     # Create connection, do not start a transaction.
     with engine.connect() as connection:
-        importer = EventsProcessor(dataset_schemas, srid, connection, truncate=truncate_table)
+        importer = EventsProcessor(dataset_schemas, connection, truncate=truncate_table)
         importer.load_events_from_file(events_path)
 
 
@@ -847,10 +846,9 @@ def consume(
     dataset_schemas = [_get_dataset_schema(dataset_id, schema_url)]
     for schema in additional_schemas:
         dataset_schemas.append(_get_dataset_schema(schema, schema_url))
-    srid = dataset_schemas[0]["crs"].split(":")[-1]
     # Create connection, do not start a transaction.
     with engine.connect() as connection:
-        consume_events(dataset_schemas, srid, connection, topics, truncate=truncate_table)
+        consume_events(dataset_schemas, connection, topics, truncate=truncate_table)
 
 
 if __name__ == "__main__":
