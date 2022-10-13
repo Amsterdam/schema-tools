@@ -212,7 +212,6 @@ class EventsProcessor:
     def __init__(
         self,
         datasets: list[DatasetSchema],
-        srid: str,
         connection: Connection,
         local_metadata=None,
         truncate=False,
@@ -230,7 +229,6 @@ class EventsProcessor:
             truncate: indicates if the relational tables need to be truncated
         """
         self.datasets: dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
-        self.srid = srid
         self.conn = connection
         _metadata = local_metadata or metadata  # mainly for testing
         _metadata.bind = connection.engine
@@ -251,7 +249,7 @@ class EventsProcessor:
                     continue
                 for field in dataset.get_table_by_id(table_id).fields:
                     if field.is_geo:
-                        self.geo_fields[dataset_id][table_id].append(field.name)
+                        self.geo_fields[dataset_id][table_id].append(field)
 
     def process_row(self, event_id: str, event_meta: dict, event_data: dict) -> None:
         """Process one row of data.
@@ -269,10 +267,10 @@ class EventsProcessor:
 
         row = data_splitter.fetch_row()
 
-        for field_name in self.geo_fields[dataset_id][table_id]:
-            geo_value = row.get(field_name)
-            if geo_value is not None and not row[field_name].startswith("SRID"):
-                row[field_name] = f"SRID={self.srid};{geo_value}"
+        for geo_field in self.geo_fields[dataset_id][table_id]:
+            geo_value = row.get(geo_field.name)
+            if geo_value is not None and not geo_value.startswith("SRID"):
+                row[geo_field.name] = f"SRID={geo_field.srid};{geo_value}"
 
         identifier = self.datasets[dataset_id].get_table_by_id(table_id).identifier
         id_value = ".".join(str(row[fn]) for fn in identifier)
