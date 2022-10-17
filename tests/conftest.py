@@ -127,7 +127,7 @@ def local_metadata(engine):
     _meta.drop_all(bind=engine)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def salogger():
     """Enable logging for sqlalchemy, useful for debugging."""
     import logging
@@ -135,6 +135,8 @@ def salogger():
     logging.basicConfig()
     logger = logging.getLogger("sqlalchemy.engine")
     logger.setLevel(logging.DEBUG)
+    yield
+    logger.setLevel(logging.WARNING)
 
 
 class DummyResponse:
