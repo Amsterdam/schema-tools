@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Dict, Final, Match, Pattern, cast
 import requests
 from cachetools.func import ttl_cache
 from more_ds.network.url import URL
-from more_itertools import last
 from string_utils import slugify
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
@@ -155,7 +154,7 @@ def _schema_from_url_with_connection(
             table_response = connection.get(base_url / dataset_path / ref)
             table_response.raise_for_status()
             # Assume `ref` is of form "table_name/v1.1.0"
-            dvn = SemVer(last(ref.split("/")))
+            dvn = SemVer(ref.split("/")[-1])
             response_data["tables"][i] = TableVersions(
                 id=table["id"], default_version_number=dvn, active={dvn: table_response.json()}
             )
@@ -193,7 +192,7 @@ def dataset_schema_from_path(
             for i, table in enumerate(ds["tables"]):
                 if ref := table.get("$ref"):
                     # Assume `ref` is of form "table_name/v1.1.0"
-                    dvn = SemVer(last(ref.split("/")))
+                    dvn = SemVer(ref.split("/")[-1])
                     with open(Path(dataset_path).parent / Path(ref + ".json")) as table_file:
                         ds["tables"][i] = TableVersions(
                             id=table["id"],
