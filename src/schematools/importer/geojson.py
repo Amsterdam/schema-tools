@@ -4,8 +4,9 @@ from typing import Any, Iterable, Tuple
 
 from shapely.geometry import shape
 
-from ..exceptions import ParserError
-from . import get_table_name
+from schematools.exceptions import ParserError
+from schematools.types import DatasetTableSchema
+
 from .base import BaseImporter
 
 ID_FORMAT = re.compile(r"^([a-z0-9_]+)[/.](\d+)$", re.I)
@@ -45,27 +46,24 @@ def split_id(id_value) -> Tuple[str, str]:
 class GeoJSONImporter(BaseImporter):
     """Import an GeoJSON file into the database."""
 
-    def parse_records(self, file_name, dataset_table, db_table_name=None, **kwargs):
+    def parse_records(self, file_name, dataset_table: DatasetTableSchema, **kwargs):
         """Provide an iterator the reads the NDJSON records"""
         features = read_geojson(file_name)
-        main_geometry = dataset_table.main_geometry
-        if db_table_name is None:
-            db_table_name = get_table_name(dataset_table)
-        relation_field_names = [
-            field.name for field in dataset_table.fields if field.relation is not None
-        ]
+        main_geometry = dataset_table.main_geometry_field
+
+        relation_fields = [field for field in dataset_table.fields if field.relation is not None]
         for feature in features:
-            wkt = ""
-            if main_geometry is not None:
-                wkt = shape(feature["geometry"]).wkt
             record = dict(
                 self._clean_value(name, value) for name, value in feature["properties"].items()
             )
-            for relation_field_name in relation_field_names:
-                record[f"{relation_field_name}_id"] = record[relation_field_name]
-                del record[relation_field_name]
-            record[main_geometry] = f"SRID={self.srid};{wkt}" if main_geometry else None
-            yield {db_table_name: [record]}
+            for relation_field in relation_fields:
+                if relation_field.db_name != relation_field.python_name:
+                    record[relation_field.db_name] = record.pop(relation_field.python_name)
+
+            wkt = shape(feature["geometry"]).wkt
+            record[main_geometry.db_name] = f"SRID={main_geometry.srid};{wkt}"
+
+            yield {dataset_table.id: [record]}
 
     def _clean_value(self, name: str, value: Any) -> Tuple[str, Any]:
         if name[0] in "@$":

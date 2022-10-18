@@ -182,18 +182,20 @@ class FKRelationMaker(RelationMaker):
 
     @property
     def field_kwargs(self):
-        # In schema foreign keys should be specified without _id,
-        # but the db_column should be with _id
         kwargs = {
             **super().field_kwargs,
             "on_delete": models.CASCADE if self.field.required else models.SET_NULL,
-            "db_column": to_snake_case(self.field.name) + "_id",
+            "db_column": self.field.db_name,
             "db_constraint": False,
             "related_name": self._get_related_name(),
         }
 
         if self.field.is_composite_key:
-            kwargs["to_fields"] = [to_snake_case(field.id) for field in self.field.subfields]
+            kwargs["to_fields"] = [
+                to_snake_case(field.id)
+                for field in self.field.subfields
+                if not field.is_temporal_range
+            ]
         elif to_field := self._get_to_field_name():
             # Field points to a different key of the other table (e.g. "identificatie").
             kwargs["to_field"] = to_snake_case(to_field)
@@ -208,8 +210,7 @@ class M2MRelationMaker(RelationMaker):
 
     @property
     def field_kwargs(self):
-        snakecased_fieldname = to_snake_case(self.field.name)
-        parent_table = to_snake_case(self.field.table.name)
+        through_fields = [f.python_name for f in self.field.through_table.through_fields]
 
         if (additional_relation := self.field.reverse_relation) is not None:
             # The relation is described by the other table, return it
@@ -217,13 +218,13 @@ class M2MRelationMaker(RelationMaker):
         else:
             # Default: give it a name, but hide it as relation.
             # This becomes the models.ManyToManyRel field on the target model.
-            related_name = f"rev_{parent_table}_{snakecased_fieldname}+"
+            related_name = f"rev_{self.field.table.python_name}_{self.field.python_name}+"
 
         return {
             **super().field_kwargs,
             "related_name": related_name,
             "through": self._make_through_classname(self.dataset.id, self.field.id),
-            "through_fields": (parent_table, snakecased_fieldname),
+            "through_fields": through_fields,
         }
 
 
@@ -262,8 +263,10 @@ class FieldMaker:
         if not field.is_primary and field.nm_relation is None:
             # Primary can not be Null
             kwargs["null"] = not field.required
+        if field.has_shortname:
+            kwargs["db_column"] = field.db_name
         if self.value_getter:
-            kwargs = {**kwargs, **self.value_getter(dataset, field)}
+            kwargs.update(self.value_getter(dataset, field))
         return field_cls, args, kwargs
 
     def handle_array(
@@ -437,13 +440,13 @@ def model_factory(
     fields = {}
     constraints = []
 
-    for field in table_schema.fields:
+    for field in table_schema.get_fields(include_subfields=True):
         type_ = field.type
         # skip schema field for now
         if type_.endswith("definitions/schema"):
             continue
         # skip nested tables and fields that are only added for temporality
-        if field.is_nested_table or field.is_temporal:
+        if field.is_nested_table or field.is_temporal_range:
             continue
         # reduce amsterdam schema refs to their fragment
         if type_.startswith(settings.SCHEMA_DEFS_URL):
@@ -453,7 +456,7 @@ def model_factory(
             base_class, init_kwargs = JSON_TYPE_TO_DJANGO[type_]
         except KeyError as e:
             raise RuntimeError(
-                f"Unable to parse {table_schema.id}: field '{field.name}'"
+                f"Unable to parse {table_schema.id}: field '{field.id}'"
                 f" has unsupported type: {type_}."
             ) from e
 
@@ -474,18 +477,17 @@ def model_factory(
         model_field = kls(*args, **kwargs)
 
         # Generate name, fix if needed.
-        field_name = to_snake_case(field.name)
-        model_field.name = field_name
+        model_field.name = field.python_name
         model_field.field_schema = field  # avoid extra lookups.
-        fields[field_name] = model_field
+        fields[model_field.name] = model_field
 
         # Non-composite string identifiers may not contain forwardslashes, since this
         # breaks URL matching when they are used in URL paths.
         if field.is_primary and field.type == "string":
             constraints.append(
                 CheckConstraint(
-                    check=~Q(**{f"{field_name}__contains": "/"}),
-                    name=f"{dataset.name}_{table_schema.name}_{field_name}_not_contains_slash",
+                    check=~Q(**{f"{model_field.name}__contains": "/"}),
+                    name=f"{table_schema.db_name}_{field.db_name}_not_contains_slash",
                 )
             )
 
@@ -495,10 +497,10 @@ def model_factory(
         (),
         {
             "managed": False,
-            "db_table": table_schema.db_name(),
+            "db_table": table_schema.db_name,
             "app_label": app_label,
             "verbose_name": (table_schema.title or table_schema.id).capitalize(),
-            "ordering": [to_snake_case(fn) for fn in table_schema.identifier],
+            "ordering": [idf.python_name for idf in table_schema.identifier_fields],
             "constraints": constraints,
         },
     )
@@ -534,10 +536,9 @@ def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
     new_table_data = deepcopy(table_data)
     new_table_data["schema"]["properties"] = {}
     # For FK add postfix and simplify the field, for M2M skip the field.
-    for field in table_schema.fields:
+    for field in table_schema.get_fields(include_subfields=True):
         # We get the field_name here, because deleting `shortname`
         # from the fielde definition changes behaviour of `field.name`.
-        field_name = field.name
         # Some autogenerated schemas already have an `autoincrement` type.
         if field.is_primary and not field.data["type"].endswith("autoincrement"):
             field.data["type"] = field.data["type"] + "/autoincrement"
@@ -562,7 +563,7 @@ def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
             # as a hint during selection of a proper faker factory
             field_definition["type"] = field_definition["type"] + "/autoincrement"
 
-        new_table_data["schema"]["properties"][f"{field_name}{id_post_fix}"] = field_definition
+        new_table_data["schema"]["properties"][f"{field.id}{id_post_fix}"] = field_definition
     return DatasetTableSchema(new_table_data, parent_schema=table_schema._parent_schema)
 
 
@@ -597,14 +598,11 @@ def model_mocker_factory(
         if type_.endswith("definitions/schema"):
             continue
         # skip nested tables and fields that are only added for temporality
-        if field.is_nested_table or field.is_temporal:
+        if field.is_nested_table or field.is_temporal_range:
             continue
         # reduce amsterdam schema refs to their fragment
         if type_.startswith(settings.SCHEMA_DEFS_URL):
             type_ = urlparse(type_).fragment
-
-        # Generate name, fix if needed.
-        field_name = to_snake_case(field.name)
 
         # If, in addition to a type, a format has been defined
         # for a field, the format will be used to look up the
@@ -622,7 +620,7 @@ def model_mocker_factory(
         # If a field has enums, those are used during mock generation.
         if (elements := field.get("enum")) is not None:
             kwargs["elements"] = elements
-        fields[field_name] = get_field_factory(type_, **kwargs)
+        fields[field.python_name] = get_field_factory(type_, **kwargs)
 
     # Generate Meta part
     meta_cls = type(

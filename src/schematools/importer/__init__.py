@@ -78,4 +78,4 @@ def fetch_col_type(field):
 def get_table_name(dataset_table: DatasetTableSchema) -> str:
     """Generate the database identifier for the table."""
     schema = dataset_table.dataset
-    return f"{schema.id}_{dataset_table.id}".replace("-", "_")
+    return f"{schema.python_name}_{dataset_table.db_name}"

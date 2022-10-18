@@ -36,15 +36,12 @@ class Command(BaseCommand):  # noqa: D101
         size = options["size"]
 
         for dataset in datasets:
-            model_mockers = {
-                cls._meta.get_model_class()._meta.model_name: cls
-                for cls in schema_model_mockers_factory(
-                    dataset, base_app_name="dso_api.dynamic_api"
-                )
-            }
+            model_mockers = schema_model_mockers_factory(
+                dataset, base_app_name="dso_api.dynamic_api"
+            )
 
-            for table in dataset.tables.all():
-                model_mockers[table.name].create_batch(size)
+            for model_mocker in model_mockers:
+                model_mocker.create_batch(size)
 
     def get_datasets_from_files(self, schema_files) -> List[Dataset]:
         """Get dataset schemas for the given files."""

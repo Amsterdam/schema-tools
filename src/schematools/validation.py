@@ -102,7 +102,7 @@ def _register_validator(name: str) -> Callable:
 def _camelcase(dataset: DatasetSchema) -> Iterator[str]:
     """Checks that conversion to snake case and back leaves field identifiers unchanged."""
     for table in dataset.tables:
-        for field in table.get_fields(include_subfields=False):
+        for field in table.fields:
             error = _camelcase_ident(field.id)
             if error is not None:
                 yield error
@@ -188,7 +188,9 @@ def _postgres_identifier_length(dataset: DatasetSchema) -> Iterator[str]:
     supported by PostgreSQL.
     """
     for table in dataset.get_tables(include_nested=True, include_through=True):
-        db_name = table.db_name(with_dataset_prefix=True, with_version=True, check_assert=False)
+        db_name = table.db_name_variant(
+            with_dataset_prefix=True, with_version=True, check_assert=False
+        )
         # print(f"{db_name:>{MAX_TABLE_NAME_LENGTH}}")
         if (length := len(db_name)) > MAX_TABLE_NAME_LENGTH:
             excess = length - MAX_TABLE_NAME_LENGTH
@@ -321,7 +323,7 @@ def _check_crs(dataset: DatasetSchema) -> Iterator[str]:
     if dataset.data.get("crs") is None:
         for table in dataset.tables:
             if table.data.get("crs") is None:
-                for field in table.get_fields():
+                for field in table.fields:
                     if field.is_geo and field.crs is None:
                         yield (
                             f"No coordinate reference system defined for field {field.name}. "
@@ -375,7 +377,7 @@ def _property_formats(dataset: DatasetSchema) -> Iterator[str]:
     }
 
     for table in dataset.tables:
-        for field in table.get_fields():
+        for field in table.fields:
             if field.type == "str" and field.format not in ALLOWED:
                 yield f"Format {field.format!r} not allowed, must be one of {ALLOWED!r}"
 
@@ -419,7 +421,7 @@ def _reasons_non_public_exists(dataset: DatasetSchema) -> Iterator[str]:
         for table in dataset.tables:
             if table.data.get("reasonsNonPublic") is None:
                 if table.auth == {"OPENBAAR"}:
-                    for field in table.get_fields():
+                    for field in table.fields:
                         if (
                             field.auth != {"OPENBAAR"}
                             and field.data.get("reasonsNonPublic") is None
@@ -453,7 +455,7 @@ def _reasons_non_public_value(dataset: DatasetSchema) -> Iterator[str]:
                 f"Placeholder value '{placeholder_value}' not allowed "
                 f"ReasonsNonPublic property of table {table.id}."
             )
-        for field in table.get_fields():
+        for field in table.fields:
             if placeholder_value in field.data.get("reasonsNonPublic", []):
                 yield (
                     f"Placeholder value '{placeholder_value}' not allowed "
@@ -467,7 +469,4 @@ def _check_schema_ref(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:
         fragments = urlparse(table["schema"]["properties"]["schema"]["$ref"])
         if fragments.hostname != "schemas.data.amsterdam.nl" or fragments.scheme != "https":
-            yield (
-                f"Incorrect `$ref` for {table.name}. "
-                "Value should be `https://data.amsterdam.nl`"
-            )
+            yield (f"Incorrect `$ref` for {table.id}. Value should be `https://data.amsterdam.nl`")

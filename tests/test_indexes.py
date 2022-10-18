@@ -59,9 +59,8 @@ def test_index_creation(engine, db_schema):
         meta_data = MetaData(bind=conn)
         meta_data.reflect()
         metadata_inspector = inspect(meta_data.bind)
-        indexes = metadata_inspector.get_indexes(
-            f"{parent_schema['id']}_{table.default['id']}", schema=None
-        )
+        table_db_name = f"{parent_schema['id']}_{table.default['id']}"  # test_test
+        indexes = metadata_inspector.get_indexes(table_db_name, schema=None)
         index_names.update(index["name"] for index in indexes)
 
     assert index_names == {"test_test_identifier_idx", "idx_test_test_geometry"}
@@ -179,15 +178,14 @@ def test_index_troughtables_creation(engine, db_schema):
     for table in data["tables"]:
 
         dataset_table = dataset_schema.get_table_by_id(table.default["id"])
-
-        for table in dataset_table.get_through_tables_by_id():
-
-            conn = create_engine(engine.url, client_encoding="UTF-8")
-            meta_data = MetaData(bind=conn)
-            meta_data.reflect()
-            metadata_inspector = inspect(meta_data.bind)
-            indexes = metadata_inspector.get_indexes(table.db_name(), schema=None)
-            indexes_names.update(index["name"] for index in indexes)
+        for field in dataset_table.fields:
+            if field.is_through_table:
+                conn = create_engine(engine.url, client_encoding="UTF-8")
+                meta_data = MetaData(bind=conn)
+                meta_data.reflect()
+                metadata_inspector = inspect(meta_data.bind)
+                indexes = metadata_inspector.get_indexes(field.through_table.db_name, schema=None)
+                indexes_names.update(index["name"] for index in indexes)
 
     assert indexes_names == {
         "public.test_test_1_heeft_onderzoeken_heeft_onderzoeken_id_idx",
