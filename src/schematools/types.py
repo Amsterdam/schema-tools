@@ -30,7 +30,6 @@ from typing import (
 import jsonschema
 from jsonschema import draft7_format_checker
 from methodtools import lru_cache
-from more_itertools import first
 
 from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR
 from schematools.datasetcollection import DatasetCollection
@@ -926,7 +925,7 @@ class DatasetTableSchema(SchemaType):
         """Return bool indicating autoincrement behaviour of the table identifier."""
         if self.has_composite_key:
             return False
-        return self.get_field_by_id(first(self.identifier)).is_autoincrement
+        return self.get_field_by_id(self.identifier[0]).is_autoincrement
 
     @property
     def has_composite_key(self) -> bool:
