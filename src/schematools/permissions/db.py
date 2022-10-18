@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from schematools.permissions import PUBLIC_SCOPE  # type: ignore [attr-defined]
 from schematools.types import DatasetSchema
-from schematools.utils import to_snake_case
 
 # Create a module-level logger, so calling code can
 # configure the logger, if needed.
@@ -169,11 +168,11 @@ def set_dataset_write_permissions(
     echo: bool = False,
 ) -> None:
     """Sets write permissions for the indicated dataset."""
-    grantee = f"write_{to_snake_case(ams_schema.id)}"
+    grantee = f"write_{ams_schema.db_name}"
     if create_roles:
         _create_role_if_not_exists(session, grantee, dry_run=dry_run)
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
-        table_name = table.db_name()
+        table_name = table.db_name
         if is_remote(table_name):
             continue
         table_privileges = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"]
@@ -257,23 +256,25 @@ def get_all_dataset_scopes(
     dataset_scopes = ams_schema.auth
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
-        table_name = table.db_name()
+        table_name = table.db_name
         if is_remote(table_name):
             continue
 
         table_scopes = table.auth
         fallback_scope = (table_scopes - {PUBLIC_SCOPE}) or dataset_scopes
-        fields = [field for field in table.fields if field.name != "schema"]
+        fields = [
+            field for field in table.get_fields(include_subfields=True) if field.name != "schema"
+        ]
 
         column_scopes = {}
 
         # First process all fields, to know if any fields has a non-public scope
         for field in fields:
-            column_name = field.db_name()
+            column_name = field.db_name
             # Object type relations have subfields, in that case
             # the auth scope on the relation is leading.
             parent_field_scopes: frozenset[str] = frozenset()
-            if field.parent_field is not None:
+            if field.is_subfield:
                 parent_field_scopes = field.parent_field.auth - {PUBLIC_SCOPE}
 
             field_scopes = field.auth - {PUBLIC_SCOPE}
@@ -283,8 +284,7 @@ def get_all_dataset_scopes(
                 column_scopes[column_name] = final_scopes
 
             if field.is_nested_table:
-                nested_table = ams_schema.build_nested_table(table, field)
-                all_scopes[nested_table.db_name()].append(
+                all_scopes[field.nested_table.db_name].append(
                     {
                         "privileges": ["SELECT"],
                         "grantees": _fetch_grantees(final_scopes or fallback_scope),
@@ -292,8 +292,7 @@ def get_all_dataset_scopes(
                 )
 
             if field.nm_relation is not None:
-                through_table = ams_schema.build_through_table(table, field)
-                all_scopes[through_table.db_name()].append(
+                all_scopes[field.through_table.db_name].append(
                     {
                         "privileges": ["SELECT"],
                         "grantees": _fetch_grantees(final_scopes or fallback_scope),
@@ -306,7 +305,7 @@ def get_all_dataset_scopes(
                     # field is not in view when nm or nested
                     continue
 
-                column_name = field.db_name()
+                column_name = field.db_name
                 all_scopes[table_name].append(
                     # NB. space after SELECT is significant!
                     {
@@ -365,7 +364,7 @@ def set_dataset_read_permissions(
         If NM and nested relation fields (type `array` in the schema) have a scope `bar`
         the associated sub-table gets the grant `scope_bar`.
     """
-    grantee: str | None = f"write_{to_snake_case(ams_schema.id)}"
+    grantee: str | None = f"write_{ams_schema.db_name}"
 
     grantee = None if role == "AUTO" else role
     if create_roles and grantee:
@@ -482,7 +481,7 @@ def _revoke_all_privileges_from_role(
         revoke_statements = []
         for table in dataset.tables:
             revoke_statements.append(
-                f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name()} FROM {role}"
+                f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {role}"
             )
         revoke_statement = ";".join(revoke_statements)
     else:
@@ -534,7 +533,7 @@ def _revoke_all_privileges_from_read_and_write_roles(
             revoke_statements = []
             for table in dataset.tables:
                 revoke_statements.append(
-                    f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name()} FROM {rolname[0]}"
+                    f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {rolname[0]}"
                 )
             revoke_statement = ";".join(revoke_statements)
         else:

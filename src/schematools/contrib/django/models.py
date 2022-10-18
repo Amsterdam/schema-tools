@@ -463,7 +463,7 @@ class DatasetTable(models.Model):
     def save_for_schema(self, table_schema: DatasetTableSchema):
         """Save changes to the dataset table schema."""
         self.name = to_snake_case(table_schema.id)
-        self.db_table = table_schema.db_name()
+        self.db_table = table_schema.db_name
         self.auth = " ".join(table_schema.auth)
         self.display_field = (
             to_snake_case(table_schema.display_field) if table_schema.display_field else None
@@ -477,7 +477,7 @@ class DatasetTable(models.Model):
         is_creation = not self._state.adding
         self.save()
 
-        new_definitions = {to_snake_case(f.id): f for f in table_schema.fields}
+        new_definitions = {f.python_name: f for f in table_schema.fields}
         new_names = set(new_definitions.keys())
         existing_fields = {f.name: f for f in self.fields.all()} if is_creation else {}
         existing_names = set(existing_fields.keys())

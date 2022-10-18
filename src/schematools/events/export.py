@@ -133,7 +133,7 @@ def export_events(
     tables: dict[str, dict[str, Table]] = {}
     datasets_lookup: dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
     dataset_table: DatasetTableSchema = datasets_lookup[dataset_id].get_table_by_id(table_id)
-    geo_fields = [to_snake_case(field.name) for field in dataset_table.fields if field.is_geo]
+    geo_fields = [field.python_name for field in dataset_table.fields if field.is_geo]
 
     complex_fields_metadata: list[ComplexFieldAttrs] = fetch_complex_fields_metadata(dataset_table)
 

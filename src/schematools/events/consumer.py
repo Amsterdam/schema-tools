@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from typing import Iterable
 
 from confluent_kafka import Consumer, Message
 from sqlalchemy.engine import Connection
@@ -44,7 +45,7 @@ def _fetch_consumer_params() -> dict:
 def consume_events(
     dataset_schemas: list[DatasetSchema],
     connection: Connection,
-    topics: list[str],
+    topics: Iterable[str],
     truncate: bool = False,
 ):
     """Consume events.

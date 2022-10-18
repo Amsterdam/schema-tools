@@ -64,7 +64,7 @@ class DataSplitter:
         """Split the event_data in 2 parts, one with scalars, the other with relations."""
         data_bags = [{}, {}]
         for field in self.dataset_table.fields:
-            snaked_field_id = to_snake_case(field.id)
+            snaked_field_id = field.python_name
             if snaked_field_id in event_data:
                 data_bags[field.is_scalar][snaked_field_id] = event_data[snaked_field_id]
         return data_bags
@@ -147,11 +147,9 @@ class DataSplitter:
 
             # relation fields for source side
             # XXX add support for shortnames!
-            for subfield_schema in self.dataset_table.get_fields_by_id(
-                *self.dataset_table.identifier
-            ):
-                subfield_id = f"{self.table_id}_{subfield_schema.id}"
-                nm_row_data[subfield_id] = id_part_values[subfield_schema.id]
+            for identifier_field in self.dataset_table.identifier_fields:
+                subfield_id = f"{self.table_id}_{identifier_field.id}"
+                nm_row_data[subfield_id] = id_part_values[identifier_field.id]
 
             # relation fields for target side
             for fn, fv in row_data.items():
@@ -182,13 +180,14 @@ class DataSplitter:
         Assertion is that GOB always provides fully populated records.
         """
         conn = self.events_processor.conn
+        tables = self.events_processor.tables[self.dataset_id]
 
         with conn.begin():
             for snaked_field_id, nm_row_data in self.junction_table_rows.items():
 
                 snaked_source_table_id = to_snake_case(self.table_id)
                 junction_table_id = f"{snaked_source_table_id}_{snaked_field_id}"
-                sa_table = self.events_processor.tables[self.dataset_id][junction_table_id]
+                sa_table = tables[junction_table_id]
                 source_id, source_id_value, _ = self._fetch_source_id_info()
 
                 source_id_column = getattr(sa_table.c, source_id)
@@ -235,7 +234,13 @@ class EventsProcessor:
         self.tables = {}
         for dataset_id, dataset in self.datasets.items():
             base_tables_ids = {dataset_table.id for dataset_table in dataset.tables}
-            self.tables[dataset_id] = tfac = tables_factory(dataset, metadata=_metadata)
+            self.tables[dataset_id] = tfac = {
+                # As quick workaround to map table identifiers with the existing event streams,
+                # the code of this file works with snake cased identifiers.
+                # The remaining code (e.g. BaseImporter) already works directly with table.id.
+                to_snake_case(table_id): table
+                for table_id, table in tables_factory(dataset, metadata=_metadata).items()
+            }
             self.geo_fields = defaultdict(lambda: defaultdict(list))
             for table_id, table in tfac.items():
                 if not table.exists():

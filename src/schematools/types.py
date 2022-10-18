@@ -15,7 +15,6 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    Iterable,
     Iterator,
     List,
     NamedTuple,
@@ -31,9 +30,10 @@ import jsonschema
 from jsonschema import draft7_format_checker
 from methodtools import lru_cache
 
-from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR
+from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.datasetcollection import DatasetCollection
 from schematools.exceptions import ParserError, SchemaObjectNotFound
+from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
 
 ST = TypeVar("ST", bound="SchemaType")
 DTS = TypeVar("DTS", bound="DatasetTableSchema")
@@ -279,6 +279,18 @@ class SchemaType(UserDict):
         return cast(str, self["id"])
 
     @property
+    def db_name(self) -> str:
+        """The object name in a database-compatible format."""
+        return to_snake_case(self.id)
+
+    @cached_property
+    def python_name(self) -> str:
+        """The 'id', but snake-cased like a python variable.
+        Some object types (e.g. dataset and table) may override this in classname notation.
+        """
+        return to_snake_case(self.id)
+
+    @property
     def type(self) -> str:  # noqa: A003
         return cast(str, self["type"])
 
@@ -346,6 +358,11 @@ class DatasetSchema(SchemaType):
             raise ValueError("Invalid Amsterdam Dataset schema file")
 
         return cls(copy.deepcopy(obj))
+
+    @cached_property
+    def python_name(self) -> str:
+        """The 'id', but camel cased like a class name."""
+        return toCamelCase(self.id).title()
 
     @property
     def title(self) -> str | None:
@@ -435,10 +452,11 @@ class DatasetSchema(SchemaType):
     ) -> DatasetTableSchema:
         from schematools.utils import to_snake_case
 
+        snakecased_table_id = to_snake_case(table_id)
         for table in self.get_tables(
             include_nested=include_nested, include_through=include_through
         ):
-            if to_snake_case(table.id) == to_snake_case(table_id):
+            if to_snake_case(table.id) == snakecased_table_id:
                 return table
 
         available = "', '".join([table.default["id"] for table in self["tables"]])
@@ -450,41 +468,29 @@ class DatasetSchema(SchemaType):
     @property
     def nested_tables(self) -> list[DatasetTableSchema]:
         """Access list of nested tables."""
-        return [
-            self.build_nested_table(table=t, field=f)
-            for t in self.tables
-            for f in t.fields
-            if f.is_nested_table
-        ]
+        return [f.nested_table for t in self.tables for f in t.fields if f.is_nested_table]
 
     @property
     def through_tables(self) -> list[DatasetTableSchema]:
         """Access list of through_tables, for n-m relations."""
         return [
-            self.build_through_table(table=t, field=f)
+            f.through_table
             for t in self.tables
             for f in t.fields
             if f.is_through_table and not (f.is_loose_relation and f.nm_relation is None)
         ]
 
-    def build_nested_table(
-        self, table: DatasetTableSchema, field: DatasetFieldSchema
-    ) -> DatasetTableSchema:
+    def build_nested_table(self, field: DatasetFieldSchema) -> DatasetTableSchema:
+        """Construct an in-line table object for a nested field."""
         # Map Arrays into tables.
-        from schematools.utils import get_rel_table_identifier, to_snake_case
-
-        def _get_parent_fk_type():
-            """Get type of the parent identifier."""
-            # composite keys are concatened to one id an thus always strings
-            if len(table.identifier) > 1:
-                return "string"
-            return table.get_field_by_id(table.identifier[0]).type
-
-        snakecased_field_id = to_snake_case(field.id)
-        sub_table_id = get_rel_table_identifier(table.id, snakecased_field_id)
+        table = field.table
 
         if "properties" not in field["items"]:
-            raise KeyError(f"Key 'properties' not defined in '{table.name}.{field.name}'")
+            raise KeyError(f"Key 'properties' not defined in '{table.id}.{field.id}'")
+
+        # composite keys are concatened to one id an thus always strings
+        parent_fk_type = "string" if len(table.identifier) > 1 else table.identifier_fields[0].type
+        sub_table_id = get_rel_table_identifier(table.id, field.id)
 
         sub_table_schema = {
             "id": sub_table_id,
@@ -501,7 +507,7 @@ class DatasetSchema(SchemaType):
                 "properties": {
                     "id": {"type": "integer/autoincrement", "description": ""},
                     "schema": {"$ref": "#/definitions/schema"},
-                    "parent": {"type": _get_parent_fk_type(), "relation": f"{self.id}:{table.id}"},
+                    "parent": {"type": parent_fk_type, "relation": f"{self.id}:{table.id}"},
                     **field["items"]["properties"],
                 },
             },
@@ -511,17 +517,14 @@ class DatasetSchema(SchemaType):
         # we need to add a shortname to the dynamically generated
         # schema definition.
         if field.has_shortname or table.has_shortname:
-            snakecased_fieldname: str = to_snake_case(field.name)
             sub_table_schema["shortname"] = get_rel_table_identifier(
-                table.name, snakecased_fieldname
+                table.shortname, through_identifier=field.shortname
             )
         return DatasetTableSchema(
             sub_table_schema, parent_schema=self, _parent_table=table, nested_table=True
         )
 
-    def build_through_table(
-        self, table: DatasetTableSchema, field: DatasetFieldSchema
-    ) -> DatasetTableSchema:
+    def build_through_table(self, field: DatasetFieldSchema) -> DatasetTableSchema:
         """Build the through table.
 
         The through tables are not defined separately in a schema.
@@ -566,6 +569,7 @@ class DatasetSchema(SchemaType):
         # Build the through_table for n-m relation
         # For relations, we have to use the real ids of the tables
         # and not the shortnames
+        table = field.table
         left_dataset_id = self.id
         left_table_id = table.id
 
@@ -614,14 +618,16 @@ class DatasetSchema(SchemaType):
         # we need to add a shortname to the dynamically generated
         # schema definition.
         if field.has_shortname or table.has_shortname:
-            sub_table_schema["shortname"] = toCamelCase(f"{table.name}_{field.name}")
+            sub_table_schema["shortname"] = toCamelCase(f"{table.shortname}_{field.shortname}")
 
         # We also need to add a shortname for the individual FK fields
         # pointing to left en right table in the M2M
         if field.has_shortname:
-            sub_table_schema["schema"]["properties"][target_field_id]["shortname"] = field.name
+            sub_table_schema["schema"]["properties"][target_field_id][
+                "shortname"
+            ] = field.shortname
         if table.has_shortname:
-            sub_table_schema["schema"]["properties"][left_table_id]["shortname"] = table.name
+            sub_table_schema["schema"]["properties"][left_table_id]["shortname"] = table.shortname
 
         # For both types of through tables (M2M and FK), we add extra fields
         # to the table (see docstring).
@@ -636,11 +642,12 @@ class DatasetSchema(SchemaType):
             else:
                 properties = {}
 
-            # Add the dimension fields, but only if those were defined in the
-            # fields of the relation.
-            for dim_field in field.get_dimension_fieldnames().get("geldigOp", []):
-                if (camel_dim_field := toCamelCase(dim_field)) in properties:
-                    dim_fields[camel_dim_field] = properties[camel_dim_field]
+            # Add the dimension fields to the through table,
+            # but only if those were defined in the fields of the relation.
+            if field.related_table and (related_temporal := field.related_table.temporal):
+                for dim_field in related_temporal.dimensions.get("geldigOp", []):
+                    if dim_field.id in properties:
+                        dim_fields[dim_field.id] = properties[dim_field.id]
 
             right_table = self.dataset_collection.get_dataset(right_dataset_id).get_table_by_id(
                 right_table_id, include_nested=False, include_through=False
@@ -657,8 +664,8 @@ class DatasetSchema(SchemaType):
                     spec = sub_table_schema["schema"]["properties"][relation_field_id]
                     spec["type"] = "object"
                     spec["properties"] = {
-                        toCamelCase(idf): {"type": fk_target_table.get_field_by_id(idf).type}
-                        for idf in fk_target_table.identifier
+                        id_field.id: {"type": id_field.type}
+                        for id_field in fk_target_table.identifier_fields
                     }
 
             sub_table_schema["schema"]["properties"].update(dim_fields)
@@ -683,7 +690,7 @@ class DatasetSchema(SchemaType):
         """
         related_ids = set()
         for table in self.tables:
-            for f in table.get_fields(include_subfields=False):
+            for f in table.fields:
                 a_relation = f.relation or f.nm_relation
                 if a_relation is not None:
                     dataset_id, _ = a_relation.split(":")
@@ -699,14 +706,9 @@ class DatasetTableSchema(SchemaType):
     address this dataset-table in the scope of the `DatasetSchema`.
     This `id` is used in lots of places in the dynamic model generation in Django.
 
-    There is also a `name` attribute, that is used for the autogeneration
-    of tablenames that are used in postgreSQL.
-
-    This `name` attribute is equal to the `id`, unless there is a `shortname`
-    defined. In that case `name` is equal to the `shortname`.
-
-    The `shortname` has been added for practical purposes, because there is a hard
-    limitation on the length of tablenames in databases like postgreSQL.
+    There is also a `db_name` method, that is used for the auto-generation
+    of database table names. This also reads the `shortname`, to define
+    a human-readable abbreviation that fits inside the maximum database table name length.
     """
 
     def __init__(
@@ -731,16 +733,29 @@ class DatasetTableSchema(SchemaType):
             raise ValueError("Invalid JSON-schema contents of table")
 
     def __repr__(self):
-        prefix = ""
-        if self._parent_schema is not None:
-            prefix += f"{self._parent_schema.id}."
-        if self._parent_table is not None:
-            prefix += f"{self._parent_table.id}."
-        return f"<{self.__class__.__name__}: {prefix}{self['id']}>"
+        return f"<{self.__class__.__name__}: {self.qualified_id}>"
 
     @property
-    def name(self) -> str:
-        return self.get("shortname", self.id)
+    def qualified_id(self) -> str:
+        """The fully qualified ID (for debugging)"""
+        prefix = ""
+        if self._parent_schema is not None:
+            prefix = f"{self._parent_schema.id}."
+        if self._parent_table is not None:
+            prefix = f"{prefix}{self._parent_table.id}."
+        return f"{prefix}{self['id']}"
+
+    @property
+    def python_name(self) -> str:
+        """The 'id', but camel cased like a class name."""
+        return toCamelCase(self.id).title()
+
+    @property
+    def shortname(self) -> str:
+        """The shorter name if present, otherwise the ID.
+        This is only used to generate human-readable database table names.
+        """
+        return self.get("shortname", self["id"])
 
     @property
     def title(self) -> str | None:
@@ -776,6 +791,22 @@ class DatasetTableSchema(SchemaType):
         else:
             return None
 
+    @cached_property
+    def through_fields(self) -> tuple[DatasetFieldSchema, DatasetFieldSchema] | None:
+        """Return the left and right side of an M2M through table.
+
+        This only returns results when the table describes
+        the intermediate table of an M2M relation (:attr:`is_through_table` is true).
+        """
+        field_ids = self.get("throughFields")
+        if field_ids is None:
+            return None
+
+        return (
+            self.get_field_by_id(field_ids[0]),
+            self.get_field_by_id(field_ids[1]),
+        )
+
     @property
     def description(self) -> str | None:
         """The description of the table as stated in the schema."""
@@ -789,6 +820,10 @@ class DatasetTableSchema(SchemaType):
             of this table. The ids of these fields need to be prefixed
             (usually with the `id` of the relation field) to avoid name collisions.
         """
+        # If composite key, add PK field
+        if self.has_composite_key and "id" not in self["schema"]["properties"]:
+            yield DatasetFieldSchema(_parent_table=self, _required=True, type="string", id="id")
+
         required = set(self["schema"]["required"])
         for id_, spec in self["schema"]["properties"].items():
             field_schema = DatasetFieldSchema(
@@ -796,37 +831,21 @@ class DatasetTableSchema(SchemaType):
                 _required=(id_ in required),
                 **{**spec, "id": id_},
             )
-
-            # Add extra fields for relations of type object
-            # These fields are added to identify the different
-            # components of a composite FK to another table
-            if field_schema.relation is not None and field_schema.is_object and include_subfields:
-                for subfield in field_schema.get_subfields(add_prefixes=True):
-                    # We exclude temporal fields, they need not to be merged into the table fields
-                    if subfield.is_temporal:
-                        continue
-                    yield subfield
             yield field_schema
 
-        # If composite key, add PK field
-        if self.has_composite_key and "id" not in self["schema"]["properties"]:
-            yield DatasetFieldSchema(_parent_table=self, _required=True, type="string", id="id")
+            # When requested, expose the individual fields of a composite foreign keys.
+            # These fields become part of the main table.
+            if field_schema.relation is not None and field_schema.is_object and include_subfields:
+                # Temporal date fields are excluded, they shouldn't be part into the main table.
+                yield from (
+                    subfield
+                    for subfield in field_schema.subfields
+                    if not subfield.is_temporal_range
+                )
 
     @cached_property
     def fields(self) -> list[DatasetFieldSchema]:
-        # TODO: this should not return sub fields!
-        return list(self.get_fields(include_subfields=True))
-
-    @lru_cache()  # type: ignore[misc]
-    def get_fields_by_id(self, *field_ids: str) -> list[DatasetFieldSchema]:
-        """Get the fields based on the ids of the fields.
-
-        args:
-            field_ids: The ids of the fields.
-            NB. This needs to be a tuple, lru_cache only works on immutable arguments.
-        """
-        field_ids_set: set[str] = set(field_ids)
-        return [field for field in self.fields if field.id in field_ids_set]
+        return list(self.get_fields())
 
     @lru_cache()  # type: ignore[misc]
     def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
@@ -847,16 +866,6 @@ class DatasetTableSchema(SchemaType):
         raise SchemaObjectNotFound(
             f"Relation '{relation_id}' does not exist in table '{self.id}'."
         )
-
-    def get_through_tables_by_id(self) -> list[DatasetTableSchema]:
-        """Access list of through_tables (for n-m relations) for a single base table."""
-        if self.dataset is None:
-            return []
-        return [
-            self.dataset.build_through_table(table=self, field=f)
-            for f in self.fields
-            if f.is_through_table and not (f.is_loose_relation and f.relation is None)
-        ]
 
     @property
     def display_field(self) -> str | None:
@@ -889,13 +898,22 @@ class DatasetTableSchema(SchemaType):
         if identifier is None or dimensions is None:
             raise ValueError("Invalid temporal data")
 
-        return Temporal(
-            identifier=identifier,
-            dimensions={
-                key: TemporalDimensionFields(start_field, end_field)
-                for key, [start_field, end_field] in dimensions.items()
-            },
-        )
+        try:
+            return Temporal(
+                identifier=identifier,
+                identifier_field=self.get_field_by_id(identifier),
+                dimensions={
+                    key: TemporalDimensionFields(
+                        self.get_field_by_id(start_field),
+                        self.get_field_by_id(end_field),
+                    )
+                    for key, [start_field, end_field] in dimensions.items()
+                },
+            )
+        except SchemaObjectNotFound as e:
+            raise SchemaObjectNotFound(
+                f"Error in '{self.id}' table; temporal identifier/range fields don't exist: {e}"
+            ) from e
 
     @property
     def is_temporal(self) -> bool:
@@ -910,6 +928,11 @@ class DatasetTableSchema(SchemaType):
         return str(self["schema"].get("mainGeometry", "geometry"))
 
     @property
+    def main_geometry_field(self) -> DatasetFieldSchema:
+        """The main geometry as field object"""
+        return self.get_field_by_id(self.main_geometry)
+
+    @property
     def identifier(self) -> list[str]:
         """The main identifier field, if there is an identifier field available.
         Default to "id" for existing schemas without an identifier field.
@@ -919,6 +942,11 @@ class DatasetTableSchema(SchemaType):
         if not isinstance(identifier, list):
             identifier = [identifier]
         return identifier
+
+    @cached_property
+    def identifier_fields(self) -> list[DatasetFieldSchema]:
+        """Return the field schema's for the identifier fields."""
+        return [self.get_field_by_id(field_id) for field_id in self.identifier]
 
     @property
     def is_autoincrement(self) -> bool:
@@ -1002,7 +1030,16 @@ class DatasetTableSchema(SchemaType):
             model_name = f"{model_name}_{self.dataset.version}"
         return to_snake_case(model_name)
 
-    def db_name(
+    @cached_property
+    def db_name(self) -> str:
+        """Return the standard database name for the table.
+
+        For some custom situations (e.g. importer, or handling table versions),
+        use :meth:`db_name_variant`.
+        """
+        return self.db_name_variant()
+
+    def db_name_variant(
         self,
         *,
         with_dataset_prefix: bool = True,
@@ -1030,11 +1067,13 @@ class DatasetTableSchema(SchemaType):
             version_postfix = self.version.signif
         if with_dataset_prefix:
             dataset_prefix = to_snake_case(self.dataset.id)
+
+        shortname = to_snake_case(self.shortname)
         if self.nested_table or self.through_table:
             # We don't automatically shorten user defined table names. Automatically generated
             # names, however, should be shortened as the user has no direct control over them.
-            db_table_name = "_".join(filter(None, (dataset_prefix, to_snake_case(self.name))))
-            additional_underscores = len(list(filter(None, (version_postfix, postfix))))
+            db_table_name = _name_join(dataset_prefix, shortname)
+            additional_underscores = _name_join_count(dataset_prefix, shortname)
             max_length = (
                 MAX_TABLE_NAME_LENGTH
                 - len(version_postfix)
@@ -1042,15 +1081,11 @@ class DatasetTableSchema(SchemaType):
                 - additional_underscores
             )
             # Shortening should preserve both postfixes
-            db_table_name = (
-                "_".join(filter(None, (db_table_name[:max_length], version_postfix))) + postfix
-            )
+            db_table_name = _name_join(db_table_name[:max_length], version_postfix) + postfix
         else:
             # User defined table name -> no shortening
-            db_table_name = (
-                "_".join(filter(None, (dataset_prefix, to_snake_case(self.name), version_postfix)))
-                + postfix
-            )
+            db_table_name = _name_join(dataset_prefix, shortname, version_postfix) + postfix
+
         # We are not shortening user defined table names automatically. Instead we rely on
         # validation code to prevent table ids in Amsterdam Schema's that result in DB table
         # names that are too long. Why? Haphazardly shortening names results in table names that
@@ -1072,14 +1107,6 @@ class DatasetTableSchema(SchemaType):
             )
         return db_table_name
 
-    def _get_fk_fields(self) -> Iterator[DatasetFieldSchema]:
-        """Generates all fields in this table that have a 1:N relation to a parent table."""
-        fields = self["schema"]["properties"].items()
-        fields = (
-            DatasetFieldSchema(_parent_table=self, **{**spec, "id": _id}) for _id, spec in fields
-        )
-        return (f for f in fields if f.relation)
-
     @property
     def version(self) -> SemVer:
         """Get table version."""
@@ -1094,6 +1121,16 @@ class DatasetTableSchema(SchemaType):
         )
 
 
+def _name_join(*parts):
+    """Combine items with underscores, and skip empty values."""
+    return "_".join(filter(None, parts))
+
+
+def _name_join_count(*parts):
+    """Counts the number of underscores that _name_join inserts."""
+    return len(list(filter(None, parts)))
+
+
 class DatasetFieldSchema(DatasetType):
     """A single field (column) in a table."""
 
@@ -1103,7 +1140,7 @@ class DatasetFieldSchema(DatasetType):
         _parent_table: DatasetTableSchema | None,
         _parent_field: DatasetFieldSchema | None = None,
         _required: bool = False,
-        _temporal: bool = False,
+        _temporal_range: bool = False,
         **kwargs: Any,
     ) -> None:
         self._id: str = kwargs.pop("id")
@@ -1111,15 +1148,10 @@ class DatasetFieldSchema(DatasetType):
         self._parent_table = _parent_table
         self._parent_field = _parent_field
         self._required = _required
-        self._temporal = _temporal
+        self._temporal_range = _temporal_range
 
     def __repr__(self) -> str:
-        prefix = ""
-        if self._parent_table is not None:
-            prefix = f"{self._parent_table.id}."
-        if self._parent_field is not None:
-            prefix += f"{self._parent_field.id}."
-        return f"<{self.__class__.__name__}: {prefix}{self._id}>"
+        return f"<{self.__class__.__name__}: {self.qualified_id}>"
 
     @property
     def table(self) -> DatasetTableSchema | None:
@@ -1132,8 +1164,23 @@ class DatasetFieldSchema(DatasetType):
         return self._parent_field
 
     @property
+    def qualified_id(self) -> str:
+        """The fully qualified ID (for debugging)"""
+        prefix = ""
+        if self._parent_table is not None:
+            prefix = self._parent_table.qualified_id
+        if self._parent_field is not None:
+            prefix = f"{prefix}{self._parent_field.id}."
+        return f"{prefix}{self._id}"
+
+    @property
     def id(self) -> str:
-        """The id of a field uniquely identifies it among the fields of a table."""
+        """The id of a field uniquely identifies it among the fields of a table.
+
+        Note that comparisons against id should be avoided when fields are
+        retrieved using ``.get_fields(include_subfields=True)``. In such case,
+        a subfield with a similar ID will match with the top-level field.
+        """
         return self._id
 
     @property
@@ -1142,26 +1189,49 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def name(self) -> str:
+        """The name as it is shown to the external world, camel-cased.
+        In general, the "id" field is already camel-cased,
+        but in case that didn't happen this property will fix that.
         """
-        The name of a field is used to derive its column name in SQL.
+        return toCamelCase(self._id)
 
-        The name is equal to the id, except when it is overridden by the presence
-        of a shortname.
+    @cached_property
+    def python_name(self) -> str:
+        """The name as its used internally in Python or an ORM, snake cased"""
+        if self._parent_field is not None and self._parent_field.is_object:
+            # Is a subfield, that's included in the same parent table.
+            # (e.g. relationname_volgnummer)
+            return to_snake_case(f"{self._parent_field.id}_{self._id}")
+        else:
+            return to_snake_case(self._id)
 
-        The actual column name in SQL is the snake-casing of the name.
+    @property
+    def shortname(self) -> str:
+        """The shorter name if present, otherwise the ID.
+        Note this is only used to generate human-readable database table names.
         """
-        return cast(str, self.get("shortname", self._id))
+        return self.get("shortname", self._id)
 
+    @cached_property
     def db_name(self) -> str:
         """Return the name that is being used in the database.
-
-        For regular fields, this should juist be the `name`,
-        the only exception is an FK relation, because in that
-        case there is an `_id` postfixed field in the base table.
+        This can be a different name then the internal name
+        when the field is a relation, or has a short-name.
         """
-        from schematools.utils import to_snake_case
+        # This is a function base DatasetTableSchema.db_name has to be one.
+        db_name = self.get("shortname", self._id)
+        if self.relation is not None:
+            # In schema foreign keys should be specified without _id,
+            # but the db_column should be with _id
+            # Regular foreign keys have a _id field for the database, just like Django ORM does.
+            db_name += "_id"
 
-        return to_snake_case(self.name + "_id" if self.relation is not None else self.name)
+        if self._parent_field is not None and self._parent_field.is_object:
+            # Is a subfield, that's included in the same parent table.
+            # (e.g. relationname_volgnummer)
+            db_name = f"{self._parent_field.shortname}_{db_name}"
+
+        return to_snake_case(db_name)
 
     @property
     def title(self) -> str | None:
@@ -1215,9 +1285,18 @@ class DatasetFieldSchema(DatasetType):
         For composite keys (table.identifier has > 1 item), an 'id'
         field is autogenerated.
         """
-        if self.table is None:
+        if self.is_subfield:
             return False
-        return self.name == "id" or [self.name] == self.table.identifier
+        return self.id == "id" or [self.id] == self._parent_table.identifier
+
+    @cached_property
+    def is_identifier_part(self) -> bool:
+        """Tell whether the field is part of the composite primary key"""
+        # This logic currently won't apply to subfields,
+        # otherwise a "relation.identifier" could match the "in" clause as well.
+        return (
+            self.id == "id" or self._id in self._parent_table.identifier
+        ) and self._parent_field is None
 
     @property
     def relation(self) -> str | None:
@@ -1276,6 +1355,15 @@ class DatasetFieldSchema(DatasetType):
             return self.related_table.identifier
 
     @property
+    def related_fields(self) -> list[DatasetFieldSchema] | None:
+        """Convenience property that returns the related field schemas."""
+        ids = self.related_field_ids
+        if ids is None:
+            return None
+        else:
+            return [self.related_table.get_field_by_id(id_name) for id_name in ids]
+
+    @property
     def reverse_relation(self) -> AdditionalRelationSchema | None:
         """Find the opposite description of a relation.
 
@@ -1306,10 +1394,16 @@ class DatasetFieldSchema(DatasetType):
         """Tell whether the field is a scalar."""
         return self.get("type") not in {"object", "array"}
 
+    @cached_property
+    def is_subfield(self) -> bool:
+        """Tell whether this field is part of an embedded object (e.g. temporal relation)"""
+        return self.parent_field is not None
+
     @property
-    def is_temporal(self) -> bool:
-        """Tell whether the field is added, because it has temporal charateristics"""
-        return self._temporal
+    def is_temporal_range(self) -> bool:
+        """Tell whether the field is used to store the range of a temporal dimension.
+        (e.g. beginGeldigheid or eindGeldigheid)."""
+        return self._temporal_range
 
     @property
     def is_geo(self) -> bool:
@@ -1343,31 +1437,6 @@ class DatasetFieldSchema(DatasetType):
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
 
-    def get_dimension_fieldnames(self) -> dict[str, TemporalDimensionFields]:
-        """Gets the dimension fieldnames."""
-        if self.relation is None and self.nm_relation is None:
-            return {}
-
-        dataset_id, table_id = cast(str, self.relation or self.nm_relation).split(":")
-        if self.table is None:
-            return {}
-
-        dataset_schema = self.table.get_dataset_schema(dataset_id)
-        if dataset_schema is None:
-            return {}
-        try:
-            dataset_table = dataset_schema.get_table_by_id(
-                table_id, include_nested=False, include_through=False
-            )
-        except ValueError:
-            # If we cannot get the table, we ignore the exception
-            # and we do not return fields
-            return {}
-        if not dataset_table.is_temporal:
-            return {}
-
-        return dataset_table.temporal.dimensions
-
     @lru_cache()  # type: ignore[misc]
     def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
         """Finds and returns the subfield with the given id.
@@ -1385,18 +1454,6 @@ class DatasetFieldSchema(DatasetType):
     def subfields(self) -> list[DatasetFieldSchema]:
         """Return the subfields for a nested structure.
 
-        Calls the `get_subfields` method without argument,
-        so no prefixes are added to the field ids.
-        This is the default situation.
-        """
-        return list(self.get_subfields())
-
-    def get_subfields(self, add_prefixes: bool = False) -> Iterable[DatasetFieldSchema]:
-        """Return the subfields for a nested structure.
-
-        Args:
-            add_prefixes: Add prefixes to the ids of the subfields.
-
         For a nested object, fields are based on its properties,
         for an array of objects, fields are based on the properties
         of the "items" field.
@@ -1408,10 +1465,6 @@ class DatasetFieldSchema(DatasetType):
 
         If self is not an object or array, the return value is an empty iterator.
         """
-        from schematools.utils import toCamelCase
-
-        field_name_prefix = ""
-
         if self.is_object:
             # Field has direct subfields (type=object)
             required = set(self.get("required", []))
@@ -1421,27 +1474,30 @@ class DatasetFieldSchema(DatasetType):
             required = set(self.field_items.get("required") or ())
             properties = self.field_items["properties"]
         else:
-            return ()
+            return []
 
         relation = self.relation
         nm_relation = self.nm_relation
-        if relation is not None or nm_relation is not None:
-            field_name_prefix = self.name + RELATION_INDICATOR
-
         combined_dimension_fieldnames: set[str] = set()
-        for (_dimension, field_names) in self.get_dimension_fieldnames().items():
-            combined_dimension_fieldnames |= {toCamelCase(fieldname) for fieldname in field_names}
+        if relation is not None or nm_relation is not None:
+            if self.related_table.is_temporal:
+                # Can't read self.related_table.temporal here, because that causes a loop
+                # into get_field_by_id() / self.fields for a self-referencing table.
+                # Reading raw dictionary data instead.
+                dimensions = self.related_table["temporal"].get("dimensions", {})
+                for dimension, range_ids in dimensions.items():
+                    combined_dimension_fieldnames.update(range_ids)
 
-        for id_, spec in properties.items():
-            needs_prefix = add_prefixes and id_ not in combined_dimension_fieldnames
-            field_id = f"{field_name_prefix}{id_}" if needs_prefix else id_
-            yield DatasetFieldSchema(
+        return [
+            DatasetFieldSchema(
                 _parent_table=self._parent_table,
                 _parent_field=self,
                 _required=(id_ in required),
-                _temporal=(id_ in combined_dimension_fieldnames),
-                **{**spec, "id": field_id},
+                _temporal_range=(id_ in combined_dimension_fieldnames),
+                **{**spec, "id": id_},
             )
+            for id_, spec in properties.items()
+        ]
 
     @property
     def is_array(self) -> bool:
@@ -1463,6 +1519,13 @@ class DatasetFieldSchema(DatasetType):
         """Checks if field is a possible nested table."""
         return self.is_array_of_objects and self.nm_relation is None
 
+    @cached_property
+    def nested_table(self) -> DatasetTableSchema | None:
+        """Access the nested table that this field needs to store its data."""
+        if not self.is_nested_table:
+            return None
+        return self._parent_table.dataset.build_nested_table(field=self)
+
     @property
     def is_through_table(self) -> bool:
         """
@@ -1472,6 +1535,13 @@ class DatasetFieldSchema(DatasetType):
         tables if the target of the relation is temporal.
         """
         return self.nm_relation is not None or self.is_relation_temporal
+
+    @cached_property
+    def through_table(self) -> DatasetTableSchema | None:
+        """Access the through table that this fields needs to store its data."""
+        if not self.is_through_table:
+            return None
+        return self._parent_table.dataset.build_through_table(field=self)
 
     @property
     def is_relation_temporal(self):
@@ -1513,8 +1583,8 @@ class DatasetFieldSchema(DatasetType):
         # So, target-side of relation is temporal
         # Determine fieldnames used for temporal
         # Table identifier is mandatory and always contains at least one field
-        identifier_field = related_table.get_field_by_id(related_table.identifier[0])
-        sequence_field = related_table.get_field_by_id(related_table.temporal.identifier)
+        identifier_field = related_table.identifier_fields[0]
+        sequence_field = related_table.temporal.identifier_field
 
         if self.is_array_of_objects:
             properties = self.field_items["properties"]
@@ -1558,6 +1628,14 @@ class AdditionalRelationSchema(DatasetType):
     @property
     def id(self):
         return self._id
+
+    @property
+    def name(self) -> str:
+        return toCamelCase(self._id)
+
+    @cached_property
+    def python_name(self) -> str:
+        return to_snake_case(self._id)
 
     @property
     def parent_table(self):
@@ -1859,13 +1937,13 @@ class ProfileTableSchema(DatasetType):
 
 
 class TemporalDimensionFields(NamedTuple):
-    """A tuple that describes the start field and end field of a range.
+    """A tuple that describes the fields for start field and end field of a range.
 
     This could be something like ``("beginGeldigheid", "eindGeldigheid")``.
     """
 
-    start: str
-    end: str
+    start: DatasetFieldSchema
+    end: DatasetFieldSchema
 
 
 @dataclass
@@ -1900,6 +1978,7 @@ class Temporal:
     """
 
     identifier: str
+    identifier_field: DatasetFieldSchema
     dimensions: dict[str, TemporalDimensionFields] = field(default_factory=dict)
 
 

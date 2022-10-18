@@ -220,7 +220,10 @@ def test_ndjson_import_nm_composite_keys_with_geldigheid(here, engine, gebieden_
     ]
 
     records = [
-        dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten")
+        dict(r)
+        for r in engine.execute(
+            "SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten order by id"
+        )
     ]
     assert len(records) == 3
     # Also the temporal fields are present in the database
@@ -246,12 +249,14 @@ def test_ndjson_import_nm_composite_selfreferencing_keys(
     importer.load_file(ndjson_path)
 
     # An "id" should have been generated, concat of the composite key fields
-    records = [dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten")]
+    records = [dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten order by id")]
     assert records == [
         {
             "id": "KAD.001.1",
             "identificatie": "KAD.001",
             "volgnummer": 1,
+            "begin_geldigheid": None,
+            "eind_geldigheid": None,
             "koopsom": None,
             "registratiedatum": None,
         },
@@ -259,6 +264,8 @@ def test_ndjson_import_nm_composite_selfreferencing_keys(
             "id": "KAD.002.1",
             "identificatie": "KAD.002",
             "volgnummer": 1,
+            "begin_geldigheid": None,
+            "eind_geldigheid": None,
             "koopsom": None,
             "registratiedatum": None,
         },

@@ -143,8 +143,12 @@ def test_model_factory_sub_objects_for_shortened_names(verblijfsobjecten_dataset
     fields_dict = {f.name: f for f in model._meta.fields}
 
     # Field is a related, should have 2 FKs to both sides of the relation
-    assert isinstance(fields_dict["activiteiten"], models.ForeignKey)
-    assert isinstance(fields_dict["sbi_voor_activiteit"], models.ForeignKey)
+    assert isinstance(fields_dict["maatschappelijkeactiviteiten"], models.ForeignKey)
+    assert fields_dict["maatschappelijkeactiviteiten"].db_column == "activiteiten_id"
+
+    heeft_sbi_voor_activiteit_voor_onder = fields_dict["heeft_sbi_activiteiten_voor_onderneming"]
+    assert isinstance(heeft_sbi_voor_activiteit_voor_onder, models.ForeignKey)
+    assert heeft_sbi_voor_activiteit_voor_onder.db_column == "sbi_voor_activiteit_id"
 
 
 @pytest.mark.django_db
@@ -158,7 +162,8 @@ def test_model_factory_temporary_1_n_relation(ggwgebieden_dataset):
         "ligtinstadsdeel_identificatie",
         "ligtinstadsdeel_volgnummer",
     }
-    assert {f.name for f in model_dict["ggwgebieden"]._meta.fields} > related_temporary_fields
+    model_fields = {f.name for f in model_dict["ggwgebieden"]._meta.fields}
+    assert model_fields > related_temporary_fields
 
 
 @pytest.mark.django_db
