@@ -23,10 +23,9 @@ class Command(BaseCommand):  # noqa: D101
             default=settings.SCHEMA_URL,
             help=f"Schema URL (default: {settings.SCHEMA_URL})",
         )
-        parser.add_argument("--sql", action="store_true", help="Generate the sql statements.")
         parser.add_argument("--skip", nargs="*", default=[], help="Dataset ids to be skipped.")
         parser.add_argument(
-            "--limit_to", nargs="*", default=[], help="Dataset ids to be included exclusively."
+            "--limit-to", nargs="*", default=[], help="Dataset ids to be included exclusively."
         )
 
     def handle(self, *args: List[Any], **options: Dict[str, Any]) -> None:  # noqa: D102
@@ -38,7 +37,4 @@ class Command(BaseCommand):  # noqa: D101
                 options["schema_url"], limit_to=options["limit_to"], skip=options["skip"]
             )
 
-        as_sql = options["sql"]
-        sql_lines = relate_datasets(*schemas, as_sql=as_sql)
-        if as_sql:
-            self.stdout.write("\n".join(sql_lines))
+        relate_datasets(*schemas)

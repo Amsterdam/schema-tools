@@ -5,7 +5,6 @@ from typing import Any, List
 
 from schematools.contrib.django.datasets import get_datasets_from_schemas
 from schematools.contrib.django.factories import schema_models_factory
-from schematools.contrib.django.sql import get_bulk_update_sql_for
 from schematools.types import DatasetSchema, DatasetTableSchema
 from schematools.utils import to_snake_case
 
@@ -39,7 +38,7 @@ def add_temporal_attrs(
     return attrs | temporal_attrs
 
 
-def relate_datasets(*dataset_schemas: List[DatasetSchema], as_sql=False) -> List[str]:
+def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> List[str]:
     """Add relations to the datasets.
 
     There is one caveat. Because we are using the Django ORM,
@@ -105,10 +104,7 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema], as_sql=False) -> List
                             )
                         objs.append(obj)
 
-                    if as_sql:
-                        sql_lines.extend(list(get_bulk_update_sql_for(objs, [field_name])))
-                    else:
-                        model.objects.bulk_update(objs, [field_name])
+                    model.objects.bulk_update(objs, [field_name])
 
                 elif f.nm_relation is not None:
                     target_model = model._meta.get_field(field_name).remote_field.model
