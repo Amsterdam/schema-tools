@@ -59,7 +59,7 @@ The following command can be used to inspect and import the GeoJSON files:
 
 ## Importing GOB events
 
-The schematools library has a module that read GOB events into database tables that are
+The schematools library has a module that reads GOB events into database tables that are
 defines by an Amsterdam schema. This module can be used to read GOB events from a Kafka stream.
 It is also possible to read GOB events from a batch file with line-separeted events using:
 
@@ -113,3 +113,28 @@ schema-tools, make sure one of the commit increments the version number in
 * tag the release X.Y.Z with ``git tag -a vX.Y.Z -m "Bump to vX.Y.Z"``;
 * push the tag to GitHub with ``git push origin --tags``;
 * release to PyPI: ``make upload`` (requires the PyPI secret).
+
+
+## Mocking data
+
+The schematools library contains two Django management commands to generate
+mock data. The first one is `create_mock_data` which generates mock data for all
+the datasets that are found at the configured schema location `SCHEMA_URL`.
+
+The `create_mock_data` command has some options, e.g. to change
+the default number of generated records (`--size`), to skip datasets (`--skip`)
+or to use a subset of the datasets (`--limit-to`). To avoid duplicate pk's
+on subsequent runs the `--start-at` options can be used.
+
+During record generation in `create_mock_data`, the relations are not added,
+so foreign key fields will be filled with NULL values.
+
+There is a second management command `relate_mock_data` that can be used to
+add the relations. This command also has `--limit-to` and `--skip` optis.
+
+NB. When `--limit-to` is being used, the command can fail when datasets that
+are involved in a relation are missing, so make sure to include all relavant
+datasets.
+
+For convenience an additional management command `truncate_tables` has been added,
+to truncate all tables.
