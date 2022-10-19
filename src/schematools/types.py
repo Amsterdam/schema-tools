@@ -955,7 +955,7 @@ class DatasetTableSchema(SchemaType):
             return False
         return self.get_field_by_id(self.identifier[0]).is_autoincrement
 
-    @property
+    @cached_property
     def has_composite_key(self) -> bool:
         """Tell whether the table uses multiple attributes together as it's identifier."""
         return len(self.identifier) > 1
@@ -1187,7 +1187,7 @@ class DatasetFieldSchema(DatasetType):
     def is_autoincrement(self) -> bool:
         return "autoincrement" in self.type
 
-    @property
+    @cached_property
     def name(self) -> str:
         """The name as it is shown to the external world, camel-cased.
         In general, the "id" field is already camel-cased,
@@ -1258,7 +1258,7 @@ class DatasetFieldSchema(DatasetType):
     def required(self) -> bool:
         return self._required
 
-    @property
+    @cached_property
     def type(self) -> str:
         """Returns the type of this field.
 
@@ -1279,7 +1279,7 @@ class DatasetFieldSchema(DatasetType):
                 raise RuntimeError(f"No 'type' or '$ref' found in {self!r}")
         return str(value)
 
-    @property
+    @cached_property
     def is_primary(self) -> bool:
         """When name is 'id' the field should be the primary key
         For composite keys (table.identifier has > 1 item), an 'id'
@@ -1298,14 +1298,14 @@ class DatasetFieldSchema(DatasetType):
             self.id == "id" or self._id in self._parent_table.identifier
         ) and self._parent_field is None
 
-    @property
+    @cached_property
     def relation(self) -> str | None:
         """Give the 1:N relation, if it exists."""
         if self.type == "array":
             return None
         return self.get("relation")
 
-    @property
+    @cached_property
     def nm_relation(self) -> str | None:
         """Give the N:M relation, if it exists (called M2M in Django)."""
         if self.type != "array":
@@ -1384,12 +1384,12 @@ class DatasetFieldSchema(DatasetType):
     def multipleof(self) -> float | None:
         return self.get("multipleOf")
 
-    @property
+    @cached_property
     def is_object(self) -> bool:
         """Tell whether the field references an object."""
         return self.get("type") == "object"
 
-    @property
+    @cached_property
     def is_scalar(self) -> bool:
         """Tell whether the field is a scalar."""
         return self.get("type") not in {"object", "array"}
@@ -1405,7 +1405,7 @@ class DatasetFieldSchema(DatasetType):
         (e.g. beginGeldigheid or eindGeldigheid)."""
         return self._temporal_range
 
-    @property
+    @cached_property
     def is_geo(self) -> bool:
         """Tell whether the field references a geo object."""
         return "geojson.org" in self.get("$ref", "")
@@ -1427,7 +1427,7 @@ class DatasetFieldSchema(DatasetType):
         crs = self.crs
         return int(crs.split("EPSG:")[1]) if crs else None
 
-    @property
+    @cached_property
     def provenance(self) -> str | None:
         """Get the provenance info, if available, or None."""
         return self.get("provenance")
@@ -1499,22 +1499,22 @@ class DatasetFieldSchema(DatasetType):
             for id_, spec in properties.items()
         ]
 
-    @property
+    @cached_property
     def is_array(self) -> bool:
         """Checks if field is an array field."""
         return self.get("type") == "array"
 
-    @property
+    @cached_property
     def is_array_of_objects(self) -> bool:
         """Checks if field is an array of objects."""
         return self.is_array and self.get("items", {}).get("type") == "object"
 
-    @property
+    @cached_property
     def is_array_of_scalars(self) -> bool:
         """Checks if field is an array of scalars."""
         return self.is_array and self.get("items", {}).get("type") != "object"
 
-    @property
+    @cached_property
     def is_nested_table(self) -> bool:
         """Checks if field is a possible nested table."""
         return self.is_array_of_objects and self.nm_relation is None
@@ -1526,7 +1526,7 @@ class DatasetFieldSchema(DatasetType):
             return None
         return self._parent_table.dataset.build_nested_table(field=self)
 
-    @property
+    @cached_property
     def is_through_table(self) -> bool:
         """
         Checks if field is a possible through table.
@@ -1543,7 +1543,7 @@ class DatasetFieldSchema(DatasetType):
             return None
         return self._parent_table.dataset.build_through_table(field=self)
 
-    @property
+    @cached_property
     def is_relation_temporal(self):
         """Tell whether the 1-N relationship is modelled by an intermediate table.
         This allows tracking multiple versions of the relationship.
@@ -1555,7 +1555,7 @@ class DatasetFieldSchema(DatasetType):
         """Auth of the field, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
 
-    @property
+    @cached_property
     def is_composite_key(self):
         """Tell whether the relation uses a composite key"""
         return self.get("relation") and self.is_object and len(self["properties"]) > 1
