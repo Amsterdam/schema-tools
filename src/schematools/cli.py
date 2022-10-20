@@ -756,15 +756,13 @@ def create_all_objects(
     """
     if dataset_id is None:
         click.echo("No 'dataset_id' provided. Processing all datasets!")
-        dataset_schemas = _get_all_dataset_schemas(schema_url)
+        dataset_schemas = _get_all_dataset_schemas(schema_url).values()
     else:
-        dataset_schemas = {
-            dataset_id: _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
-        }
+        dataset_schemas = [_get_dataset_schema(dataset_id, schema_url, prefetch_related=True)]
 
     engine = _get_engine(db_url)
-    for dataset_id, dataset_schema in dataset_schemas.items():
-        if dataset_id in exclude:
+    for dataset_schema in dataset_schemas:
+        if dataset_schema.id in exclude:
             msg = f"Skipping dataset {dataset_id!r}"
             click.echo(msg)
             click.echo("=" * len(msg))
