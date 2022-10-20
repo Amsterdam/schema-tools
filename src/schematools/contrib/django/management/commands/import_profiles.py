@@ -3,9 +3,10 @@ from typing import List, Optional
 from django.conf import settings
 from django.core.management import BaseCommand
 
+from schematools import types
 from schematools.contrib.django.models import Profile
 from schematools.types import ProfileSchema
-from schematools.utils import profile_schemas_from_url
+from schematools.utils import schemas_from_url
 
 
 class Command(BaseCommand):
@@ -36,7 +37,7 @@ class Command(BaseCommand):
         for filename in profile_files:
             self.stdout.write(f"Loading profile from {filename}")
             schema = ProfileSchema.from_file(filename)
-            profile = self.import_schema(schema.name, schema)
+            profile = self._import(schema.name, schema)
             if profile is not None:
                 profiles.append(profile)
 
@@ -47,17 +48,20 @@ class Command(BaseCommand):
         self.stdout.write(f"Loading profiles from {schema_url}")
         profiles = []
 
-        for name, schema in profile_schemas_from_url(schema_url).items():
-            self.stdout.write(f"* Processing {name}")
-            profile = self.import_schema(name, schema)
+        for schema in schemas_from_url(
+            base_url=schema_url, data_type=types.ProfileSchema
+        ).values():
+            self.stdout.write(f"* Processing {schema.name}")
+            profile = self._import(schema)
             if profile is not None:
                 profiles.append(profile)
 
         return profiles
 
-    def import_schema(self, name: str, schema: ProfileSchema) -> Optional[Profile]:
+    def _import(self, schema: ProfileSchema) -> Optional[Profile]:
+        name = schema.name
         try:
-            profile = Profile.objects.get(name=schema.name)
+            profile = Profile.objects.get(name=name)
         except Profile.DoesNotExist:
             profile = Profile.create_for_schema(schema)
             self.stdout.write(f"   Created {name}")
