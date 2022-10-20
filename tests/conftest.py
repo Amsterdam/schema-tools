@@ -22,6 +22,13 @@ from schematools.utils import dataset_schema_from_path
 HERE = Path(__file__).parent
 
 
+try:
+    # Will raise ImproperlyConfigured if env. vars not set.
+    import django  # noqa: F401
+except Exception:
+    collect_ignore_glob = ["django"]
+
+
 # fixtures engine and dbengine provided by pytest-sqlalchemy,
 # automatically discovered by pytest via setuptools entry-points.
 # https://github.com/toirl/pytest-sqlalchemy/blob/master/pytest_sqlalchemy.py
@@ -42,7 +49,9 @@ def here() -> Path:
 @pytest.fixture(scope="session")
 def db_url():
     """Get the DATABASE_URL, prepend test_ to it."""
-    url = os.environ.get("DATABASE_URL", "postgresql://localhost/schematools")
+    url = os.environ.get("DATABASE_URL")
+    if url is None:
+        pytest.skip("DATABASE_URL not set")
 
     parts = urlparse(url)
     dbname = parts.path[1:]

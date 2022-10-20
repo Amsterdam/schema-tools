@@ -1,6 +1,12 @@
 """Extra fixtures for ``schematools.contrib.django``"""
+import os
+
 from django.conf import settings
 from pytest_django.plugin import _setup_django
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL is None:
+    collect_ignore_glob = "*"
 
 
 def pytest_configure(config):
@@ -15,7 +21,7 @@ def pytest_configure(config):
         ),
     }
     databases["default"]["NAME"] += "_django"  # avoid duplication with sqlalchemy tests
-    settings.configure(
+    settings.configure(  # noqa: S106
         DEBUG=True,
         INSTALLED_APPS=[
             "django.contrib.auth",
