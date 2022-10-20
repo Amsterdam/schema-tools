@@ -61,14 +61,6 @@ def dataset_schema_from_url(
     )
 
 
-def profile_schemas_from_url(profiles_url: URL | str) -> dict[str, types.ProfileSchema]:
-    """Fetch all profile schemas from a remote file.
-
-    The URL could be ``https://schemas.data.amsterdam.nl/profiles/``
-    """
-    return schemas_from_url(base_url=profiles_url, data_type=types.ProfileSchema)
-
-
 def dataset_paths_from_url(base_url: URL | str) -> dict[str, str]:
     """Fetch all dataset paths from a remote location.
 
