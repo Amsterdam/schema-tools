@@ -34,19 +34,18 @@ def add_temporal_attrs(
                     "Skipping temporal attribute mocking for `%s` `%s`", field_info, postfix
                 )
                 return attrs
-            temporal_attrs[to_snake_case(field_name + "_" + postfix)] = postfix_value
+            temporal_attrs[field_name + "_" + postfix] = postfix_value
     return attrs | temporal_attrs
 
 
-def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> List[str]:
+def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> None:
     """Add relations to the datasets.
 
     There is one caveat. Because we are using the Django ORM,
     we do not have models for the extra through tabels for the 1-N models,
-    that is added for the BenK related models.
-    So these through tables cannot be filled with data.
+    that are added for the BenK related models.
+    So these through tables cannot be filled with mock data.
     """
-    sql_lines = []
     models = defaultdict(dict)
     datasets = get_datasets_from_schemas(dataset_schemas)
     for dataset in datasets:
@@ -55,9 +54,12 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> List[str]:
 
     for dataset_schema in dataset_schemas:
         for table in dataset_schema.tables:
-            model = models[to_snake_case(dataset_schema.id)][to_snake_case(table.id)]
+            model = models[dataset_schema.db_name][
+                table.db_name_variant(with_dataset_prefix=False)
+            ]
             for f in table.get_fields(include_subfields=False):
-                field_name = to_snake_case(f.name)
+                field_name = f.python_name
+
                 if f.relation is not None:
                     related_dataset_schema_id, related_dataset_table_id = f.relation.split(":")
 
@@ -104,7 +106,7 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> List[str]:
                             )
                         objs.append(obj)
 
-                    model.objects.bulk_update(objs, [field_name])
+                    model.objects.bulk_update(objs, attrs.keys())
 
                 elif f.nm_relation is not None:
                     target_model = model._meta.get_field(field_name).remote_field.model
@@ -114,7 +116,7 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> List[str]:
                     through_model = m2m_descriptor.through
 
                     objs = []
-                    source_id = to_snake_case(table.name) + "_id"
+                    source_id = table.db_name_variant(with_dataset_prefix=False, postfix="_id")
                     target_id = field_name + "_id"
 
                     # first delete all relations
@@ -127,7 +129,10 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> List[str]:
                         # the source and target side of the relation.
                         if not f.is_loose_relation:
                             attrs = add_temporal_attrs(
-                                to_snake_case(table.name), source_value, attrs, table
+                                table.db_name_variant(with_dataset_prefix=False),
+                                source_value,
+                                attrs,
+                                table,
                             )
                             attrs = add_temporal_attrs(
                                 field_name, target_value, attrs, f.related_table
@@ -136,5 +141,3 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> List[str]:
 
                     if objs:
                         through_model.objects.bulk_update(objs, attrs.keys())
-
-    return sql_lines

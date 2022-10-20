@@ -822,7 +822,12 @@ class DatasetTableSchema(SchemaType):
         """
         # If composite key, add PK field
         if self.has_composite_key and "id" not in self["schema"]["properties"]:
-            yield DatasetFieldSchema(_parent_table=self, _required=True, type="string", id="id")
+            field_kwargs = {"_parent_table": self, "_required": True, "type": "string", "id": "id"}
+            # For temporal tables, we add an extra `faker` in the field definition
+            # that knows how to concatenate the field of the composite key to generate an id
+            if self.is_temporal:
+                field_kwargs["faker"] = "joiner"
+            yield DatasetFieldSchema(**field_kwargs)
 
         required = set(self["schema"]["required"])
         for id_, spec in self["schema"]["properties"].items():
