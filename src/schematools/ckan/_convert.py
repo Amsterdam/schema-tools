@@ -5,8 +5,11 @@ from typing import Any
 from ..types import DatasetSchema
 
 
-def from_dataset(ds: DatasetSchema) -> dict[str, Any]:
+def from_dataset(ds: DatasetSchema, path: str) -> dict[str, Any]:
     """Convert a dataset to the CKAN format variant used by data.overheid.nl.
+
+    path should be the dataset path as used in DSO-API, e.g., "beheerkaart/cbs_grid"
+    for the dataset with id "beheerkaartCbsGrid".
 
     The output, as JSON, can be used in a CKAN create_package request.
 
@@ -20,12 +23,7 @@ def from_dataset(ds: DatasetSchema) -> dict[str, Any]:
     # which we could use to represent the tables, but data.overheid.nl doesn't
     # seem to support that (or it's broken).
 
-    # The URL for the dataset also serves as the identifier.
-    #
-    # XXX The URL is not always correct, but the logic to construct paths lives in DSO-API.
-    # Only the Haal Centraal remotes have custom paths, though.
-    # Maybe get rid of the custom paths?
-    url = "https://api.data.amsterdam.nl/v1/" + ds.id
+    url = "https://api.data.amsterdam.nl/v1/" + path
 
     has_geo = any(table.has_geometry_fields for table in ds.tables)
     theme = THEME_RUIMTE if has_geo else THEME_BESTUUR
@@ -54,7 +52,7 @@ def from_dataset(ds: DatasetSchema) -> dict[str, Any]:
         "publisher": "http://standaarden.overheid.nl/owms/terms/Amsterdam",
         "theme": [theme],
         "title": title,
-        "url": "https://api.data.amsterdam.nl/v1/" + ds.id,
+        "url": url,
     }
 
     # XXX I can't find what the inverse is called, so we omit this field for

@@ -473,12 +473,12 @@ def to_ckan(schema_url: str, upload_url: str):
 
     status = 0
 
-    datasets = _get_all_dataset_schemas(schema_url).values()
+    datasets = _get_all_dataset_schemas(schema_url)
 
     data = []
-    for ds in datasets:
+    for path, ds in datasets.items():
         try:
-            data.append(ckan.from_dataset(ds))
+            data.append(ckan.from_dataset(ds, path))
         except Exception as e:
             logger.error("in dataset %s: %s", ds.identifier, str(e))
             status = 1
