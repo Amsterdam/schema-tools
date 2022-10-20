@@ -443,7 +443,7 @@ def create_acl_from_schemas(
                 session, pg_schema, schemas, role, scope, dry_run, create_roles, echo=bool(verbose)
             )
         else:
-            for _dataset_name, dataset_schema in schemas.items():
+            for dataset_schema in schemas.values():
                 set_dataset_read_permissions(
                     session,
                     pg_schema,
@@ -462,7 +462,7 @@ def create_acl_from_schemas(
                 session, pg_schema, schemas, dry_run, create_roles, echo=bool(verbose)
             )
         else:
-            for _dataset_name, dataset_schema in schemas.items():
+            for dataset_schema in schemas.values():
                 set_dataset_write_permissions(
                     session, pg_schema, dataset_schema, dry_run, create_roles, echo=bool(verbose)
                 )
