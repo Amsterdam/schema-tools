@@ -6,7 +6,7 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Final, Match, Pattern, cast
+from typing import TYPE_CHECKING, Final, Match, Pattern
 
 import requests
 from cachetools.func import ttl_cache
@@ -61,25 +61,12 @@ def dataset_schema_from_url(
     )
 
 
-def dataset_paths_from_url(base_url: URL | str) -> dict[str, str]:
-    """Fetch all dataset paths from a remote location.
-
-    The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
-    """
-    base_url = URL(base_url)
-
-    with requests.Session() as connection:
-        response = connection.get(base_url / "index.json")
-        response.raise_for_status()
-        return cast(Dict[str, str], response.json())
-
-
 def schemas_from_url(base_url: URL | str, data_type: type[types.ST]) -> dict[str, types.ST]:
     """Fetch all schema definitions from a remote file.
 
     The URL could be ``https://schemas.data.amsterdam.nl/datasets/``
     """
-    schema_lookup: dict[str, types.ST] = {}
+    schemas = {}
     base_url = URL(base_url)
 
     with requests.Session() as connection:
@@ -87,13 +74,12 @@ def schemas_from_url(base_url: URL | str, data_type: type[types.ST]) -> dict[str
         response.raise_for_status()
         response_data = response.json()
 
-        for i, schema_id in enumerate(response_data):
-            schema_path = response_data[schema_id]
+        for i, (schema_id, schema_path) in enumerate(response_data.items()):
             logger.debug("Looking up dataset %3d of %d: %s.", i, len(response_data), schema_id)
-            schema_lookup[schema_id] = _schema_from_url_with_connection(
+            schemas[schema_path] = _schema_from_url_with_connection(
                 connection, base_url, schema_path, data_type
             )
-    return schema_lookup
+    return schemas
 
 
 def schema_from_url(
@@ -234,21 +220,20 @@ def dataset_schema_from_id_and_schemas_path(
     return dataset_schema
 
 
-def dataset_schemas_from_schemas_path(schemas_path: Path | str) -> dict[str, types.DatasetSchema]:
-    """Read all datasets from the schemas_path.
+def dataset_schemas_from_schemas_path(root: Path | str) -> dict[str, types.DatasetSchema]:
+    """Read all dataset schemas from a directory tree.
 
     Args:
-        schemas_path: Path to the filesystem location with the dataset schemas.
+        root: Path of a directory containing dataset schemas in subdirs.
     """
-    schema_lookup: dict[str, types.DatasetSchema] = {}
-    for root, _, files in os.walk(schemas_path):
+    schemas = {}
+    for dirname, _, files in os.walk(root):
         if "dataset.json" in files:
-            root_path = Path(root)
-            # fetch the id for the dataset in some way
-            schema_path = root_path.joinpath("dataset.json")
-            dataset_schema: types.DatasetSchema = dataset_schema_from_path(schema_path)
-            schema_lookup[dataset_schema.id] = dataset_schema
-    return schema_lookup
+            schema_path = os.path.join(dirname, "dataset.json")
+            schema: types.DatasetSchema = dataset_schema_from_path(schema_path)
+            rel_path = os.path.relpath(dirname, start=root)
+            schemas[rel_path] = schema
+    return schemas
 
 
 def profile_schema_from_file(filename: Path | str) -> dict[str, types.ProfileSchema]:

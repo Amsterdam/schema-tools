@@ -6,12 +6,7 @@ from django.db.models import Q
 
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetSchema
-from schematools.utils import (
-    dataset_paths_from_url,
-    dataset_schema_from_path,
-    dataset_schemas_from_url,
-    to_snake_case,
-)
+from schematools.utils import dataset_schema_from_path, dataset_schemas_from_url, to_snake_case
 
 from .create_tables import create_tables
 
@@ -56,29 +51,26 @@ class Command(BaseCommand):
         for filename in schema_files:
             self.stdout.write(f"Loading schema from {filename}")
             schema = dataset_schema_from_path(filename)
-            dataset = self.import_schema(schema.id, schema)
+            dataset = self._import(schema, filename)
             datasets.append(dataset)
 
         return datasets
 
     def import_from_url(self, schema_url) -> List[Dataset]:
-        """Import all schema definitions from an URL"""
+        """Import all schema definitions from a URL"""
         self.stdout.write(f"Loading schema from {schema_url}")
         datasets = []
 
         schemas = dataset_schemas_from_url(schema_url)
-        paths = dataset_paths_from_url(schema_url)
-        for name, schema in schemas.items():
-            self.stdout.write(f"* Processing {name}")
-            dataset = self.import_schema(name, schema, paths[name])
+        for path, schema in schemas.items():
+            self.stdout.write(f"* Processing {schema.id}")
+            dataset = self._import(schema, path)
             if dataset is not None:
                 datasets.append(dataset)
 
         return datasets
 
-    def import_schema(
-        self, name: str, schema: DatasetSchema, path: Optional[str] = None
-    ) -> Optional[Dataset]:
+    def _import(self, schema: DatasetSchema, path: str) -> Optional[Dataset]:
         """Import a single dataset schema."""
 
         created = False
@@ -96,17 +88,16 @@ class Command(BaseCommand):
                 created = True
 
         if created:
-            self.stdout.write(f"  Created {name}")
+            self.stdout.write(f"  Created {schema.id}")
             return dataset
         else:
-            self.stdout.write(f"  Updated {name}")
+            self.stdout.write(f"  Updated {schema.id}")
 
             if dataset.is_default_version != schema.is_default_version:
                 self.update_dataset_version(dataset, schema)
 
             updated = dataset.save_for_schema(schema)
-            if path is not None:
-                dataset.save_path(path)
+            dataset.save_path(path)
             if updated:
                 return dataset
 
