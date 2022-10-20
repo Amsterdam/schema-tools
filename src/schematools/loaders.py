@@ -29,7 +29,10 @@ class SchemaLoader:
         raise NotImplementedError
 
     def get_all_datasets(self) -> dict[str, DatasetSchema]:
-        """Gets all datasets from the schema_url location."""
+        """Gets all datasets from the schema_url location.
+
+        The return value maps dataset paths (foo/bar) to schema's.
+        """
         raise NotImplementedError
 
 
