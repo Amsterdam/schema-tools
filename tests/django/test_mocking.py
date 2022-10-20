@@ -17,7 +17,8 @@ def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
     create_tables(gebieden_dataset)
     create_data_for(gebieden_dataset, size=3)
     table_schemas = {
-        to_snake_case(t.id): t for t in gebieden_schema.get_tables(include_through=True)
+        t.db_name_variant(with_dataset_prefix=False): t
+        for t in gebieden_schema.get_tables(include_through=True)
     }
     models = {}
     for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
@@ -136,7 +137,7 @@ def test_mocking_add_temporal_fields_for_1n_relations(
     gebieden_dataset,
     gebieden_schema,
 ):
-    """Prove that the separete temporal fields are updated correctly during the relate step."""
+    """Prove that the separate temporal fields are updated correctly during the relate step."""
     models = {}
     create_tables(gebieden_dataset)
     for cls in schema_model_mockers_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
