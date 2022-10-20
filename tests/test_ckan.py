@@ -28,7 +28,7 @@ def test_convert(here, name):
     with open(filename) as f:
         schema = DatasetSchema.from_dict(json_encoder.json.load(f))
 
-    data = ckan.from_dataset(schema)
+    data = ckan.from_dataset(schema, name)
 
     for key in ["identifier", "title"]:
         assert data.get(key) and re.match(r"^[a-z0-9_-]", data[key])
