@@ -19,7 +19,7 @@ def get_schemas_for_url(
     if not limit_to:
         schemas = [
             schema
-            for schema in dataset_schemas_from_url(schema_url).values()
+            for schema in dataset_schemas_from_url(schema_url, prefetch_related=True).values()
             if schema.id not in _setify(skip)
         ]
     else:

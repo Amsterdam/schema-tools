@@ -6,7 +6,6 @@ from typing import Any, List
 from schematools.contrib.django.datasets import get_datasets_from_schemas
 from schematools.contrib.django.factories import schema_models_factory
 from schematools.types import DatasetSchema, DatasetTableSchema
-from schematools.utils import to_snake_case
 
 logger = logging.getLogger(__name__)
 
@@ -106,10 +105,16 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> None:
                             )
                         objs.append(obj)
 
-                    model.objects.bulk_update(objs, attrs.keys())
+                    if nulled_objects:
+                        model.objects.bulk_update(objs, attrs.keys())
 
                 elif f.nm_relation is not None:
                     target_model = model._meta.get_field(field_name).remote_field.model
+                    if isinstance(target_model, str):
+                        logger.warning(
+                            "Skipping relate for %s, reason: model not loaded.", target_model
+                        )
+                        continue
                     target_values = target_model.objects.all()
                     source_values = model.objects.all()
                     m2m_descriptor = getattr(model, field_name)

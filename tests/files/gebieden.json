@@ -78,6 +78,20 @@
             "relation": "gebieden:buurten",
             "description": "De buurt waar het bouwblok in ligt."
           },
+          "ligtInBuurtMetTeLangeNaam": {
+            "shortname": "lgtInBrt",
+            "type": "object",
+            "properties": {
+              "identificatie": {
+                "type": "string"
+              },
+              "volgnummer": {
+                "type": "integer"
+              }
+            },
+            "relation": "gebieden:buurten",
+            "description": "De buurt waar het bouwblok in ligt."
+          },
           "geometrie": {
             "$ref": "https://geojson.org/schema/Geometry.json",
             "description": "Geometrische beschrijving van een object."
