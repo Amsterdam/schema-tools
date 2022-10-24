@@ -14,11 +14,12 @@ from schematools.utils import to_snake_case
 
 @pytest.mark.django_db
 def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
+    """Prove that mocking create data."""
     create_tables(gebieden_dataset)
     create_data_for(gebieden_dataset, size=3)
+
     table_schemas = {
-        t.db_name_variant(with_dataset_prefix=False): t
-        for t in gebieden_schema.get_tables(include_through=True)
+        to_snake_case(t.id): t for t in gebieden_schema.get_tables(include_through=True)
     }
     models = {}
     for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
@@ -203,3 +204,18 @@ def test_mocking_adds_nm_relations(
                 str(tmo.kadastraleobjecten_volgnummer),
             ]
         )
+
+
+@pytest.mark.django_db
+def test_mocking_with_shortname_on_relation(gebieden_dataset, gebieden_schema):
+    """Prove that a relation with a shortname produces a correct field."""
+    create_tables(gebieden_dataset)
+    create_data_for(gebieden_dataset, size=10)
+
+    models = {}
+    for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
+        models[cls._meta.model_name] = cls
+
+    fields = {f.name: f for f in models["bouwblokken"]._meta.get_fields()}
+    # proves both the existence of the (long) fieldname + correct (short) db_column
+    assert fields["ligt_in_buurt_met_te_lange_naam"].db_column == "lgt_in_brt_id"
