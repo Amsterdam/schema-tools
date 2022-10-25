@@ -119,21 +119,65 @@ schema-tools, make sure one of the commit increments the version number in
 
 The schematools library contains two Django management commands to generate
 mock data. The first one is `create_mock_data` which generates mock data for all
-the datasets that are found at the configured schema location `SCHEMA_URL`.
+the datasets that are found at the configured schema location `SCHEMA_URL`
+(where `SCHEMA_URL` can be configure to point to a path at the local filesystem).
 
-The `create_mock_data` command has some options, e.g. to change
-the default number of generated records (`--size`), to skip datasets (`--skip`)
-or to use a subset of the datasets (`--limit-to`). To avoid duplicate pk's
-on subsequent runs the `--start-at` options can be used.
+The `create_mock_data` command processes all datasets. However, it is possible
+to limit this by adding positional arguments. These positional arguments can be
+dataset ids or paths to the location of the `dataset.json` on the local filesystem.
+
+Furthermore, the command has some options, e.g. to change
+the default number of generated records (`--size`) and to skip datasets (`--skip`).
+
+To avoid duplicate primary keys on subsequent runs the `--start-at` options can be used
+to start autonumbering of primary keys at an offset.
+
+E.g. to generate 5 records for the `bag` and `gebieden` datasets, starting the
+autonumbering of primary keys at 50.
+
+```
+    django create_mock_data bag gebieden --size 5 --start-at 50
+```
+
+To generate records for all datasets, except for the `fietspaaltjes` dataset:
+
+```
+    django create_mock_data --skip fietspaaltjes
+```
+
+To generate records for the `bbga` dataset, by loading the schema from the local filesystem:
+
+```
+    django create_mock_data <path-to-bbga-schema>/datasets.json
+```
 
 During record generation in `create_mock_data`, the relations are not added,
 so foreign key fields will be filled with NULL values.
 
 There is a second management command `relate_mock_data` that can be used to
-add the relations. This command also has `--limit-to` and `--skip` optis.
+add the relations. This command support positional arguments for datasets
+in the same way as `create_mock_data`.  Furthermore, the command also has a `--skip` option.
 
-NB. When `--limit-to` is being used, the command can fail when datasets that
-are involved in a relation are missing, so make sure to include all relavant
+E.g. to add relations to all datasets:
+
+```
+    django relate_mock_data
+```
+
+To add relations for `bag` and `gebieden` only:
+
+```
+    django relate_mock_data bag gebieden
+```
+
+To add relations for all datasets except `meetbouten`:
+
+```
+    django relate_mock_data --skip meetbouten
+```
+
+NB. When only a subset of the datasets is being mocked, the command can fail when datasets that
+are involved in a relation are missing, so make sure to include all relevant
 datasets.
 
 For convenience an additional management command `truncate_tables` has been added,
