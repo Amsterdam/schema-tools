@@ -5,6 +5,7 @@ from django.core.management import BaseCommand
 from django.db.models import Q
 
 from schematools.contrib.django.models import Dataset
+from schematools.datasetcollection import DatasetCollection, set_schema_loader
 from schematools.types import DatasetSchema
 from schematools.utils import dataset_schema_from_path, dataset_schemas_from_url, to_snake_case
 
@@ -59,9 +60,11 @@ class Command(BaseCommand):
     def import_from_url(self, schema_url) -> List[Dataset]:
         """Import all schema definitions from a URL"""
         self.stdout.write(f"Loading schema from {schema_url}")
+        set_schema_loader(schema_url)
+        dataset_collection = DatasetCollection()
         datasets = []
 
-        schemas = dataset_schemas_from_url(schema_url)
+        schemas = dataset_collection.get_all_datasets()
         for path, schema in schemas.items():
             self.stdout.write(f"* Processing {schema.id}")
             dataset = self._import(schema, path)
@@ -72,7 +75,6 @@ class Command(BaseCommand):
 
     def _import(self, schema: DatasetSchema, path: str) -> Optional[Dataset]:
         """Import a single dataset schema."""
-
         created = False
         try:
             dataset = Dataset.objects.get(name=Dataset.name_from_schema(schema))
