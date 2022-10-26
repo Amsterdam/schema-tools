@@ -48,6 +48,9 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> None:
     models = defaultdict(dict)
     datasets = get_datasets_from_schemas(dataset_schemas)
     for dataset in datasets:
+        if not dataset.enable_db:
+            logger.warning("Skipping `%s`, `enable_db` is False", dataset.name)
+            continue
         for cls in schema_models_factory(dataset, base_app_name="dso_api.dynamic_api"):
             models[dataset.name][cls._meta.model_name] = cls
 
