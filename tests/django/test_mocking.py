@@ -17,8 +17,9 @@ from .conftest import DATABASE_URL
 @pytest.mark.django_db
 @pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
+    size = 3
     create_tables(gebieden_dataset)
-    create_data_for(gebieden_dataset, size=3)
+    create_data_for(gebieden_dataset, size=size)
 
     table_schemas = {
         to_snake_case(t.id): t for t in gebieden_schema.get_tables(include_through=True)
@@ -28,7 +29,7 @@ def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
         models[cls._meta.model_name] = cls
 
     for model in models.values():
-        assert model.objects.count() == 3
+        assert model.objects.count() == size
         # For composite keys, a faker automatically kicks in to create the proper `id`
         if (table_schema := table_schemas[model._meta.model_name]).has_composite_key:
             for obj in model.objects.all():
@@ -49,7 +50,6 @@ def test_mocking_take_min_max_into_account(
     for cls in schema_models_factory(afvalwegingen_dataset, base_app_name="dso_api.dynamic_api"):
         models[cls._meta.model_name] = cls
 
-    # The containertypes.volume field has a `maximum` of 20 and `minimum` of 5
     assert models["containertypes"].objects.filter(volume__gt=12, volume__lt=5).count() == 0
 
 
