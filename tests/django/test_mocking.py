@@ -17,7 +17,6 @@ from .conftest import DATABASE_URL
 @pytest.mark.django_db
 @pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
-    """Prove that mocking create data."""
     create_tables(gebieden_dataset)
     create_data_for(gebieden_dataset, size=3)
 
