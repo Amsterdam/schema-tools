@@ -127,7 +127,8 @@ to limit this by adding positional arguments. These positional arguments can be
 dataset ids or paths to the location of the `dataset.json` on the local filesystem.
 
 Furthermore, the command has some options, e.g. to change
-the default number of generated records (`--size`) and to skip datasets (`--skip`).
+the default number of generated records (`--size`) or to reverse meaning of the positional
+arguments using `--exclude`.
 
 To avoid duplicate primary keys on subsequent runs the `--start-at` options can be used
 to start autonumbering of primary keys at an offset.
@@ -142,7 +143,7 @@ autonumbering of primary keys at 50.
 To generate records for all datasets, except for the `fietspaaltjes` dataset:
 
 ```
-    django create_mock_data --skip fietspaaltjes
+    django create_mock_data fietspaaltjes --exclude  # or -x
 ```
 
 To generate records for the `bbga` dataset, by loading the schema from the local filesystem:
@@ -156,7 +157,9 @@ so foreign key fields will be filled with NULL values.
 
 There is a second management command `relate_mock_data` that can be used to
 add the relations. This command support positional arguments for datasets
-in the same way as `create_mock_data`.  Furthermore, the command also has a `--skip` option.
+in the same way as `create_mock_data`.  
+Furthermore, the command also has the `--exclude` option to reverse the meaning
+of the positional dataset arguments.
 
 E.g. to add relations to all datasets:
 
@@ -173,7 +176,7 @@ To add relations for `bag` and `gebieden` only:
 To add relations for all datasets except `meetbouten`:
 
 ```
-    django relate_mock_data --skip meetbouten
+    django relate_mock_data meetbouten --exclude  # or -x
 ```
 
 NB. When only a subset of the datasets is being mocked, the command can fail when datasets that
