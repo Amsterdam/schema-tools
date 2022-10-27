@@ -1168,7 +1168,7 @@ class DatasetFieldSchema(DatasetType):
         """The fully qualified ID (for debugging)"""
         prefix = ""
         if self._parent_table is not None:
-            prefix = self._parent_table.qualified_id
+            prefix = f"{self._parent_table.qualified_id}."
         if self._parent_field is not None:
             prefix = f"{prefix}{self._parent_field.id}."
         return f"{prefix}{self._id}"
