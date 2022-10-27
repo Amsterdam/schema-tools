@@ -15,8 +15,8 @@ from schematools import (
     TMP_TABLE_POSTFIX,
 )
 from schematools.importer import fetch_col_type
+from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema, DatasetTableSchema
-from schematools.utils import to_snake_case
 
 
 def tables_factory(

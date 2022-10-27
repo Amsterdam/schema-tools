@@ -9,8 +9,8 @@ from sqlalchemy.engine import Connection
 
 from schematools.events import metadata
 from schematools.factories import tables_factory
+from schematools.naming import to_snake_case, toCamelCase
 from schematools.types import DatasetSchema
-from schematools.utils import to_snake_case, toCamelCase
 
 # Enable the sqlalchemy logger by uncommenting the following 2 lines to debug SQL related issues
 # logging.basicConfig()

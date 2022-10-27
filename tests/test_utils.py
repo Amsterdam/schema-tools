@@ -1,6 +1,6 @@
 import pytest
 
-from schematools.utils import to_snake_case, toCamelCase
+from schematools.naming import to_snake_case, toCamelCase
 
 
 def test_toCamelCase() -> None:

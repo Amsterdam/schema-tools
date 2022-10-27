@@ -9,7 +9,7 @@ from schematools.contrib.django.factories import (
 )
 from schematools.contrib.django.faker.create import create_data_for
 from schematools.contrib.django.faker.relate import relate_datasets
-from schematools.utils import to_snake_case
+from schematools.naming import to_snake_case
 
 from .conftest import DATABASE_URL
 

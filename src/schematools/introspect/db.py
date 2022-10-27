@@ -2,7 +2,7 @@ import copy
 
 from sqlalchemy import inspect
 
-from ..utils import toCamelCase
+from ..naming import toCamelCase
 from .utils import DATASET_TMPL, TABLE_TMPL
 
 # the Geometry field has a property geometry_type, could be mapped to more

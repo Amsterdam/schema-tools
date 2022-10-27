@@ -6,8 +6,9 @@ from django.db.models import Q
 
 from schematools.contrib.django.models import Dataset
 from schematools.datasetcollection import DatasetCollection, set_schema_loader
+from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema
-from schematools.utils import dataset_schema_from_path, to_snake_case
+from schematools.utils import dataset_schema_from_path
 
 from .create_tables import create_tables
 

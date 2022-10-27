@@ -11,8 +11,8 @@ from django.db.models import CheckConstraint, Q
 from django.db.models.base import ModelBase
 
 from schematools.contrib.django import app_config, signals
+from schematools.naming import get_rel_table_identifier, to_snake_case
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
-from schematools.utils import get_rel_table_identifier, to_snake_case
 
 from .mockers import DynamicModelMocker
 from .models import (

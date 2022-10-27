@@ -26,6 +26,7 @@ from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 
+from schematools.naming import to_snake_case
 from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
@@ -33,7 +34,6 @@ from schematools.types import (
     ProfileSchema,
     SemVer,
 )
-from schematools.utils import to_snake_case
 
 from . import managers
 from .validators import URLPathValidator, validate_json
