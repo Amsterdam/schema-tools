@@ -20,7 +20,7 @@ services:
       SECRET_KEY: insecure
       # In order to use local datasets
       SCHEMA_URL: /tmp/ams-schema/datasets
-      DATABASE_URL: "postgres://dataservices:insecure@database/dataservices"
+      DATABASE_URL: "postgresql://dataservices:insecure@database/dataservices"
     env_file: .env
     volumes:
       - ".:/app"
