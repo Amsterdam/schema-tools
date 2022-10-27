@@ -13,10 +13,10 @@ from cachetools.func import ttl_cache
 from more_ds.network.url import URL
 from string_utils import slugify
 
-from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX, types
+from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
 
 if TYPE_CHECKING:
-    from schematools.loaders import SchemaLoader  # noqa: F401
+    from schematools import types
 
 RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
