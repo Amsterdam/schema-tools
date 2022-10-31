@@ -26,6 +26,7 @@ from django.utils.translation import gettext_lazy as _
 from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 
+from schematools.exceptions import SchemaObjectNotFound
 from schematools.naming import to_snake_case
 from schematools.types import (
     DatasetFieldSchema,
@@ -411,7 +412,7 @@ class DatasetTable(models.Model):
     name = models.CharField(max_length=100)
     version = models.TextField(default=SemVer("1.0.0"))
 
-    # Exposed metadata from the jsonschema, so other utils can query these
+    # Exposed metadata from the jsonschema, so other apps (e.g. geosearch) can query these
     auth = models.CharField(max_length=250, blank=True, null=True)
     enable_geosearch = models.BooleanField(default=True)
     db_table = models.CharField(max_length=100)
@@ -432,23 +433,18 @@ class DatasetTable(models.Model):
         return self.name
 
     @classmethod
-    def _get_field_values(cls, table_schema):
-        ret = {
-            "display_field": table_schema.display_field,
-            "geometry_field": None,
-            "geometry_field_type": None,
-            "is_temporal": table_schema.is_temporal,
-        }
+    def _get_geometry_field(cls, table_schema):
+        try:
+            field = table_schema.main_geometry_field
+        except SchemaObjectNotFound:
+            # fallback to first GeoJSON field as geometry field.
+            field = next((f for f in table_schema.fields if f.is_geo), None)
+            if field is None:
+                return None, None
 
-        for field in table_schema.fields:
-            # Take the first geojson field as geometry field
-            if not ret["geometry_field"] and field.type.startswith(GEOJSON_PREFIX):
-                ret["geometry_field"] = field.name
-                match = re.search(r"schema\/(?P<schema>\w+)\.json", field.type)
-                if match is not None:
-                    ret["geometry_field_type"] = match.group("schema")
-                break
-        return ret
+        match = re.search(r"schema\/(?P<schema>\w+)\.json", field.type)
+        geo_type = match.group("schema") if match is not None else None
+        return field.db_name, geo_type
 
     @classmethod
     def create_for_schema(cls, dataset: Dataset, table_schema: DatasetTableSchema) -> DatasetTable:
@@ -462,17 +458,17 @@ class DatasetTable(models.Model):
 
     def save_for_schema(self, table_schema: DatasetTableSchema):
         """Save changes to the dataset table schema."""
+        display_field = table_schema.display_field
         self.name = to_snake_case(table_schema.id)
         self.db_table = table_schema.db_name
         self.auth = " ".join(table_schema.auth)
-        self.display_field = (
-            to_snake_case(table_schema.display_field) if table_schema.display_field else None
-        )
+        self.display_field = display_field.db_name if display_field is not None else None
+        self.display_field = ((display_field.db_name if display_field is not None else None),)
+        self.geometry_field, self.geometry_field_type = self._get_geometry_field(table_schema)
+        self.is_temporal = table_schema.is_temporal
         self.enable_geosearch = (
             table_schema.dataset.id not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
         )
-        for field, value in self._get_field_values(table_schema).items():
-            setattr(self, field, value)
 
         is_creation = not self._state.adding
         self.save()
