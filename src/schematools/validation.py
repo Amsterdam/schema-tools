@@ -30,8 +30,8 @@ from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
+from schematools.naming import to_snake_case, toCamelCase
 from schematools.types import DatasetSchema, SemVer, TableVersions
-from schematools.utils import to_snake_case, toCamelCase
 
 
 @dataclass(frozen=True)

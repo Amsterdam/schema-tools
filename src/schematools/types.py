@@ -33,7 +33,7 @@ from methodtools import lru_cache
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.datasetcollection import DatasetCollection
 from schematools.exceptions import ParserError, SchemaObjectNotFound
-from schematools.utils import get_rel_table_identifier, to_snake_case, toCamelCase
+from schematools.naming import get_rel_table_identifier, to_snake_case, toCamelCase
 
 ST = TypeVar("ST", bound="SchemaType")
 DTS = TypeVar("DTS", bound="DatasetTableSchema")
@@ -450,8 +450,6 @@ class DatasetSchema(SchemaType):
     def get_table_by_id(
         self, table_id: str, include_nested: bool = True, include_through: bool = True
     ) -> DatasetTableSchema:
-        from schematools.utils import to_snake_case
-
         snakecased_table_id = to_snake_case(table_id)
         for table in self.get_tables(
             include_nested=include_nested, include_through=include_through
@@ -564,8 +562,6 @@ class DatasetSchema(SchemaType):
             - bestaat_uit_buurten_identificatie
             - bestaat_uit_buurten_volgnummer
         """
-        from schematools.utils import get_rel_table_identifier, toCamelCase
-
         # Build the through_table for n-m relation
         # For relations, we have to use the real ids of the tables
         # and not the shortnames
@@ -1024,8 +1020,6 @@ class DatasetTableSchema(SchemaType):
     def model_name(self) -> str:
         """Returns model name for this table. Including version number, if needed."""
 
-        from schematools.utils import to_snake_case
-
         if self.dataset is None:
             raise ValueError(
                 "Cannot obtain a model_name from a DatasetTableSchema without a parent dataset."
@@ -1065,8 +1059,6 @@ class DatasetTableSchema(SchemaType):
             A derived table name suitable for DB usage.
 
         """
-        from schematools.utils import to_snake_case
-
         dataset_prefix = version_postfix = ""
         if with_version:
             version_postfix = self.version.signif

@@ -19,8 +19,8 @@ from sqlalchemy.engine import Connection
 
 from schematools.events import metadata
 from schematools.factories import tables_factory
+from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema, DatasetTableSchema
-from schematools.utils import to_snake_case
 
 
 @dataclass
