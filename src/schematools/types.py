@@ -361,7 +361,7 @@ class DatasetSchema(SchemaType):
     @cached_property
     def python_name(self) -> str:
         """The 'id', but camel cased like a class name."""
-        return toCamelCase(self.id).title()
+        return toCamelCase(self.id, first_upper=True)
 
     @property
     def title(self) -> str | None:
@@ -743,7 +743,7 @@ class DatasetTableSchema(SchemaType):
     @property
     def python_name(self) -> str:
         """The 'id', but camel cased like a class name."""
-        return toCamelCase(self.id).title()
+        return toCamelCase(self.id, first_upper=True)
 
     @property
     def shortname(self) -> str:

@@ -27,7 +27,7 @@ _CAMEL_CASE_REPLACE_PAT: Final[Pattern[str]] = re.compile(
 
 
 @lru_cache(maxsize=500)
-def toCamelCase(ident: str) -> str:
+def toCamelCase(ident: str, first_upper=False) -> str:
     """Convert an identifier to camelCase format.
 
     Word boundaries are determined by:
@@ -65,6 +65,8 @@ def toCamelCase(ident: str) -> str:
         ValueError: If ``indent`` is an empty string.
 
     """
+    if ident == "":
+        raise ValueError("Parameter `ident` cannot be an empty string.")
 
     def replacement(m: Match) -> str:
         # As we use the OR operator in the regular expression with capture groups on both sides,
@@ -74,11 +76,12 @@ def toCamelCase(ident: str) -> str:
         # explicit test.
         return "".join(s.upper() for s in m.groups() if s)
 
-    if ident == "":
-        raise ValueError("Parameter `ident` cannot be an empty string.")
     result = _CAMEL_CASE_REPLACE_PAT.sub(replacement, ident)
-    # The first letter of camelCase identifier is always lower case
-    return result[0].lower() + result[1:]
+    if first_upper:
+        return result[0].upper() + result[1:]
+    else:
+        # The first letter of camelCase identifier is always lower case
+        return result[0].lower() + result[1:]
 
 
 @lru_cache(maxsize=500)
