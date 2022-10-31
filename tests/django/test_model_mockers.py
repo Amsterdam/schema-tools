@@ -110,14 +110,14 @@ def test_schema_model_mockers_factory(afval_dataset):
     ContainersMocker = model_mockers["containers"]
     assert type(ContainersMocker) == FactoryMetaClass
     assert str(ContainersMocker) == (
-        "<Containers for <class 'dso_api.dynamic_api.afvalwegingen.models.containers'>>"
+        "<containers_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.containers'>>"
     )
 
     assert "clusters" in model_mockers.keys()
     ClustersMocker = model_mockers["clusters"]
     assert type(ClustersMocker) == FactoryMetaClass
     assert str(ClustersMocker) == (
-        "<Clusters for <class 'dso_api.dynamic_api.afvalwegingen.models.clusters'>>"
+        "<clusters_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.clusters'>>"
     )
 
 
