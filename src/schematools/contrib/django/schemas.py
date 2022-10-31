@@ -5,7 +5,7 @@ from typing import List
 from more_ds.network.url import URL
 
 from schematools import types
-from schematools.datasetcollection import DatasetCollection, set_schema_loader
+from schematools._datasetcollection import _DatasetCollection, _set_schema_loader
 from schematools.utils import dataset_schema_from_url, dataset_schemas_from_url
 
 
@@ -17,8 +17,8 @@ def get_schemas_for_url(
     schema_url: URL, limit_to: List[str] | None = None, skip: List[str] | None = None
 ) -> List[types.DatasetSchema]:
     """Gets all schemas from `schema_url`, or a subset, depending on `limit_to` and `skip`."""
-    set_schema_loader(schema_url)
-    dataset_collection = DatasetCollection()
+    _set_schema_loader(schema_url)
+    dataset_collection = _DatasetCollection()
     if not limit_to:
         schemas = [
             schema

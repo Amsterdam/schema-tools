@@ -30,7 +30,7 @@ from jsonschema import draft7_format_checker
 from methodtools import lru_cache
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools.datasetcollection import DatasetCollection
+from schematools._datasetcollection import _DatasetCollection
 from schematools.exceptions import ParserError, SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
 
@@ -334,7 +334,7 @@ class DatasetSchema(SchemaType):
         about the related datasets.
         """
         super().__init__(*args, **kwargs)
-        self.dataset_collection = DatasetCollection()
+        self.dataset_collection = _DatasetCollection()
         for i, table in enumerate(self["tables"]):
             if isinstance(table, TableVersions):
                 continue

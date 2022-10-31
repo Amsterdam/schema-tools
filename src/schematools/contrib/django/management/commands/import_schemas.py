@@ -4,8 +4,8 @@ from django.conf import settings
 from django.core.management import BaseCommand
 from django.db.models import Q
 
+from schematools._datasetcollection import _DatasetCollection, _set_schema_loader
 from schematools.contrib.django.models import Dataset
-from schematools.datasetcollection import DatasetCollection, set_schema_loader
 from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema
 from schematools.utils import dataset_schema_from_path
@@ -61,8 +61,8 @@ class Command(BaseCommand):
     def import_from_url(self, schema_url) -> List[Dataset]:
         """Import all schema definitions from a URL"""
         self.stdout.write(f"Loading schema from {schema_url}")
-        set_schema_loader(schema_url)
-        dataset_collection = DatasetCollection()
+        _set_schema_loader(schema_url)
+        dataset_collection = _DatasetCollection()
         datasets = []
 
         schemas = dataset_collection.get_all_datasets()
