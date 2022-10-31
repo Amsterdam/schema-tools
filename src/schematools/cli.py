@@ -20,7 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateTable
 
 from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL, ckan, validation
-from schematools.datasetcollection import DatasetCollection, set_schema_loader
+from schematools._datasetcollection import _DatasetCollection, _set_schema_loader
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
 from schematools.exceptions import DatasetNotFound, ParserError
@@ -664,8 +664,8 @@ def _get_dataset_schema(
         schema_url: url of the location where the collection of amsterdam schemas is found.
         prefetch_related: related schemas should be prefetched.
     """
-    set_schema_loader(schema_url)
-    dataset_collection = DatasetCollection()
+    _set_schema_loader(schema_url)
+    dataset_collection = _DatasetCollection()
     try:
         return dataset_collection.get_dataset(dataset_id, prefetch_related=prefetch_related)
     except DatasetNotFound as e:
@@ -678,8 +678,8 @@ def _get_all_dataset_schemas(schema_url: str) -> dict[str, DatasetSchema]:
     Args:
         schema_url: url of the location where the collection of amsterdam schemas is found.
     """
-    set_schema_loader(schema_url)
-    dataset_collection = DatasetCollection()
+    _set_schema_loader(schema_url)
+    dataset_collection = _DatasetCollection()
     return dataset_collection.get_all_datasets()
 
 

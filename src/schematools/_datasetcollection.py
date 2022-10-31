@@ -15,7 +15,7 @@ from schematools import DEFAULT_SCHEMA_URL, loaders
 # Initialize the schema_loader in the DatasetCollection singleton
 
 
-class DatasetCollection(metaclass=Singleton):
+class _DatasetCollection(metaclass=Singleton):
     """Holding class for a collection of datasets.
 
     This can hold a cache of datasets that have already been collected.
@@ -67,14 +67,14 @@ class DatasetCollection(metaclass=Singleton):
         return self.schema_loader.get_all_datasets()
 
 
-def set_schema_loader(schema_url: URL | str) -> None:
+def _set_schema_loader(schema_url: URL | str) -> None:
     """Initialize the schema loader at module load time.
 
     schema_url:
         Location where the schemas can be found. This
         can be a web url, or a filesystem path.
     """
-    dataset_collection = DatasetCollection()
+    dataset_collection = _DatasetCollection()
     loader: loaders.SchemaLoader | None = None  # pleasing mypy
     if urlparse(schema_url).scheme in ("http", "https"):
         loader = loaders.URLSchemaLoader(schema_url)
@@ -87,4 +87,4 @@ def set_schema_loader(schema_url: URL | str) -> None:
 # or from the DEFAULT_SCHEMA_URL constant.
 # This call is done at module load time, to have an initial value for the schemaloader.
 # If needed, an alternative schemaloader can be injected into `DatasetCollection` at runtime.
-set_schema_loader(os.environ.get("SCHEMA_URL", DEFAULT_SCHEMA_URL))
+_set_schema_loader(os.environ.get("SCHEMA_URL", DEFAULT_SCHEMA_URL))
