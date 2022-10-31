@@ -1,3 +1,8 @@
+# Upcoming release (in git)
+
+* Fixed dependency pinning of shapely to 1.8.0
+
+
 # 2022-10-31 (5.0)
 
 A major new release that cleans up various internal API's.
