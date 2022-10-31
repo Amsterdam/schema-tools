@@ -1,3 +1,12 @@
 [flake8]
-ignore = D101, D102
+ignore=
+  # Black may add spaces in slice[func(v) : end] syntax
+  E203,
+  # Black leaves commas after combining lines
+  E231,
+  # line break before binary operator (incompatible with black):
+  W503,
+  # missing docstrings:
+  D101,
+  D102
 format = ${cyan}%(path)s${reset}:${yellow_bold}%(row)d${reset}:${green_bold}%(col)d${reset}: ${red_bold}%(code)s${reset} %(text)s
