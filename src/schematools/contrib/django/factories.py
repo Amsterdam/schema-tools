@@ -100,7 +100,7 @@ class FKRelationMaker(RelationMaker):
         if self.field.is_composite_key:
             # Make it easier to recognize the keys, e.g. in ``manage.py dump_models``.
             return CompositeForeignKeyField
-        elif self.field.is_loose_relation or self._get_to_field_name():
+        elif self.field.is_loose_relation or self._get_to_field():
             # Points to the first part of a composite key.
             return LooseRelationField
         else:
@@ -148,7 +148,7 @@ class FKRelationMaker(RelationMaker):
             # as Django still uses the backwards relation internally.
             return "+"
 
-    def _get_to_field_name(self) -> str | None:
+    def _get_to_field(self) -> DatasetFieldSchema | None:
         """Determine the "to_field" for the foreign key.
 
         This returns a value when the relation doesn't point to the targets's primary key,
@@ -169,14 +169,13 @@ class FKRelationMaker(RelationMaker):
         ):
             # A FK in the through table might actually be a partial composite key.
             # When this is the case, make sure the to_field points to the right field.
-            target_field_ids = nm_field.related_field_ids
-            target_field = self.field.related_table.get_field_by_id(target_field_ids[0])
+            target_fields = nm_field.related_fields
 
-            if target_field_ids[0] != "id" and not target_field.is_primary:
-                return target_field_ids[0]
+            if target_fields[0].id != "id" and not target_fields[0].is_primary:
+                return target_fields[0]
         elif self.field.is_loose_relation:
             # Loose relation points to the first field of a composite foreign key
-            return self.field.related_table.identifier[0]
+            return self.field.related_table.identifier_fields[0]
 
         return None
 
@@ -191,14 +190,10 @@ class FKRelationMaker(RelationMaker):
         }
 
         if self.field.is_composite_key:
-            kwargs["to_fields"] = [
-                to_snake_case(field.id)
-                for field in self.field.subfields
-                if not field.is_temporal_range
-            ]
-        elif to_field := self._get_to_field_name():
+            kwargs["to_fields"] = [field.python_name for field in self.field.related_fields]
+        elif to_field := self._get_to_field():
             # Field points to a different key of the other table (e.g. "identificatie").
-            kwargs["to_field"] = to_snake_case(to_field)
+            kwargs["to_field"] = to_field.python_name
 
         return kwargs
 
