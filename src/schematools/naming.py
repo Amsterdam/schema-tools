@@ -6,7 +6,7 @@ from typing import Final, Match, Pattern
 
 from string_utils import slugify
 
-from schematools import MAX_TABLE_NAME_LENGTH, RELATION_INDICATOR, TMP_TABLE_POSTFIX
+from schematools import RELATION_INDICATOR
 
 _RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
     r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
@@ -107,14 +107,3 @@ def to_snake_case(ident: str) -> str:
     return RELATION_INDICATOR.join(
         slugify(_RE_CAMEL_CASE.sub(r" \1", part).strip(), separator="_") for part in name_parts
     )
-
-
-def get_rel_table_identifier(table_identifier: str, through_identifier: str) -> str:
-    """Create identifier for related table (FK or M2M)."""
-    return f"{table_identifier}_{through_identifier}"
-
-
-def shorten_name(db_table_name: str, with_postfix: bool = False) -> str:
-    """Shorten names to safe length for postgresql."""
-    max_length = MAX_TABLE_NAME_LENGTH - int(with_postfix) * len(TMP_TABLE_POSTFIX)
-    return db_table_name[:max_length]

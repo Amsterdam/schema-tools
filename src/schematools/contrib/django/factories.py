@@ -11,7 +11,7 @@ from django.db.models import CheckConstraint, Q
 from django.db.models.base import ModelBase
 
 from schematools.contrib.django import app_config, signals
-from schematools.naming import get_rel_table_identifier, to_snake_case
+from schematools.naming import to_snake_case
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 from .mockers import DynamicModelMocker
@@ -67,23 +67,14 @@ class RelationMaker:
         else:
             return None  # To signal this is not a relation
 
-    def _make_related_classname(self, relation):
-        related_dataset, related_table, *_ = relation.split(":")
-        return f"{related_dataset}.{to_snake_case(related_table)}"
-
-    def _make_through_classname(self, dataset_id, field_id):
-        snakecased_fieldname = to_snake_case(field_id)
-        through_table_id = get_rel_table_identifier(self.table.id, snakecased_fieldname)
-        # Give Django app_label.model_name notation
-        return f"{dataset_id}.{through_table_id}"
-
     @property
     def field_cls(self):
         return self._field_cls
 
     @property
     def field_args(self):
-        return [self._make_related_classname(self.relation)]
+        related_table = self.field.related_table
+        return [f"{related_table.dataset.id}.{_get_model_name(related_table)}"]
 
     @property
     def field_kwargs(self):
@@ -218,7 +209,7 @@ class M2MRelationMaker(RelationMaker):
         return {
             **super().field_kwargs,
             "related_name": related_name,
-            "through": self._make_through_classname(self.dataset.id, self.field.id),
+            "through": f"{self.dataset.id}.{_get_model_name(self.field.through_table)}",
             "through_fields": through_fields,
         }
 
@@ -398,6 +389,17 @@ def schema_model_mockers_factory(
     ]
 
 
+def _get_model_name(table_schema: DatasetTableSchema) -> str:
+    """Returns model name for this table. Including version number, if needed."""
+    # Using table_schema.python_name gives UpperCamelCased names, the old format is kept here.
+    # This also keeps model names more readable and recognizable/linkable with db table names.
+    model_name = to_snake_case(table_schema.id)
+    if table_schema.dataset.version is not None and not table_schema.dataset.is_default_version:
+        return f"{model_name}_{table_schema.dataset.version}"
+    else:
+        return model_name
+
+
 def _fetch_verbose_name(
     obj: Union[DatasetTableSchema, DatasetTableSchema], with_description: bool = False
 ) -> str:
@@ -499,7 +501,7 @@ def model_factory(
     )
 
     model_class = ModelBase(
-        table_schema.model_name(),
+        _get_model_name(table_schema),
         (base_model,),
         {
             **fields,
@@ -607,7 +609,10 @@ def model_mocker_factory(
     meta_cls = type(
         "Meta",
         (),
-        {"model": f"{app_label}.{stripped_table_schema.model_name()}", "database": "default"},
+        {
+            "model": f"{app_label}.{_get_model_name(stripped_table_schema)}",
+            "database": "default",
+        },
     )
 
     # The `Params` class in an inner class on the mocker,
@@ -616,7 +621,7 @@ def model_mocker_factory(
     params_cls = type("Params", (), {"table_schema": table_schema})
 
     model_mocker_class = type(
-        f"{stripped_table_schema.model_name()}".capitalize(),
+        f"{_get_model_name(stripped_table_schema)}_factory",
         (DynamicModelMocker,),
         {
             **fields,

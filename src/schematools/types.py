@@ -32,7 +32,7 @@ from methodtools import lru_cache
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.datasetcollection import DatasetCollection
 from schematools.exceptions import ParserError, SchemaObjectNotFound
-from schematools.naming import get_rel_table_identifier, to_snake_case, toCamelCase
+from schematools.naming import to_snake_case, toCamelCase
 
 ST = TypeVar("ST", bound="SchemaType")
 DTS = TypeVar("DTS", bound="DatasetTableSchema")
@@ -487,10 +487,9 @@ class DatasetSchema(SchemaType):
 
         # composite keys are concatened to one id an thus always strings
         parent_fk_type = "string" if len(table.identifier) > 1 else table.identifier_fields[0].type
-        sub_table_id = get_rel_table_identifier(table.id, field.id)
 
         sub_table_schema = {
-            "id": sub_table_id,
+            "id": f"{table.id}_{field.id}",
             "originalID": field.id,
             "type": "table",
             "version": str(table.version),
@@ -514,9 +513,7 @@ class DatasetSchema(SchemaType):
         # we need to add a shortname to the dynamically generated
         # schema definition.
         if field.has_shortname or table.has_shortname:
-            sub_table_schema["shortname"] = get_rel_table_identifier(
-                table.shortname, through_identifier=field.shortname
-            )
+            sub_table_schema["shortname"] = f"{table.shortname}_{field.shortname}"
         return DatasetTableSchema(
             sub_table_schema, parent_schema=self, _parent_table=table, nested_table=True
         )
@@ -578,10 +575,8 @@ class DatasetSchema(SchemaType):
         right_dataset_id, right_table_id = str(relation).split(":")[:2]
 
         target_field_id = field.id
-        table_id = get_rel_table_identifier(table.id, target_field_id)
-
         sub_table_schema: dict[str, Any] = {
-            "id": table_id,
+            "id": f"{table.id}_{target_field_id}",
             "type": "table",
             "version": str(table.version),
             "originalID": field.id,
@@ -613,7 +608,7 @@ class DatasetSchema(SchemaType):
         # we need to add a shortname to the dynamically generated
         # schema definition.
         if field.has_shortname or table.has_shortname:
-            sub_table_schema["shortname"] = toCamelCase(f"{table.shortname}_{field.shortname}")
+            sub_table_schema["shortname"] = f"{table.shortname}_{field.shortname}"
 
         # We also need to add a shortname for the individual FK fields
         # pointing to left en right table in the M2M
@@ -1016,18 +1011,6 @@ class DatasetTableSchema(SchemaType):
     @cached_property
     def has_geometry_fields(self) -> bool:
         return any(field.is_geo for field in self.fields)
-
-    def model_name(self) -> str:
-        """Returns model name for this table. Including version number, if needed."""
-
-        if self.dataset is None:
-            raise ValueError(
-                "Cannot obtain a model_name from a DatasetTableSchema without a parent dataset."
-            )
-        model_name = self.id
-        if self.dataset.version is not None and not self.dataset.is_default_version:
-            model_name = f"{model_name}_{self.dataset.version}"
-        return to_snake_case(model_name)
 
     @cached_property
     def db_name(self) -> str:
