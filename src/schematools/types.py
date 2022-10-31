@@ -19,7 +19,6 @@ from typing import (
     List,
     NamedTuple,
     NoReturn,
-    Optional,
     Pattern,
     TypeVar,
     Union,
@@ -868,10 +867,11 @@ class DatasetTableSchema(SchemaType):
             f"Relation '{relation_id}' does not exist in table '{self.id}'."
         )
 
-    @property
-    def display_field(self) -> str | None:
+    @cached_property
+    def display_field(self) -> DatasetFieldSchema | None:
         """Tell which fields can be used as display field."""
-        return cast(Optional[str], self["schema"].get("display"))
+        display = self["schema"].get("display")
+        return self.get_field_by_id(display) if display else None
 
     def get_dataset_schema(self, dataset_id: str) -> DatasetSchema | None:
         """Return the associated parent datasetschema for this table."""

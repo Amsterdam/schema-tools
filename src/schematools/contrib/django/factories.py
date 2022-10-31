@@ -425,11 +425,8 @@ def model_factory(
     app_label = dataset_schema.id
     base_app_name = base_app_name or "dso_api.dynamic_api"
     module_name = f"{base_app_name}.{app_label}.models"
-    display_field = (
-        to_snake_case(table_schema.display_field) if table_schema.display_field else None
-    )
-
     is_temporal = table_schema.is_temporal
+    display_field = table_schema.display_field
 
     # Generate fields
     fields = {}
@@ -510,7 +507,7 @@ def model_factory(
             "_dataset": dataset,
             "_table_schema": table_schema,
             "_dataset_schema": dataset_schema,
-            "_display_field": display_field,
+            "_display_field": (display_field.python_name if display_field is not None else None),
             "_is_temporal": is_temporal,
             "CREATION_COUNTER": MODEL_CREATION_COUNTER,  # for debugging recreation
             "__module__": module_name,
