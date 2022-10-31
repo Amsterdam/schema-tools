@@ -188,6 +188,20 @@ def dataset_schema_from_path(
     return types.DatasetSchema.from_dict(ds)
 
 
+def _get_relative_dataset_path(schemas_path: Path | str, dataset_id: str) -> Path:
+    """Gets the path of a dataset relative to `schemas_path`."""
+    for root, dirs, files in os.walk(schemas_path):
+        if dataset_id in dirs and "dataset.json" in files:
+            return dataset_id
+        for file_name in files:
+            if file_name == "dataset.json":
+                with (Path(root) / file_name).open() as jf:
+                    dataset_json = json.load(jf)
+                if dataset_json.get("id") == dataset_id:
+                    return Path(root).relative_to(schemas_path)
+    raise ValueError(f"No local path for dataset `{dataset_id}` found at `{schemas_path}`.")
+
+
 def dataset_schema_from_id_and_schemas_path(
     dataset_id: str,
     schemas_path: Path | str,
@@ -200,7 +214,8 @@ def dataset_schema_from_id_and_schemas_path(
         schemas_path: Path to the location with the dataset schemas.
         prefetch_related: If True, the related datasets are preloaded.
     """
-    dataset_path = Path(schemas_path) / dataset_id / "dataset.json"
+    relative_dataset_path = _get_relative_dataset_path(schemas_path, dataset_id)
+    dataset_path = Path(schemas_path) / relative_dataset_path / "dataset.json"
     dataset_schema: types.DatasetSchema = dataset_schema_from_path(dataset_path)
 
     index: dict[str, Path] = {}
