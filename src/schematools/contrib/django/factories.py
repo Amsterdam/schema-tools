@@ -249,7 +249,9 @@ class FieldMaker:
         if not field.is_primary and field.nm_relation is None:
             # Primary can not be Null
             kwargs["null"] = not field.required
-        if field.has_shortname:
+        if field.has_shortname or (
+            field.parent_field is not None and field.parent_field.has_shortname
+        ):
             kwargs["db_column"] = field.db_name
         if self.value_getter:
             kwargs.update(self.value_getter(dataset, field))
