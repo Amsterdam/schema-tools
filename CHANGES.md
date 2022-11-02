@@ -1,5 +1,7 @@
-# Upcoming release (in git)
+# 2022-11-02 (5.0.1)
 
+* Added validation check to prevent field names from being prefixed with their table or dataset name.
+* Fixed Django ``db_column`` for subfields that use a shortname (regression by 5.0).
 * Fixed dependency pinning of shapely to 1.8.0
 
 
