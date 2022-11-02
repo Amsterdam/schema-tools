@@ -201,6 +201,23 @@ def _postgres_identifier_length(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
+@_register_validator("repetitive identifiers")
+def _repetitive_naming(dataset: DatasetSchema) -> Iterator[str]:
+    """Identifier names should not repeat enclosing dataset/table names.
+
+    This catches any dataset with a datasetThing table addressed by
+    datasetThingIdentifier (should be dataset, thing, identifier).
+    We make an exception for the case where dataset and table names are equal.
+    """
+    for table in dataset.tables:
+        if table.id != dataset.id and table.id.startswith(dataset.id):
+            yield f"table name {table.id!r} should not start with {dataset.id!r}"
+        for field in table.fields:
+            for prefix in [dataset.id, table.id]:
+                if field.id.startswith(prefix):
+                    yield f"field name {field.id!r} should not start with {prefix!r}"
+
+
 @_register_validator("identifier properties")
 def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
     """Validate that the identifier property refers to actual fields on the table definitions."""
