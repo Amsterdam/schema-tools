@@ -47,7 +47,7 @@ def from_dataset(ds: DatasetSchema, path: str) -> dict[str, Any]:
         "mimetype": "application/json",
         "modified": strftime("%Y-%m-%dT%H:%M:%S"),
         "name": title,
-        "notes": ds.description or ds.title,  # Must not be empty.
+        "notes": ds.description or title,  # Must not be empty.
         "owner_org": "gemeente-amsterdam",
         "publisher": "http://standaarden.overheid.nl/owms/terms/Amsterdam",
         "theme": [theme],
