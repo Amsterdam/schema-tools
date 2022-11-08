@@ -36,3 +36,4 @@ def test_convert(here, name):
         assert isinstance(data.get(key), list) and data[key]
     assert data["identifier"]
     assert data["identifier"] == data["url"]
+    assert data["notes"]
