@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import PosixPath
-from typing import Any, Iterator
+from typing import Any, Iterator, Optional
 
 import ndjson
 from shapely.geometry import shape
@@ -16,14 +16,37 @@ class NDJSONImporter(BaseImporter):
     """Import an NDJSON file into the database."""
 
     def parse_records(
-        self, file_name: PosixPath, dataset_table: DatasetTableSchema, **kwargs: Any
+        self,
+        file_name: PosixPath,
+        dataset_table: DatasetTableSchema,
+        non_target_fields: Optional[list] = [],
+        **kwargs: Any,
     ) -> Iterator[dict[str, list[dict]]]:
-        """Provide an iterator the reads the NDJSON records."""
+        """Provide an iterator the reads the NDJSON records.
+
+        Args:
+            file_name: The full system path location of the NDJSON file.
+            dataset_table: The table conform Amsterdam Schema that defines
+                the context of data in the NDJSON file.
+            non_target_fields: Optional, a list of source fields that needs
+                to be in the output so it can be referenced by intermediate
+                processing logic, but will not end up in the target table
+                and is therefore not defined in the Amsterdam schema.
+
+        Yields:
+            A single source row.
+        """
         # Initializes the field mapper once for the table
         field_mapper = TableFieldMapper(dataset_table)
         with open(file_name) as fh:
             for row in ndjson.reader(fh):
                 records = field_mapper.parse_object(row)
+
+                # add the (optional) non target fields.
+                for field in non_target_fields:
+                    if field not in records[dataset_table.id]:
+                        records[dataset_table.id][0][field] = str(row[field])
+
                 yield records
 
 

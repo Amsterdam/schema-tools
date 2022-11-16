@@ -267,13 +267,29 @@ class BaseImporter:
                 db_schema_name,
             )
 
-    def load_file(self, file_name: Path, batch_size: int = 100, **kwargs: Any) -> dict | None:
-        """Import a file into the database table, returns the last record, if available."""
+    def load_file(
+        self, file_name: Path, batch_size: int = 100, non_target_fields: list = [], **kwargs: Any
+    ) -> dict | None:
+        """Import a file into the database table, returns the last record, if available.
+
+        Args:
+            file_name: The full system path location of the NDJSON file.
+            batch_size: The max number of rows to be processed within a single
+                iteration.
+            non_target_fields: Optional, a list of source fields that needs
+                to be in the output so it can be referenced by intermediate
+                processing logic, but will not end up in the target table
+                and is therefore not defined in the Amsterdam schema.
+
+        Returns:
+            The last row in the defined batch size.
+        """
         if self.dataset_table is None:
             raise ValueError("Import needs to be initialized with table info")
         data_generator = self.parse_records(
             file_name,
             self.dataset_table,
+            non_target_fields,
             **kwargs,
         )
         self.logger.log_start(file_name, size=batch_size)
@@ -284,14 +300,23 @@ class BaseImporter:
         }
 
         last_record: dict | None = None
+
         for records in chunked(data_generator, size=batch_size):
             # every record is keyed on tablename + inside there is a list
             for db_table_name, table_records in self._group_records(records).items():
+                print("db_table_name ==", db_table_name)
+
                 table_records = list(self.deduplicate(db_table_name, table_records))
-                if table_records:
+                # exclude the non target fields for ingestion into database table
+                # since they are not part of the Amsterdam
+                table_records_to_insert = [
+                    item for item in table_records if item not in non_target_fields
+                ]
+
+                if table_records_to_insert:
                     self.engine.execute(
                         insert_statements[db_table_name],
-                        table_records,
+                        table_records_to_insert,
                     )
             num_imported += len(records)
             self.logger.log_progress(num_imported)
