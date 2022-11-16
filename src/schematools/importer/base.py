@@ -300,19 +300,15 @@ class BaseImporter:
         }
 
         last_record: dict | None = None
-
         for records in chunked(data_generator, size=batch_size):
             # every record is keyed on tablename + inside there is a list
             for db_table_name, table_records in self._group_records(records).items():
-                print("db_table_name ==", db_table_name)
-
                 table_records = list(self.deduplicate(db_table_name, table_records))
                 # exclude the non target fields for ingestion into database table
                 # since they are not part of the Amsterdam
                 table_records_to_insert = [
                     item for item in table_records if item not in non_target_fields
                 ]
-
                 if table_records_to_insert:
                     self.engine.execute(
                         insert_statements[db_table_name],
