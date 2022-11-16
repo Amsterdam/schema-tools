@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 from pathlib import Path
 
+import aiohttp
 import requests
 from cachetools.func import ttl_cache
 from more_ds.network.url import URL
@@ -34,6 +36,63 @@ def dataset_schemas_from_url(
         return {dataset_name: schema}
 
     return schemas_from_url(base_url=schemas_url, data_type=types.DatasetSchema)
+
+
+async def schema_task(q, schemas: dict[str, types.DatasetSchema]):
+    from schematools.types import SemVer, TableVersions
+
+    async with aiohttp.ClientSession() as session:
+        while not q.empty():
+            base_url, schema_path = await q.get()
+            async with session.get(base_url / schema_path / "dataset") as response:
+                response_data = await response.json()
+
+            # Include referenced tables for datasets.
+            for i, table in enumerate(response_data["tables"]):
+                if ref := table.get("$ref"):
+                    table_response = await session.get(base_url / schema_path / ref)
+                    table_response.raise_for_status()
+                    payload = await table_response.json()
+                    # Assume `ref` is of form "table_name/v1.1.0"
+                    dvn = SemVer(ref.split("/")[-1])
+                    response_data["tables"][i] = TableVersions(
+                        id=table["id"], default_version_number=dvn, active={dvn: payload}
+                    )
+                    for version, ref in table.get("activeVersions", {}).items():
+                        table_response = await session.get(base_url / schema_path / ref)
+                        table_response.raise_for_status()
+                        payload = await table_response.json()
+                        response_data["tables"][i].active[SemVer(version)] = payload
+                else:
+                    dvn = SemVer(table["version"])
+                    response_data["tables"][i] = TableVersions(
+                        id=table["id"], default_version_number=dvn, active={dvn: table}
+                    )
+            logger.info("retrieved %s", schema_path)
+            schemas[schema_path] = types.DatasetSchema.from_dict(response_data)
+
+
+async def _dataset_schemas_from_url(base_url: str):
+    base_url = URL(base_url)
+    q = asyncio.Queue()
+    schemas = {}
+    num_tasks = 60
+
+    with requests.Session() as connection:
+        response = connection.get(base_url / "index.json")
+        response.raise_for_status()
+        response_data = response.json()
+
+        for i, (_, schema_path) in enumerate(response_data.items()):
+            await q.put((base_url, schema_path))
+
+    await asyncio.gather(*[schema_task(q, schemas) for _ in range(num_tasks)])
+
+    return schemas
+
+
+def async_schemas_from_url(base_url: str = "https://schemas.data.amsterdam.nl/datasets/"):
+    return asyncio.run(_dataset_schemas_from_url(base_url))
 
 
 def dataset_schema_from_url(
