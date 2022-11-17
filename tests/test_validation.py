@@ -69,7 +69,7 @@ def test_id_matches_path(here: Path) -> None:
     dataset = dataset_schema_from_path(here / "files" / "stadsdelen.json")
 
     # No errors when id equals parent path name
-    errors = validation.run(dataset, here / "gebieden" / "dataset.json")
+    errors = validation.run(dataset, here / "stadsdelen" / "dataset.json")
     assert list(errors) == []
 
     # Error when not equal
@@ -78,7 +78,7 @@ def test_id_matches_path(here: Path) -> None:
     assert error
     assert error.validator_name == "ID does not match file path"
     assert (
-        """Id of the dataset gebieden does not match the parent directory regios."""
+        """Id of the dataset stadsdelen does not match the parent directory regios."""
         in error.message
     )
     assert list(errors) == []

@@ -66,7 +66,7 @@ def test_ndjson_import_separate_relations_both_composite(
 
     importer.load_file(ndjson_path, is_through_table=True)
     records = [
-        dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
+        dict(r) for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten")
     ]
 
     assert records == [
@@ -109,13 +109,13 @@ def test_ndjson_import_no_embedded_nm_relation_in_data(
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
 
     importer.load_file(ndjson_path, is_through_table=True)
-    records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden")]
+    records = [dict(r) for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden")]
     assert len(records) == 1
 
     # Through table is available, but has no content
     # (because there is no data  for it in the ndjson).
     records = [
-        dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
+        dict(r) for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten")
     ]
     assert len(records) == 0
 
@@ -144,7 +144,7 @@ def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbses
     importer = NDJSONImporter(ggwgebieden_schema, engine)
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden")]
+    records = [dict(r) for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden")]
 
     # An "id" should have been generated, concat of the composite key fields
     assert records == [
@@ -165,7 +165,7 @@ def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbses
     ]
 
     records = [
-        dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_bestaatuitbuurten")
+        dict(r) for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten")
     ]
     assert len(records) == 3
     # Also the temporal fields are present in the database
@@ -298,7 +298,8 @@ def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbs
     records = [
         dict(r)
         for r in engine.execute(
-            "SELECT code, omschrijving, parent_id FROM baggob_verblijfsobjecten_gebruiksdoel"
+            "SELECT code, omschrijving, parent_id"
+            " FROM verblijfsobjecten_verblijfsobjecten_gebruiksdoel"
         )
     ]
     assert records == [
@@ -335,7 +336,7 @@ def test_inactive_relation_that_are_commented_out(here, engine, stadsdelen_schem
     importer = NDJSONImporter(stadsdelen_schema, engine)
     importer.generate_db_objects("stadsdelen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from gebieden_stadsdelen ORDER BY id")]
+    records = [dict(r) for r in engine.execute("SELECT * FROM stadsdelen_stadsdelen ORDER BY id")]
     # Field is stringified, because in schema the relation is 'disabled'
     assert records == [
         {"id": "1", "ligt_in_gemeente": '{"identificatie": "0363"}'},
@@ -349,7 +350,9 @@ def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema
     importer = NDJSONImporter(woonplaatsen_schema, engine)
     importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from baggob_woonplaatsen ORDER BY id")]
+    records = [
+        dict(r) for r in engine.execute("SELECT * FROM woonplaatsen_woonplaatsen ORDER BY id")
+    ]
     assert records == [
         {
             "id": "1.1",
@@ -461,7 +464,9 @@ def test_provenance_for_schema_field_ids_equal_to_ndjson_keys(
     importer = NDJSONImporter(woonplaatsen_schema, engine)
     importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from baggob_woonplaatsen ORDER BY id")]
+    records = [
+        dict(r) for r in engine.execute("SELECT * FROM woonplaatsen_woonplaatsen ORDER BY id")
+    ]
     assert records == [
         {
             "id": "1.1",

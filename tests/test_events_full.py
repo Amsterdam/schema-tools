@@ -115,7 +115,7 @@ def test_event_process_nm_relation_insert(
     )
     importer.load_events_from_file(events_path)
     records = [
-        dict(r) for r in tconn.execute("SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten")
+        dict(r) for r in tconn.execute("SELECT * FROM gebieden_ggwgebieden_bestaat_uit_buurten")
     ]
     assert len(records) == 1
     assert records[0]["bestaat_uit_buurten_id"] == "03630023754008.1"
@@ -170,6 +170,6 @@ def test_event_process_nm_relation_delete(here, tconn, local_metadata, gebieden_
     )
     importer.load_events_from_file(events_path)
     records = [
-        dict(r) for r in tconn.execute("SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten")
+        dict(r) for r in tconn.execute("SELECT * FROM gebieden_ggwgebieden_bestaat_uit_buurten")
     ]
     assert len(records) == 0

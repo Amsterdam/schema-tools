@@ -1,5 +1,5 @@
 {
-    "id": "afvalwegingen",
+    "id": "afvalwegingen_sep_table",
     "type": "dataset",
     "status": "beschikbaar",
     "authorizationGrantor": "Deze gegevensset wordt onderhouden voor uitvoering van taken betreffende het inzamelen van huishoudelijk afval. De juridische basis is de Wet Milieubeheer, Hoofdstuk 10. Afvalstoffen.",
@@ -40,7 +40,7 @@
             },
             "cluster": {
               "type": "string",
-              "relation": "afvalwegingen:clusters",
+              "relation": "afvalwegingen_sep_table:clusters",
               "description": "Cluster-ID"
             },
             "serienummer": {
@@ -98,7 +98,7 @@
             },
             "containertype": {
               "type": "string",
-              "relation": "afvalwegingen:containertypes",
+              "relation": "afvalwegingen_sep_table:containertypes",
               "description": "Containertype-ID"
             }
           }
@@ -131,7 +131,7 @@
             },
             "cluster": {
               "type": "string",
-              "relation": "afvalwegingen:clusters",
+              "relation": "afvalwegingen_sep_table:clusters",
               "description": "Cluster-ID"
             },
             "weegsysteem id": {

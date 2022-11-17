@@ -82,7 +82,7 @@
                 }
               }
             },
-            "relation": "bag:verblijfsobjecten",
+            "relation": "verblijfsobjecten:verblijfsobjecten",
             "description": "Relatie naar verblijfsobject",
             "$comment": "This is a fictional relation, added for testing purposes"
           },
@@ -97,7 +97,7 @@
                 "type": "integer"
               }
             },
-            "relation": "bag:verblijfsobjecten",
+            "relation": "verblijfsobjecten:verblijfsobjecten",
             "description": "Relatie naar verblijfsobject",
             "$comment": "This is a fictional relation, added for testing purposes"
           }

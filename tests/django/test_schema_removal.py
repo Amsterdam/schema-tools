@@ -55,6 +55,6 @@ def test_remove_schema_and_tables(here):
     assert parkeervak_tables.issubset(connection.introspection.table_names())
 
     # Delete last two datasets
-    call_command("remove_schemas", "baggob", "gebieden")
+    call_command("remove_schemas", "verblijfsobjecten", "gebieden")
 
     assert models.Dataset.objects.count() == 0
