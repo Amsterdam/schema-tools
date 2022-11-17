@@ -38,7 +38,20 @@ def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsess
     ndjson_path = here / "files" / "data" / "gebieden.ndjson"
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-    importer.load_file(ndjson_path)
+    last_record = importer.load_file(ndjson_path)
+    assert dict(last_record) == {
+        "begin_geldigheid": "2008-03-12",
+        "eind_geldigheid": "2010-10-19",
+        "id": 2,
+        "ligt_in_buurt_id": 34,
+    }
+    assert last_record.source == {
+        "beginGeldigheid": "2008-03-12",
+        "eindgeldigheid": "2010-10-19",
+        "id": 2,
+        "ligtinbuurt": 34,
+        "schema": "irrelevant",
+    }
     records = [
         dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken ORDER BY id")
     ]
@@ -58,7 +71,28 @@ def test_skip_duplicate_keys_in_batch_during_import(here, engine, bouwblokken_sc
     ndjson_path = here / "files" / "data" / "gebieden-duplicate-id.ndjson"
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-    importer.load_file(ndjson_path)
+    last_record = importer.load_file(ndjson_path)
+    records = [
+        dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken ORDER BY id")
+    ]
+    assert records == [
+        # Only one inserted, and no crash happened.
+        {
+            "begin_geldigheid": date(2006, 1, 12),
+            "eind_geldigheid": date(2008, 11, 14),
+            "id": "1",
+            "ligt_in_buurt_id": "12",
+        }
+    ]
+
+    # Despite not being inserted, the record should still be returned as last one,
+    # because this the last one processed (useful for cursor tracking).
+    assert last_record == {
+        "begin_geldigheid": "2008-03-12",
+        "eind_geldigheid": "2010-10-19",
+        "id": 1,
+        "ligt_in_buurt_id": 34,
+    }
 
 
 def test_skip_duplicate_keys_in_db_during_import_with_existing_value(

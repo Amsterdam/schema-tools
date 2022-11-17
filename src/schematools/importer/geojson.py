@@ -7,7 +7,7 @@ from shapely.geometry import shape
 from schematools.exceptions import ParserError
 from schematools.types import DatasetTableSchema
 
-from .base import BaseImporter
+from .base import BaseImporter, Record
 
 ID_FORMAT = re.compile(r"^([a-z0-9_]+)[/.](\d+)$", re.I)
 
@@ -53,8 +53,9 @@ class GeoJSONImporter(BaseImporter):
 
         relation_fields = [field for field in dataset_table.fields if field.relation is not None]
         for feature in features:
-            record = dict(
-                self._clean_value(name, value) for name, value in feature["properties"].items()
+            record = Record(
+                (self._clean_value(name, value) for name, value in feature["properties"].items()),
+                source=feature,
             )
             for relation_field in relation_fields:
                 if relation_field.db_name != relation_field.python_name:

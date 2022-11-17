@@ -95,6 +95,25 @@ class Provenance:
             return source[self.provenance]
 
 
+class Record(dict):
+    """A single generated row from the importer.
+    Each key matches the database field name, value is the data that should be written.
+
+    This is a tiny wrapper around dict for simplicity, and allowing the source record
+    to be accessed. The source record is useful debugging information,
+    and some implementations need to retrieve non-schema fields
+    (such as a "cursor" field in the last record).
+    """
+
+    def __init__(self, data, source: dict):
+        super().__init__(data)
+        self.source = source
+
+    def __repr__(self):
+        data_repr = super().__repr__()
+        return f"Record({data_repr}, source={self.source!r})"
+
+
 class BaseImporter:
     """Base importer that holds common data."""
 
@@ -119,8 +138,8 @@ class BaseImporter:
     def deduplicate(
         self,
         table_name: str,
-        table_records: list[dict],
-    ) -> Iterator[dict]:
+        table_records: list[Record],
+    ) -> Iterator[Record]:
         """Removes duplicates from a set of records.
         This is introduced because the importer often needed to re-run
         before completing the task (e.g. source system errors / task redeploys).
@@ -267,7 +286,7 @@ class BaseImporter:
                 db_schema_name,
             )
 
-    def load_file(self, file_name: Path, batch_size: int = 100, **kwargs: Any) -> dict | None:
+    def load_file(self, file_name: Path, batch_size: int = 100, **kwargs: Any) -> Record | None:
         """Import a file into the database table, returns the last record, if available."""
         if self.dataset_table is None:
             raise ValueError("Import needs to be initialized with table info")
@@ -283,7 +302,7 @@ class BaseImporter:
             table_name: table.insert() for table_name, table in self.tables.items()
         }
 
-        last_record: dict | None = None
+        last_record: Record | None = None
         for records in chunked(data_generator, size=batch_size):
             # every record is keyed on tablename + inside there is a list
             for db_table_name, table_records in self._group_records(records).items():
@@ -302,7 +321,7 @@ class BaseImporter:
         self.logger.log_done(num_imported)
         return last_record
 
-    def _group_records(self, records: list[dict[str, list[dict]]]) -> dict[str, list[dict]]:
+    def _group_records(self, records: list[dict[str, list[Record]]]) -> dict[str, list[Record]]:
         """Combine the records for a single table into a single set"""
         groups = defaultdict(list)
         for record in records:
@@ -313,7 +332,7 @@ class BaseImporter:
 
     def parse_records(
         self, filename: Path, dataset_table: DatasetTableSchema, **kwargs: Any
-    ) -> Iterator[dict[str, list[dict]]]:
+    ) -> Iterator[dict[str, list[Record]]]:
         """Yield all records from the filename.
         The expected format of each returned row is::
 
