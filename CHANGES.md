@@ -1,3 +1,26 @@
+# Changes in git
+
+A big change in schema loading.
+
+This mostly affects unit tests in other projects, or files that do custom schema loading.
+Unit test code should preferably use a `schema_loader` instance per test run,
+as all datasets are only cached within the same loader instance now.
+
+* Added `schematools.loaders.get_schema_loader()` that provides a single object instance for loading.
+* Added `DatasetSchema.table_versions` mapping to access other table versions by name.
+* Removed `TableVersions` injection in dataset schema data. Tables are now loaded on demand.
+* Removed internal global dataset cache, datasets are only cached per loader.
+* Removed ununsed functions in `schematools.utils`.
+* Deprecated loading functions in `schematools.utils`, use `schematools.loaders` instead.
+
+
+# 2022-11-15 (5.0.2)
+
+* Using `BigAutoField` for all identifier fields now by default.
+* Fixed Django system check warnings for `AutoField`/`BigAutoField` migration changes.
+* Fixed CKAN metadata upload to https://data.overheid.nl/ for datasets without a description or title.
+
+
 # 2022-11-02 (5.0.1)
 
 * Added validation check to prevent field names from being prefixed with their table or dataset name.
