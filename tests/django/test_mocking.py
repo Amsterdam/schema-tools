@@ -92,7 +92,7 @@ def test_mocking_add_ids_for_relations(
             )
 
     # Now add relation.
-    relate_datasets(afvalwegingen_schema, verblijfsobjecten_schema, gebieden_schema)
+    relate_datasets(afvalwegingen_dataset, verblijfsobjecten_dataset, gebieden_dataset)
 
     # Check if relations are added.
     for dataset_id, table_id, relation_ids in (
@@ -152,7 +152,7 @@ def test_mocking_add_temporal_fields_for_1n_relations(
     for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
         models[cls._meta.model_name] = cls
 
-    relate_datasets(gebieden_schema)
+    relate_datasets(gebieden_dataset)
 
     for bb in models["bouwblokken"].objects.all():
         bb.ligt_in_buurt_id = ".".join(
@@ -184,7 +184,7 @@ def test_mocking_adds_nm_relations(
         )
     }
 
-    relate_datasets(kadastraleobjecten_schema)
+    relate_datasets(kadastraleobjecten_dataset)
 
     source_model = models["kadastraleobjecten"]
     through_model = models["kadastraleobjecten_is_ontstaan_uit_kadastraalobject"]

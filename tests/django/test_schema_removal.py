@@ -9,10 +9,10 @@ from schematools.contrib.django.factories import model_factory
 @pytest.mark.django_db
 def test_remove_schema_and_tables(here):
     """Prove that dataset schema gets imported correctly"""
-    afval_json_path = here / "files" / "afvalwegingen.json"
-    parkeervakken_json_path = here / "files" / "parkeervakken.json"
-    verblijfsobjecten_json_path = here / "files" / "verblijfsobjecten.json"
-    gebieden_json_path = here / "files" / "gebieden.json"
+    afval_json_path = here / "files/datasets/afvalwegingen.json"
+    parkeervakken_json_path = here / "files/datasets/parkeervakken.json"
+    verblijfsobjecten_json_path = here / "files/datasets/verblijfsobjecten.json"
+    gebieden_json_path = here / "files/datasets/gebieden.json"
     args = [
         afval_json_path,
         parkeervakken_json_path,

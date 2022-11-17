@@ -3,10 +3,9 @@ from typing import List, Optional
 from django.conf import settings
 from django.core.management import BaseCommand
 
-from schematools import types
 from schematools.contrib.django.models import Profile
+from schematools.loaders import get_profile_loader
 from schematools.types import ProfileSchema
-from schematools.utils import schemas_from_url
 
 
 class Command(BaseCommand):
@@ -35,9 +34,8 @@ class Command(BaseCommand):
     def import_from_files(self, profile_files: List[str]) -> List[Profile]:
         profiles = []
         for filename in profile_files:
-            self.stdout.write(f"Loading profile from {filename}")
             schema = ProfileSchema.from_file(filename)
-            profile = self._import(schema.name, schema)
+            profile = self._import(schema)
             if profile is not None:
                 profiles.append(profile)
 
@@ -46,12 +44,10 @@ class Command(BaseCommand):
     def import_from_url(self, schema_url: str) -> List[Profile]:
         """Import all schema definitions from an URL"""
         self.stdout.write(f"Loading profiles from {schema_url}")
+        loader = get_profile_loader(schema_url)
         profiles = []
 
-        for schema in schemas_from_url(
-            base_url=schema_url, data_type=types.ProfileSchema
-        ).values():
-            self.stdout.write(f"* Processing {schema.name}")
+        for schema in loader.get_all_profiles():
             profile = self._import(schema)
             if profile is not None:
                 profiles.append(profile)
@@ -59,6 +55,7 @@ class Command(BaseCommand):
         return profiles
 
     def _import(self, schema: ProfileSchema) -> Optional[Profile]:
+        self.stdout.write(f"* Processing {schema.name}")
         name = schema.name
         try:
             profile = Profile.objects.get(name=name)

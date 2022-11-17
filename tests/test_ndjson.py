@@ -369,9 +369,7 @@ def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema
     ]
 
 
-def test_ndjson_import_with_shortnames_missing_data(
-    here, engine, hr_schema, verblijfsobjecten_schema, dbsession
-):
+def test_ndjson_import_with_shortnames_missing_data(here, engine, hr_schema, dbsession):
     """Prove that rows with missing fields with shortnames are imported correctly."""
     ndjson_path = here / "files" / "data" / "hr_missing_nmrelation.ndjson"
     importer = NDJSONImporter(hr_schema, engine)
@@ -392,9 +390,7 @@ def test_ndjson_import_with_shortnames_missing_data(
     ]
 
 
-def test_ndjson_import_with_shortnames_in_schema(
-    here, engine, hr_schema, verblijfsobjecten_schema, dbsession
-):
+def test_ndjson_import_with_shortnames_in_schema(here, engine, hr_schema, dbsession):
     """Prove that data for schemas with shortnames for tables/fields is imported correctly."""
     ndjson_path = here / "files" / "data" / "hr.ndjson"
     importer = NDJSONImporter(hr_schema, engine)

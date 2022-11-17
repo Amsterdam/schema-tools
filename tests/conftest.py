@@ -8,6 +8,7 @@ from typing import Any, ContextManager
 from urllib.parse import ParseResult, urlparse
 
 import pytest
+import requests
 import sqlalchemy_utils
 from more_ds.network.url import URL
 from sqlalchemy import MetaData
@@ -16,8 +17,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.ddl import DropTable
 
 from schematools.importer.base import metadata
+from schematools.loaders import FileSystemProfileLoader, FileSystemSchemaLoader
 from schematools.types import DatasetSchema, Json, ProfileSchema
-from schematools.utils import dataset_schema_from_path
 
 HERE = Path(__file__).parent
 
@@ -204,14 +205,11 @@ def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
 
     This allows to run "schema import schema afvalwegingen".
     """
-
-    from schematools.utils import requests
-
     dummy_session_maker = DummySessionMaker()
 
-    AFVALWEGINGEN_JSON = HERE / "files" / "afvalwegingen_sep_table.json"
-    CLUSTERS_JSON = HERE / "files" / "afvalwegingen_clusters" / "v1.0.0.json"
-    VERBLIJFSOBJECTEN_JSON = HERE / "files" / "verblijfsobjecten.json"
+    AFVALWEGINGEN_JSON = HERE / "files/datasets/afvalwegingen_sep_table.json"
+    CLUSTERS_JSON = HERE / "files/datasets/afvalwegingen_clusters/v1.0.0.json"
+    VERBLIJFSOBJECTEN_JSON = HERE / "files/datasets/verblijfsobjecten.json"
 
     monkeypatch.setattr(requests, "Session", dummy_session_maker)
 
@@ -233,7 +231,7 @@ def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
 
     with open(CLUSTERS_JSON, "rb") as fh:
         dummy_session_maker.add_route(
-            schema_url / "afvalwegingen/afvalwegingen_clusters" / "v1.0.0",
+            schema_url / "afvalwegingen/afvalwegingen_clusters/v1.0.0",
             content=json.load(fh),
         )
     yield dummy_session_maker
@@ -241,105 +239,140 @@ def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
 
 @pytest.fixture
 def afval_schema_json(here: Path) -> Json:
-    with open(here / "files/afval.json") as f:
+    with open(here / "files/datasets/afval.json") as f:
         return json.load(f)
 
 
-@pytest.fixture
-def afval_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/afval.json")
+@pytest.fixture()
+def schema_loader(here) -> FileSystemSchemaLoader:
+    """A single schema loader instance that is shared by a single test run.
+    This also means all fixtures of a single test share the same dataset_collection,
+    as this schema loader assigns that to each loaded dataset.
+    """
+    return FileSystemSchemaLoader(here / "files/datasets")
 
 
 @pytest.fixture
-def afvalwegingen_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/afvalwegingen.json")
+def afval_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("afval.json")
 
 
 @pytest.fixture
-def kadastraleobjecten_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/kadastraleobjecten.json")
+def afvalwegingen_schema(schema_loader, verblijfsobjecten_schema) -> DatasetSchema:
+    # verblijfsobjecten_schema is listed as dependency to resolve relations
+    return schema_loader.get_dataset_from_file("afvalwegingen.json")
 
 
 @pytest.fixture
-def meetbouten_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/meetbouten.json")
+def brk_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("brk.json")
 
 
 @pytest.fixture
-def parkeervakken_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/parkeervakken.json")
+def composite_key_schema(schema_loader) -> ProfileSchema:
+    return schema_loader.get_dataset_from_file("composite_key.json")
 
 
 @pytest.fixture
-def gebieden_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/gebieden.json")
+def hr_schema(schema_loader, verblijfsobjecten_schema) -> DatasetSchema:
+    # verblijfsobjecten_schema is listed as dependency to resolve relations
+    return schema_loader.get_dataset_from_file("hr.json")
 
 
 @pytest.fixture
-def bouwblokken_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/bouwblokken.json")
+def hr_schema_auth(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("hr_auth.json")
 
 
 @pytest.fixture
-def gebieden_schema_auth(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/gebieden_auth.json")
+def meetbouten_schema(schema_loader, gebieden_schema) -> DatasetSchema:
+    # gebieden_schema is listed as dependency to resolve relations
+    return schema_loader.get_dataset_from_file("meetbouten.json")
 
 
 @pytest.fixture
-def gebieden_schema_auth_list(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/gebieden_auth_list.json")
+def parkeervakken_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("parkeervakken.json")
 
 
 @pytest.fixture
-def ggwgebieden_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/ggwgebieden.json")
+def gebieden_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("gebieden.json")
 
 
 @pytest.fixture
-def stadsdelen_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/stadsdelen.json")
+def bouwblokken_schema(schema_loader, gebieden_schema) -> DatasetSchema:
+    # gebieden_schema is listed as dependency to resolve relations
+    return schema_loader.get_dataset_from_file("bouwblokken.json")
 
 
 @pytest.fixture
-def verblijfsobjecten_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/verblijfsobjecten.json")
+def gebieden_schema_auth(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("gebieden_auth.json")
 
 
 @pytest.fixture
-def meldingen_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/meldingen.json")
+def gebieden_schema_auth_list(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("gebieden_auth_list.json")
 
 
 @pytest.fixture
-def woonplaatsen_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/woonplaatsen.json")
+def ggwgebieden_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("ggwgebieden.json")
 
 
 @pytest.fixture
-def woningbouwplannen_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/woningbouwplannen.json")
+def stadsdelen_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("stadsdelen.json")
 
 
 @pytest.fixture
-def brp_r_profile_schema(here) -> ProfileSchema:
+def verblijfsobjecten_schema(schema_loader, gebieden_schema) -> DatasetSchema:
+    # gebieden_schema is listed as dependency to resolve relations
+    return schema_loader.get_dataset_from_file("verblijfsobjecten.json")
+
+
+@pytest.fixture
+def kadastraleobjecten_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("kadastraleobjecten.json")
+
+
+@pytest.fixture
+def meldingen_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("meldingen.json")
+
+
+@pytest.fixture
+def woonplaatsen_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("woonplaatsen.json")
+
+
+@pytest.fixture
+def woningbouwplannen_schema(schema_loader, gebieden_schema) -> DatasetSchema:
+    # gebieden_schema is listed as dependency to resolve relations
+    return schema_loader.get_dataset_from_file("woningbouwplannen.json")
+
+
+@pytest.fixture()
+def profile_loader(here) -> FileSystemProfileLoader:
+    return FileSystemProfileLoader(here / "files/profiles")
+
+
+@pytest.fixture
+def brp_r_profile_schema(profile_loader) -> ProfileSchema:
     """A downloaded profile schema definition"""
-    return ProfileSchema.from_file(here / "files/profiles/BRP_R.json")
+    return profile_loader.get_profile("BRP_R")
 
 
 @pytest.fixture
-def profile_brk_encoded_schema(here) -> ProfileSchema:
+def profile_brk_encoded_schema(profile_loader) -> ProfileSchema:
     """A downloaded profile schema definition"""
-    return ProfileSchema.from_file(here / "files/profiles/BRK_encoded.json")
+    return profile_loader.get_profile("BRK_encoded")
 
 
 @pytest.fixture
-def profile_brk_read_id_schema(here) -> ProfileSchema:
-    return ProfileSchema.from_file(here / "files/profiles/BRK_RID.json")
-
-
-@pytest.fixture
-def composite_key_schema(here) -> ProfileSchema:
-    return dataset_schema_from_path(here / "files/composite_key.json")
+def profile_brk_read_id_schema(profile_loader) -> ProfileSchema:
+    return profile_loader.get_profile("BRK_RID")
 
 
 @pytest.fixture
@@ -353,18 +386,3 @@ def profile_verkeer_medewerker_schema() -> ProfileSchema:
             },
         }
     )
-
-
-@pytest.fixture
-def brk_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/brk.json")
-
-
-@pytest.fixture
-def hr_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/hr.json")
-
-
-@pytest.fixture
-def hr_schema_auth(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/hr_auth.json")

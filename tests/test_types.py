@@ -1,19 +1,9 @@
 import operator
-from pathlib import Path
 
 import pytest
 
 from schematools.exceptions import SchemaObjectNotFound
-from schematools.types import (
-    DatasetSchema,
-    Json,
-    Permission,
-    PermissionLevel,
-    ProfileSchema,
-    SemVer,
-    TableVersions,
-)
-from schematools.utils import dataset_schema_from_path
+from schematools.types import DatasetSchema, Permission, PermissionLevel, ProfileSchema, SemVer
 
 
 def test_permission_level_ordering() -> None:
@@ -30,45 +20,41 @@ def test_permission_level_ordering() -> None:
     assert PermissionLevel.highest is max(PermissionLevel)
 
 
-def test_geo_and_id_when_configured(here: Path, gebieden_schema: DatasetSchema) -> None:
-    schema = dataset_schema_from_path(here / "files" / "meetbouten.json")
-    table = schema.get_table_by_id("meetbouten")
+def test_geo_and_id_when_configured(schema_loader, meetbouten_schema) -> None:
+    table = meetbouten_schema.get_table_by_id("meetbouten")
     assert table.identifier == ["identificatie"]
     assert table.main_geometry == "geometrie"
     id_field = [field for field in table.fields if [field.name] == table.identifier][0]
     assert id_field.is_primary
 
 
-def test_geo_and_id_when_not_configured(here: Path) -> None:
-    schema = dataset_schema_from_path(here / "files" / "afvalwegingen.json")
-    table = schema.get_table_by_id("containers")
+def test_geo_and_id_when_not_configured(schema_loader, afvalwegingen_schema) -> None:
+    table = afvalwegingen_schema.get_table_by_id("containers")
     assert table.identifier == ["id"]
     assert table.main_geometry == "geometry"
     id_field = [field for field in table.fields if [field.name] == table.identifier][0]
     assert id_field.is_primary
 
 
-def test_import_dataset_separate_table_files(here: Path) -> None:
+def test_import_dataset_separate_table_files(schema_loader) -> None:
     """Prove that datasets with tables in separate files are created correctly."""
-    schema = dataset_schema_from_path(here / "files" / "gebieden_sep_tables" / "dataset.json")
+    schema = schema_loader.get_dataset("gebieden_sep_tables")
     assert len(schema.tables) == 2
     table = schema.get_table_by_id("buurten")
     assert table.main_geometry == "primaireGeometrie"
 
 
-def test_datasetschema_from_file_not_a_dataset(here: Path) -> None:
+def test_datasetschema_from_file_not_a_dataset(schema_loader) -> None:
     """Ensure a proper exception is raised when loading a file that's not a DatasetSchema."""
 
     error_msg = "Invalid Amsterdam Dataset schema file"
     with pytest.raises(ValueError, match=error_msg):
         # v1.0.0.json is a DatasetRow, not a DatasetSchema.
-        dataset_schema_from_path(
-            here / "files" / "gebieden_sep_tables" / "bouwblokken" / "v1.0.0.json"
-        )
+        schema_loader.get_dataset_from_file("gebieden_sep_tables/bouwblokken/v1.0.0.json")
 
     with pytest.raises(ValueError, match=error_msg):
         # not_a_json_file.txt is not a JSON file. We should still get our ValueError.
-        dataset_schema_from_path(here / "files" / "not_a_json_file.txt")
+        schema_loader.get_dataset_from_file("not_a_json_file.txt")
 
 
 def test_profile_schema(brp_r_profile_schema: ProfileSchema) -> None:
@@ -88,9 +74,9 @@ def test_profile_schema(brp_r_profile_schema: ProfileSchema) -> None:
     ]
 
 
-def test_fetching_of_related_schema_ids(here: Path) -> None:
+def test_fetching_of_related_schema_ids(schema_loader) -> None:
     """Prove that ids of related dataset schemas are properly collected."""
-    schema = dataset_schema_from_path(here / "files" / "multirelation.json")
+    schema = schema_loader.get_dataset_from_file("multirelation.json")
     assert set(schema.related_dataset_schema_ids) == {"gebieden", "baseDataset"}
 
 
@@ -237,7 +223,9 @@ def test_dataset_with_loose_nm_relations_has_through_tables(
     assert len(tables_including_through) == 3
 
 
-def test_dataset_with_camel_cased_id_generates_correct_through_relations(here):
+def test_dataset_with_camel_cased_id_generates_correct_through_relations(
+    schema_loader, gebieden_schema
+):
     """Prove that the relation identifiers in through tables are correctly generated.
 
     When a through table is generated, two FK relations are inserted in this table,
@@ -245,28 +233,12 @@ def test_dataset_with_camel_cased_id_generates_correct_through_relations(here):
     When dataset.id or table.id in the source or target table are camelCased,
     the generated identifiers should stay intact, and should not be snakecased.
     """
-    schema = dataset_schema_from_path(here / "files" / "multirelation.json")
+    schema = schema_loader.get_dataset_from_file("multirelation.json")
     through_table = schema.through_tables[0]
 
     # The fields `hasrelations` and `hasNMRelation` are the FK's to source and target table.
     assert through_table.get_field_by_id("hasrelations").relation == "baseDataset:hasrelations"
     assert through_table.get_field_by_id("hasNMRelation").relation == "baseDataset:internalRelated"
-
-
-def test_from_dict(afval_schema_json: Json) -> None:
-    is_dict = lambda o: isinstance(o, dict)
-    is_tv = lambda o: isinstance(o, TableVersions)
-
-    assert all(map(is_dict, afval_schema_json["tables"]))
-
-    dataset = DatasetSchema.from_dict(afval_schema_json)
-
-    # Internally `DatasetSchema` uses `TableVersions` instances as the elements of the "tables"
-    # list.
-    assert all(map(is_dict, afval_schema_json["tables"]))
-
-    # However that should not affect the dict that was originally passed in to `from_dict`
-    assert all(map(is_tv, dataset["tables"]))
 
 
 def test_subfields(ggwgebieden_schema: DatasetSchema) -> None:
@@ -281,9 +253,9 @@ def test_subfields(ggwgebieden_schema: DatasetSchema) -> None:
         field.get_field_by_id("iDoNotExist")
 
 
-def test_raise_exception_on_missing_properties_in_array(here):
+def test_raise_exception_on_missing_properties_in_array(schema_loader):
     """Test if a human-readable error is raised on missing properties key."""
-    schema = dataset_schema_from_path(here / "files" / "missing_properties.json")
+    schema = schema_loader.get_dataset_from_file("missing_properties.json")
     with pytest.raises(
         KeyError, match=r"Key 'properties' not defined in 'meetbouten.broken_array'"
     ):
