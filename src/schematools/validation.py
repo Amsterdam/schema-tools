@@ -285,26 +285,20 @@ def _active_versions(dataset: DatasetSchema) -> Iterator[str]:
     # we do, we are in a position to restructure our abstraction (eg :class:`DatasetSchema`,
     # etc) more definitely. And as a result can rely on those abstractions for our
     # validation instead of some internal representation.
-    for tv in dataset["tables"]:
-        if not isinstance(tv, TableVersions):
-            raise TypeError(
-                'Someone messed with the internal representation of DatasetSchema["tables"].'
-            )
-        for version, table in tv.active.items():
-            if not isinstance(table, dict):
-                raise TypeError(f"table is a {type(table).__name__} instead of a dict")
-            if tv.id != table["id"]:
-                yield (
-                    f"Table {tv.id!r} with version number '{version}' does not match with "
-                    f"id {table['id']!r} of the referenced table."
-                )
-            version_in_table = SemVer(table["version"])
-            if version != version_in_table:
-                yield (
-                    f"Version number '{version}' in activeVersions for table {table['id']!r} "
-                    f"does not match with version number '{version_in_table}' of the "
-                    "referenced table."
-                )
+    for table_versions in dataset.table_versions.values():  # type: TableVersions
+        for version in table_versions.keys():
+            try:
+                # Runtime checking already happens on retrieval of the tables,
+                # so this validation check only tests whether that would happen.
+                table_versions[version]
+            except RuntimeError as e:
+                yield str(e)
+
+        # See if default version exists
+        try:
+            table_versions[table_versions._default_version]
+        except SchemaObjectNotFound as e:
+            yield str(e)
 
 
 @_register_validator("mainGeometry")

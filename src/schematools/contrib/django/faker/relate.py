@@ -1,11 +1,11 @@
 import logging
 import random
 from collections import defaultdict
-from typing import Any, List
+from typing import Any
 
-from schematools.contrib.django.datasets import get_datasets_from_schemas
 from schematools.contrib.django.factories import schema_models_factory
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.contrib.django.models import Dataset
+from schematools.types import DatasetTableSchema
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def add_temporal_attrs(
     return attrs | temporal_attrs
 
 
-def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> None:
+def relate_datasets(*datasets: Dataset) -> None:
     """Add relations to the datasets.
 
     There is one caveat. Because we are using the Django ORM,
@@ -46,7 +46,6 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> None:
     So these through tables cannot be filled with mock data.
     """
     models = defaultdict(dict)
-    datasets = get_datasets_from_schemas(dataset_schemas)
     for dataset in datasets:
         if not dataset.enable_db:
             logger.warning("Skipping `%s`, `enable_db` is False", dataset.name)
@@ -54,17 +53,16 @@ def relate_datasets(*dataset_schemas: List[DatasetSchema]) -> None:
         for cls in schema_models_factory(dataset, base_app_name="dso_api.dynamic_api"):
             models[dataset.name][cls._meta.model_name] = cls
 
-    for dataset_schema in dataset_schemas:
+    for dataset in datasets:
+        dataset_schema = dataset.schema
         for table in dataset_schema.tables:
             model = models[dataset_schema.db_name][
                 table.db_name_variant(with_dataset_prefix=False)
             ]
-            for f in table.get_fields(include_subfields=False):
+            for f in table.fields:
                 field_name = f.python_name
 
                 if f.relation is not None:
-                    related_dataset_schema_id, related_dataset_table_id = f.relation.split(":")
-
                     # We need to get the related_model via the field on the source model
                     # For some reason, getting the related_model from the `models` dict
                     # does not work. The model class seems to be identical,

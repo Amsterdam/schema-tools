@@ -337,7 +337,7 @@ def test_temporal_subfields_are_skipped(verblijfsobjecten_dataset):
 
 @pytest.mark.django_db
 def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_dataset, here):
-    call_command("import_schemas", here / "files" / "parkeervakken.json", create_tables=True)
+    call_command("import_schemas", here / "files/datasets/parkeervakken.json", create_tables=True)
     model_dict = {
         cls._meta.model_name: cls
         for cls in schema_models_factory(

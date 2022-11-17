@@ -1,14 +1,16 @@
+from __future__ import annotations
+
+from pathlib import Path
 from typing import List, Optional
 
 from django.conf import settings
 from django.core.management import BaseCommand
 from django.db.models import Q
 
-from schematools._datasetcollection import _DatasetCollection, _set_schema_loader
 from schematools.contrib.django.models import Dataset
+from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
 from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema
-from schematools.utils import dataset_schema_from_path
 
 from .create_tables import create_tables
 
@@ -50,23 +52,55 @@ class Command(BaseCommand):
     def import_from_files(self, schema_files) -> List[Dataset]:
         """Import all schema definitions from the given files."""
         datasets = []
+        shared_loaders = {}
+
+        def _get_shared_loader(path):
+            # Make sure all datasets that share the same root also share the same loader,
+            # so relations between the separate files can be resolved.
+            if (loader := shared_loaders.get(path)) is None:
+                shared_loaders[path] = loader = FileSystemSchemaLoader(
+                    path, loaded_callback=self._loaded_callback
+                )
+            return loader
+
         for filename in schema_files:
-            self.stdout.write(f"Loading schema from {filename}")
-            schema = dataset_schema_from_path(filename)
-            dataset = self._import(schema, filename)
-            datasets.append(dataset)
+            self.stdout.write(f"Loading schemas from {filename}")
+            file = Path(filename)
+            if file.is_dir():
+                # As intended, read all datasets
+                # The folder might be a sub path in the repository,
+                # in which case only a few datasets will be imported.
+                files = _get_shared_loader(file).get_all_datasets()
+            else:
+                # Previous logic also allowed selecting a single file by name.
+                # This still needs to resolve the root to resolve relations,
+                # and to make sure the 'path' is correctly calculated.
+                root = FileSystemSchemaLoader.get_root(file)
+                dataset = _get_shared_loader(root).get_dataset_from_file(file)
+                # Random files may not follow the folder/dataset.json convention,
+                # calculate the path here instead of using loader.get_dataset_path().
+                path = file.parent.relative_to(root)
+                if str(path) == ".":
+                    path = dataset.id  # workaround for unit tests
+
+                files = {path: dataset}
+
+            datasets.extend(self._run_import(files))
 
         return datasets
 
     def import_from_url(self, schema_url) -> List[Dataset]:
         """Import all schema definitions from a URL"""
         self.stdout.write(f"Loading schema from {schema_url}")
-        _set_schema_loader(schema_url)
-        dataset_collection = _DatasetCollection()
-        datasets = []
+        loader = get_schema_loader(schema_url, loaded_callback=self._loaded_callback)
+        return self._run_import(loader.get_all_datasets())
 
-        schemas = dataset_collection.get_all_datasets()
-        for path, schema in schemas.items():
+    def _loaded_callback(self, schema: DatasetSchema):
+        self.stdout.write(f"* Loaded {schema.id}")
+
+    def _run_import(self, files: dict[str, DatasetSchema]) -> list[Dataset]:
+        datasets = []
+        for path, schema in files.items():
             self.stdout.write(f"* Processing {schema.id}")
             dataset = self._import(schema, path)
             if dataset is not None:
@@ -76,7 +110,6 @@ class Command(BaseCommand):
 
     def _import(self, schema: DatasetSchema, path: str) -> Optional[Dataset]:
         """Import a single dataset schema."""
-        created = False
         try:
             dataset = Dataset.objects.get(name=Dataset.name_from_schema(schema))
         except Dataset.DoesNotExist:
@@ -88,25 +121,18 @@ class Command(BaseCommand):
             except Dataset.DoesNotExist:
                 # Give up, Create new dataset
                 dataset = Dataset.create_for_schema(schema, path)
-                created = True
-
-        if created:
-            self.stdout.write(f"  Created {schema.id}")
-            return dataset
-        else:
-            self.stdout.write(f"  Updated {schema.id}")
-
-            if dataset.is_default_version != schema.is_default_version:
-                self.update_dataset_version(dataset, schema)
-
-            updated = dataset.save_for_schema(schema)
-            dataset.save_path(path)
-            if updated:
+                self.stdout.write(f"  Created {schema.id}")
                 return dataset
 
-        return None
+        self.stdout.write(f"  Updated {schema.id}")
+        if dataset.is_default_version != schema.is_default_version:
+            self.update_dataset_version(dataset, schema)
 
-    def update_dataset_version(self, dataset: Dataset, schema: DatasetSchema) -> Dataset:
+        updated = dataset.save_for_schema(schema)
+        dataset.save_path(path)
+        return dataset if updated else None
+
+    def update_dataset_version(self, dataset: Dataset, schema: DatasetSchema) -> None:
         """
         Perform dataset version update, including changes to dataset tables.
         """

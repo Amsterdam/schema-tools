@@ -5,11 +5,12 @@ import copy
 import json
 import logging
 import re
+import typing
 from collections import UserDict
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, total_ordering
-from json import JSONEncoder
 from typing import (
     Any,
     Callable,
@@ -30,9 +31,11 @@ from jsonschema import draft7_format_checker
 from methodtools import lru_cache
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools._datasetcollection import _DatasetCollection
-from schematools.exceptions import ParserError, SchemaObjectNotFound
+from schematools.exceptions import DatasetNotFound, ParserError, SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
+
+if typing.TYPE_CHECKING:
+    from schematools.loaders import CachedSchemaLoader
 
 ST = TypeVar("ST", bound="SchemaType")
 DTS = TypeVar("DTS", bound="DatasetTableSchema")
@@ -184,86 +187,9 @@ class SemVer(str):
         return f"{self.major}_{self.minor}"
 
 
-@dataclass
-class TableVersions:
-    """Capture all active table definition versions.
-
-    Upon reading in datasets
-     :class:`TableVersions` nodes are explicitly inserted into the deserialized JSON schema
-    to retain information about active table versions.
-    This information would otherwise be lost
-    by virtue of the `$ref` property being on the same level
-    as the `activeVersions` property,
-    and how `$ref`s are supposed to be treated.
-
-    See Also: https://json-schema.org/understanding-json-schema/structuring.html#ref
-
-    This a stop gap
-    until the Amsterdam Meta Schema is extended to retain this information.
-    """
-
-    id: str  # noqa: A003
-    """Table id."""
-
-    default_version_number: SemVer
-    """Version number of the default table version."""
-
-    active: dict[SemVer, Json]
-    """All active table versions."""
-
-    @property
-    def default(self) -> Json:
-        """Return default table version."""
-        return self.active[self.default_version_number]
-
-
-class TableVersionsEncoder(JSONEncoder):
-    """Partially encode TableVersions to JSON.
-
-    We allow for two different ways to define tables:
-
-    1. Inline with the dataset definition.
-       This allows for only one version of the table to be specified.
-    2. In separate files referenced from the dataset definition.
-       This allows for multiple versions of the table to be specified.
-
-    Option 2. was originally introduced in a backwards compatible way;
-    when the JSON definitions were loaded from either a path or URL,
-    the node,
-    in the JSON that referenced the tables,
-    was replaced with the default version of the table.
-    This allowed most of the existing code to keep working
-    as if option 1 had been used.
-
-    The downside of that approach is that specified information,
-    namely that of active versions,
-    is lost in the process.
-    As a stop gap,
-    this was temporarily remedied with the introduction of the :class:`TableVersions` object:
-    it retained the references to all active versions on the table,
-    including the default version,
-    by enriching the deserialized dataset with additional information
-    However,
-    this cannot be serialized back to a single dataset definition
-    with inline table definitions;
-    the Amsterdam Meta Schema currently won't allow for it.
-
-    This means that
-    anything that expects a deserialized dataset
-    that adheres to the Amsterdam Meta Schema,
-    e.g. the DSO-API that wants to store the dataset definitions in SQL tables,
-    should receive the original non-enriched JSON.
-    That is exactly what this encoder does;
-    it effectively removes everything that :class:`TableVersions` added.
-    """
-
-    def default(self, o: Any) -> Any:
-        if isinstance(o, TableVersions):
-            return o.default
-        return super().default(o)
-
-
 class SchemaType(UserDict):
+    """Base class for top-level schema objects (dataset, table, profile)."""
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
@@ -294,7 +220,7 @@ class SchemaType(UserDict):
         return cast(str, self["type"])
 
     def json(self) -> str:
-        return json.dumps(self.data, cls=TableVersionsEncoder)
+        return json.dumps(self.data)
 
     def json_data(self) -> Json:
         return json.loads(self.json())
@@ -305,6 +231,8 @@ class SchemaType(UserDict):
 
 
 class DatasetType(UserDict):
+    """Base class for child elements of the schema."""
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
@@ -324,39 +252,48 @@ class DatasetSchema(SchemaType):
         beschikbaar = "beschikbaar"
         niet_beschikbaar = "niet_beschikbaar"
 
-    def __init__(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, data: dict, dataset_collection: CachedSchemaLoader | None = None) -> None:
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
         about the related datasets.
+
+        Args:
+            data: The JSON data from the file.
+            dataset_collection: The shared collection that the dataset should become part of.
+                                This is used to resolve relations between different datasets.
         """
-        super().__init__(*args, **kwargs)
-        self.dataset_collection = _DatasetCollection()
-        for i, table in enumerate(self["tables"]):
-            if isinstance(table, TableVersions):
-                continue
-            try:
-                dvn = SemVer(table["version"])
-            except ValueError as e:
-                raise ValueError(f"""{e} (in {table["id"]})""") from e
-            self["tables"][i] = TableVersions(
-                id=table["id"], default_version_number=dvn, active={dvn: table}
-            )
-        self.dataset_collection.add_dataset(self)
+        if data.get("type") != "dataset" or not isinstance(data.get("tables"), list):
+            raise ValueError("Invalid Amsterdam Dataset schema file")
+
+        super().__init__(data)
+
+        self.loader = dataset_collection
+        if dataset_collection is not None:
+            dataset_collection.add_dataset(self)  # done early for self-references
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self['id']}>"
 
     @classmethod
-    def from_dict(cls, obj: dict[str, Any]) -> DatasetSchema:
+    def from_dict(
+        cls, obj: dict[str, Any], dataset_collection: CachedSchemaLoader | None = None
+    ) -> DatasetSchema:
         """Parses given dict and validates the given schema."""
-        if obj.get("type") != "dataset" or not isinstance(obj.get("tables"), list):
-            raise ValueError("Invalid Amsterdam Dataset schema file")
+        return cls(obj, dataset_collection=dataset_collection)
 
-        return cls(copy.deepcopy(obj))
+    def json(self, inline_tables: bool = False) -> str:
+        """Overwritten JSON logic that inlines tables by default."""
+        if inline_tables and any(t.get("$ref") for t in self["tables"]):
+            data = self.data.copy()
+            data["tables"] = [t.data for t in self.tables]
+        else:
+            data = self.data
+
+        return json.dumps(data)
+
+    def json_data(self, inline_tables: bool = False) -> Json:
+        """Overwritten logic that inlines tables"""
+        return json.loads(self.json(inline_tables=inline_tables))
 
     @cached_property
     def python_name(self) -> str:
@@ -412,25 +349,56 @@ class DatasetSchema(SchemaType):
         except KeyError:
             raise ParserError(f"Status field contains an unknown value: {value}")
 
-    def get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
-        return self.dataset_collection.get_dataset(dataset_id)
+    def _get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
+        """Internal function to retrieve a (related) dataset from the shared cache."""
+        if dataset_id == self.id:
+            return self  # shortcut to avoid unneeded lookups
 
-    @property
+        if self.loader is None:
+            # Ideally the dataset collection should be mandatory at construction,
+            # but this breaks compatibility. Adding a default collection is also tricky,
+            # as that introduces an implicit cache that would affect unit testing code.
+            # The best option is simply to have an error when the loader would be called.
+            raise RuntimeError(
+                f"{self!r} has no dataset collection defined, can't resolve relation to '{dataset_id}'."
+            )
+
+        # It's assumed here that the loader is a CachedSchemaLoader,
+        # do data can be fetched multiple times.
+        return self.loader.get_dataset(dataset_id)
+
+    @cached_property
     def tables(self) -> list[DatasetTableSchema]:
         """Access the tables within the file."""
         tables: list[DatasetTableSchema] = []
-        for tv in self["tables"]:
-            if isinstance(tv, TableVersions):
-                # Dataset was likely loaded using the path or URL loader that properly resolves
-                # all the active tables. Hence the presence of the TableVersions node in
-                # dictionary.
-                tables.append(DatasetTableSchema(tv.default, parent_schema=self))
+        for table_json in self["tables"]:
+            if "$ref" in table_json:
+                # Dataset uses the new format to define table versions.
+                # Load the default version
+                if self.loader is None:
+                    raise RuntimeError(f"{self!r} has no loader defined, can't resolve tables.")
+                table = self.loader.get_table(self, table_json["$ref"])
             else:
-                # For backwards compatibility reasons assume the node in the dictionary is an
-                # actual table definition. This happens when the schema is handed to us
-                # by the DSO-API. See also :class:`TableVersionsEncoder` for a more complete rant.
-                tables.append(DatasetTableSchema(tv, parent_schema=self))
+                # Old format, a single "dataset.json" with all tables embedded.
+                # This format is also used when the dataset is serialized for database storage.
+                table = DatasetTableSchema(table_json, parent_schema=self)
+            tables.append(table)
+
         return tables
+
+    @cached_property
+    def table_versions(self) -> dict[str, TableVersions]:
+        """Access different versions of the table, as mentioned in the dataset file."""
+        return {
+            table_json["id"]: TableVersions(
+                table_id=table_json["id"],
+                default_version=table_json["$ref"],
+                version_paths=table_json["activeVersions"],
+                parent_dataset=self,
+            )
+            for table_json in self["tables"]
+            if "$ref" in table_json
+        }
 
     def get_tables(
         self,
@@ -438,12 +406,18 @@ class DatasetSchema(SchemaType):
         include_through: bool = False,
     ) -> list[DatasetTableSchema]:
         """List tables, including nested."""
-        tables = self.tables
+        return list(
+            self._get_tables(include_nested=include_nested, include_through=include_through)
+        )
+
+    def _get_tables(self, include_nested: bool = False, include_through: bool = False):
+        # Using yield so nested/through tables aren't analyzed until they really have to.
+        # This avoids unnecessary retrieval of related datasets/tables for get_table_by_id().
+        yield from self.tables
         if include_nested:
-            tables += self.nested_tables
+            yield from self.nested_tables
         if include_through:
-            tables += self.through_tables
-        return tables
+            yield from self.through_tables
 
     @lru_cache()  # type: ignore[misc]
     def get_table_by_id(
@@ -456,7 +430,7 @@ class DatasetSchema(SchemaType):
             if to_snake_case(table.id) == snakecased_table_id:
                 return table
 
-        available = "', '".join([table.default["id"] for table in self["tables"]])
+        available = "', '".join([table["id"] for table in self["tables"]])
         raise SchemaObjectNotFound(
             f"Table '{table_id}' does not exist "
             f"in schema '{self.id}', available are: '{available}'"
@@ -639,7 +613,7 @@ class DatasetSchema(SchemaType):
                     if dim_field.id in properties:
                         dim_fields[dim_field.id] = properties[dim_field.id]
 
-            right_table = self.dataset_collection.get_dataset(right_dataset_id).get_table_by_id(
+            right_table = self._get_dataset_schema(right_dataset_id).get_table_by_id(
                 right_table_id, include_nested=False, include_through=False
             )
             for fk_target_table, relation_field_id in (
@@ -870,7 +844,7 @@ class DatasetTableSchema(SchemaType):
 
     def get_dataset_schema(self, dataset_id: str) -> DatasetSchema | None:
         """Return the associated parent datasetschema for this table."""
-        return self.dataset.get_dataset_schema(dataset_id) if self.dataset is not None else None
+        return self.dataset._get_dataset_schema(dataset_id) if self.dataset is not None else None
 
     @cached_property
     def temporal(self) -> Temporal | None:
@@ -909,7 +883,7 @@ class DatasetTableSchema(SchemaType):
         except SchemaObjectNotFound as e:
             raise SchemaObjectNotFound(
                 f"Error in '{self.id}' table; temporal identifier/range fields don't exist: {e}"
-            ) from e
+            ) from None
 
     @property
     def is_temporal(self) -> bool:
@@ -1111,6 +1085,48 @@ def _name_join_count(*parts):
     return len(list(filter(None, parts)))
 
 
+class TableVersions(Mapping[str, DatasetTableSchema]):
+    """Lazy evaluated dict that provides access to other table versions."""
+
+    def __init__(
+        self,
+        table_id: str,
+        default_version: str,
+        version_paths: dict[str, str],
+        parent_dataset: DatasetSchema,
+    ):
+        self.id = table_id
+        self._default_version = default_version
+        self._version_paths = version_paths
+        self._parent_dataset = parent_dataset
+
+    def __getitem__(self, version) -> DatasetTableSchema:
+        if version == self._default_version:
+            # Take the same table object from the dataset. Avoid loading a new object
+            return self._parent_dataset.get_table_by_id(
+                self.id, include_nested=False, include_through=False
+            )
+
+        table_path = self._version_paths[version]
+        table = self._parent_dataset.loader.get_table(self._parent_dataset, table_path)
+        if table.id != self.id:
+            raise RuntimeError(
+                f"Referenced table '{table_path}' does not match with id '{self.id}'!"
+            )
+        if table["version"] != version:
+            raise RuntimeError(
+                f"Referenced table '{table_path}' version does not match with version '{version}!"
+            )
+
+        return table
+
+    def __iter__(self):
+        return iter(self._version_paths)
+
+    def __len__(self):
+        return len(self._version_paths)
+
+
 class DatasetFieldSchema(DatasetType):
     """A single field (column) in a table."""
 
@@ -1309,11 +1325,17 @@ class DatasetFieldSchema(DatasetType):
 
         # Find the related field
         related_dataset_id, related_table_id = relation.split(":")
-        dataset = cast(DatasetSchema, self.table.dataset)
-        dataset = dataset.dataset_collection.get_dataset(related_dataset_id)
-        return dataset.get_table_by_id(
-            related_table_id, include_nested=False, include_through=False
-        )
+        dataset = self.table.dataset
+        try:
+            dataset = dataset._get_dataset_schema(related_dataset_id)
+            return dataset.get_table_by_id(
+                related_table_id, include_nested=False, include_through=False
+            )
+        except (DatasetNotFound, SchemaObjectNotFound) as e:
+            # Amend the error message for better debugging
+            raise e.__class__(
+                f"Unable to resolve relation '{relation}' for field '{self.qualified_id}': {e}"
+            ) from e
 
     @property
     def related_field_ids(self) -> list[str] | None:
@@ -1582,7 +1604,9 @@ class DatasetFieldSchema(DatasetType):
             raise ValueError("Relations should have string/array/object type")
 
         source_type_set = {
-            (prop_name, prop_val["type"]) for prop_name, prop_val in properties.items()
+            (prop_name, prop_val["type"])
+            for prop_name, prop_val in properties.items()
+            if prop_val.get("format") != "date-time"  # exclude beginGeldigheid/eindGeldigheid?
         }
         destination_type_set = {
             (identifier_field.name, identifier_field.type),

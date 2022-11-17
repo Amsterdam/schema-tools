@@ -27,6 +27,7 @@ from django_postgres_unlimited_varchar import UnlimitedCharField
 from gisserver.types import CRS
 
 from schematools.exceptions import SchemaObjectNotFound
+from schematools.loaders import CachedSchemaLoader
 from schematools.naming import to_snake_case
 from schematools.types import (
     DatasetFieldSchema,
@@ -262,6 +263,7 @@ class Dataset(models.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._dataset_collection = None
 
         # The check makes sure that deferred fields are not checked for changes,
         # nor that creating the model
@@ -283,15 +285,19 @@ class Dataset(models.Model):
         name = cls.name_from_schema(schema)
         if path is None:
             path = name
-        return cls.objects.create(
+        obj = cls(
             name=name,
-            schema_data=schema.json(),
+            schema_data=schema.json(inline_tables=True),
             auth=" ".join(schema.auth),
             path=path,
             version=schema.version,
             is_default_version=schema.is_default_version,
             enable_api=cls.has_api_enabled(schema),
         )
+        obj._dataset_collection = schema.loader  # retain collection on saving
+        obj.save()
+        obj.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
+        return obj
 
     def save_path(self, path: str) -> bool:
         """Update this model with new path"""
@@ -302,15 +308,17 @@ class Dataset(models.Model):
 
     def save_for_schema(self, schema: DatasetSchema):
         """Update this model with schema data"""
-        self.schema_data = schema.json()
+        self.schema_data = schema.json(inline_tables=True)
         self.auth = " ".join(schema.auth)
         self.enable_api = Dataset.has_api_enabled(schema)
+        self._dataset_collection = schema.loader  # retain collection on saving
 
-        if self.schema_data_changed():
+        changed = self.schema_data_changed()
+        if changed:
             self.save(update_fields=["schema_data", "auth", "is_default_version", "enable_api"])
-            return True
-        else:
-            return False
+
+        self.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
+        return changed
 
     def save(self, *args, **kwargs):
         """Perform a final data validation check, and additional updates."""
@@ -361,11 +369,20 @@ class Dataset(models.Model):
 
     @cached_property
     def schema(self) -> DatasetSchema:
-        """Provide access to the schema data"""
+        """Provide access to the schema data."""
+        # The _dataset_collection value is filled by the queryset,
+        # so any object that is fetched by same the queryset uses the same shared cache.
+        return self.get_schema(dataset_collection=self._dataset_collection)
+
+    def get_schema(self, dataset_collection: CachedSchemaLoader) -> DatasetSchema:
+        """Extract the schema data from this model, and connect it with a dataset collection."""
         if not self.schema_data:
             raise RuntimeError("Dataset.schema_data is empty")
 
-        return DatasetSchema.from_dict(json.loads(self.schema_data))
+        return DatasetSchema.from_dict(
+            json.loads(self.schema_data),
+            dataset_collection=dataset_collection,
+        )
 
     @cached_property
     def has_geometry_fields(self) -> bool:

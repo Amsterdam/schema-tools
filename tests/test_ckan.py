@@ -24,7 +24,7 @@ from schematools.types import DatasetSchema
     ],
 )
 def test_convert(here, name):
-    filename = here / "files" / (name + ".json")
+    filename = here / f"files/datasets/{name}.json"
     with open(filename) as f:
         schema = DatasetSchema.from_dict(json_encoder.json.load(f))
 

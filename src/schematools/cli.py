@@ -20,7 +20,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateTable
 
 from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL, ckan, validation
-from schematools._datasetcollection import _DatasetCollection, _set_schema_loader
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
 from schematools.exceptions import DatasetNotFound, ParserError
@@ -30,6 +29,7 @@ from schematools.importer.geojson import GeoJSONImporter
 from schematools.importer.ndjson import NDJSONImporter
 from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
+from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
 from schematools.maps import create_mapfile
 from schematools.permissions.db import (
     apply_schema_and_profile_permissions,
@@ -38,11 +38,6 @@ from schematools.permissions.db import (
 )
 from schematools.provenance.create import ProvenanceIteration
 from schematools.types import DatasetSchema
-from schematools.utils import (
-    dataset_schema_from_path,
-    dataset_schema_from_url,
-    dataset_schemas_from_url,
-)
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
@@ -269,10 +264,11 @@ def permissions_apply(
     engine = _get_engine(db_url)
 
     if schema_filename:
-        dataset_schema = DatasetSchema.from_file(schema_filename)
+        loader = FileSystemSchemaLoader.from_file(schema_filename)
+        dataset_schema = loader.get_dataset_from_file(schema_filename)
         ams_schema = {dataset_schema.id: dataset_schema}
     else:
-        ams_schema = dataset_schemas_from_url(schemas_url=schema_url)
+        ams_schema = get_schema_loader(schema_url).get_all_datasets()
 
     if profile_filename:
         profile = _schema_fetch_url_file(profile_filename)
@@ -363,8 +359,10 @@ def _fetch_json(location: str) -> dict[str, Any]:
     "--additional-schemas",
     "-a",
     multiple=True,
-    help="Id of a dataset schema that will be preloaded. "
-    "To be used mainly for schemas that are related to the schema that is being validated.",
+    help=(
+        "Id of a dataset schema that will be preloaded. "
+        "To be used mainly for schemas that are related to the schema that is being validated."
+    ),
 )
 @click.argument("meta_schema_url")
 def validate(
@@ -390,7 +388,9 @@ def validate(
     structural_errors = False
     try:
         jsonschema.validate(
-            instance=dataset.json_data(), schema=meta_schema, format_checker=draft7_format_checker
+            instance=dataset.json_data(inline_tables=True),
+            schema=meta_schema,
+            format_checker=draft7_format_checker,
         )
     except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
         click.echo("Structural validation: ", nl=False)
@@ -427,16 +427,18 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
     """  # noqa: D301,D412,D417
     meta_schema = _fetch_json(meta_schema_url)
     errors: DefaultDict[str, list[str]] = defaultdict(list)
+    loader = FileSystemSchemaLoader(os.path.commonpath(schema_files))
+
     for schema_file in schema_files:
         try:
-            dataset = dataset_schema_from_path(schema_file)
+            dataset = loader.get_dataset_from_file(schema_file)
         except ValueError as ve:
             errors[schema_file].append(str(ve))
             # No sense in continuing if we can't read the schema file.
             break
         try:
             jsonschema.validate(
-                instance=dataset.json_data(),
+                instance=dataset.json_data(inline_tables=True),
                 schema=meta_schema,
                 format_checker=draft7_format_checker,
             )
@@ -473,7 +475,7 @@ def to_ckan(schema_url: str, upload_url: str):
 
     status = 0
 
-    datasets = _get_all_dataset_schemas(schema_url)
+    datasets = get_schema_loader(schema_url).get_all_datasets()
 
     data = []
     for path, ds in datasets.items():
@@ -548,7 +550,7 @@ def show_tablenames(db_url: str) -> None:
 def show_mapfile(schema_url: str, dataset_id: str) -> None:
     """Generate a mapfile based on a dataset schema."""
     try:
-        dataset_schema = dataset_schema_from_url(schema_url, dataset_id)
+        dataset_schema = get_schema_loader(schema_url).get_dataset(dataset_id)
     except KeyError:
         raise click.BadParameter(f"Schema {dataset_id} not found.") from None
     click.echo(create_mapfile(dataset_schema))
@@ -664,23 +666,11 @@ def _get_dataset_schema(
         schema_url: url of the location where the collection of amsterdam schemas is found.
         prefetch_related: related schemas should be prefetched.
     """
-    _set_schema_loader(schema_url)
-    dataset_collection = _DatasetCollection()
+    loader = get_schema_loader(schema_url)
     try:
-        return dataset_collection.get_dataset(dataset_id, prefetch_related=prefetch_related)
+        return loader.get_dataset(dataset_id, prefetch_related=prefetch_related)
     except DatasetNotFound as e:
         raise click.ClickException(str(e))
-
-
-def _get_all_dataset_schemas(schema_url: str) -> dict[str, DatasetSchema]:
-    """Find all the dataset schemas for the given schema_url.
-
-    Args:
-        schema_url: url of the location where the collection of amsterdam schemas is found.
-    """
-    _set_schema_loader(schema_url)
-    dataset_collection = _DatasetCollection()
-    return dataset_collection.get_all_datasets()
 
 
 @create.command("extra_index")
@@ -728,7 +718,8 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
 def create_sql(versioned: bool, db_url: str, schema_path: str) -> None:
     """Generate SQL Create from amsterdam schema definition."""
     engine = _get_engine(db_url)
-    dataset_schema = dataset_schema_from_path(schema_path)
+    loader = FileSystemSchemaLoader.from_file(schema_path)
+    dataset_schema = loader.get_dataset_from_file(schema_path)
     tables = tables_factory(dataset_schema, is_versioned_dataset=versioned)
     for table in tables.values():
         table_sql = CreateTable(table).compile(engine)
@@ -754,11 +745,12 @@ def create_all_objects(
 
     If no DATASET_ID is provide it will process all datasets!
     """
+    loader = get_schema_loader(schema_url)
     if dataset_id is None:
         click.echo("No 'dataset_id' provided. Processing all datasets!")
-        dataset_schemas = _get_all_dataset_schemas(schema_url).values()
+        dataset_schemas = loader.get_all_datasets().values()
     else:
-        dataset_schemas = [_get_dataset_schema(dataset_id, schema_url, prefetch_related=True)]
+        dataset_schemas = [loader.get_dataset(dataset_id, prefetch_related=True)]
 
     engine = _get_engine(db_url)
     for dataset_schema in dataset_schemas:
@@ -792,8 +784,8 @@ def diff_schemas(schema_url: str, diff_schema_url: str) -> None:
 
     For nicer output, pipe it through a json formatter.
     """
-    schemas = dataset_schemas_from_url(schema_url)
-    diff_schemas = dataset_schemas_from_url(diff_schema_url)
+    schemas = get_schema_loader(schema_url).get_all_datasets()
+    diff_schemas = get_schema_loader(diff_schema_url).get_all_datasets()
     click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
 
 

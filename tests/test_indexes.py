@@ -45,21 +45,19 @@ def test_index_creation(engine, db_schema):
         ],
     }
 
-    data = test_data
-    parent_schema = SchemaType(data)
-    dataset_schema = DatasetSchema(parent_schema)
+    dataset_schema = DatasetSchema.from_dict(test_data)
     index_names = set()
 
-    for table in data["tables"]:
+    for table in test_data["tables"]:
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
-        importer.generate_db_objects(table.default["id"], ind_tables=True, ind_extra_index=True)
+        importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
         conn = create_engine(engine.url, client_encoding="UTF-8")
         meta_data = MetaData(bind=conn)
         meta_data.reflect()
         metadata_inspector = inspect(meta_data.bind)
-        table_db_name = f"{parent_schema['id']}_{table.default['id']}"  # test_test
+        table_db_name = f"{test_data['id']}_{table['id']}"  # test_test
         indexes = metadata_inspector.get_indexes(table_db_name, schema=None)
         index_names.update(index["name"] for index in indexes)
 
@@ -160,24 +158,19 @@ def test_index_troughtables_creation(engine, db_schema):
         ],
     }
 
-    data = test_data
-    parent_schema = SchemaType(data)
-    dataset_schema = DatasetSchema(parent_schema)
+    dataset_schema = DatasetSchema(test_data)
     indexes_names = set()
 
-    for table in data["tables"]:
-
+    for table in test_data["tables"]:
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
         importer.generate_db_objects(
-            table.default["id"],
+            table["id"],
             ind_tables=True,
             ind_extra_index=True,
         )
 
-    for table in data["tables"]:
-
-        dataset_table = dataset_schema.get_table_by_id(table.default["id"])
+    for dataset_table in dataset_schema.tables:
         for field in dataset_table.fields:
             if field.is_through_table:
                 conn = create_engine(engine.url, client_encoding="UTF-8")
@@ -254,23 +247,18 @@ def test_fk_index_creation(engine, db_schema):
         ],
     }
 
-    data = test_data
-    parent_schema = SchemaType(data)
-    dataset_schema = DatasetSchema(parent_schema)
-
-    table = next(table for table in data["tables"] if table.default["id"] == "child_test")
+    dataset_schema = DatasetSchema(test_data)
+    table = dataset_schema.get_table_by_id("child_test")
 
     importer = BaseImporter(dataset_schema, engine)
     # the generate_table and create index
-    importer.generate_db_objects(table.default["id"], ind_tables=True, ind_extra_index=True)
+    importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
     conn = create_engine(engine.url, client_encoding="UTF-8")
     meta_data = MetaData(bind=conn)
     meta_data.reflect()
     metadata_inspector = inspect(meta_data.bind)
-    indexes = metadata_inspector.get_indexes(
-        f"{parent_schema['id']}_{table.default['id']}", schema=None
-    )
+    indexes = metadata_inspector.get_indexes(table.db_name, schema=None)
     indexes_name = {index["name"] for index in indexes}
     assert indexes_name == {
         "test_child_test_identifier_idx",
@@ -344,29 +332,23 @@ def test_size_of_index_name(engine, db_schema):
     data = test_data
     parent_schema = SchemaType(data)
     dataset_schema = DatasetSchema(parent_schema)
+    table = dataset_schema.get_table_by_id("child_test_size")
 
-    for table in data["tables"]:
-        if table.default["id"] == "child_test_size":
+    importer = BaseImporter(dataset_schema, engine)
+    # the generate_table and create index
+    importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
-            importer = BaseImporter(dataset_schema, engine)
-            # the generate_table and create index
-            importer.generate_db_objects(
-                table.default["id"], ind_tables=True, ind_extra_index=True
-            )
+    conn = create_engine(engine.url, client_encoding="UTF-8")
+    meta_data = MetaData(bind=conn)
+    meta_data.reflect()
+    metadata_inspector = inspect(meta_data.bind)
+    indexes = metadata_inspector.get_indexes(f"{parent_schema['id']}_{table['id']}", schema=None)
+    indexes_name = []
 
-            conn = create_engine(engine.url, client_encoding="UTF-8")
-            meta_data = MetaData(bind=conn)
-            meta_data.reflect()
-            metadata_inspector = inspect(meta_data.bind)
-            indexes = metadata_inspector.get_indexes(
-                f"{parent_schema['id']}_{table.default['id']}", schema=None
-            )
-            indexes_name = []
-
-            for index in indexes:
-                indexes_name.append(index["name"])
-            for index_name in indexes_name:
-                assert len(index_name) <= (MAX_TABLE_NAME_LENGTH - len(TABLE_INDEX_POSTFIX))
+    for index in indexes:
+        indexes_name.append(index["name"])
+    for index_name in indexes_name:
+        assert len(index_name) <= (MAX_TABLE_NAME_LENGTH - len(TABLE_INDEX_POSTFIX))
 
 
 def test_index_creation_db_schema2(engine, stadsdelen_schema):
