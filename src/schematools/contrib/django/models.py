@@ -15,16 +15,12 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, Tuple, Type, TypeVar
+from typing import TypeVar
 
 from django.conf import settings
-from django.contrib.gis.db import models as gis_models
-from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
-from django_postgres_unlimited_varchar import UnlimitedCharField
-from gisserver.types import CRS
 
 from schematools.exceptions import SchemaObjectNotFound
 from schematools.loaders import CachedSchemaLoader
@@ -41,89 +37,6 @@ from . import managers
 from .validators import URLPathValidator, validate_json
 
 logger = logging.getLogger(__name__)
-
-GEOJSON_PREFIX = "https://geojson.org/schema/"
-
-FORMAT_MODELS_LOOKUP = {
-    "date": models.DateField,
-    "time": models.TimeField,
-    "date-time": models.DateTimeField,
-    "uri": models.URLField,
-    "email": models.EmailField,
-    "blob-azure": UnlimitedCharField,
-}
-
-RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
-CRSs_3D = ["EPSG:7415"]  # Supported 3D coordinate reference systems
-
-TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
-
-
-class ObjectMarker:
-    """Class to signal that field type object has been found in the aschema definition.
-    For FK and NM relations, this class will be replaced by another field class,
-    during processing (in the FieldMaker).
-    For non-model fields (e.g. BRP), this class marks the fact that no
-    model field needs to be generated.
-    """
-
-    pass
-
-
-def _fetch_srid(field: DatasetFieldSchema) -> dict[str, Any]:
-    dimensions = 2
-    if field.crs in CRSs_3D:
-        dimensions = 3
-    return {"srid": field.srid, "dim": dimensions}
-
-
-JSON_TYPE_TO_DJANGO = {
-    "string": (UnlimitedCharField, None),
-    "integer": (models.BigIntegerField, None),
-    "integer/autoincrement": (models.AutoField, None),
-    "string/autoincrement": (UnlimitedCharField, None),
-    "date": (models.DateField, None),
-    "datetime": (models.DateTimeField, None),
-    "time": (models.TimeField, None),
-    "number": (models.FloatField, None),
-    "boolean": (models.BooleanField, None),
-    "array": (ArrayField, None),
-    "object": (ObjectMarker, None),
-    "/definitions/id": (models.IntegerField, None),
-    "/definitions/schema": (UnlimitedCharField, None),
-    "https://geojson.org/schema/Geometry.json": (
-        gis_models.GeometryField,
-        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/Point.json": (
-        gis_models.PointField,
-        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/MultiPoint.json": (
-        gis_models.MultiPointField,
-        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/Polygon.json": (
-        gis_models.PolygonField,
-        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/MultiPolygon.json": (
-        gis_models.MultiPolygonField,
-        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/LineString.json": (
-        gis_models.LineStringField,
-        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/MultiLineString.json": (
-        gis_models.MultiLineStringField,
-        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/GeometryCollection.json": (
-        gis_models.GeometryCollectionField,
-        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
-    ),
-}
 
 
 class DynamicModel(models.Model):
