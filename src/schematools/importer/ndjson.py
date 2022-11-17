@@ -9,7 +9,7 @@ from shapely.geometry import shape
 
 from schematools.types import DatasetFieldSchema, DatasetTableSchema
 
-from .base import BaseImporter, Provenance
+from .base import BaseImporter, Provenance, Record
 
 
 class NDJSONImporter(BaseImporter):
@@ -17,7 +17,7 @@ class NDJSONImporter(BaseImporter):
 
     def parse_records(
         self, file_name: PosixPath, dataset_table: DatasetTableSchema, **kwargs: Any
-    ) -> Iterator[dict[str, list[dict]]]:
+    ) -> Iterator[dict[str, list[Record]]]:
         """Provide an iterator the reads the NDJSON records."""
         # Initializes the field mapper once for the table
         field_mapper = TableFieldMapper(dataset_table)
@@ -78,11 +78,11 @@ class TableFieldMapper:
                     for related_identifier in through_field.related_table.identifier
                 ]
 
-    def parse_object(self, source: dict) -> dict[str, list[dict]]:
+    def parse_object(self, source: dict) -> dict[str, list[Record]]:
         """Parse the record, convert field names.
         Returns all database records to create, grouped by SQL table name.
         """
-        main_row = {}
+        main_row = Record(data={}, source=source)
         sub_rows = {}
 
         self._fix_through_fields(source)
@@ -129,7 +129,7 @@ class TableFieldMapper:
             **sub_rows,
         }
 
-    def _fill_composite_pk(self, source: dict, row: dict):
+    def _fill_composite_pk(self, source: dict, row: Record):
         if not self.dataset_table.is_autoincrement and self.dataset_table.has_composite_key:
             # Add composite key for temporal table
             row["id"] = self._get_composite_id(source)
@@ -193,7 +193,7 @@ class TableFieldMapper:
                 gob_name = gob_names[0][1]
                 source[through_field_id] = source[gob_name]
 
-    def _fill_composite_fk(self, rel_field: DatasetFieldSchema, value: dict | None, row: dict):
+    def _fill_composite_fk(self, rel_field: DatasetFieldSchema, value: dict | None, row: Record):
         """Process a composite foreign key"""
         # Flatten subfields, as they are part of the same record.
         fk_value_parts = []
@@ -215,8 +215,8 @@ class TableFieldMapper:
         row[rel_field.db_name] = ".".join([str(p) for p in fk_value_parts]) or None
 
     def _format_nested_rows(
-        self, n_field: DatasetFieldSchema, value: list[dict], main_row: dict
-    ) -> list[dict]:
+        self, n_field: DatasetFieldSchema, value: list[dict], main_row: Record
+    ) -> list[Record]:
         """Collect the records for a nested field"""
         # When the identifier is composite, we can assume
         # that an extra 'id' field will be available, because
@@ -226,10 +226,13 @@ class TableFieldMapper:
         parent_id = main_row[parent_id_field]
 
         return [
-            {
-                "parent_id": parent_id,
-                **self._get_field_values(n_field.subfields, nested_row),
-            }
+            Record(
+                {
+                    "parent_id": parent_id,
+                    **self._get_field_values(n_field.subfields, nested_row),
+                },
+                source=nested_row,
+            )
             for nested_row in value
         ]
 
@@ -246,7 +249,7 @@ class TableFieldMapper:
 
     def _format_through_rows(
         self, nm_field: DatasetFieldSchema, values: list[dict], source: dict
-    ) -> list[dict]:
+    ) -> list[Record]:
         """Provide the records for a Many-to-Many (NM) fields."""
         source_db_name = self.dataset_table.db_name_variant(with_dataset_prefix=False)
         src_id_value = self._get_composite_id(source)
@@ -261,10 +264,13 @@ class TableFieldMapper:
             )
 
             # Generate the main id values that Django needs
-            through_row_record = {
-                f"{source_db_name}_id": src_id_value,
-                f"{nm_field.db_name}_id": dst_id_value,
-            }
+            through_row_record = Record(
+                {
+                    f"{source_db_name}_id": src_id_value,
+                    f"{nm_field.db_name}_id": dst_id_value,
+                },
+                source=value,
+            )
 
             # Fill the temporal identifier fields if these are present.
             for prefix, table, source_dict in (
