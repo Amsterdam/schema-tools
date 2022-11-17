@@ -211,7 +211,7 @@ def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
 
     AFVALWEGINGEN_JSON = HERE / "files" / "afvalwegingen_sep_table.json"
     CLUSTERS_JSON = HERE / "files" / "afvalwegingen_clusters" / "v1.0.0.json"
-    BAGGOB_JSON = HERE / "files" / "verblijfsobjecten.json"
+    VERBLIJFSOBJECTEN_JSON = HERE / "files" / "verblijfsobjecten.json"
 
     monkeypatch.setattr(requests, "Session", dummy_session_maker)
 
@@ -225,7 +225,7 @@ def schemas_mock(schema_url: URL, monkeypatch: Any) -> DummySessionMaker:
             content=json.load(fh),
         )
 
-    with open(BAGGOB_JSON, "rb") as fh:
+    with open(VERBLIJFSOBJECTEN_JSON, "rb") as fh:
         dummy_session_maker.add_route(
             schema_url / "bag/dataset",
             content=json.load(fh),
@@ -303,11 +303,6 @@ def stadsdelen_schema(here) -> DatasetSchema:
 @pytest.fixture
 def verblijfsobjecten_schema(here) -> DatasetSchema:
     return dataset_schema_from_path(here / "files/verblijfsobjecten.json")
-
-
-@pytest.fixture
-def kadastraleobjecten_schema(here) -> DatasetSchema:
-    return dataset_schema_from_path(here / "files/kadastraleobjecten.json")
 
 
 @pytest.fixture

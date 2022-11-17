@@ -185,7 +185,7 @@
                 }
               }
             },
-            "relation": "baggob:verblijfsobjecten",
+            "relation": "verblijfsobjecten:verblijfsobjecten",
             "description": "Relatie naar verblijfsobject"
           }
         },

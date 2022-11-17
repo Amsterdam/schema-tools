@@ -1,7 +1,7 @@
 {
   "type": "dataset",
-  "id": "gebieden",
-  "title": "gebieden",
+  "id": "ggwgebieden",
+  "title": "ggwgebieden",
   "status": "beschikbaar",
   "version": "0.0.1",
   "identifier": "identificatie",
@@ -84,7 +84,7 @@
                 "type": "integer"
               }
             },
-            "relation": "gebieden:wijken",
+            "relation": "ggwgebieden:wijken",
             "description": "De wijk waar de buurt in ligt."
           },
           "geometrie": {
@@ -149,7 +149,7 @@
       "temporal": {
         "identifier": "volgnummer",
         "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+          "geldigOp": ["begingeldigheid", "eindgeldigheid"]
         }
       },
       "schema": {
@@ -201,7 +201,7 @@
             "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
           },
           "ligtinstadsdeel": {
-            "relation": "gebieden:stadsdelen",
+            "relation": "ggwgebieden:stadsdelen",
             "type": "object",
             "properties": {
               "identificatie": {
@@ -214,7 +214,7 @@
             "description": "Het stadsdeel waar het gebied in ligt."
           },
           "bestaatuitbuurten": {
-            "relation": "gebieden:buurten",
+            "relation": "ggwgebieden:buurten",
             "type": "array",
             "items": {
               "type": "object",

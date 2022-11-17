@@ -385,4 +385,4 @@ def test_index_creation_db_schema2(engine, stadsdelen_schema):
         f"{parent_schema['id']}_stadsdelen", schema="schema_foo_bar"
     )
     index_names = {index["name"] for index in indexes}
-    assert index_names == {"gebieden_stadsdelen_identifier_idx"}
+    assert index_names == {"stadsdelen_stadsdelen_identifier_idx"}

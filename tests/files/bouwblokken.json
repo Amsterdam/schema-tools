@@ -1,7 +1,7 @@
 {
   "type": "dataset",
-  "id": "gebieden",
-  "title": "gebieden",
+  "id": "bouwblokken",
+  "title": "bouwblokken",
   "status": "beschikbaar",
   "version": "0.0.1",
   "crs": "EPSG:28992",

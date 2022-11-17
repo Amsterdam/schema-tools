@@ -10,7 +10,7 @@
       "mainGeometry": "primaireGeometrie",
       "identifier": "identificatie",
       "required": ["schema", "identificatie", "volgnummer"],
-      "display": "id",
+      "display": "naam",
       "properties": {
         "schema": {
           "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"

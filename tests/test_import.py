@@ -39,7 +39,9 @@ def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsess
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * FROM gebieden_bouwblokken ORDER BY id")]
+    records = [
+        dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken ORDER BY id")
+    ]
     assert len(records) == 2
     assert set(records[0].keys()) == {
         "id",

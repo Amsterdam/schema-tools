@@ -38,7 +38,7 @@
         },
         "ligtInBuurt": {
           "type": "string",
-          "relation": "gebieden:buurten",
+          "relation": "gebieden_sep_tables:buurten",
           "provenance": "ligtinbuurt",
           "description": "De buurt waar het bouwblok in ligt."
         }
