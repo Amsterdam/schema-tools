@@ -7,8 +7,12 @@ from urllib.parse import urlparse
 from django.apps import apps
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.contrib.gis.db import models as gis_models
+from django.contrib.postgres.fields import ArrayField
 from django.db.models import CheckConstraint, Q
 from django.db.models.base import ModelBase
+from django_postgres_unlimited_varchar import UnlimitedCharField
+from gisserver.geometries import CRS
 
 from schematools.contrib.django import app_config, signals
 from schematools.naming import to_snake_case
@@ -16,20 +20,97 @@ from schematools.types import DatasetFieldSchema, DatasetTableSchema
 
 from .mockers import DynamicModelMocker
 from .models import (
-    FORMAT_MODELS_LOOKUP,
-    JSON_TYPE_TO_DJANGO,
     CompositeForeignKeyField,
     Dataset,
     DynamicModel,
     LooseRelationField,
     LooseRelationManyToManyField,
-    ObjectMarker,
 )
 
 TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
 M = TypeVar("M", bound=DynamicModel)
 MODEL_CREATION_COUNTER = 1
 MODEL_MOCKER_CREATION_COUNTER = 1
+
+RD_NEW = CRS.from_string("EPSG:28992")  # Amersfoort / RD New
+CRSs_3D = ["EPSG:7415"]  # Supported 3D coordinate reference systems
+
+
+class ObjectMarker:
+    """Class to signal that field type object has been found in the aschema definition.
+    For FK and NM relations, this class will be replaced by another field class,
+    during processing (in the FieldMaker).
+    For non-model fields (e.g. BRP), this class marks the fact that no
+    model field needs to be generated.
+    """
+
+    pass
+
+
+def _fetch_srid(field: DatasetFieldSchema) -> dict[str, Any]:
+    dimensions = 2
+    if field.crs in CRSs_3D:
+        dimensions = 3
+    return {"srid": field.srid, "dim": dimensions}
+
+
+FORMAT_MODELS_LOOKUP = {
+    "date": models.DateField,
+    "time": models.TimeField,
+    "date-time": models.DateTimeField,
+    "uri": models.URLField,
+    "email": models.EmailField,
+    "blob-azure": UnlimitedCharField,
+}
+
+
+JSON_TYPE_TO_DJANGO = {
+    "string": (UnlimitedCharField, None),
+    "integer": (models.BigIntegerField, None),
+    "integer/autoincrement": (models.AutoField, None),
+    "string/autoincrement": (UnlimitedCharField, None),
+    "date": (models.DateField, None),
+    "datetime": (models.DateTimeField, None),
+    "time": (models.TimeField, None),
+    "number": (models.FloatField, None),
+    "boolean": (models.BooleanField, None),
+    "array": (ArrayField, None),
+    "object": (ObjectMarker, None),
+    "/definitions/id": (models.IntegerField, None),
+    "/definitions/schema": (UnlimitedCharField, None),
+    "https://geojson.org/schema/Geometry.json": (
+        gis_models.GeometryField,
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+    ),
+    "https://geojson.org/schema/Point.json": (
+        gis_models.PointField,
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+    ),
+    "https://geojson.org/schema/MultiPoint.json": (
+        gis_models.MultiPointField,
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+    ),
+    "https://geojson.org/schema/Polygon.json": (
+        gis_models.PolygonField,
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+    ),
+    "https://geojson.org/schema/MultiPolygon.json": (
+        gis_models.MultiPolygonField,
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+    ),
+    "https://geojson.org/schema/LineString.json": (
+        gis_models.LineStringField,
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+    ),
+    "https://geojson.org/schema/MultiLineString.json": (
+        gis_models.MultiLineStringField,
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+    ),
+    "https://geojson.org/schema/GeometryCollection.json": (
+        gis_models.GeometryCollectionField,
+        {"value_getter": _fetch_srid, "srid": RD_NEW.srid, "geography": False, "db_index": True},
+    ),
+}
 
 
 class RelationMaker:
