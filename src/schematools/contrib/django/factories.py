@@ -12,7 +12,7 @@ from django.db.models.base import ModelBase
 
 from schematools.contrib.django import app_config, signals
 from schematools.naming import to_snake_case
-from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
+from schematools.types import DatasetFieldSchema, DatasetTableSchema
 
 from .mockers import DynamicModelMocker
 from .models import (
@@ -37,15 +37,11 @@ class RelationMaker:
 
     def __init__(
         self,
-        dataset: DatasetSchema,
-        table: DatasetTableSchema,
         field: DatasetFieldSchema,
         field_cls,
         *args,
         **kwargs,
     ):
-        self.dataset = dataset
-        self.table = table
         self.field = field
         self._field_cls = field_cls
         self._args = args
@@ -196,7 +192,8 @@ class M2MRelationMaker(RelationMaker):
 
     @property
     def field_kwargs(self):
-        through_fields = [f.python_name for f in self.field.through_table.through_fields]
+        through_table = self.field.through_table
+        through_fields = [f.python_name for f in through_table.through_fields]
 
         if (additional_relation := self.field.reverse_relation) is not None:
             # The relation is described by the other table, return it
@@ -209,7 +206,7 @@ class M2MRelationMaker(RelationMaker):
         return {
             **super().field_kwargs,
             "related_name": related_name,
-            "through": f"{self.dataset.id}.{_get_model_name(self.field.through_table)}",
+            "through": f"{through_table.dataset.id}.{_get_model_name(through_table)}",
             "through_fields": through_fields,
         }
 
@@ -227,7 +224,7 @@ class FieldMaker:
         self,
         field_cls: type[models.Field],
         table_schema: DatasetTableSchema,
-        value_getter: Callable[[DatasetSchema], dict[str, Any]] = None,
+        value_getter: Callable[[DatasetFieldSchema], dict[str, Any]] = None,
         **kwargs,
     ):
         self.field_cls = field_cls
@@ -238,7 +235,6 @@ class FieldMaker:
 
     def handle_basic(
         self,
-        dataset: DatasetSchema,
         field: DatasetFieldSchema,
         field_cls,
         *args,
@@ -254,12 +250,11 @@ class FieldMaker:
         ):
             kwargs["db_column"] = field.db_name
         if self.value_getter:
-            kwargs.update(self.value_getter(dataset, field))
+            kwargs.update(self.value_getter(field))
         return field_cls, args, kwargs
 
     def handle_array(
         self,
-        dataset: DatasetSchema,
         field: DatasetFieldSchema,
         field_cls,
         *args,
@@ -272,7 +267,6 @@ class FieldMaker:
 
     def handle_relation(
         self,
-        dataset: DatasetSchema,
         field: DatasetFieldSchema,
         field_cls,
         *args,
@@ -281,21 +275,16 @@ class FieldMaker:
         try:
             relation_maker_cls = RelationMaker.fetch_maker(field)
         except ValueError as e:
-            raise ValueError(
-                f"Failed to construct field {dataset.id}.{field.table.id}.{field.name}: {e}"
-            ) from e
+            raise ValueError(f"Failed to construct field {field.qualified_id}: {e}") from e
 
         if relation_maker_cls is not None:
-            relation_maker = relation_maker_cls(
-                dataset, self.table, field, field_cls, *args, **kwargs
-            )
+            relation_maker = relation_maker_cls(field, field_cls, *args, **kwargs)
             return relation_maker.field_constructor_info
         else:
             return field_cls, args, kwargs
 
     def handle_date(
         self,
-        dataset: DatasetSchema,
         field: DatasetFieldSchema,
         field_cls,
         *args,
@@ -306,13 +295,13 @@ class FieldMaker:
             field_cls = FORMAT_MODELS_LOOKUP[format_]
         return field_cls, args, kwargs
 
-    def __call__(self, field: DatasetFieldSchema, dataset: DatasetSchema) -> TypeAndSignature:
+    def __call__(self, field: DatasetFieldSchema) -> TypeAndSignature:
         field_cls = self.field_cls
         kwargs = self.kwargs
         args = []
 
         for modifier in self.modifiers:
-            field_cls, args, kwargs = modifier(dataset, field, field_cls, *args, **kwargs)
+            field_cls, args, kwargs = modifier(field, field_cls, *args, **kwargs)
 
         return field_cls, args, kwargs
 
@@ -464,9 +453,7 @@ def model_factory(
             init_kwargs["verbose_name"] = field.title
 
         # Generate field object
-        kls, args, kwargs = FieldMaker(base_class, table_schema, **init_kwargs)(
-            field, dataset_schema
-        )
+        kls, args, kwargs = FieldMaker(base_class, table_schema, **init_kwargs)(field)
         if kls is None or kls is ObjectMarker:
             # Some fields are not mapped into classes
             continue

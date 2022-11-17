@@ -69,7 +69,7 @@ class ObjectMarker:
     pass
 
 
-def _fetch_srid(dataset: DatasetSchema, field: DatasetFieldSchema) -> dict[str, Any]:
+def _fetch_srid(field: DatasetFieldSchema) -> dict[str, Any]:
     dimensions = 2
     if field.crs in CRSs_3D:
         dimensions = 3
