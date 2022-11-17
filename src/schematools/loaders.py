@@ -389,7 +389,7 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
         loaded_callback: Callable[[DatasetSchema], None] | None = None,
     ):
         super().__init__(
-            URL(schema_url or os.environ.get("SCHEMA_URL", DEFAULT_SCHEMA_URL)),
+            URL(schema_url or os.environ.get("SCHEMA_URL") or DEFAULT_SCHEMA_URL),
             loaded_callback=loaded_callback,
         )
 
@@ -472,7 +472,7 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
         return profiles
 
 
-def get_schema_loader(schema_url: URL | str, **kwargs) -> SchemaLoader:
+def get_schema_loader(schema_url: URL | str | None = None, **kwargs) -> SchemaLoader:
     """Initialize the schema loader based on the given location.
 
     schema_url:
@@ -480,7 +480,7 @@ def get_schema_loader(schema_url: URL | str, **kwargs) -> SchemaLoader:
         can be a web url, or a filesystem path.
     """
     if schema_url is None:
-        schema_url = os.environ.get("SCHEMA_URL", DEFAULT_SCHEMA_URL)
+        schema_url = os.environ.get("SCHEMA_URL") or DEFAULT_SCHEMA_URL
 
     if _is_url(schema_url):
         return URLSchemaLoader(schema_url, **kwargs)
@@ -491,7 +491,7 @@ def get_schema_loader(schema_url: URL | str, **kwargs) -> SchemaLoader:
 def get_profile_loader(profiles_url: URL | Path | str | None = None, **kwargs) -> ProfileLoader:
     """Initialize the profile loader for a given location."""
     if profiles_url is None:
-        profiles_url = os.environ.get("PROFILES_URL", DEFAULT_PROFILE_URL)
+        profiles_url = os.environ.get("PROFILES_URL") or DEFAULT_PROFILE_URL
     if _is_url(profiles_url):
         return URLProfileLoader(profiles_url, **kwargs)
     else:
