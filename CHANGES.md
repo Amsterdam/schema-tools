@@ -1,4 +1,4 @@
-# Changes in git
+# 2022-11-21 (5.1)
 
 A big change in schema loading.
 
@@ -8,6 +8,8 @@ as all datasets are only cached within the same loader instance now.
 
 * Added `schematools.loaders.get_schema_loader()` that provides a single object instance for loading.
 * Added `DatasetSchema.table_versions` mapping to access other table versions by name.
+* Added `Record.source` attribute to `BaseImporter.load_file()` and `parse_records()` return values.
+  This allows callers to inspect the source record, e.g. for cursor handling.
 * Removed `TableVersions` injection in dataset schema data. Tables are now loaded on demand.
 * Removed internal global dataset cache, datasets are only cached per loader.
 * Removed ununsed functions in `schematools.utils`.
