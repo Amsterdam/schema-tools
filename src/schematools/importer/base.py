@@ -97,9 +97,9 @@ class Provenance:
 
 class Record(dict):
     """A single generated row from the importer.
-    Each key matches the database field name, value is the data that should be written.
+    Each dict key matches the database field name, each value is the data that should be written.
 
-    This is a tiny wrapper around dict for simplicity, and allowing the source record
+    This is a tiny wrapper around dict for simplicity that allows the source record
     to be accessed. The source record is useful debugging information,
     and some implementations need to retrieve non-schema fields
     (such as a "cursor" field in the last record).
