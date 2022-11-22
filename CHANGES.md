@@ -1,4 +1,4 @@
-# in git
+# 2022-11-22 (5.1.1)
 
 * Improve `limit_tables_to` to accept snake-cased table identifiers, which broke Airflow jobs.
   This addresses an inconsistency between parameters, where `BaseImporter.generate_db_objects()`
