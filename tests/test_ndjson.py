@@ -36,7 +36,15 @@ def test_ndjson_import_separate_relations_target_composite(
 ):
     ndjson_path = here / "files" / "data" / "meetbouten_ligt_in_buurt.ndjson"
     importer = NDJSONImporter(meetbouten_schema, engine)
-    importer.generate_db_objects("meetbouten_ligt_in_buurt", truncate=True, ind_extra_index=False)
+    # NOTE: the table ID is actually "meetbouten_ligtInBuurt".
+    # This also tests that both parameters still work with the old snake-cased identifiers,
+    # as get_table_by_id() still does.
+    importer.generate_db_objects(
+        table_id="meetbouten_ligt_in_buurt",
+        truncate=True,
+        ind_extra_index=False,
+        limit_tables_to={"meetbouten_ligt_in_buurt"},
+    )
 
     importer.load_file(ndjson_path, is_through_table=True)
     records = [

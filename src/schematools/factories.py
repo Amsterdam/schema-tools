@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from collections import defaultdict
 from typing import DefaultDict, cast
 
@@ -17,6 +18,8 @@ from schematools import (
 from schematools.importer import fetch_col_type
 from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema, DatasetTableSchema
+
+logger = logging.getLogger(__name__)
 
 
 def tables_factory(
@@ -56,8 +59,25 @@ def tables_factory(
     """
     tables = {}
     metadata = metadata or MetaData()
+    dataset_tables = dataset.get_tables(include_nested=True, include_through=True)
 
-    for dataset_table in dataset.get_tables(include_nested=True, include_through=True):
+    # Validate 'limit_tables_to' to avoid unexpected KeyError for the insert_statements
+    # later on during the import, as that is based on the tables being generated here.
+    if limit_tables_to is not None:
+        table_ids = {table.id for table in dataset_tables}
+        invalid = set(limit_tables_to) - table_ids - {to_snake_case(id) for id in table_ids}
+        if invalid:
+            raise ValueError(
+                f"limit_tables_to has invalid entries: {', '.join(sorted(invalid))}. "
+                f"Available are: {', '.join(sorted(table_ids))}"
+            )
+        # For compatibility and consistency, the check works on snake-cased identifiers.
+        # This is needed because get_table_by_id() also still accepts those values.
+        # Otherwise, generate_db_objects(table_id=.., limit_tables_to=..) allows snake-cased
+        # identifiers for the first parameter, but needs exact-cased ids for the last parameter.
+        limit_tables_to = {to_snake_case(id) for id in limit_tables_to}
+
+    for dataset_table in dataset_tables:
         # The junction table for relations are imported separately nowadays.
         # However, nested tables are implemented using a sub-table
         # during import of the main table.
@@ -65,12 +85,15 @@ def tables_factory(
         # to create the table where data has to be imported into.
         table_object_needed = (
             limit_tables_to is None
-            or dataset_table.id in limit_tables_to
-            or dataset_table.is_nested_table
-            and dataset_table.parent_table.id in limit_tables_to  # type: ignore
+            or to_snake_case(dataset_table.id) in limit_tables_to
+            or (
+                dataset_table.is_nested_table
+                and to_snake_case(dataset_table.parent_table.id) in limit_tables_to
+            )
         )
 
         if not table_object_needed:
+            logger.debug("tables_factory() - skipping table %s", dataset_table.qualified_id)
             continue
 
         db_table_description = dataset_table.description

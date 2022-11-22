@@ -1,3 +1,10 @@
+# in git
+
+* Improve `limit_tables_to` to accept snake-cased table identifiers, which broke Airflow jobs.
+  This addresses an inconsistency between parameters, where `BaseImporter.generate_db_objects()`
+  allowed snake-cased identifiers for `table_id`, but needed exact-cased values for `limit_tables_to`.
+
+
 # 2022-11-21 (5.1)
 
 A big change in schema loading.
