@@ -216,6 +216,7 @@ class BaseImporter:
                 ``db_schema_name`` parameter.
         """
         self.dataset_table = self.dataset_schema.get_table_by_id(table_id)
+        table_id = self.dataset_table.id  # get real-cased ID.
 
         if is_versioned_dataset:
             if db_schema_name is None:
