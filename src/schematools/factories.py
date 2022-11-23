@@ -61,6 +61,10 @@ def tables_factory(
     metadata = metadata or MetaData()
     dataset_tables = dataset.get_tables(include_nested=True, include_through=True)
 
+    # For compatibility and consistency, allow snake-cased table ID's
+    db_table_names = _snake_keys(db_table_names) if db_table_names else {}
+    db_schema_names = _snake_keys(db_schema_names) if db_schema_names else {}
+
     # Validate 'limit_tables_to' to avoid unexpected KeyError for the insert_statements
     # later on during the import, as that is based on the tables being generated here.
     if limit_tables_to is not None:
@@ -78,6 +82,13 @@ def tables_factory(
         limit_tables_to = {to_snake_case(id) for id in limit_tables_to}
 
     for dataset_table in dataset_tables:
+        snaked_table_id = to_snake_case(dataset_table.id)
+        snaked_parent_table_id = (
+            to_snake_case(dataset_table.parent_table.id)
+            if dataset_table.is_nested_table or dataset_table.is_through_table
+            else None
+        )
+
         # The junction table for relations are imported separately nowadays.
         # However, nested tables are implemented using a sub-table
         # during import of the main table.
@@ -85,11 +96,8 @@ def tables_factory(
         # to create the table where data has to be imported into.
         table_object_needed = (
             limit_tables_to is None
-            or to_snake_case(dataset_table.id) in limit_tables_to
-            or (
-                dataset_table.is_nested_table
-                and to_snake_case(dataset_table.parent_table.id) in limit_tables_to
-            )
+            or snaked_table_id in limit_tables_to
+            or (dataset_table.is_nested_table and snaked_parent_table_id in limit_tables_to)
         )
 
         if not table_object_needed:
@@ -97,12 +105,13 @@ def tables_factory(
             continue
 
         db_table_description = dataset_table.description
-        if (db_table_name := (db_table_names or {}).get(dataset_table.id)) is None:
+        if (db_table_name := db_table_names.get(snaked_table_id)) is None:
+            # No predefined table name, generate a custom one.
+            # When the parent has a _new postfix, make sure nested tables also receive that.
             has_postfix = (
-                db_schema_names is not None
-                and (dataset_table.is_nested_table or dataset_table.is_through_table)
-                and (parent_table_name := db_table_names.get(dataset_table.parent_table.id))
-                is not None
+                db_schema_names
+                and snaked_parent_table_id
+                and (parent_table_name := db_table_names.get(snaked_parent_table_id)) is not None
                 and parent_table_name.endswith(TMP_TABLE_POSTFIX)
             )
             postfix = TMP_TABLE_POSTFIX if has_postfix else ""
@@ -116,11 +125,12 @@ def tables_factory(
         # If schema is None, default to Public. Leave it to None will have a risk that
         # the DB schema that is currently in use will be used to create the table in
         # leading to unwanted/unexepected results
-        if (db_schema_name := (db_schema_names or {}).get(dataset_table.id)) is None:
+        if (db_schema_name := db_schema_names.get(snaked_table_id)) is None:
             if is_versioned_dataset:
                 db_schema_name = to_snake_case(dataset.id)
             else:
                 db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
+
         columns = []
         for field in dataset_table.get_fields(include_subfields=True):
 
@@ -160,6 +170,10 @@ def tables_factory(
         tables[dataset_table.id] = alchemy_table
 
     return tables
+
+
+def _snake_keys(value: dict[str, str]) -> dict[str, str]:
+    return {to_snake_case(table_id): value for table_id, value in value.items()}
 
 
 def views_factory(dataset: DatasetSchema, tables: dict[str, Table]) -> dict[str, sql.SQL]:
