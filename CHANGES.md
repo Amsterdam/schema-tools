@@ -1,3 +1,9 @@
+# 2022-11-24 (5.1.2)
+
+* Fix `BaseImporter.generate_db_objects()` to handle properly snake-cased table identifiers values for table creation.
+* Improve the underlying `tables_factory()` logic to support snake-cased table identifiers for all remaining parameters.
+
+
 # 2022-11-22 (5.1.1)
 
 * Improve `limit_tables_to` to accept snake-cased table identifiers, which broke Airflow jobs.
