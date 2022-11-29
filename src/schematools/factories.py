@@ -262,13 +262,18 @@ def index_factory(
         if db_table_name is None:
             db_table_name = dataset_table.db_name
 
-    table_name = f"{db_schema_name}.{db_table_name}"
-    table: Table = _metadata.tables[table_name]
-
-    indexes[db_table_name] = [
-        _build_identifier_index(table, dataset_table, db_table_name),
-        *_build_fk_indexes(table, dataset_table, db_table_name),
-    ]
+    table_id = f"{db_schema_name}.{db_table_name}"
+    try:
+        table: Table = _metadata.tables[table_id]
+    except KeyError:
+        # When tables_factory() is called with limit_tables_to, it's possible that this
+        # main table is not created, and only the M2m are created in a separate import call.
+        logger.warning("Table '%s' not found...skipping index creation", table_id)
+    else:
+        indexes[db_table_name] = [
+            _build_identifier_index(table, dataset_table, db_table_name),
+            *_build_fk_indexes(table, dataset_table, db_table_name),
+        ]
 
     through_indexes = _build_m2m_indexes(
         metadata, dataset_table, is_versioned_dataset, db_schema_name
@@ -330,7 +335,14 @@ def _build_m2m_indexes(
             table_db_name = table.db_name
 
         table_id = f"{db_schema_name}.{table_db_name}"
-        table_object = metadata.tables[table_id]
+        try:
+            table_object = metadata.tables[table_id]
+        except KeyError:
+            # When tables_factory() is called with limit_tables_to, it's possible that this M2M
+            # table is not created yet, and will be created with a separate import call.
+            logger.warning("Table '%s' not found...skipping M2M index creation", table_id)
+            continue
+
         indexes[table_db_name] = [
             Index(
                 _format_index_name(f"{table_id}_{through_field.db_name}{TABLE_INDEX_POSTFIX}"),
