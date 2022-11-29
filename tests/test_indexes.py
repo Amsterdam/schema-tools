@@ -61,7 +61,10 @@ def test_index_creation(engine, db_schema):
         indexes = metadata_inspector.get_indexes(table_db_name, schema=None)
         index_names.update(index["name"] for index in indexes)
 
-    assert index_names == {"test_test_identifier_idx", "idx_test_test_geometry"}
+    assert index_names == {
+        "test_test_identifier_idx",
+        "test_test_geometry_idx",
+    }
 
 
 def test_index_troughtables_creation(engine, db_schema):

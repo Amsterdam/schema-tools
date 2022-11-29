@@ -237,7 +237,8 @@ def _get_col_type(field: DatasetFieldSchema):
             geometry_type=GEOJSON_TYPE_TO_WKT[field.type],
             srid=field.srid,
             dimension=3 if is_3d else 2,
-            use_N_D_index=field.srid in SRID_3D,
+            spatial_index=False,  # Done manually below for control over index naming
+            # use_N_D_index=field.srid in SRID_3D,
         )
 
     return JSON_TYPE_TO_PG[field.type]
@@ -361,6 +362,7 @@ def index_factory(
         indexes[db_table_name] = [
             _build_identifier_index(table, dataset_table, db_table_name),
             *_build_fk_indexes(table, dataset_table, db_table_name),
+            *_build_geo_indexes(table, dataset_table, db_table_name),
         ]
 
     through_indexes = _build_m2m_indexes(
@@ -396,6 +398,25 @@ def _build_fk_indexes(
         )
         for field in dataset_table.get_fields(include_subfields=True)
         if field.relation
+    ]
+
+
+def _build_geo_indexes(
+    table_object: Table, dataset_table: DatasetTableSchema, db_table_name: str
+) -> list[Index]:
+    """Creates an index on geometry fields."""
+    return [
+        Index(
+            _format_index_name(f"{db_table_name}_{field.db_name}{TABLE_INDEX_POSTFIX}"),
+            table_object.c[field.db_name],
+            # Taken from geoalchemy2:
+            postgresql_using="gist",
+            postgresql_ops=(
+                {field.db_name: "gist_geometry_ops_nd"} if field.srid in SRID_3D else {}
+            ),
+        )
+        for field in dataset_table.fields
+        if field.is_geo
     ]
 
 
