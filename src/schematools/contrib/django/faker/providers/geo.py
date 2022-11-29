@@ -5,19 +5,16 @@ import random
 from django.contrib.gis import geos
 from factory import Faker
 from faker.providers import BaseProvider
-from gisserver.geometries import CRS, BoundingBox
+from gisserver.geometries import CRS
+
+from schematools import CRS_RD_NEW, SRID_3D, SRID_RD_NEW
 
 LOCALE = "nl_NL"
-RD_NEW_CRS_STR = "EPSG:28992"
-RD_NEW_SRID = 28992
-RD_NEW = CRS.from_string(RD_NEW_CRS_STR)
-DEFAULT_CRS = RD_NEW
+DEFAULT_CRS = CRS_RD_NEW
 
-# In RD crs
+# Amsterdam bounding box, in RD
 WEST, SOUTH = 104000, 474000
 EAST, NORTH = 136000, 501999
-
-ADAM_BBOX = BoundingBox(south=SOUTH, west=WEST, north=NORTH, east=EAST, crs=RD_NEW)
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +33,16 @@ def random_point(has_z=False):
 
 class Geometry:
     def __init__(self, has_z=False):
+        class_name = self.__class__.__name__
         try:
-            class_name = self.__class__.__name__
             shape_cls = getattr(geos, class_name)
-            self.has_z = has_z
         except AttributeError:
             raise UnsupportedGEOTypeException(f"Class {class_name} is not allowed.")
-        self.shape = shape_cls(*self.get_coordinates(has_z=self.has_z), srid=RD_NEW_SRID)
+        self.has_z = has_z
+        self.shape = shape_cls(*self.get_coordinates(), srid=SRID_RD_NEW)
 
-    def get_coordinates(self, has_z=False):
-        return random_point(has_z=has_z)
+    def get_coordinates(self):
+        return random_point(has_z=self.has_z)
 
     @property
     def ewkt(self):
@@ -57,35 +54,35 @@ class Point(Geometry):
 
 
 class MultiPoint(Geometry):
-    def get_coordinates(self, has_z=False):
-        return [[random_point(has_z=has_z) for i in range(5)]]
+    def get_coordinates(self):
+        return [[random_point(has_z=self.has_z) for i in range(5)]]
 
 
 class Polygon(Geometry):
-    def get_coordinates(self, has_z=False):
+    def get_coordinates(self):
         # Use a circle
-        center = Point(has_z=has_z)
+        center = Point(has_z=self.has_z)
         return center.shape.buffer(1000)
 
 
 class MultiPolygon(Geometry):
-    def get_coordinates(self, has_z=False):
-        return [[Polygon(has_z=has_z).shape for j in range(3)]]
+    def get_coordinates(self):
+        return [[Polygon(has_z=self.has_z).shape for j in range(3)]]
 
 
 class LineString(Geometry):
-    def get_coordinates(self, has_z=False):
-        return [[random_point(has_z=has_z) for i in range(5)]]
+    def get_coordinates(self):
+        return [[random_point(has_z=self.has_z) for i in range(5)]]
 
 
 class MultiLineString(Geometry):
-    def get_coordinates(self, has_z=False):
-        return [[LineString(has_z=has_z).shape for j in range(3)]]
+    def get_coordinates(self):
+        return [[LineString(has_z=self.has_z).shape for j in range(3)]]
 
 
 class GeometryCollection(Geometry):
-    def get_coordinates(self, has_z=False):
-        return [(Polygon(has_z=has_z).shape, LineString(has_z=has_z).shape)]
+    def get_coordinates(self):
+        return [(Polygon(has_z=self.has_z).shape, LineString(has_z=self.has_z).shape)]
 
 
 class GeoProvider(BaseProvider):  # noqa: D101
@@ -93,8 +90,7 @@ class GeoProvider(BaseProvider):  # noqa: D101
 
     def geo(self, geo_type: str = "Geometry", crs: CRS = DEFAULT_CRS) -> str:  # noqa: D102
         try:
-            has_z = crs.srid == 7415  # maybe we need to refine this!
-            shape = globals()[geo_type](has_z=has_z)
+            shape = globals()[geo_type](has_z=crs.srid in SRID_3D)
             if crs != DEFAULT_CRS:
                 crs.apply_to(shape.shape)
             ewkt = shape.ewkt
