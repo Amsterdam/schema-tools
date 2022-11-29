@@ -3,23 +3,64 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import numbers
 from collections import defaultdict
+from decimal import Decimal
 from typing import DefaultDict, cast
 
+from geoalchemy2.types import Geometry
 from psycopg2 import sql
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, Numeric, String, Time
 from sqlalchemy.sql.schema import Column, Index, MetaData, Table
+from sqlalchemy.types import ARRAY
 
 from schematools import (
     DATABASE_SCHEMA_NAME_DEFAULT,
     MAX_TABLE_NAME_LENGTH,
+    SRID_3D,
     TABLE_INDEX_POSTFIX,
     TMP_TABLE_POSTFIX,
 )
-from schematools.importer import fetch_col_type
 from schematools.naming import to_snake_case
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 logger = logging.getLogger(__name__)
+
+FORMAT_MODELS_LOOKUP = {
+    "date": Date,
+    "time": Time,
+    "date-time": DateTime,
+    "uri": String,
+    "email": String,
+}
+
+JSON_TYPE_TO_PG = {
+    "string": String,
+    "object": String,
+    "boolean": Boolean,
+    "integer": BigInteger,
+    "integer/autoincrement": BigInteger,
+    "number": Float,
+    "array": ARRAY(String),
+    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/class": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/dataset": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/id": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/class": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/dataset": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema": String,
+}
+
+GEOJSON_TYPE_TO_WKT = {
+    "https://geojson.org/schema/Geometry.json": "GEOMETRY",
+    "https://geojson.org/schema/Point.json": "POINT",
+    "https://geojson.org/schema/Polygon.json": "POLYGON",
+    "https://geojson.org/schema/MultiPolygon.json": "MULTIPOLYGON",
+    "https://geojson.org/schema/MultiPoint.json": "MULTIPOINT",
+    "https://geojson.org/schema/LineString.json": "LINESTRING",
+    "https://geojson.org/schema/MultiLineString.json": "MULTILINESTRING",
+}
 
 
 def tables_factory(
@@ -134,29 +175,18 @@ def tables_factory(
         columns = []
         for field in dataset_table.get_fields(include_subfields=True):
 
-            # Exclude nested and nm_relation fields (is_array check)
+            # Exclude nested and nm_relation fields,
             # and fields that are added only for temporality
             if (
                 field.type.endswith("#/definitions/schema")
-                or field.is_array
+                or field.nm_relation
+                or field.is_array_of_objects
+                or field.is_nested_table
                 or field.is_temporal_range
             ):
                 continue
-            try:
-                col_type = fetch_col_type(field)
-            except KeyError:
-                raise NotImplementedError(
-                    f'Import failed at "{field.id}": {dict(field)!r}\n'
-                    f"Field type '{field.type}' is not implemented."
-                ) from None
-            col_kwargs = {"nullable": not field.required}
-            if field.is_primary:
-                col_kwargs["primary_key"] = True
-                col_kwargs["nullable"] = False
-                col_kwargs["autoincrement"] = field.type.endswith("autoincrement")
-            columns.append(
-                Column(field.db_name, col_type, comment=field.description, **col_kwargs)
-            )
+
+            columns.append(_column_factory(field))
 
         alchemy_table = Table(
             db_table_name,
@@ -170,6 +200,64 @@ def tables_factory(
         tables[dataset_table.id] = alchemy_table
 
     return tables
+
+
+def _column_factory(field: DatasetFieldSchema) -> Column:
+    """Generate a SQLAlchemy column for a single field"""
+    try:
+        col_type = _get_col_type(field)
+    except KeyError:
+        raise NotImplementedError(
+            f"Field '{field.qualified_id}' type '{field.type}' is not implemented."
+        ) from None
+
+    col_kwargs = {"nullable": not field.required}
+    if field.is_primary:
+        col_kwargs["primary_key"] = True
+        col_kwargs["nullable"] = False
+        col_kwargs["autoincrement"] = field.type.endswith("autoincrement")
+
+    return Column(field.db_name, col_type, comment=field.description, **col_kwargs)
+
+
+def _get_col_type(field: DatasetFieldSchema):
+    if (field_format := field.format) is not None:
+        return FORMAT_MODELS_LOOKUP[field_format]
+
+    # TODO: format takes precedence over multipleof
+    # if there is an use case that both can apply for a field definition
+    # then logic must be changed
+    field_multiple = field.multipleof
+    if field_multiple is not None:
+        return _numeric_datatype_scale(scale_=field_multiple)
+
+    if field.is_geo:
+        is_3d = field.srid in SRID_3D
+        return Geometry(
+            geometry_type=GEOJSON_TYPE_TO_WKT[field.type],
+            srid=field.srid,
+            dimension=3 if is_3d else 2,
+            use_N_D_index=field.srid in SRID_3D,
+        )
+
+    return JSON_TYPE_TO_PG[field.type]
+
+
+def _numeric_datatype_scale(scale_=None):
+    """detect scale from decimal for database datatype scale definition"""
+    if (
+        isinstance(scale_, numbers.Number)
+        and str(scale_).count("1") == 1
+        and str(scale_).endswith("1")
+    ):
+        # TODO: make it possible to set percision too
+        # now it defaults to max of 12
+        get_scale = Decimal(str(scale_)).as_tuple().exponent
+        if get_scale < 0:
+            get_scale = get_scale * -1
+        return Numeric(precision=12, scale=get_scale)
+    else:
+        return Numeric
 
 
 def _snake_keys(value: dict[str, str]) -> dict[str, str]:
