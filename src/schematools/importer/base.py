@@ -299,20 +299,29 @@ class BaseImporter:
         self.logger.log_start(file_name, size=batch_size)
 
         num_imported = 0
-        insert_statements = {
-            table_name: table.insert() for table_name, table in self.tables.items()
-        }
+        insert_statements = {table_id: table.insert() for table_id, table in self.tables.items()}
+        skipped_tables = set()
 
         last_record: Record | None = None
         for records in chunked(data_generator, size=batch_size):
             # every record is keyed on tablename + inside there is a list
-            for db_table_name, table_records in self._group_records(records).items():
-                table_records = list(self.deduplicate(db_table_name, table_records))
+            for table_id, table_records in self._group_records(records).items():
+                try:
+                    insert_statement = insert_statements[table_id]
+                except KeyError:
+                    if table_id not in skipped_tables:
+                        # Show proper table db_name instead of confusing users with the internal ID
+                        # If the resolving fails, the generator isn't producing proper table IDs
+                        self.logger.log_info(
+                            "Table '%s' was excluded, skipping!",
+                            self.dataset_schema.get_table_by_id(table_id).db_name,
+                        )
+                        skipped_tables.add(table_id)
+                    continue
+
+                table_records = list(self.deduplicate(table_id, table_records))
                 if table_records:
-                    self.engine.execute(
-                        insert_statements[db_table_name],
-                        table_records,
-                    )
+                    self.engine.execute(insert_statement, table_records)
             num_imported += len(records)
             self.logger.log_progress(num_imported)
 
@@ -338,8 +347,8 @@ class BaseImporter:
         The expected format of each returned row is::
 
             {
-                "db_table": [{"db_field1": "value", ...}, ...],
-                "db_table2": [...],
+                "tableId1": [{"db_field1": "value", ...}, ...],
+                "tableId2": [...],
             }
         """
         raise NotImplementedError()
