@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from contextlib import closing
 from functools import cached_property
 from itertools import islice
-from logging import Logger
 from pathlib import Path
 from typing import Any, Final, Iterator, TypeVar, cast
 
@@ -118,7 +118,7 @@ class BaseImporter:
     """Base importer that holds common data."""
 
     def __init__(
-        self, dataset_schema: DatasetSchema, engine: Engine, logger: Logger | None = None
+        self, dataset_schema: DatasetSchema, engine: Engine, logger: logging.Logger | None = None
     ) -> None:
         """Initializes the BaseImporter.
 
@@ -378,7 +378,7 @@ class BaseImporter:
         inspector: PGInspector,
         engine: Engine,
         db_schema_name: str | None = None,
-        logger: Logger | None = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         """Create extra indexes.
 
@@ -474,7 +474,7 @@ class CliLogger:
 class LogfileLogger(CliLogger):
     """Logger to be used when importer is called from python code."""
 
-    def __init__(self, logger: Logger):
+    def __init__(self, logger: logging.Logger):
         """Initialize logger."""
         self.logger = logger
 
