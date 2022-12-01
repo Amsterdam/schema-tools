@@ -1,3 +1,13 @@
+# 2022-12-01 (5.1.3)
+
+* Fix `limit_tables_to` issue with crash in index creation for skipped tables.
+* Fix `limit_tables_to` issue for M2M relations, now reports the table is not available.
+* Fix SRID value for SQLAlchemy geometry columns (were always RD/NEW).
+* Fix CKAN upload to skip datasets that are marked as "not available".
+* Improved 3D coordinate system detection, and added more common SRID values.
+* Improved naming of geometry column index to be consistent with other generated indices.
+
+
 # 2022-11-24 (5.1.2)
 
 * Fix `BaseImporter.generate_db_objects()` to handle properly snake-cased table identifiers values for table creation.
