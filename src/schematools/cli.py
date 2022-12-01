@@ -479,6 +479,8 @@ def to_ckan(schema_url: str, upload_url: str):
 
     data = []
     for path, ds in datasets.items():
+        if ds.status != DatasetSchema.Status.beschikbaar:
+            continue
         try:
             data.append(ckan.from_dataset(ds, path))
         except Exception as e:
