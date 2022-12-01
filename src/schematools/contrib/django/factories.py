@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Callable, Collection, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Collection, Dict, List, Optional, Tuple, Type, TypeVar
 from urllib.parse import urlparse
 
 from django.apps import apps
@@ -13,7 +13,7 @@ from django.db.models import CheckConstraint, Q
 from django.db.models.base import ModelBase
 from django_postgres_unlimited_varchar import UnlimitedCharField
 
-from schematools import SRID_3D, SRID_RD_NEW
+from schematools import SRID_3D
 from schematools.contrib.django import app_config, signals
 from schematools.naming import to_snake_case
 from schematools.types import DatasetFieldSchema, DatasetTableSchema
@@ -32,356 +32,34 @@ M = TypeVar("M", bound=DynamicModel)
 MODEL_CREATION_COUNTER = 1
 MODEL_MOCKER_CREATION_COUNTER = 1
 
-
-class ObjectMarker:
-    """Class to signal that field type object has been found in the aschema definition.
-    For FK and NM relations, this class will be replaced by another field class,
-    during processing (in the FieldMaker).
-    For non-model fields (e.g. BRP), this class marks the fact that no
-    model field needs to be generated.
-    """
-
-    pass
-
-
-def _fetch_srid(field: DatasetFieldSchema) -> dict[str, Any]:
-    dimensions = 2
-    if field.srid in SRID_3D:
-        dimensions = 3
-    return {"srid": field.srid, "dim": dimensions}
-
-
-FORMAT_MODELS_LOOKUP = {
+JSON_TYPE_TO_DJANGO = {
+    "string": UnlimitedCharField,
+    "integer": models.BigIntegerField,
+    "integer/autoincrement": models.AutoField,
+    "string/autoincrement": UnlimitedCharField,
+    "datetime": models.DateTimeField,
+    "number": models.FloatField,
+    "boolean": models.BooleanField,
+    "array": ArrayField,
+    # Format variants of type string:
     "date": models.DateField,
     "time": models.TimeField,
     "date-time": models.DateTimeField,
     "uri": models.URLField,
     "email": models.EmailField,
     "blob-azure": UnlimitedCharField,
+    # "object" handled elsewhere.
+    "/definitions/id": models.IntegerField,
+    "/definitions/schema": UnlimitedCharField,
+    "https://geojson.org/schema/Geometry.json": gis_models.GeometryField,
+    "https://geojson.org/schema/Point.json": gis_models.PointField,
+    "https://geojson.org/schema/MultiPoint.json": gis_models.MultiPointField,
+    "https://geojson.org/schema/Polygon.json": gis_models.PolygonField,
+    "https://geojson.org/schema/MultiPolygon.json": gis_models.MultiPolygonField,
+    "https://geojson.org/schema/LineString.json": gis_models.LineStringField,
+    "https://geojson.org/schema/MultiLineString.json": gis_models.MultiLineStringField,
+    "https://geojson.org/schema/GeometryCollection.json": gis_models.GeometryCollectionField,
 }
-
-
-JSON_TYPE_TO_DJANGO = {
-    "string": (UnlimitedCharField, None),
-    "integer": (models.BigIntegerField, None),
-    "integer/autoincrement": (models.AutoField, None),
-    "string/autoincrement": (UnlimitedCharField, None),
-    "date": (models.DateField, None),
-    "datetime": (models.DateTimeField, None),
-    "time": (models.TimeField, None),
-    "number": (models.FloatField, None),
-    "boolean": (models.BooleanField, None),
-    "array": (ArrayField, None),
-    "object": (ObjectMarker, None),
-    "/definitions/id": (models.IntegerField, None),
-    "/definitions/schema": (UnlimitedCharField, None),
-    "https://geojson.org/schema/Geometry.json": (
-        gis_models.GeometryField,
-        {"value_getter": _fetch_srid, "srid": SRID_RD_NEW, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/Point.json": (
-        gis_models.PointField,
-        {"value_getter": _fetch_srid, "srid": SRID_RD_NEW, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/MultiPoint.json": (
-        gis_models.MultiPointField,
-        {"value_getter": _fetch_srid, "srid": SRID_RD_NEW, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/Polygon.json": (
-        gis_models.PolygonField,
-        {"value_getter": _fetch_srid, "srid": SRID_RD_NEW, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/MultiPolygon.json": (
-        gis_models.MultiPolygonField,
-        {"value_getter": _fetch_srid, "srid": SRID_RD_NEW, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/LineString.json": (
-        gis_models.LineStringField,
-        {"value_getter": _fetch_srid, "srid": SRID_RD_NEW, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/MultiLineString.json": (
-        gis_models.MultiLineStringField,
-        {"value_getter": _fetch_srid, "srid": SRID_RD_NEW, "geography": False, "db_index": True},
-    ),
-    "https://geojson.org/schema/GeometryCollection.json": (
-        gis_models.GeometryCollectionField,
-        {"value_getter": _fetch_srid, "srid": SRID_RD_NEW, "geography": False, "db_index": True},
-    ),
-}
-
-
-class RelationMaker:
-    """Superclass to generate info for relation fields."""
-
-    def __init__(
-        self,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ):
-        self.field = field
-        self._field_cls = field_cls
-        self._args = args
-        self._kwargs = kwargs
-        self.relation = field.relation or field.nm_relation
-        self.fk_relation = field.relation
-        self.nm_relation = field.nm_relation
-
-    @classmethod
-    def fetch_maker(cls, field: DatasetFieldSchema):
-        # determine type of relation (FKLoose, FK, M2M, LooseM2M)
-        if field.relation:
-            return FKRelationMaker
-        elif field.nm_relation:
-            if field.is_loose_relation:
-                return LooseM2MRelationMaker
-            else:
-                return M2MRelationMaker
-        else:
-            return None  # To signal this is not a relation
-
-    @property
-    def field_cls(self):
-        return self._field_cls
-
-    @property
-    def field_args(self):
-        related_table = self.field.related_table
-        return [f"{related_table.dataset.id}.{_get_model_name(related_table)}"]
-
-    @property
-    def field_kwargs(self):
-        return self._kwargs
-
-    @property
-    def field_constructor_info(self):
-        return self.field_cls, self.field_args, self.field_kwargs
-
-
-class FKRelationMaker(RelationMaker):
-    @property
-    def field_cls(self):
-        if self.field.is_composite_key:
-            # Make it easier to recognize the keys, e.g. in ``manage.py dump_models``.
-            return CompositeForeignKeyField
-        elif self.field.is_loose_relation or self._get_to_field():
-            # Points to the first part of a composite key.
-            return LooseRelationField
-        else:
-            return models.ForeignKey
-
-    def _get_related_name(self):
-        """Find the name of the backwards relationship.
-
-        If the linked table describes the other end of the relationship,
-        this field will also be included in the model.
-        """
-        parent_table = self.field.table
-        if parent_table.is_nested_table:
-            # Won't ever show related name for internal tables
-            return to_snake_case(parent_table["originalID"])
-        elif parent_table.is_through_table:
-            # This provides a reverse-link from each FK in the M2M table to the linked tables,
-            # allowing to walk *inside* the M2M table instead of over it.
-            # For debugging purposes these names are clarified depending on what direction
-            # the key takes.
-            m2m_field = parent_table.parent_table_field
-            through_fields = parent_table["throughFields"]
-            if self.field.name == through_fields[0]:
-                # First model, can resemble the original field name,
-                return f"rev_m2m_{to_snake_case(m2m_field.name)}"
-            elif self.field.name == through_fields[1]:
-                # Second model, can resemble the reverse name if it exists.
-                m2m_reverse_name = m2m_field.reverse_relation
-                if m2m_reverse_name is not None:
-                    # As the field exists on the second model,
-                    # let the reverse relation also reflect that.
-                    return f"rev_m2m_{to_snake_case(m2m_reverse_name.id)}"
-
-            # By default, create something unique and recognizable.
-            # The "m2m" would be snake_cased as m_2_m, so it's added afterwards.
-            # The parent table ID already has the main field name included, but for tables
-            # with a self-reference, the field is still added to guarantee uniqueness.
-            return "rev_m2m_" + to_snake_case(f"{parent_table.id}_via_{self.field.id}")
-        elif (additional_relation := self.field.reverse_relation) is not None:
-            # The relation is described by the other table, return it
-            return additional_relation.id
-        else:
-            # Hide it as relation.
-            # Note that for M2M relations, Django will replace this with "_tablename_fieldname_+",
-            # as Django still uses the backwards relation internally.
-            return "+"
-
-    def _get_to_field(self) -> DatasetFieldSchema | None:
-        """Determine the "to_field" for the foreign key.
-
-        This returns a value when the relation doesn't point to the targets's primary key,
-        hence the "to_field" parameter is needed.
-
-        The current implementation only works for the right-side of N-M relations at the moment,
-        other relation types are still created as a loose relation field.
-        """
-        if (
-            # HACK: This complicated logic is needed because self.field.is_loose_relation
-            # has very mixed-up logic that handles things which the callers should have handled.
-            # This makes it impossible to determine whether a through-table has loose relations.
-            # Solving that turns out to be really complex and bring up more issues. However,
-            # reading the NM-field does work, so at least one side of the relation can be fixed.
-            (nm_field := self.field.table.parent_table_field) is not None
-            and nm_field.is_loose_relation
-            and self.field.id == self.field.table["throughFields"][1]
-        ):
-            # A FK in the through table might actually be a partial composite key.
-            # When this is the case, make sure the to_field points to the right field.
-            target_fields = nm_field.related_fields
-
-            if target_fields[0].id != "id" and not target_fields[0].is_primary:
-                return target_fields[0]
-        elif self.field.is_loose_relation:
-            # Loose relation points to the first field of a composite foreign key
-            return self.field.related_table.identifier_fields[0]
-
-        return None
-
-    @property
-    def field_kwargs(self):
-        kwargs = {
-            **super().field_kwargs,
-            "on_delete": models.CASCADE if self.field.required else models.SET_NULL,
-            "db_column": self.field.db_name,
-            "db_constraint": False,
-            "related_name": self._get_related_name(),
-        }
-
-        if self.field.is_composite_key:
-            kwargs["to_fields"] = [field.python_name for field in self.field.related_fields]
-        elif to_field := self._get_to_field():
-            # Field points to a different key of the other table (e.g. "identificatie").
-            kwargs["to_field"] = to_field.python_name
-
-        return kwargs
-
-
-class M2MRelationMaker(RelationMaker):
-    @property
-    def field_cls(self):
-        return models.ManyToManyField
-
-    @property
-    def field_kwargs(self):
-        through_table = self.field.through_table
-        through_fields = [f.python_name for f in through_table.through_fields]
-
-        if (additional_relation := self.field.reverse_relation) is not None:
-            # The relation is described by the other table, return it
-            related_name = additional_relation.id
-        else:
-            # Default: give it a name, but hide it as relation.
-            # This becomes the models.ManyToManyRel field on the target model.
-            related_name = f"rev_{self.field.table.python_name}_{self.field.python_name}+"
-
-        return {
-            **super().field_kwargs,
-            "related_name": related_name,
-            "through": f"{through_table.dataset.id}.{_get_model_name(through_table)}",
-            "through_fields": through_fields,
-        }
-
-
-class LooseM2MRelationMaker(M2MRelationMaker):
-    @property
-    def field_cls(self):
-        return LooseRelationManyToManyField
-
-
-class FieldMaker:
-    """Generate the field for a JSON-Schema property"""
-
-    def __init__(
-        self,
-        field_cls: type[models.Field],
-        table_schema: DatasetTableSchema,
-        value_getter: Callable[[DatasetFieldSchema], dict[str, Any]] = None,
-        **kwargs,
-    ):
-        self.field_cls = field_cls
-        self.table = table_schema
-        self.value_getter = value_getter
-        self.kwargs = kwargs
-        self.modifiers = [getattr(self, an) for an in dir(self) if an.startswith("handle_")]
-
-    def handle_basic(
-        self,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        kwargs["primary_key"] = field.is_primary
-        kwargs["help_text"] = field.description or ""  # also used by OpenAPI spec
-        if not field.is_primary and field.nm_relation is None:
-            # Primary can not be Null
-            kwargs["null"] = not field.required
-        if field.has_shortname or (
-            field.parent_field is not None and field.parent_field.has_shortname
-        ):
-            kwargs["db_column"] = field.db_name
-        if self.value_getter:
-            kwargs.update(self.value_getter(field))
-        return field_cls, args, kwargs
-
-    def handle_array(
-        self,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        if field.data.get("type", "").lower() == "array" and not field.nm_relation:
-            base_field, _ = JSON_TYPE_TO_DJANGO[field.data.get("entity", {}).get("type", "string")]
-            kwargs["base_field"] = base_field()
-        return field_cls, args, kwargs
-
-    def handle_relation(
-        self,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        try:
-            relation_maker_cls = RelationMaker.fetch_maker(field)
-        except ValueError as e:
-            raise ValueError(f"Failed to construct field {field.qualified_id}: {e}") from e
-
-        if relation_maker_cls is not None:
-            relation_maker = relation_maker_cls(field, field_cls, *args, **kwargs)
-            return relation_maker.field_constructor_info
-        else:
-            return field_cls, args, kwargs
-
-    def handle_date(
-        self,
-        field: DatasetFieldSchema,
-        field_cls,
-        *args,
-        **kwargs,
-    ) -> TypeAndSignature:
-        format_ = field.format
-        if format_ is not None:
-            field_cls = FORMAT_MODELS_LOOKUP[format_]
-        return field_cls, args, kwargs
-
-    def __call__(self, field: DatasetFieldSchema) -> TypeAndSignature:
-        field_cls = self.field_cls
-        kwargs = self.kwargs
-        args = []
-
-        for modifier in self.modifiers:
-            field_cls, args, kwargs = modifier(field, field_cls, *args, **kwargs)
-
-        return field_cls, args, kwargs
 
 
 def remove_dynamic_models() -> None:
@@ -469,22 +147,6 @@ def _get_model_name(table_schema: DatasetTableSchema) -> str:
         return model_name
 
 
-def _fetch_verbose_name(
-    obj: Union[DatasetTableSchema, DatasetTableSchema], with_description: bool = False
-) -> str:
-    """Generate a verbose_name for a table or field.
-
-    For fields, the description goes into `help_text`, so the flag `with_description`
-    can be used to leave it out of the `verbose_name`.
-    """
-    verbose_name_parts = []
-    if title := obj.title:
-        verbose_name_parts.append(title)
-    if with_description and (description := obj.description):
-        verbose_name_parts.append(description)
-    return " | ".join(verbose_name_parts)
-
-
 def model_factory(
     dataset: Dataset,
     table_schema: DatasetTableSchema,
@@ -504,42 +166,19 @@ def model_factory(
     constraints = []
 
     for field in table_schema.get_fields(include_subfields=True):
-        type_ = field.type
         # skip schema field for now
-        if type_.endswith("definitions/schema"):
-            continue
         # skip nested tables and fields that are only added for temporality
-        if field.is_nested_table or field.is_temporal_range:
-            continue
-        # reduce amsterdam schema refs to their fragment
-        # only relevant for `/definitions/id` types atm.
-        if type_.startswith(settings.SCHEMA_DEFS_URL):
-            type_ = urlparse(type_).fragment
-
-        try:
-            base_class, init_kwargs = JSON_TYPE_TO_DJANGO[type_]
-        except KeyError as e:
-            raise RuntimeError(
-                f"Unable to parse {table_schema.id}: field '{field.id}'"
-                f" has unsupported type: {type_}."
-            ) from e
-
-        if init_kwargs is None:
-            init_kwargs = {}
-
-        if field.title:
-            init_kwargs["verbose_name"] = field.title
-
-        # Generate field object
-        kls, args, kwargs = FieldMaker(base_class, table_schema, **init_kwargs)(field)
-        if kls is None or kls is ObjectMarker:
-            # Some fields are not mapped into classes
+        if (
+            field.type.endswith("definitions/schema")
+            or field.is_nested_table
+            or field.is_temporal_range
+            or (field.is_object and not field.get("relation"))
+        ):
             continue
 
-        model_field = kls(*args, **kwargs)
+        model_field = _model_field_factory(field)
 
-        # Generate name, fix if needed.
-        model_field.name = field.python_name
+        model_field.name = field.python_name  # Generate name, fix if needed.
         model_field.field_schema = field  # avoid extra lookups.
         fields[model_field.name] = model_field
 
@@ -586,6 +225,211 @@ def model_factory(
 
     app_config.register_model(app_label, model_class)
     return model_class
+
+
+def _model_field_factory(field: DatasetFieldSchema) -> models.Field:
+    """Construct the Django model field for a schema field."""
+    if field.relation:
+        return _fk_field_factory(field)
+    elif field.nm_relation:
+        return _nm_field_factory(field)
+    else:
+        return _basic_field_factory(field)
+
+
+def _get_model_field_class(field: DatasetFieldSchema) -> type[models.Field]:
+    type_ = field.type
+    # reduce amsterdam schema refs to their fragment
+    # only relevant for `/definitions/id` types atm.
+    if type_.startswith(settings.SCHEMA_DEFS_URL):
+        type_ = urlparse(type_).fragment
+
+    try:
+        return JSON_TYPE_TO_DJANGO[field.format or type_]
+    except KeyError as e:
+        raise RuntimeError(f"Field '{field.qualified_id}' has unsupported type: {type_}.") from e
+
+
+def _get_basic_kwargs(field: DatasetFieldSchema) -> dict:
+    """Common model field kwargs for all field types."""
+    kwargs = {
+        "primary_key": field.is_primary,
+        "verbose_name": field.title,
+        "help_text": field.description or "",  # also used by OpenAPI spec
+        "db_column": field.db_name if field.db_name != field.python_name else None,
+    }
+
+    if not field.is_primary and field.nm_relation is None:
+        # Primary can not be Null
+        kwargs["null"] = not field.required
+
+    return kwargs
+
+
+def _basic_field_factory(field: DatasetFieldSchema) -> models.Field:
+    """Construct a Django model field for a basic field type."""
+    field_cls = _get_model_field_class(field)
+    kwargs = _get_basic_kwargs(field)
+
+    if issubclass(field_cls, ArrayField):
+        # Array field
+        item_type = field.get("entity", {}).get("type", "string")
+        kwargs["base_field"] = JSON_TYPE_TO_DJANGO[item_type]()
+
+    if issubclass(field_cls, gis_models.GeometryField):
+        # Geometry field specials
+        kwargs.update(
+            {
+                "srid": field.srid,
+                "dim": (3 if field.srid in SRID_3D else 2),
+                "geography": False,
+                "db_index": True,
+            }
+        )
+
+    return field_cls(**kwargs)
+
+
+def _fk_field_factory(field: DatasetFieldSchema) -> models.ForeignKey:
+    """Generate a Django ForeignKey field for a schema 1N relation field.
+
+    This also takes composite-key relations into account,
+    and "loose relations" where the field only references
+    one part of the composite relation
+    """
+    to_field = _get_fk_to_field(field)
+    if field.is_composite_key:
+        # Make it easier to recognize the keys, e.g. in ``manage.py dump_models``.
+        # For the most part, this is a tagging interface class.
+        field_cls = CompositeForeignKeyField
+    elif field.is_loose_relation or to_field:
+        # Points to the first part of a composite key.
+        field_cls = LooseRelationField
+    else:
+        field_cls = models.ForeignKey
+
+    kwargs = {
+        "to": f"{field.related_table.dataset.id}.{_get_model_name(field.related_table)}",
+        **_get_basic_kwargs(field),
+        "on_delete": models.CASCADE if field.required else models.SET_NULL,
+        "db_column": field.db_name,
+        "db_constraint": False,  # don't enforce on database, not feasible for many datasets.
+        "related_name": _get_fk_related_name(field),
+    }
+
+    if field.is_composite_key:
+        kwargs["to_fields"] = [field.python_name for field in field.related_fields]
+    elif to_field:
+        # Field points to a different key of the other table (e.g. "identificatie").
+        kwargs["to_field"] = to_field.python_name
+
+    return field_cls(**kwargs)
+
+
+def _get_fk_related_name(field: DatasetFieldSchema) -> str:
+    """Determine the name of the backwards relationship.
+
+    If the linked table describes the other end of the relationship,
+    this field will also be included in the model.
+    """
+    parent_table = field.table
+    if parent_table.is_nested_table:
+        # Won't ever show related name for internal tables
+        return to_snake_case(parent_table["originalID"])
+    elif parent_table.is_through_table:
+        # This provides a reverse-link from each FK in the M2M table to the linked tables,
+        # allowing to walk *inside* the M2M table instead of over it.
+        # For debugging purposes these names are clarified depending on what direction
+        # the key takes.
+        m2m_field = parent_table.parent_table_field
+        through_fields = parent_table["throughFields"]
+        if field.name == through_fields[0]:
+            # First model, can resemble the original field name,
+            return f"rev_m2m_{to_snake_case(m2m_field.name)}"
+        elif field.name == through_fields[1]:
+            # Second model, can resemble the reverse name if it exists.
+            m2m_reverse_name = m2m_field.reverse_relation
+            if m2m_reverse_name is not None:
+                # As the field exists on the second model,
+                # let the reverse relation also reflect that.
+                return f"rev_m2m_{to_snake_case(m2m_reverse_name.id)}"
+
+        # By default, create something unique and recognizable.
+        # The "m2m" would be snake_cased as m_2_m, so it's added afterwards.
+        # The parent table ID already has the main field name included, but for tables
+        # with a self-reference, the field is still added to guarantee uniqueness.
+        return "rev_m2m_" + to_snake_case(f"{parent_table.id}_via_{field.id}")
+    elif (additional_relation := field.reverse_relation) is not None:
+        # The relation is described by the other table, return it
+        return additional_relation.id
+    else:
+        # Hide it as relation.
+        # Note that for M2M relations, Django will replace this with "_tablename_fieldname_+",
+        # as Django still uses the backwards relation internally.
+        return "+"
+
+
+def _get_fk_to_field(field: DatasetFieldSchema) -> DatasetFieldSchema | None:
+    """Determine the "to_field" for the foreign key.
+
+    This returns a value when the relation doesn't point to the targets's primary key,
+    hence the "to_field" parameter is needed.
+
+    The current implementation only works for the right-side of N-M relations at the moment,
+    other relation types are still created as a loose relation field.
+    """
+    if (
+        # HACK: This complicated logic is needed because self.field.is_loose_relation
+        # has very mixed-up logic that handles things which the callers should have handled.
+        # This makes it impossible to determine whether a through-table has loose relations.
+        # Solving that turns out to be really complex and bring up more issues. However,
+        # reading the NM-field does work, so at least one side of the relation can be fixed.
+        (nm_field := field.table.parent_table_field) is not None
+        and nm_field.is_loose_relation
+        and field.id == field.table["throughFields"][1]
+    ):
+        # A FK in the through table might actually be a partial composite key.
+        # When this is the case, make sure the to_field points to the right field.
+        target_fields = nm_field.related_fields
+
+        if target_fields[0].id != "id" and not target_fields[0].is_primary:
+            return target_fields[0]
+    elif field.is_loose_relation:
+        # Loose relation points to the first field of a composite foreign key
+        return field.related_table.identifier_fields[0]
+
+    return None
+
+
+def _nm_field_factory(field: DatasetFieldSchema) -> models.ManyToManyField:
+    """Generate a Django ManyToManyField for the NM-relation.
+
+    NOTE: this still generates a regular M2M relation for "loose m2m relations".
+    """
+    # TODO: this doesn't really take loose relations into account.
+    # In practice, the schematools still has 2 regular foreignkey pairs,
+    # # but also includes subfields for the composite key field.
+    field_cls = LooseRelationManyToManyField if field.is_loose_relation else models.ManyToManyField
+    through_table = field.through_table
+    through_fields = [f.python_name for f in through_table.through_fields]
+
+    if (additional_relation := field.reverse_relation) is not None:
+        # The relation is described by the other table, return it
+        related_name = additional_relation.id
+    else:
+        # Default: give it a name, but hide it as relation.
+        # This becomes the models.ManyToManyRel field on the target model.
+        related_name = f"rev_{field.table.python_name}_{field.python_name}+"
+
+    kwargs = {
+        "to": f"{field.related_table.dataset.id}.{_get_model_name(field.related_table)}",
+        **_get_basic_kwargs(field),
+        "related_name": related_name,
+        "through": f"{through_table.dataset.id}.{_get_model_name(through_table)}",
+        "through_fields": through_fields,
+    }
+
+    return field_cls(**kwargs)
 
 
 def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
