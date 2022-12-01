@@ -1396,7 +1396,10 @@ class DatasetFieldSchema(DatasetType):
 
     @cached_property
     def is_object(self) -> bool:
-        """Tell whether the field references an object."""
+        """Tell whether the field references an object.
+        This might also be a relation, with a composite key.
+        In both cases, the object subfields could be inlined in the main SQL table.
+        """
         return self.get("type") == "object"
 
     @cached_property
