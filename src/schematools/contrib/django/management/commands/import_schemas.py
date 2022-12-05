@@ -65,7 +65,7 @@ class Command(BaseCommand):
 
         for filename in schema_files:
             self.stdout.write(f"Loading schemas from {filename}")
-            file = Path(filename)
+            file = Path(filename).resolve()
             if file.is_dir():
                 # As intended, read all datasets
                 # The folder might be a sub path in the repository,

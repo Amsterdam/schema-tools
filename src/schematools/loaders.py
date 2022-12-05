@@ -273,7 +273,7 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         This makes sure that the datasets-path value will be correct,
         even when a subfolder is selected for importing files.
         """
-        dataset_file = Path(dataset_file)
+        dataset_file = Path(dataset_file).resolve()
         dataset_file.stat()  # confirms the file exists, raises FileNotFoundError otherwise.
         if dataset_file.name == "datasets":
             # Pointed to the datasets folder already.
@@ -304,10 +304,8 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         * the dataset follows the ``name/dataset.json`` convention;
         * or when the related dataset is also read and cached by the same loader instance.
         """
-        dataset_file = Path(dataset_file)
-        if not dataset_file.is_absolute():
-            dataset_file = self.root.joinpath(dataset_file)
-        if not dataset_file.resolve().is_relative_to(self.root):
+        dataset_file = Path(dataset_file).resolve()
+        if not dataset_file.is_relative_to(self.root):
             raise ValueError(
                 f"Dataset file '{dataset_file}' does not exist in the schema repository"
             )
