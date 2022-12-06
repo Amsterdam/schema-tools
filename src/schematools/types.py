@@ -31,7 +31,12 @@ from jsonschema import draft7_format_checker
 from methodtools import lru_cache
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools.exceptions import DatasetNotFound, ParserError, SchemaObjectNotFound
+from schematools.exceptions import (
+    DatasetFieldNotFound,
+    DatasetTableNotFound,
+    ParserError,
+    SchemaObjectNotFound,
+)
 from schematools.naming import to_snake_case, toCamelCase
 
 if typing.TYPE_CHECKING:
@@ -360,7 +365,8 @@ class DatasetSchema(SchemaType):
             # as that introduces an implicit cache that would affect unit testing code.
             # The best option is simply to have an error when the loader would be called.
             raise RuntimeError(
-                f"{self!r} has no dataset collection defined, can't resolve relation to '{dataset_id}'."
+                f"{self!r} has no dataset collection defined,"
+                f" can't resolve relation to '{dataset_id}'."
             )
 
         # It's assumed here that the loader is a CachedSchemaLoader,
@@ -431,7 +437,7 @@ class DatasetSchema(SchemaType):
                 return table
 
         available = "', '".join([table["id"] for table in self["tables"]])
-        raise SchemaObjectNotFound(
+        raise DatasetTableNotFound(
             f"Table '{table_id}' does not exist "
             f"in schema '{self.id}', available are: '{available}'"
         )
@@ -823,7 +829,7 @@ class DatasetTableSchema(SchemaType):
             if field_schema.id == field_id:
                 return field_schema
 
-        raise SchemaObjectNotFound(f"Field '{field_id}' does not exist in table '{self.id}'.")
+        raise DatasetFieldNotFound(f"Field '{field_id}' does not exist in table '{self.id}'.")
 
     @lru_cache()  # type: ignore[misc]
     def get_additional_relation_by_id(self, relation_id: str) -> AdditionalRelationSchema:
@@ -832,7 +838,7 @@ class DatasetTableSchema(SchemaType):
             if additional_relation.id == relation_id:
                 return additional_relation
 
-        raise SchemaObjectNotFound(
+        raise DatasetFieldNotFound(
             f"Relation '{relation_id}' does not exist in table '{self.id}'."
         )
 
@@ -880,8 +886,8 @@ class DatasetTableSchema(SchemaType):
                     for key, [start_field, end_field] in dimensions.items()
                 },
             )
-        except SchemaObjectNotFound as e:
-            raise SchemaObjectNotFound(
+        except DatasetFieldNotFound as e:
+            raise DatasetFieldNotFound(
                 f"Error in '{self.id}' table; temporal identifier/range fields don't exist: {e}"
             ) from None
 
@@ -1331,7 +1337,7 @@ class DatasetFieldSchema(DatasetType):
             return dataset.get_table_by_id(
                 related_table_id, include_nested=False, include_through=False
             )
-        except (DatasetNotFound, SchemaObjectNotFound) as e:
+        except SchemaObjectNotFound as e:
             # Amend the error message for better debugging
             raise e.__class__(
                 f"Unable to resolve relation '{relation}' for field '{self.qualified_id}': {e}"
@@ -1454,14 +1460,14 @@ class DatasetFieldSchema(DatasetType):
     def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
         """Finds and returns the subfield with the given id.
 
-        SchemaObjectNotFound is raised when the field does not exist.
+        DatasetFieldNotFound is raised when the field does not exist.
         """
         for field_schema in self.subfields:
             if field_schema.id == field_id:
                 return field_schema
 
         name = self.table.id + "." + self.id
-        raise SchemaObjectNotFound(f"Subfield '{field_id}' does not exist below field '{name}'.")
+        raise DatasetFieldNotFound(f"Subfield '{field_id}' does not exist in field '{name}'.")
 
     @cached_property
     def subfields(self) -> list[DatasetFieldSchema]:
@@ -1681,7 +1687,7 @@ class AdditionalRelationSchema(DatasetType):
             return self._parent_table.dataset.get_table_by_id(
                 self["table"], include_nested=False, include_through=False
             )
-        except SchemaObjectNotFound as e:
+        except DatasetTableNotFound as e:
             raise RuntimeError(f"Unable to resolve {self}.related_table: {e}") from e
 
     @cached_property

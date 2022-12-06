@@ -12,7 +12,7 @@ import requests
 from more_ds.network.url import URL
 
 from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL
-from schematools.exceptions import DatasetNotFound
+from schematools.exceptions import DatasetNotFound, DatasetTableNotFound, SchemaObjectNotFound
 from schematools.types import DatasetSchema, DatasetTableSchema, Json, ProfileSchema
 
 __all__ = (
@@ -208,6 +208,11 @@ class _FileBasedSchemaLoader(SchemaLoader):
             # likely using a non-standard naming format (loaded via get_dataset_from_file())
             # but now the path isn't resolvable through the index. Fix the loading
             raise RuntimeError(f"Can't determine path to dataset '{dataset}'!") from None
+        except SchemaObjectNotFound as e:
+            # Provide better error message, can translate this into a more readable description
+            raise DatasetTableNotFound(
+                f"Dataset '{dataset.id}' has no table ref: '{table_ref}'!"
+            ) from e
         return DatasetTableSchema(table_json, parent_schema=dataset)
 
     def get_all_datasets(self) -> dict[str, DatasetSchema]:
@@ -344,11 +349,15 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
 
 def _read_json_path(dataset_file: Path) -> Json:
     """Load JSON from a path"""
-    with dataset_file.open() as stream:
-        try:
-            return json.load(stream)
-        except json.JSONDecodeError as exc:
-            raise ValueError("Invalid Amsterdam Dataset schema file") from exc
+    try:
+        with dataset_file.open() as stream:
+            try:
+                return json.load(stream)
+            except json.JSONDecodeError as exc:
+                raise ValueError("Invalid Amsterdam Dataset schema file") from exc
+    except FileNotFoundError as e:
+        # Normalize the exception type for "not found" errors.
+        raise SchemaObjectNotFound(str(dataset_file)) from e
 
 
 class _SharedConnectionMixin:
@@ -373,7 +382,10 @@ class _SharedConnectionMixin:
     def _read_json_url(self, url) -> Json:
         """Load JSON from an URL"""
         response = (self._connection or requests).get(url, timeout=60)
-        response.raise_for_status()
+        if response.status_code == 404:
+            # Normalize the exception type for "not found" errors.
+            raise SchemaObjectNotFound(url)
+        response.raise_for_status()  # All extend from OSError
         return response.json()
 
 
