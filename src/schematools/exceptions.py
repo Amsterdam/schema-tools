@@ -6,5 +6,13 @@ class SchemaObjectNotFound(ValueError):
     """Field does not exist."""
 
 
-class DatasetNotFound(ValueError):
+class DatasetNotFound(SchemaObjectNotFound):
     """The dataset could not be found."""
+
+
+class DatasetTableNotFound(SchemaObjectNotFound):
+    """The table could not be found."""
+
+
+class DatasetFieldNotFound(SchemaObjectNotFound):
+    """The field could not be found."""

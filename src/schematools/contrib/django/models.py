@@ -22,7 +22,7 @@ from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
-from schematools.exceptions import SchemaObjectNotFound
+from schematools.exceptions import DatasetFieldNotFound
 from schematools.loaders import CachedSchemaLoader
 from schematools.naming import to_snake_case
 from schematools.types import (
@@ -366,7 +366,7 @@ class DatasetTable(models.Model):
     def _get_geometry_field(cls, table_schema):
         try:
             field = table_schema.main_geometry_field
-        except SchemaObjectNotFound:
+        except DatasetFieldNotFound:
             # fallback to first GeoJSON field as geometry field.
             field = next((f for f in table_schema.fields if f.is_geo), None)
             if field is None:
