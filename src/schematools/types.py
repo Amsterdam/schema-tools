@@ -691,7 +691,7 @@ class DatasetTableSchema(SchemaType):
         self.through_table = through_table
 
         if self.type != "table":
-            raise ValueError("Invalid Amsterdam schema table data")
+            raise ValueError(f"expected type = 'table', got {self.type!r}")
 
         if not self["schema"].get("$schema", "").startswith("http://json-schema.org/"):
             raise ValueError("Invalid JSON-schema contents of table")
