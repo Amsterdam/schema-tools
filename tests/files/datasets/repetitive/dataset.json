@@ -1,0 +1,16 @@
+{
+  "id": "repetitive",
+  "type": "dataset",
+  "status": "beschikbaar",
+  "title": "Title",
+  "version": "1.0.0",
+  "tables": [
+    {
+      "id": "repetitiveTable",
+      "$ref": "repetitiveTable/v1.0.0",
+      "activeVersions": {
+        "1.0.0": "repetitiveTable/v1.0.0"
+      }
+    }
+  ]
+}
