@@ -172,7 +172,7 @@ def model_factory(
             field.type.endswith("definitions/schema")
             or field.is_nested_table
             or field.is_temporal_range
-            or (field.is_object and not field.get("relation"))
+            or field.is_nested_object
         ):
             continue
 
