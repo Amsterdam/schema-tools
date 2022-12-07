@@ -776,30 +776,54 @@ class DatasetTableSchema(SchemaType):
         """The description of the table as stated in the schema."""
         return self.get("description")
 
-    def get_fields(self, include_subfields: bool = False) -> Iterator[DatasetFieldSchema]:
-        """Get the fields for this table.
+    @cached_property
+    def fields(self) -> list[DatasetFieldSchema]:
+        """All the fields of the table.
 
-        Args:
-            include_subfields: Merge the subfields of an FK relation into the fields
-            of this table. The ids of these fields need to be prefixed
-            (usually with the `id` of the relation field) to avoid name collisions.
+        This returns the direct fields that are part of the table.
+        Fields that have "type=object" can define nested fields, which are not included here.
+        These fields can either be read using ``field.subfields``, or be inlined
+        using ``get_fields(include_subfields=True)``.
         """
-        # If composite key, add PK field
-        if self.has_composite_key and "id" not in self["schema"]["properties"]:
-            field_kwargs = {"_parent_table": self, "_required": True, "type": "string", "id": "id"}
-            # For temporal tables, we add an extra `faker` in the field definition
-            # that knows how to concatenate the field of the composite key to generate an id
-            if self.is_temporal:
-                field_kwargs["faker"] = "joiner"
-            yield DatasetFieldSchema(**field_kwargs)
-
         required = set(self["schema"]["required"])
-        for id_, spec in self["schema"]["properties"].items():
-            field_schema = DatasetFieldSchema(
+        fields = [
+            DatasetFieldSchema(
                 _parent_table=self,
                 _required=(id_ in required),
                 **{**spec, "id": id_},
             )
+            for id_, spec in self["schema"]["properties"].items()
+        ]
+
+        # If composite key, add PK field
+        if self.has_composite_key and "id" not in self["schema"]["properties"]:
+            # For temporal tables, we add an extra `faker` in the field definition
+            # that knows how to concatenate the field of the composite key to generate an id
+            kwargs = {"faker": "joiner"} if self.is_temporal else {}
+            fields.insert(
+                0,
+                DatasetFieldSchema(
+                    _parent_table=self, _required=True, type="string", id="id", **kwargs
+                ),
+            )
+
+        return fields
+
+    def get_fields(self, include_subfields: bool = False) -> Iterator[DatasetFieldSchema]:
+        """Get the fields for this table.
+
+        Args:
+            include_subfields: This includes the subfields of ``object`` fields,
+                               so those can be inlined in the main table. This is useful
+                               for ORM and SQL databases, that can't support a nested structure.
+        """
+        if not include_subfields:
+            # Shortcut, likely the code should just use table.fields.
+            yield from self.fields
+            return
+
+        # Reuse the cache to avoid recreating the field objects.
+        for field_schema in self.fields:
             yield field_schema
 
             # When requested, expose the individual fields of a composite foreign keys.
@@ -811,10 +835,6 @@ class DatasetTableSchema(SchemaType):
                     for subfield in field_schema.subfields
                     if not subfield.is_temporal_range
                 )
-
-    @cached_property
-    def fields(self) -> list[DatasetFieldSchema]:
-        return list(self.get_fields())
 
     @lru_cache()  # type: ignore[misc]
     def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
