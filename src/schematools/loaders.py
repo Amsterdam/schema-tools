@@ -184,7 +184,8 @@ class _FileBasedSchemaLoader(SchemaLoader):
 
             # Make sure the related datasets are read.
             for dataset_id in dataset_schema.related_dataset_schema_ids:
-                self.dataset_collection.get_dataset(dataset_id, prefetch_related=True)
+                if dataset_id != schema_json["id"]:  # skip self-references to local tables
+                    self.dataset_collection.get_dataset(dataset_id, prefetch_related=True)
 
         return dataset_schema
 

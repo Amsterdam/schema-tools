@@ -646,25 +646,19 @@ class DatasetSchema(SchemaType):
 
     @property
     def related_dataset_schema_ids(self) -> set[str]:
-        """Fetch a list or related schema ids.
+        """Access the list or related schema ids.
 
-        When a dataset has relations,
-        it needs to build up tables on the fly with the information
-        in the associated table. This property calculates the dataset_schema_ids
-        that are needed, so the users of this dataset can preload these
-        datasets.
-
-        We also collect the FK relation that possibly do not have temporal
-        characteristics. However, we cannot know this for sure if not also the
-        target dataset of a relation has been loaded.
+        This property calculates the related data that are needed,
+        so the users of this dataset can preload these datasets.
+        This can also include the current dataset,
+        for relations that point to other tables within the same dataset.
         """
         related_ids = set()
+        # Nested tables are checked by walking over subfields.
+        # Through tables are not checked, but don't have to as the "relation" is already checked.
         for table in self.tables:
-            for f in table.fields:
-                a_relation = f.relation or f.nm_relation
-                if a_relation is not None:
-                    dataset_id, _ = a_relation.split(":")
-                    related_ids.add(dataset_id)
+            related_ids.update(table.related_dataset_ids)
+
         return related_ids
 
 
@@ -1072,6 +1066,28 @@ class DatasetTableSchema(SchemaType):
         """Get table version."""
         # It's a required attribute, hence should be present.
         return SemVer(self["version"])
+
+    @property
+    def related_dataset_ids(self) -> set[str]:
+        """Tell which dataset ID's relations point to.
+
+        This can also include the current dataset,
+        for relations that point to other tables within the same dataset.
+        """
+        related_ids = set()
+        for field in self.fields:
+            if relation := field.get("relation"):
+                related_ids.add(relation.split(":", 1)[0])
+
+            # Also inspect the subfields.
+            # This does not use .get_fields(include_subfields=True) at the moment,
+            # because that needs to inspect is_temporal_range, which then retrieves the
+            # related table in return. That removes any need for loading other datasets:
+            for subfield in field.subfields:
+                if relation := subfield.get("relation"):
+                    related_ids.add(relation.split(":", 1)[0])
+
+        return related_ids
 
     @classmethod
     def from_dict(cls: type[DTS], obj: Json) -> DTS:  # noqa: D102
