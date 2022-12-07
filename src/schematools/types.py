@@ -1457,6 +1457,7 @@ class DatasetFieldSchema(DatasetType):
         """Tell whether the field references an object.
         This might also be a relation, with a composite key.
         In both cases, the object subfields could be inlined in the main SQL table.
+        See also: ``is_nested_object`` and ``is_composite_key``.
         """
         return self.get("type") == "object"
 
@@ -1586,6 +1587,11 @@ class DatasetFieldSchema(DatasetType):
     def is_nested_table(self) -> bool:
         """Checks if field is a possible nested table."""
         return self.is_array_of_objects and self.nm_relation is None
+
+    @cached_property
+    def is_nested_object(self) -> bool:
+        """Checks if field is a possible nested object definition."""
+        return self.is_object and not self.get("relation")
 
     @cached_property
     def nested_table(self) -> DatasetTableSchema | None:
