@@ -1,0 +1,32 @@
+{
+  "id": "repetitiveTable",
+  "title": "Title",
+  "type": "table",
+  "version": "1.0.0",
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "additionalProperties": false,
+    "identifier": [
+      "id"
+    ],
+    "required": [
+      "id",
+      "schema"
+    ],
+    "display": "id",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "description": "Container-ID"
+      },
+      "schema": {
+        "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema"
+      },
+      "repetitiveTableField": {
+        "type": "string",
+        "description": "repetitive.repetitiveTable.repetitiveTableField"
+      }
+    }
+  }
+}

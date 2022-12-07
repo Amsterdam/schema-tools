@@ -233,6 +233,20 @@ def test_rel_auth_field(here: Path) -> None:
     assert any("requires scopes ['HAMMERTIME']" in str(e) for e in errors)
 
 
+def test_repetitive_naming(here: Path, schema_loader) -> None:
+    dataset = schema_loader.get_dataset("repetitive")
+    errors = {str(e) for e in validation.run(dataset)}
+
+    assert errors == {
+        "[repetitive identifiers] " + e
+        for e in [
+            "table name 'repetitiveTable' should not start with 'repetitive'",
+            "field name 'repetitiveTableField' should not start with 'repetitive'",
+            "field name 'repetitiveTableField' should not start with 'repetitiveTable'",
+        ]
+    }
+
+
 def test_reasons_non_public_exists(here: Path, schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("hr_auth.json")
     errors = list(validation.run(dataset))
