@@ -1622,7 +1622,11 @@ class DatasetFieldSchema(DatasetType):
         """Tell whether the 1-N relationship is modelled by an intermediate table.
         This allows tracking multiple versions of the relationship.
         """
-        return self.relation is not None and self.related_table.is_temporal
+        # The "is_composite_key" check is a performance win,
+        # as that avoids having to fetch the related table object.
+        return self.relation is not None and (
+            self.is_composite_key or self.related_table.is_temporal
+        )
 
     @property
     def auth(self) -> frozenset[str]:
