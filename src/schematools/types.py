@@ -910,6 +910,22 @@ class DatasetTableSchema(SchemaType):
         """Indicates if this is a table with temporal characteristics"""
         return "temporal" in self
 
+    @cached_property
+    def _temporal_range_field_ids(self) -> set[str]:
+        """Provide all fields that are used for temporal ranges."""
+        # Can't read self.temporal here, because that causes a loop
+        # into get_field_by_id() / self.fields for a self-referencing table.
+        # Reading raw dictionary data instead.
+        try:
+            dimensions = self["temporal"]["dimensions"]
+        except KeyError:
+            return set()
+
+        date_fields = set()
+        for dimension, range_ids in dimensions.items():
+            date_fields.update(range_ids)
+        return date_fields
+
     @property
     def main_geometry(self) -> str:
         """The main geometry field, if there is a geometry field available.
@@ -1452,13 +1468,23 @@ class DatasetFieldSchema(DatasetType):
     @cached_property
     def is_subfield(self) -> bool:
         """Tell whether this field is part of an embedded object (e.g. temporal relation)"""
-        return self.parent_field is not None
+        return self._parent_field is not None
 
     @property
     def is_temporal_range(self) -> bool:
         """Tell whether the field is used to store the range of a temporal dimension.
-        (e.g. beginGeldigheid or eindGeldigheid)."""
-        return self._temporal_range
+        (e.g. beginGeldigheid or eindGeldigheid).
+        """
+        # Checks whether this is a subfield, that is mentioned
+        # by the related table as a temporal range field.
+        return (
+            self._parent_field is not None
+            # The format check is a performance improvement,
+            # to avoid unnecessary loading the related table.
+            and self.get("format") in ("date", "date-time")
+            and self._parent_field.get("relation")
+            and self.id in self._parent_field.related_table._temporal_range_field_ids
+        )
 
     @cached_property
     def is_geo(self) -> bool:
@@ -1531,24 +1557,11 @@ class DatasetFieldSchema(DatasetType):
         else:
             return []
 
-        relation = self.relation
-        nm_relation = self.nm_relation
-        combined_dimension_fieldnames: set[str] = set()
-        if relation is not None or nm_relation is not None:
-            if self.related_table.is_temporal:
-                # Can't read self.related_table.temporal here, because that causes a loop
-                # into get_field_by_id() / self.fields for a self-referencing table.
-                # Reading raw dictionary data instead.
-                dimensions = self.related_table["temporal"].get("dimensions", {})
-                for dimension, range_ids in dimensions.items():
-                    combined_dimension_fieldnames.update(range_ids)
-
         return [
             DatasetFieldSchema(
                 _parent_table=self._parent_table,
                 _parent_field=self,
                 _required=(id_ in required),
-                _temporal_range=(id_ in combined_dimension_fieldnames),
                 **{**spec, "id": id_},
             )
             for id_, spec in properties.items()
