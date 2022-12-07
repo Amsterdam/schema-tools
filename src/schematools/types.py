@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import json
 import logging
 import re
 import typing
 from collections import UserDict
 from collections.abc import Mapping
-from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, total_ordering
 from typing import (
@@ -1759,7 +1759,7 @@ class PermissionLevel(Enum):
         return self.value < other.value
 
 
-@dataclass(order=True)
+@dataclasses.dataclass(order=True)
 class Permission:
     """The result of an authorisation check.
 
@@ -1774,7 +1774,7 @@ class Permission:
     sub_value: str | None = None
 
     #: Who authenticated this (added for easier debugging. typically tested against)
-    source: str | None = field(default=None, compare=False)
+    source: str | None = dataclasses.field(default=None, compare=False)
 
     def __post_init__(self) -> None:
         if self.level is PermissionLevel.NONE:
@@ -1983,7 +1983,7 @@ class TemporalDimensionFields(NamedTuple):
     end: DatasetFieldSchema
 
 
-@dataclass
+@dataclasses.dataclass
 class Temporal:
     """The temporal property of a Table.
 
@@ -2016,7 +2016,7 @@ class Temporal:
 
     identifier: str
     identifier_field: DatasetFieldSchema
-    dimensions: dict[str, TemporalDimensionFields] = field(default_factory=dict)
+    dimensions: dict[str, TemporalDimensionFields] = dataclasses.field(default_factory=dict)
 
 
 def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
@@ -2032,9 +2032,9 @@ def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
         return frozenset({auth})
 
 
-@dataclass
+@dataclasses.dataclass
 class Faker:
     """Name and properties that can be used for mock data."""
 
     name: str
-    properties: dict[str, Any] = field(default_factory=dict)
+    properties: dict[str, Any] = dataclasses.field(default_factory=dict)
