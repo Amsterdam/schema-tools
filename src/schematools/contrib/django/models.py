@@ -45,6 +45,7 @@ class DynamicModel(models.Model):
     #: Overwritten by subclasses / factory
     CREATION_COUNTER = None
     _dataset: Dataset = None  # type: ignore[assignment]
+    _dataset_schema: DatasetSchema = None  # type: ignore[assignment]
     _table_schema: DatasetTableSchema = None  # type: ignore[assignment]
     _display_field = None
     _is_temporal = None
@@ -70,7 +71,7 @@ class DynamicModel(models.Model):
     @classmethod
     def get_dataset_id(cls) -> str:
         """Give access to the original dataset ID that this model is part of."""
-        return cls._dataset.schema.id
+        return cls._dataset_schema.id
 
     @classmethod
     def get_dataset_path(cls) -> str:
@@ -80,7 +81,7 @@ class DynamicModel(models.Model):
     @classmethod
     def get_dataset_schema(cls) -> DatasetSchema:
         """Give access to the original dataset schema that this model is a part of."""
-        return cls._dataset.schema
+        return cls._dataset_schema
 
     @classmethod
     def table_schema(cls) -> DatasetTableSchema:
