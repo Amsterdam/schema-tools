@@ -1,6 +1,6 @@
-import sys
+import io
 
-from django.core.management import BaseCommand
+from django.core.management import BaseCommand, CommandError
 from django.db import connection
 from django.db.utils import ProgrammingError
 from psycopg2 import sql
@@ -37,14 +37,17 @@ class Command(BaseCommand):
 
         impossible_schemas = [ident for ident in drop_schemas if ident not in imported_datasets]
         if impossible_schemas:
-            print("These schemas do not exist:", file=sys.stderr)
+            msg = io.StringIO()
+            msg.write("These schemas do not exist:\n")
+
             for ident in impossible_schemas:
-                msg = f"* {ident!r}"
+                msg.write(f"* {ident!r}")
                 snake = to_snake_case(ident)
                 if snake in imported_datasets:
-                    msg += f" (did you mean {snake!r}?)"
-                print(msg, file=sys.stderr)
-            sys.exit(1)
+                    msg.write(f" (did you mean {snake!r}?)")
+                msg.write("\n")
+
+            raise CommandError(msg.getvalue())
 
         dataset_qs = datasets.filter(name__in=drop_schemas)
         if options["drop_tables"]:
