@@ -309,7 +309,15 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         * the dataset follows the ``name/dataset.json`` convention;
         * or when the related dataset is also read and cached by the same loader instance.
         """
-        dataset_file = Path(dataset_file).resolve()
+        # Cleanup the path
+        dataset_file = Path(dataset_file)
+        if not dataset_file.is_absolute():
+            # Assume relative path from the repository root, typically used from unit test code.
+            # For any imports that use this code path to import relative to the app directory,
+            # an easy fix to is to convert to absolute paths first before calling this function.
+            dataset_file = self.root.joinpath(dataset_file)
+        dataset_file = dataset_file.resolve()  # removes ../../ entries, so is_relative_to() works
+
         if not dataset_file.is_relative_to(self.root):
             raise ValueError(
                 f"Dataset file '{dataset_file}' does not exist in the schema repository"
