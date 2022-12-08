@@ -1272,7 +1272,6 @@ class DatasetFieldSchema(DatasetType):
         This can be a different name then the internal name
         when the field is a relation, or has a short-name.
         """
-        # This is a function base DatasetTableSchema.db_name has to be one.
         db_name = self.get("shortname", self._id)
         if self.relation is not None:
             # In schema foreign keys should be specified without _id,
