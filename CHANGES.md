@@ -1,3 +1,19 @@
+# Changes in git
+
+* Fix importing schema files by using a relative path.
+* Fix `related_dataset_schema_ids` to also detect changes in nested objects.
+* Fix `DatasetTableSchema.get_fields()` to return cached instances too.
+* Fix `verbose_name` of `GeometryField` in Django ORM, which reused globally defined data.
+* Fix performance of iterating over subfields, no longer needs to load related tables.
+* Added `DatasetFieldSchema.is_nested_object` property.
+* Normalized exceptions for missing datasets/tables/fields:
+  * The `DatasetNotFound` exception extends from `SchemaObjectNotFound`.
+  * Added `DatasetTableNotFound` and `DatasetFieldNotFound`.
+  * There is no need for `except (DatasetNotFound, SchemaObjectNotFound)` code, it can all be `except SchemaObjectNotFound:`.
+* Cleanup Django model field creation logic.
+* Cleanup SQLAlchemy column creation logic.
+
+
 # 2022-12-01 (5.1.3)
 
 * Fix `limit_tables_to` issue with crash in index creation for skipped tables.
