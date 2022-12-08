@@ -1,9 +1,12 @@
+import sys
+
 from django.core.management import BaseCommand
 from django.db import connection
 from django.db.utils import ProgrammingError
 from psycopg2 import sql
 
 from schematools.contrib.django.models import Dataset, DatasetTable
+from schematools.naming import to_snake_case
 
 
 class Command(BaseCommand):
@@ -27,13 +30,21 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        """Djang hook implementing command logic."""
+        """Django hook implementing command logic."""
         datasets = Dataset.objects.all()
         imported_datasets = {d.name for d in datasets}
         drop_schemas = set(options.get("schemas", []))
-        if not drop_schemas <= imported_datasets:
-            impossible_schemas = drop_schemas - imported_datasets
-            raise ValueError(f"These schemas do not exist: {impossible_schemas}")
+
+        impossible_schemas = [ident for ident in drop_schemas if ident not in imported_datasets]
+        if impossible_schemas:
+            print("These schemas do not exist:", file=sys.stderr)
+            for ident in impossible_schemas:
+                msg = f"* {ident!r}"
+                snake = to_snake_case(ident)
+                if snake in imported_datasets:
+                    msg += f" (did you mean {snake!r}?)"
+                print(msg, file=sys.stderr)
+            sys.exit(1)
 
         dataset_qs = datasets.filter(name__in=drop_schemas)
         if options["drop_tables"]:
