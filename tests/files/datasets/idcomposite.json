@@ -1,0 +1,52 @@
+{
+  "id": "idcomposite",
+  "type": "dataset",
+  "description": "Dataset with an 'id' field an a composite pk",
+  "license": "public",
+  "status": "niet_beschikbaar",
+  "version": "1.2.3",
+  "publisher": "us",
+  "owner": "us",
+  "authorizationGrantor": "us",
+  "crs": "EPSG:28992",
+  "tables": [
+    {
+      "id": "base",
+      "type": "table",
+      "title": "Base",
+      "version": "1.2.4",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "identifier": [
+          "uniqid",
+          "sequenceNumber"
+        ],
+        "required": [
+          "schema",
+          "uniqid",
+          "sequenceNumber"
+        ],
+        "display": "uniqid",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "uniqid": {
+            "type": "integer",
+            "description": "Unique identifier"
+          },
+          "sequenceNumber": {
+            "type": "integer",
+            "description": "Sequence number"
+          },
+          "id": {
+              "type": "integer",
+              "description": "Some external identifier"
+          }
+        }
+      }
+    }
+  ]
+}

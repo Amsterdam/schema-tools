@@ -12,6 +12,7 @@
   * There is no need for `except (DatasetNotFound, SchemaObjectNotFound)` code, it can all be `except SchemaObjectNotFound:`.
 * Cleanup Django model field creation logic.
 * Cleanup SQLAlchemy column creation logic.
+* The schema validator now rejects tables with both an 'id' field and a composite primary key.
 
 
 # 2022-12-01 (5.1.3)
