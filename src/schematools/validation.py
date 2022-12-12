@@ -31,7 +31,7 @@ from urllib.parse import urlparse
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
-from schematools.types import DatasetSchema, SemVer, TableVersions
+from schematools.types import DatasetSchema, TableVersions
 
 
 @dataclass(frozen=True)
@@ -43,21 +43,6 @@ class ValidationError:
 
     def __str__(self) -> str:
         return f"[{self.validator_name}] {self.message}"
-
-
-class ValidationException(Exception):
-    """Raised when validation fails to execute.
-
-    .. note::
-
-       This is not for validation errors. See :class:`ValidationError` instead.
-    """
-
-    message: str
-
-    def __init__(self, message: str) -> None:  # noqa: D107
-        super().__init__(message)
-        self.message = message
 
 
 _all: list[tuple[str, Callable[[DatasetSchema, str | None], Iterator[str]]]] = []
