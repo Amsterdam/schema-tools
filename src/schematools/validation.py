@@ -29,7 +29,7 @@ from typing import Callable, Iterator, Optional, Set, cast
 from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools.exceptions import SchemaObjectNotFound
+from schematools.exceptions import DatasetFieldNotFound, SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.types import DatasetSchema, TableVersions
 
@@ -161,6 +161,19 @@ def _id_type(dataset: DatasetSchema) -> Iterator[str]:
                     )
             except SchemaObjectNotFound as e:
                 yield f"{ident!r} listed in identifier list {table.identifier}, but: {e}"
+
+
+@_register_validator("'id' field in the presence of composite primary key")
+def _id_and_composite(dataset: DatasetSchema) -> Iterator[str]:
+    for table in dataset.tables:
+        if len(table.identifier) < 2:
+            continue
+        try:
+            table.get_field_by_id("id")
+        except DatasetFieldNotFound:
+            pass
+        else:
+            yield f"table {table.qualified_id!r} has a field called 'id'"
 
 
 @_register_validator("PostgreSQL identifier length")
