@@ -1,5 +1,7 @@
 # Changes in git
 
+# 2022-12-13 (5.1.4)
+
 * Fix importing schema files by using a relative path.
 * Fix `related_dataset_schema_ids` to also detect changes in nested objects.
 * Fix `DatasetTableSchema.get_fields()` to return cached instances too.
