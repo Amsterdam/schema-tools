@@ -253,6 +253,11 @@ def schema_loader(here) -> FileSystemSchemaLoader:
 
 
 @pytest.fixture
+def aardgasverbruik_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("aardgasverbruik.json")
+
+
+@pytest.fixture
 def afval_schema(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("afval.json")
 

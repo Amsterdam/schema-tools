@@ -1275,10 +1275,12 @@ class DatasetFieldSchema(DatasetType):
         when the field is a relation, or has a short-name.
         """
         db_name = self.get("shortname", self._id)
-        if self.relation is not None:
+        if self.relation is not None and not self.is_primary:
             # In schema foreign keys should be specified without _id,
             # but the db_column should be with _id
             # Regular foreign keys have a _id field for the database, just like Django ORM does.
+            # ...but this is not done for primary keys that have a relationship constraint,
+            # as those should read the original db column directly as their value.
             db_name += "_id"
 
         if self._parent_field is not None and self._parent_field.is_object:
