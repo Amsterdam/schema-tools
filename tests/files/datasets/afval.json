@@ -35,17 +35,17 @@
             "type": "string",
             "description": "Serienummer van container"
           },
-          "eigenaar naam": {
+          "eigenaarNaam": {
             "type": "string",
             "title": "Naam eigenaar",
             "description": "Naam van eigenaar"
           },
-          "datum creatie": {
+          "datumCreatie": {
             "type": "string",
             "format": "date",
             "description": "Datum aangemaakt"
           },
-          "datum leegmaken": {
+          "datumLeegmaken": {
             "type": "string",
             "format": "date-time",
             "description": "Datum leeggemaakt"
