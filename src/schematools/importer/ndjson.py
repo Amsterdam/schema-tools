@@ -86,13 +86,13 @@ class TableFieldMapper:
         sub_rows = {}
 
         self._fix_through_fields(source)
-        composite_key_set = self._fill_composite_pk(source, main_row)
+        composite_key_filled = self._fill_composite_pk(source, main_row)
 
         # Fill all standard fields from the source.
         for field in self.dataset_table.get_fields(include_subfields=True):
             if field.id == "schema" and field.type.startswith("https://"):
                 continue
-            if field.id == "id" and composite_key_set:
+            if field.id == "id" and composite_key_filled:
                 # The composite key is already inserted in main_row
                 # skip processing "id" field again
                 continue
