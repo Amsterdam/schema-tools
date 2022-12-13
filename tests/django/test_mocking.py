@@ -7,6 +7,7 @@ from schematools.contrib.django.factories import (
     schema_model_mockers_factory,
     schema_models_factory,
 )
+from schematools.contrib.django.faker import get_field_factory
 from schematools.contrib.django.faker.create import create_data_for
 from schematools.contrib.django.faker.relate import relate_datasets
 from schematools.naming import to_snake_case
@@ -227,3 +228,43 @@ def test_mocking_with_shortname_on_relation(gebieden_dataset, gebieden_schema):
     fields = {f.name: f for f in models["bouwblokken"]._meta.get_fields()}
     # proves both the existence of the (long) fieldname + correct (short) db_column
     assert fields["ligt_in_buurt_met_te_lange_naam"].db_column == "lgt_in_brt_id"
+
+
+@pytest.mark.django_db
+@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
+def test_mocker_params_are_not_leaking(
+    afvalwegingen_schema,
+):
+    """Prove that an enum definition on one field does not effect values on another field.
+
+    Because we are not sure in what order the fields of a schema are processed,
+    we have to conduct this test at a lower level.
+
+    We take two fields of the afvalwegingen.container schema. The first field
+    `afvalfractie` is a string and has an enum definition.
+    The second field `containerlocatie id` is a string without an enum definition.
+
+    We use the field_factory for the enum field first. Then we use the field factory
+    for the second field. The resulting value should not be influenced by the
+    enum definition of the first field.
+
+    The second field uses the standard `pystr` provider that produces string
+    with a length of 20 chars, so there should never be a change of overlap
+    with the values in the enumeration.
+    """
+    table_schema = afvalwegingen_schema.get_table_by_id("containers")
+    fractie_field_schema = table_schema.get_field_by_id("afvalfractie")
+    locatie_field_schema = table_schema.get_field_by_id("containerlocatie id")
+    fractie_field_factory = get_field_factory(fractie_field_schema)
+    locatie_field_factory = get_field_factory(locatie_field_schema)
+    fractie_provider_name = fractie_field_factory.provider
+    locatie_provider_name = locatie_field_factory.provider
+    fractie_faker = fractie_field_factory._get_faker()
+    locatie_faker = locatie_field_factory._get_faker()
+    fractie_provider = getattr(fractie_faker, fractie_provider_name)
+    locatie_provider = getattr(locatie_faker, locatie_provider_name)
+    elements = fractie_field_schema.json_data()["enum"]
+    fractie_provider(elements=elements)
+    locatie_value = locatie_provider()
+    assert locatie_value not in elements
+    assert len(locatie_value) not in {len(e) for e in elements}
