@@ -86,13 +86,13 @@ class TableFieldMapper:
         sub_rows = {}
 
         self._fix_through_fields(source)
-        self._fill_composite_pk(source, main_row)
+        composite_key_filled = self._fill_composite_pk(source, main_row)
 
         # Fill all standard fields from the source.
         for field in self.dataset_table.get_fields(include_subfields=True):
             if field.id == "schema" and field.type.startswith("https://"):
                 continue
-            if field.id == "id" and self.dataset_table.is_autoincrement and self.dataset_table.has_composite_key:
+            if field.id == "id" and composite_key_filled:
                 # The composite key is already inserted in main_row
                 # skip processing "id" field again
                 continue
@@ -133,10 +133,16 @@ class TableFieldMapper:
             **sub_rows,
         }
 
-    def _fill_composite_pk(self, source: dict, row: Record):
-        if not self.dataset_table.is_autoincrement and self.dataset_table.has_composite_key:
-            # Add composite key for temporal table
-            row["id"] = self._get_composite_id(source)
+    def _fill_composite_pk(self, source: dict, row: Record) -> bool:
+        """Adds a composite key 'id' for temporal tables.
+        Return value indicates whether this was done.
+        """
+        temporal = not self.dataset_table.is_autoincrement and self.dataset_table.has_composite_key
+        if not temporal:
+            return False
+
+        row["id"] = self._get_composite_id(source)
+        return True
 
     def _get_value(self, field: DatasetFieldSchema, source: dict) -> Any:
         """Retrieve a single value from the source object.
