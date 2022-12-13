@@ -39,16 +39,24 @@ class Declaration:
     field_kwargs: dict[str, Any] = dataclass_field(default_factory=dict)
     field_arg: Any | None = dataclass_field(init=False)
 
-    def set_params(self, field) -> None:  # noqa: D102
-        self.field_arg = None
-        self.field_kwargs = {}
+    def get_call_param_modifiers(self, field) -> tuple(Any, dict[str, Any]):
+        """Get modifications to the args and kwarg for the __call__.
 
-    def __call__(self, **schema_faker_kwargs) -> BaseDeclaration:
+        When a Declaration is being used to create the actual mock data,
+        for some mockers, additional or modified args or kwargs are needed.
+        This method gives subclasses the opportunity to change arg or kwargs
+        according to their needs.
+        """
+        return None, {}
+
+    def __call__(self, field, **schema_faker_kwargs) -> BaseDeclaration:
+        """Create the actual FactoryBoy declaration instance that is being used for mocking."""
+        arg, kwargs = self.get_call_param_modifiers(field)
         call_kwargs = {}
         call_kwargs.update(self.declaration_kwargs)
-        call_kwargs.update(self.field_kwargs)
+        call_kwargs.update(kwargs)
         call_kwargs.update(schema_faker_kwargs)
-        call_arg = self.field_arg or self.arg
+        call_arg = arg or self.arg
         return self.cls(call_arg, **call_kwargs)
 
 
@@ -92,11 +100,12 @@ class Faker(Declaration):
     def __post_init__(self):
         self.declaration_kwargs["locale"] = LOCALE
 
-    def set_params(self, field: DatasetFieldSchema):  # noqa: D102
-        super().set_params(field)
+    def get_call_param_modifiers(self, field) -> tuple(Any, dict[str, Any]):
+        arg, kwargs = super().get_call_param_modifiers(field)
         if (elements := field.get("enum")) is not None:
-            self.field_kwargs["elements"] = elements
-            self.field_arg = "random_element"
+            kwargs["elements"] = elements
+            arg = "random_element"
+        return arg, kwargs
 
 
 @dataclass
@@ -105,16 +114,16 @@ class GeoFaker(Faker):
 
     arg: str = "geo"  # The registered `geo` faker
 
-    def set_params(self, field: DatasetFieldSchema):  # noqa: D102
-        super().set_params(field)
-        self.field_kwargs["crs"] = CRS.from_string(field.crs)
+    def get_call_param_modifiers(self, field) -> tuple(Any, dict[str, Any]):
+        arg, kwargs = super().get_call_param_modifiers(field)
+        return None, kwargs | {"crs": CRS.from_string(field.crs)}
 
 
 @dataclass
 class NullableFaker(Faker):
-    def set_params(self, field: DatasetFieldSchema):  # noqa: D102
-        super().set_params(field)
-        self.field_kwargs["nullable"] = not field.required
+    def get_call_param_modifiers(self, field) -> tuple(Any, dict[str, Any]):
+        arg, kwargs = super().get_call_param_modifiers(field)
+        return None, kwargs | {"nullable": not field.required}
 
 
 @dataclass
@@ -126,12 +135,13 @@ class NullableIntFaker(Faker):
 
     arg: str = "nullable_int"
 
-    def set_params(self, field: DatasetFieldSchema):  # noqa: D102
-        super().set_params(field)
+    def get_call_param_modifiers(self, field) -> tuple(Any, dict[str, Any]):
+        arg, kwargs = super().get_call_param_modifiers(field)
         if (min_ := field.get("minimum")) is not None:
-            self.field_kwargs["min_"] = min_
+            kwargs["min_"] = min_
         if (max_ := field.get("maximum")) is not None:
-            self.field_kwargs["max_"] = max_
+            kwargs["max_"] = max_
+        return None, kwargs
 
 
 @dataclass
@@ -143,12 +153,13 @@ class NullableFloatFaker(Faker):
 
     arg: str = "nullable_float"
 
-    def set_params(self, field: DatasetFieldSchema):  # noqa: D102
-        super().set_params(field)
+    def get_call_param_modifiers(self, field) -> tuple(Any, dict[str, Any]):
+        arg, kwargs = super().get_call_param_modifiers(field)
         if (min_value := field.get("minimum")) is not None:
-            self.field_kwargs["min_value"] = min_value
+            kwargs["min_value"] = min_value
         if (max_value := field.get("maximum")) is not None:
-            self.field_kwargs["max_value"] = max_value
+            kwargs["max_value"] = max_value
+        return None, kwargs
 
 
 DECLARATION_LOOKUP = {
@@ -222,5 +233,4 @@ def get_field_factory(field: DatasetFieldSchema) -> BaseDeclaration:
     if declaration_maker is None:
         raise ValueError(f"No declaration defined for field with type {field_type}")
 
-    declaration_maker.set_params(field)
-    return declaration_maker(**schema_faker_kwargs)
+    return declaration_maker(field, **schema_faker_kwargs)
