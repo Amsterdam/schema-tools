@@ -192,7 +192,15 @@ class SemVer(str):
         return f"{self.major}_{self.minor}"
 
 
-class SchemaType(UserDict):
+class JsonDict(UserDict):
+    def json(self) -> str:
+        return json.dumps(self.data)
+
+    def json_data(self) -> Json:
+        return json.loads(self.json())
+
+
+class SchemaType(JsonDict):
     """Base class for top-level schema objects (dataset, table, profile)."""
 
     def __repr__(self) -> str:
@@ -224,18 +232,12 @@ class SchemaType(UserDict):
     def type(self) -> str:  # noqa: A003
         return cast(str, self["type"])
 
-    def json(self) -> str:
-        return json.dumps(self.data)
-
-    def json_data(self) -> Json:
-        return json.loads(self.json())
-
     @classmethod
     def from_dict(cls: type[ST], obj: Json) -> ST:
         return cls(copy.deepcopy(obj))
 
 
-class DatasetType(UserDict):
+class DatasetType(JsonDict):
     """Base class for child elements of the schema."""
 
     def __repr__(self) -> str:
