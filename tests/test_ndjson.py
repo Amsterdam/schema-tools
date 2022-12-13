@@ -266,6 +266,7 @@ def test_ndjson_import_nm_composite_selfreferencing_keys(
             "begin_geldigheid": None,
             "eind_geldigheid": None,
             "koopsom": None,
+            "neuron_id": "10",
             "registratiedatum": None,
         },
         {
@@ -275,6 +276,7 @@ def test_ndjson_import_nm_composite_selfreferencing_keys(
             "begin_geldigheid": None,
             "eind_geldigheid": None,
             "koopsom": None,
+            "neuron_id": "11",
             "registratiedatum": None,
         },
     ]

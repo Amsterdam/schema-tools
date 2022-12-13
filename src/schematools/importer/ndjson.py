@@ -92,6 +92,10 @@ class TableFieldMapper:
         for field in self.dataset_table.get_fields(include_subfields=True):
             if field.id == "schema" and field.type.startswith("https://"):
                 continue
+            if field.id == "id" and self.dataset_table.is_autoincrement and self.dataset_table.has_composite_key:
+                # The composite key is already inserted in main_row
+                # skip processing "id" field again
+                continue
 
             # Read the value from the record. As subfields are also part of the main loop,
             # extra care is needed to make sure the correct dictionary is checked for the value.
