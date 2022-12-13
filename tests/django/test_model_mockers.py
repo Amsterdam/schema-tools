@@ -77,12 +77,12 @@ def test_model_mocker_factory_sets_model_mocker_dataset_and_table_schema_through
     mocked_schema_dict = json.loads(AfvalwegingenContainersModel.table_schema().json())
 
     # For mocks, relations will be replaced by plain `_id` fields
-    assert mocked_schema_dict["schema"]["properties"]["cluster_id"] == {
+    assert mocked_schema_dict["schema"]["properties"]["clusterId"] == {
         "description": "Cluster-ID",
         "faker": "nuller",
         "type": "string",
     }
-    del mocked_schema_dict["schema"]["properties"]["cluster_id"]
+    del mocked_schema_dict["schema"]["properties"]["clusterId"]
     del table_schema_dict["schema"]["properties"]["cluster"]
     table_schema_dict["schema"]["properties"]["id"]["type"] = "integer/autoincrement"
 
