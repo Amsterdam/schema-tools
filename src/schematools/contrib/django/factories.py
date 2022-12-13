@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import Any, Collection, Dict, List, Optional, Tuple, Type, TypeVar
 from urllib.parse import urlparse
 
@@ -185,6 +184,8 @@ def model_factory(
         # Non-composite string identifiers may not contain forwardslashes, since this
         # breaks URL matching when they are used in URL paths.
         if field.is_primary and field.type == "string":
+            # To make sure OneToOneField relations also support the '__contains' lookup,
+            # that lookup type is registered with this field class in apps.py.
             constraints.append(
                 CheckConstraint(
                     check=~Q(**{f"{model_field.name}__contains": "/"}),
@@ -298,16 +299,6 @@ def _fk_field_factory(field: DatasetFieldSchema) -> models.ForeignKey:
     one part of the composite relation
     """
     to_field = _get_fk_to_field(field)
-    if field.is_composite_key:
-        # Make it easier to recognize the keys, e.g. in ``manage.py dump_models``.
-        # For the most part, this is a tagging interface class.
-        field_cls = CompositeForeignKeyField
-    elif field.is_loose_relation or to_field:
-        # Points to the first part of a composite key.
-        field_cls = LooseRelationField
-    else:
-        field_cls = models.ForeignKey
-
     kwargs = {
         "to": f"{field.related_table.dataset.id}.{_get_model_name(field.related_table)}",
         **_get_basic_kwargs(field),
@@ -318,10 +309,23 @@ def _fk_field_factory(field: DatasetFieldSchema) -> models.ForeignKey:
     }
 
     if field.is_composite_key:
+        # Make it easier to recognize the keys, e.g. in ``manage.py dump_models``.
+        # For the most part, this is a tagging interface class.
+        field_cls = CompositeForeignKeyField
         kwargs["to_fields"] = [field.python_name for field in field.related_fields]
-    elif to_field:
-        # Field points to a different key of the other table (e.g. "identificatie").
+    elif field.is_primary:
+        # A primary key with a relation is typically a OneToOneField.
+        # For a field named "id", using db_column="id" will work to retrieve the field there.
+        # Internally, Django will still add an "id_id" field to the model to access the raw value.
+        field_cls = models.OneToOneField
+        kwargs["primary_key"] = True  # Note Django will use an INNER JOIN to retrieve the model.
+        # Not using 'kwargs["parent_link"] = True', as model inheritance is not used here.
+    elif field.is_loose_relation or to_field:
+        # Points to the first part of a composite key (e.g. "identificatie").
+        field_cls = LooseRelationField
         kwargs["to_field"] = to_field.python_name
+    else:
+        field_cls = models.ForeignKey
 
     return field_cls(**kwargs)
 

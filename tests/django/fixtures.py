@@ -64,6 +64,12 @@ def brp_dataset(brp_schema_json: dict) -> Dataset:
 
 
 @pytest.fixture
+def aardgasverbruik_dataset(aardgasverbruik_schema: DatasetSchema) -> Dataset:
+    """Create Aardgasverbruik dataset."""
+    return Dataset.create_for_schema(aardgasverbruik_schema)
+
+
+@pytest.fixture
 def afval_dataset(afval_schema: DatasetSchema) -> Dataset:
     """Create Afvalwegingen dataset."""
     return Dataset.create_for_schema(afval_schema)

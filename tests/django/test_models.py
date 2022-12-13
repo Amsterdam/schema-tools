@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.gis.db import models
 from django.core.management import call_command
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from django.db.models.base import ModelBase
 from django.db.models.fields import DateTimeField
 from django_postgres_unlimited_varchar import UnlimitedCharField
@@ -107,6 +107,43 @@ def test_model_factory_n_m_relations(gebieden_dataset, meetbouten_dataset):
     }
     nm_ref = model_dict["metingen"]._meta.get_field("refereertaanreferentiepunten")
     assert isinstance(nm_ref, models.ManyToManyField)
+
+
+@pytest.mark.django_db
+def test_model_factory_pk_with_relation(here, aardgasverbruik_dataset):
+    """Prove that primary keys with relations are supported."""
+    call_command(
+        "import_schemas", here / "files/datasets/aardgasverbruik.json", create_tables=True
+    )
+    MraLiander, PostcodeRangeModel = schema_models_factory(
+        aardgasverbruik_dataset, base_app_name="dso_api.dynamic_api"
+    )
+    pk_field = PostcodeRangeModel._meta.pk
+    assert isinstance(pk_field, models.OneToOneField)
+    assert pk_field.db_column == "id"
+
+    PostcodeRangeModel.objects.create(
+        id_id="foobar",  # needs raw instance, must be mraLiander model otherwise.
+        gemiddeld_verbruik=200,
+    )
+    # Prove that the actual database does use the "id" column:
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM aardgasverbruik_mra_statistieken_pcranges")
+        rows = dictfetchall(cursor)
+    assert rows == [{"id": "foobar", "gemiddeld_verbruik": 200}]
+
+    instance = PostcodeRangeModel.objects.get(id="foobar")  # new instance, no refresh_from_db()!
+    assert instance.id_id == "foobar"  # read Django added "attname" attribute for raw data access
+    with pytest.raises(MraLiander.DoesNotExist):
+        assert instance.id  # Read OneToOneField descriptor that accesses the model value.
+
+
+def dictfetchall(cursor):
+    """Return all rows from a cursor as a dict"""
+    # Django's connection.cursor() doesn't offer a way to pass RealDictCursor.
+    # This code is straight from the Django docs:
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
 @pytest.mark.django_db

@@ -1,4 +1,9 @@
 from django.apps import AppConfig
+from django.db import models
+
+# Make sure OneToOneField also allows __contains= lookups (will only work for type=string).
+# This allows model_factory() to create the CheckConstraint check for a relational PK field.
+models.OneToOneField.register_lookup(models.lookups.Contains)
 
 
 class SchematoolsAppConfig(AppConfig):
