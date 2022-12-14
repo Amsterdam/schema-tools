@@ -1308,12 +1308,12 @@ class DatasetFieldSchema(DatasetType):
         return self.get("description")
 
     @property
-    def faker(self) -> str | None:
+    def faker(self) -> Faker | None:
         """Return faker name and properties used for mocking data."""
         faker = self.get("faker")
         if faker is None:
             return None
-        if isinstance(faker, str):
+        elif isinstance(faker, str):
             return Faker(name=faker)
         else:
             name = faker.pop("name")
