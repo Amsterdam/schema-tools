@@ -1,4 +1,9 @@
-# Changes in git
+# 2022-12-14 (5.1.5)
+
+* Mocked schemas now use properly camel-cased field names.
+* Relations can be primary keys.
+* The command `schema batch-validate` now works on table files as well as
+  `dataset.json` files.
 
 # 2022-12-13 (5.1.4)
 
