@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from collections import defaultdict
-from pathlib import PosixPath
+from pathlib import Path, PosixPath
 from typing import Any, DefaultDict, Iterable, List
 
 import click
@@ -412,12 +412,15 @@ def validate(
 @click.argument("meta_schema_url")
 @click.argument("schema_files", nargs=-1)
 def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
-    """Batch validate schema's.
+    """Batch validate schemas.
 
-    This command was tailored so that it could be run from a pre-commit hook. As a result,
-    the order and type of its arguments differ from other `schema` sub-commands.
+    This command was tailored so that it could be run from a pre-commit hook.
+    The order and type of its arguments differ from other `schema` sub-commands:
+    the files it accepts are either "dataset.json" files or files denoting
+    tables. In the case of table files, the containing dataset will be
+    validated.
 
-    It will perform both structural and semantic validation of the schema's.
+    It will perform both structural and semantic validation of schemas.
 
     Args:
 
@@ -427,11 +430,34 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
     """  # noqa: D301,D412,D417
     meta_schema = _fetch_json(meta_schema_url)
     errors: DefaultDict[str, list[str]] = defaultdict(list)
-    loader = FileSystemSchemaLoader(os.path.commonpath(schema_files))
 
+    # Find the root "datasets" directory.
+    datasets_dir = Path(os.path.commonpath(schema_files)).absolute()
+    root = Path(datasets_dir.root)
+    while True:
+        if datasets_dir.name == "datasets":
+            break
+        if datasets_dir == root:
+            raise ValueError("dataset files do not live in a common 'datasets' dir")
+        datasets_dir = datasets_dir.parent
+
+    loader = FileSystemSchemaLoader(datasets_dir)
+
+    done = set()
     for schema_file in schema_files:
+        # Find the containing dataset.
+        ds_dir = Path(schema_file).parent
+        while not (ds_dir / "dataset.json").exists():
+            ds_dir = ds_dir.parent
+
+        # Don't run validations multiple times when several files in a dataset have changed.
+        main_file = os.path.join(ds_dir.name, "dataset.json")
+        if main_file in done:
+            continue
+        done.add(main_file)
+
         try:
-            dataset = loader.get_dataset_from_file(schema_file)
+            dataset = loader.get_dataset_from_file(main_file)
         except ValueError as ve:
             errors[schema_file].append(str(ve))
             # No sense in continuing if we can't read the schema file.
@@ -484,7 +510,7 @@ def to_ckan(schema_url: str, upload_url: str):
         try:
             data.append(ckan.from_dataset(ds, path))
         except Exception as e:
-            logger.error("in dataset %s: %s", ds.identifier, str(e))
+            logger.error("in dataset %s: %s", ds.identifier, str(e))  # noqa: G200
             status = 1
 
     if upload_url is None:
