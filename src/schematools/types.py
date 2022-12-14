@@ -830,7 +830,7 @@ class DatasetTableSchema(SchemaType):
 
             # When requested, expose the individual fields of a composite foreign keys.
             # These fields become part of the main table.
-            if field_schema.relation is not None and field_schema.is_object and include_subfields:
+            if field_schema.relation is not None and field_schema.is_object:
                 # Temporal date fields are excluded, they shouldn't be part into the main table.
                 yield from (
                     subfield
