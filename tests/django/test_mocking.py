@@ -200,13 +200,13 @@ def test_mocking_adds_nm_relations(
 
     # Also prove that the separately stored temporal fields are correct
     for tmo in through_model_objects:
-        tmo.is_ontstaan_uit_kadastraalobject_id = ".".join(
+        assert tmo.is_ontstaan_uit_kadastraalobject_id == ".".join(
             [
                 tmo.is_ontstaan_uit_kadastraalobject_identificatie,
                 str(tmo.is_ontstaan_uit_kadastraalobject_volgnummer),
             ]
         )
-        tmo.kadastraleobjecten_id = ".".join(
+        assert tmo.kadastraleobjecten_id == ".".join(
             [
                 tmo.kadastraleobjecten_identificatie,
                 str(tmo.kadastraleobjecten_volgnummer),
