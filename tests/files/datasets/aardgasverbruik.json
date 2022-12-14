@@ -9,7 +9,7 @@
   "crs": "EPSG:28992",
   "creator": "Onderzoek en Statistiek",
   "auth": "OPENBAAR",
-  "authorizationGrantor": "basisstatistiek.os@amsterdam.nl",
+  "authorizationGrantor": "OIS",
   "tables": [
     {
       "id": "mraLiander",
