@@ -151,6 +151,7 @@ def model_factory(
     table_schema: DatasetTableSchema,
     base_app_name: str | None = None,
     base_model: type[M] = DynamicModel,
+    meta_options: dict[str, Any] | None = None,
 ) -> type[M]:
     """Generate a Django model class from a JSON Schema definition."""
     dataset_schema = dataset.schema
@@ -204,6 +205,7 @@ def model_factory(
             "verbose_name": (table_schema.title or table_schema.id).capitalize(),
             "ordering": [idf.python_name for idf in table_schema.identifier_fields],
             "constraints": constraints,
+            **(meta_options or {}),
         },
     )
 
