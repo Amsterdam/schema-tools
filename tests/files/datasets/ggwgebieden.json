@@ -52,7 +52,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecre\u00eberd."
+            "description": "De datum waarop het object is gecreëerd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -120,7 +120,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecre\u00eberd."
+            "description": "De datum waarop het object is gecreëerd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -178,7 +178,7 @@
           "begingeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecre\u00eberd."
+            "description": "De datum waarop het object is gecreëerd."
           },
           "eindgeldigheid": {
             "type": "string",
@@ -246,7 +246,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecre\u00eberd."
+            "description": "De datum waarop het object is gecreëerd."
           },
           "eindGeldigheid": {
             "type": "string",

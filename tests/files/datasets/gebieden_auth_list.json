@@ -37,7 +37,7 @@
             "type": "string",
             "format": "date",
             "auth": ["LEVEL/C1", "LEVEL/C2"],
-            "description": "De datum waarop het object is gecre\u00eberd."
+            "description": "De datum waarop het object is gecreëerd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -99,7 +99,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecre\u00eberd."
+            "description": "De datum waarop het object is gecreëerd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -167,7 +167,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecre\u00eberd."
+            "description": "De datum waarop het object is gecreëerd."
           },
           "eindGeldigheid": {
             "type": "string",

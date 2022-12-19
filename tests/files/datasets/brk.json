@@ -76,12 +76,12 @@
           "soortCultuurOnbebouwdCode": {
             "type": "string",
             "provenance": "$.soortCultuurOnbebouwd.code",
-            "description": "De soort cultuur onbebouwd is een aanduiding voor de aard van de meest significante cultuur van het onbebouwde deel van het kadastraal object, weergegeven als \u2018omschrijving kadastraal object\u2019 in Mijn.kadaster.nl Dit kenmerk is in beginsel afgeleid van de notari\u00eble akte, maar kan worden bijgesteld op grond van een verzoek van de eigenaar (of een schriftelijk gevolmachtigde namens de eigenaar)per brief, fax of e-mailbericht. Dit kan afwijken van: het feitelijk gebruik in de WOZ; gebruiksdoel in de BAG; SBI-code in het HR. code"
+            "description": "De soort cultuur onbebouwd is een aanduiding voor de aard van de meest significante cultuur van het onbebouwde deel van het kadastraal object, weergegeven als \u2018omschrijving kadastraal object\u2019 in Mijn.kadaster.nl Dit kenmerk is in beginsel afgeleid van de notariële akte, maar kan worden bijgesteld op grond van een verzoek van de eigenaar (of een schriftelijk gevolmachtigde namens de eigenaar)per brief, fax of e-mailbericht. Dit kan afwijken van: het feitelijk gebruik in de WOZ; gebruiksdoel in de BAG; SBI-code in het HR. code"
           },
           "soortCultuurOnbebouwdOmschrijving": {
             "type": "string",
             "provenance": "$.soortCultuurOnbebouwd.omschrijving",
-            "description": "De soort cultuur onbebouwd is een aanduiding voor de aard van de meest significante cultuur van het onbebouwde deel van het kadastraal object, weergegeven als \u2018omschrijving kadastraal object\u2019 in Mijn.kadaster.nl Dit kenmerk is in beginsel afgeleid van de notari\u00eble akte, maar kan worden bijgesteld op grond van een verzoek van de eigenaar (of een schriftelijk gevolmachtigde namens de eigenaar)per brief, fax of e-mailbericht. Dit kan afwijken van: het feitelijk gebruik in de WOZ; gebruiksdoel in de BAG; SBI-code in het HR. omschrijving"
+            "description": "De soort cultuur onbebouwd is een aanduiding voor de aard van de meest significante cultuur van het onbebouwde deel van het kadastraal object, weergegeven als \u2018omschrijving kadastraal object\u2019 in Mijn.kadaster.nl Dit kenmerk is in beginsel afgeleid van de notariële akte, maar kan worden bijgesteld op grond van een verzoek van de eigenaar (of een schriftelijk gevolmachtigde namens de eigenaar)per brief, fax of e-mailbericht. Dit kan afwijken van: het feitelijk gebruik in de WOZ; gebruiksdoel in de BAG; SBI-code in het HR. omschrijving"
           },
           "soortCultuurBebouwd": {
             "type": "array",
@@ -1021,7 +1021,7 @@
           },
           "naam": {
             "type": "string",
-            "description": "De offici\u00eble vastgestelde gemeentenaam."
+            "description": "De officiële vastgestelde gemeentenaam."
           },
           "beginGeldigheid": {
             "type": "string",
