@@ -46,6 +46,7 @@ class TableFieldMapper:
         "wozobjectnummer": "Id",
         "id": "Id",
         "code": "Id",
+        "neuronId": "Id",
     }
 
     def __init__(self, dataset_table: DatasetTableSchema):
