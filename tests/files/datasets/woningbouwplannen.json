@@ -46,7 +46,7 @@
           },
           "avarageSalesPriceIncorrectZero": {
             "type": "number",
-            "multipleOf": 0.00,
+            "multipleOf": 0.0,
             "description": "Gemiddelde verkoopprijs (test)"
           },
           "buurten": {
@@ -54,24 +54,19 @@
             "relation": "gebieden:buurten",
             "items": {
               "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                }
-              }
+              "properties": { "id": { "type": "string" } }
             },
             "description": "Buurten waarin het woningbouwplan ligt"
           },
           "buurtenAsScalar": {
             "type": "array",
             "relation": "gebieden:buurten",
-            "items": {
-              "type": "string"
-            },
+            "items": { "type": "string" },
             "description": "Buurten waarin het woningbouwplan ligt, simply as scalar"
           }
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

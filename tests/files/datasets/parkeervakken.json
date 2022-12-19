@@ -17,10 +17,7 @@
         "identifier": ["id"],
         "required": ["id", "schema"],
         "properties": {
-          "id": {
-            "type": "string",
-            "description": ""
-          },
+          "id": { "type": "string", "description": "" },
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema"
           },
@@ -29,25 +26,15 @@
             "items": {
               "type": "object",
               "properties": {
-                "soort": {
-                  "type": "string",
-                  "description": ""
-                },
-                "eType": {
-                  "type": "string",
-                  "description": ""
-                },
-                "dagen": {
-                  "type": "array",
-                  "entity": {
-                    "type": "string"
-                  }
-                }
+                "soort": { "type": "string", "description": "" },
+                "eType": { "type": "string", "description": "" },
+                "dagen": { "type": "array", "entity": { "type": "string" } }
               }
             }
           }
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

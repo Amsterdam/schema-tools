@@ -15,9 +15,7 @@
       "auth": "LEVEL/B",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
@@ -39,7 +37,7 @@
             "type": "string",
             "format": "date",
             "auth": "LEVEL/C",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -57,12 +55,8 @@
           "ligtInBuurt": {
             "type": "object",
             "properties": {
-                "identificatie": {
-                    "type": "string"
-                },
-                "volgnummer": {
-                    "type": "integer"
-                }
+              "identificatie": { "type": "string" },
+              "volgnummer": { "type": "integer" }
             },
             "relation": "gebieden:buurten",
             "provenance": "ligtinbuurt",
@@ -78,9 +72,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
@@ -119,7 +111,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -142,12 +134,8 @@
           "ligtInWijk": {
             "type": "object",
             "properties": {
-              "identificatie": {
-                "type": "string"
-              },
-              "volgnummer": {
-                "type": "integer"
-              }
+              "identificatie": { "type": "string" },
+              "volgnummer": { "type": "integer" }
             },
             "relation": "gebieden:wijken",
             "description": "De wijk waar de buurt in ligt."
@@ -165,9 +153,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
@@ -193,7 +179,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -207,15 +193,13 @@
         }
       }
     },
-{
+    {
       "id": "ggwgebieden",
       "type": "table",
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/ggwgebieden.json",
@@ -240,7 +224,7 @@
           "begingeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindgeldigheid": {
             "type": "string",
@@ -253,12 +237,8 @@
             "items": {
               "type": "object",
               "properties": {
-                "identificatie": {
-                  "type": "string"
-                },
-                "volgnummer": {
-                  "type": "integer"
-                }
+                "identificatie": { "type": "string" },
+                "volgnummer": { "type": "integer" }
               }
             },
             "auth": "LEVEL/E",
@@ -269,12 +249,8 @@
             "items": {
               "type": "object",
               "properties": {
-                "diemen": {
-                  "type": "string"
-                },
-                "zaanstad": {
-                  "type": "integer"
-                }
+                "diemen": { "type": "string" },
+                "zaanstad": { "type": "integer" }
               }
             },
             "auth": "LEVEL/F",
@@ -283,5 +259,6 @@
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

@@ -33,11 +33,7 @@
             "shortname": "sbiMaatschappelijk",
             "items": {
               "type": "object",
-              "properties": {
-                "bronwaarde": {
-                  "type": "integer"
-                }
-              }
+              "properties": { "bronwaarde": { "type": "integer" } }
             },
             "description": "De omschrijving van de activiteiten die de maatschappelijke activiteit uitoefent."
           },
@@ -46,11 +42,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "properties": {
-                "sbiActiviteitNummer": {
-                  "type": "integer"
-                }
-              }
+              "properties": { "sbiActiviteitNummer": { "type": "integer" } }
             },
             "relation": "hr:sbiactiviteiten",
             "description": "De omschrijving van de activiteiten die de onderneming uitoefent."
@@ -59,11 +51,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "properties": {
-                "bronwaarde": {
-                  "type": "integer"
-                }
-              }
+              "properties": { "bronwaarde": { "type": "integer" } }
             },
             "$comment": "relation hr:vestigingen",
             "description": "Een vestiging is gebouw of een complex van gebouwen waar duurzame uitoefening van activiteiten van een Onderneming of Rechtspersoon plaatsvindt."
@@ -74,12 +62,8 @@
             "items": {
               "type": "object",
               "properties": {
-                "identificatie": {
-                  "type": "string"
-                },
-                "volgnummer": {
-                  "type": "integer"
-                }
+                "identificatie": { "type": "string" },
+                "volgnummer": { "type": "integer" }
               }
             },
             "relation": "verblijfsobjecten:verblijfsobjecten",
@@ -90,12 +74,8 @@
             "type": "object",
             "shortname": "gevestigdIn",
             "properties": {
-              "identificatie": {
-                "type": "string"
-              },
-              "volgnummer": {
-                "type": "integer"
-              }
+              "identificatie": { "type": "string" },
+              "volgnummer": { "type": "integer" }
             },
             "relation": "verblijfsobjecten:verblijfsobjecten",
             "description": "Relatie naar verblijfsobject",
@@ -128,5 +108,6 @@
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

@@ -14,9 +14,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
@@ -37,7 +35,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -95,5 +93,6 @@
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

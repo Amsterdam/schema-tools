@@ -17,18 +17,13 @@
         "identifier": "foo",
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "foo",
-          "schema"
-        ],
+        "required": ["foo", "schema"],
         "display": "foo",
         "properties": {
           "schema": {
             "$ref": "https://invalid.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "foo": {
-            "type": "string"
-          }
+          "foo": { "type": "string" }
         }
       }
     },
@@ -43,20 +38,16 @@
         "identifier": "bar",
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "bar",
-          "schema"
-        ],
+        "required": ["bar", "schema"],
         "display": "bar",
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "bar": {
-            "type": "string"
-          }
+          "bar": { "type": "string" }
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

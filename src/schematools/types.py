@@ -201,7 +201,7 @@ class JsonDict(UserDict):
 
 
 class SchemaType(JsonDict):
-    """Base class for top-level schema objects (dataset, table, profile)."""
+    """Base class for top-level schema objects (dataset, table, profile, publisher)."""
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
@@ -288,19 +288,24 @@ class DatasetSchema(SchemaType):
         """Parses given dict and validates the given schema."""
         return cls(obj, dataset_collection=dataset_collection)
 
-    def json(self, inline_tables: bool = False) -> str:
-        """Overwritten JSON logic that inlines tables by default."""
+    def json(self, inline_tables: bool = False, inline_publishers: bool = False) -> str:
+        """Overwritten JSON logic that allows inlining of $refs"""
+        if not inline_tables and not inline_publishers:
+            return json.dumps(self.data)
+
+        data = self.data.copy()
         if inline_tables and any(t.get("$ref") for t in self["tables"]):
-            data = self.data.copy()
             data["tables"] = [t.data for t in self.tables]
-        else:
-            data = self.data
+        if inline_publishers:
+            data["publisher"] = self.publisher
 
         return json.dumps(data)
 
-    def json_data(self, inline_tables: bool = False) -> Json:
+    def json_data(self, inline_tables: bool = False, inline_publishers: bool = False) -> Json:
         """Overwritten logic that inlines tables"""
-        return json.loads(self.json(inline_tables=inline_tables))
+        return json.loads(
+            self.json(inline_tables=inline_tables, inline_publishers=inline_publishers)
+        )
 
     @cached_property
     def python_name(self) -> str:
@@ -402,6 +407,21 @@ class DatasetSchema(SchemaType):
             for table_json in self["tables"]
             if "$ref" in table_json
         }
+
+    @cached_property
+    def publisher(self) -> Publisher | str:
+        """Access the publisher within the file."""
+        raw_publisher = self.json_data()["publisher"]
+        if type(raw_publisher) == str:
+            # Compatibility with meta-schemas prior to 2.0
+            return self["publisher"]
+
+        # From metaschema 2.0 it is an object { "$ref": "/publishers/ID" }
+        if self.loader is None:
+            raise RuntimeError(f"{self!r} has no loader defined, can't resolve publisher.")
+
+        publisher_id = raw_publisher["$ref"].split("/")[-1]
+        return self.loader.get_publisher(publisher_id)
 
     def get_tables(
         self,
@@ -2079,3 +2099,14 @@ class Faker:
 
     name: str
     properties: dict[str, Any] = dataclasses.field(default_factory=dict)
+
+
+class Publisher(SchemaType):
+    @classmethod
+    def from_file(cls, filename: str) -> Publisher:
+        with open(filename) as fh:
+            return cls.from_dict(json.load(fh))
+
+    @classmethod
+    def from_dict(cls, obj: Json) -> Publisher:
+        return cls(copy.deepcopy(obj))

@@ -11,9 +11,14 @@ from urllib.parse import urlparse
 import requests
 from more_ds.network.url import URL
 
-from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL
+from schematools import (
+    DEFAULT_PROFILE_URL,
+    DEFAULT_SCHEMA_URL,
+    PUBLISHER_DIR,
+    PUBLISHER_EXCLUDE_FILES,
+)
 from schematools.exceptions import DatasetNotFound, DatasetTableNotFound, SchemaObjectNotFound
-from schematools.types import DatasetSchema, DatasetTableSchema, Json, ProfileSchema
+from schematools.types import DatasetSchema, DatasetTableSchema, Json, ProfileSchema, Publisher
 
 __all__ = (
     "get_schema_loader",
@@ -46,6 +51,16 @@ class SchemaLoader:
         """
         raise NotImplementedError
 
+    def get_all_publishers(self) -> dict[str, Publisher]:
+        """Get all publishers from the schema location
+
+        The return value maps pulisher ids to Publisher objects.
+        """
+        raise NotImplementedError
+
+    def get_publisher(self, publisher_id: str) -> dict[str, Publisher]:
+        raise NotImplementedError
+
 
 class ProfileLoader:
     """Interface for loading profile objects"""
@@ -66,6 +81,7 @@ class CachedSchemaLoader(SchemaLoader):
         """
         self._loader = loader
         self._cache: dict[str, DatasetSchema] = {}
+        self._publisher_cache: dict[str, Publisher] = {}
         self._table_cache: dict[tuple[str, str], DatasetTableSchema] = {}
         self._has_all = False
 
@@ -128,6 +144,25 @@ class CachedSchemaLoader(SchemaLoader):
                 schema.id: schema for schema in self._loader.get_all_datasets().values()
             }
             self._has_all = True
+
+        return self._cache
+
+    def get_publisher(self, publisher_id: str) -> Publisher:
+        if publisher := self._publisher_cache.get(publisher_id) is not None:
+            return publisher
+
+        publisher = self._loader.get_publisher(publisher_id)
+        self._publisher_cache[publisher.id] = publisher
+        return publisher
+
+    def get_all_publishers(self) -> dict[str, Publisher]:
+        """Load all publishers, and fill the cache"""
+        if not self._has_all_publishers:
+            if self._loader is None:
+                raise RuntimeError("This dataset collection can't retrieve new publishers")
+
+            self._publisher_cache = self._loader.get_all_publishers()
+            self._has_all_publishers = True
 
         return self._cache
 
@@ -226,6 +261,22 @@ class _FileBasedSchemaLoader(SchemaLoader):
             dataset.tables  # noqa: ensure versioned tables are still prefetched
             datasets[dataset_path] = dataset
         return datasets
+
+    def get_publisher(self, publisher_id: str) -> dict[str, Publisher]:
+        return Publisher.from_dict(
+            _read_json_path((self.root.parent / PUBLISHER_DIR / publisher_id).with_suffix(".json"))
+        )
+
+    def get_all_publishers(self) -> dict[str, Publisher]:
+        result = {}
+        for path in (self.root.parent / PUBLISHER_DIR).glob("*.json"):
+            if path.name in PUBLISHER_EXCLUDE_FILES:
+                continue
+
+            publisher = Publisher.from_dict(_read_json_path(path))
+            result[publisher.id] = publisher
+
+        return result
 
 
 class FileSystemSchemaLoader(_FileBasedSchemaLoader):
@@ -363,7 +414,7 @@ def _read_json_path(dataset_file: Path) -> Json:
             try:
                 return json.load(stream)
             except json.JSONDecodeError as exc:
-                raise ValueError("Invalid Amsterdam Dataset schema file") from exc
+                raise ValueError("Invalid JSON file") from exc
     except FileNotFoundError as e:
         # Normalize the exception type for "not found" errors.
         raise SchemaObjectNotFound(str(dataset_file)) from e
@@ -432,6 +483,22 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
     def _read_table(self, dataset_id: str, table_ref: str) -> Json:
         dataset_path = self.get_dataset_path(dataset_id)
         return self._read_json_url(self.schema_url / dataset_path / table_ref)
+
+    def _get_publisher_url(self) -> URL:
+        return URL(self.schema_url.rpartition("/")[0]) / "publishers"
+
+    def get_publisher(self, publisher_id: str) -> Publisher:
+        url = self._get_publisher_url()
+        return Publisher.from_dict(self._read_json_url(url / publisher_id))
+
+    def get_all_publishers(self) -> dict[str, Publisher]:
+        url = self._get_publisher_url()
+        index = self._read_json_url(url / "index.json")
+        result = {}
+        for id_ in index:
+            result[id_] = Publisher.from_dict(self._read_json_url(url / id_))
+
+        return result
 
 
 class FileSystemProfileLoader(ProfileLoader):

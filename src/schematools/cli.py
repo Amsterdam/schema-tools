@@ -22,7 +22,7 @@ from sqlalchemy.schema import CreateTable
 from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL, ckan, validation
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
-from schematools.exceptions import DatasetNotFound, ParserError
+from schematools.exceptions import DatasetNotFound, ParserError, SchemaObjectNotFound
 from schematools.factories import tables_factory
 from schematools.importer.base import BaseImporter
 from schematools.importer.geojson import GeoJSONImporter
@@ -37,7 +37,7 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, Publisher
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
@@ -388,7 +388,7 @@ def validate(
     structural_errors = False
     try:
         jsonschema.validate(
-            instance=dataset.json_data(inline_tables=True),
+            instance=dataset.json_data(inline_tables=True, inline_publishers=True),
             schema=meta_schema,
             format_checker=draft7_format_checker,
         )
@@ -406,6 +406,47 @@ def validate(
 
     if structural_errors or semantic_errors:
         sys.exit(1)
+
+
+@schema.command()
+@option_schema_url
+@click.argument("meta_schema_url")
+def validate_publishers(schema_url: str, meta_schema_url: str) -> None:
+    """Validate all publishers against the Amsterdam Schema meta schema.
+
+    Args:
+
+    \b
+        META_SCHEMA_URL: URL where the meta schema for Amsterdam Schema definitions can be found.
+
+    Options:
+
+    \b
+        SCHEMA_URL: URL where the datasets for Amsterdam Schema definitions can be found. The path
+        component of this uri is dropped to find the publishers in the root. For example, if
+        SCHEMA_URL=https://example.com/datasets, the publishers are extracted from
+        https://example.com/publishers.
+    """  # noqa: D301,D412,D417
+    meta_schema = _fetch_json(meta_schema_url)
+    publishers = _get_publishers(schema_url)
+
+    structural_errors = False
+    for id_, publisher in publishers.items():
+        try:
+            click.echo(f"Validating publisher with id {id_}")
+            jsonschema.validate(
+                instance=publisher.json_data(),
+                schema=meta_schema,
+                format_checker=draft7_format_checker,
+            )
+        except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+            click.echo("Structural validation: ", nl=False)
+            structural_errors = True
+            click.echo(f"\n{e!s}", err=True)
+
+        if structural_errors:
+            sys.exit(1)
+    click.echo("All publishers are structurally valid")
 
 
 @schema.command()
@@ -464,7 +505,7 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
             break
         try:
             jsonschema.validate(
-                instance=dataset.json_data(inline_tables=True),
+                instance=dataset.json_data(inline_tables=True, inline_publishers=True),
                 schema=meta_schema,
                 format_checker=draft7_format_checker,
             )
@@ -698,6 +739,21 @@ def _get_dataset_schema(
     try:
         return loader.get_dataset(dataset_id, prefetch_related=prefetch_related)
     except DatasetNotFound as e:
+        raise click.ClickException(str(e))
+
+
+def _get_publishers(schema_url: str) -> dict[str, Publisher]:
+    """Find the dataset schema for the given dataset.
+
+    Args:
+        dataset_id: id of the dataset.
+        schema_url: url of the location where the collection of amsterdam schemas is found.
+        prefetch_related: related schemas should be prefetched.
+    """
+    loader = get_schema_loader(schema_url)
+    try:
+        return loader.get_all_publishers()
+    except SchemaObjectNotFound as e:
         raise click.ClickException(str(e))
 
 

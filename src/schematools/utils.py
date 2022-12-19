@@ -134,3 +134,12 @@ def dataset_schemas_from_schemas_path(root: Path | str) -> dict[str, types.Datas
 
     loader = FileSystemSchemaLoader(root)
     return loader.get_all_datasets()
+
+
+def publishers_from_url(base_url: URL | str) -> dict[str, list[types.Publisher]]:
+    """
+    The URL could be ``https://schemas.data.amsterdam.nl/publishers/``
+    """
+
+    loader = URLSchemaLoader(base_url)
+    return loader.get_all_publishers()

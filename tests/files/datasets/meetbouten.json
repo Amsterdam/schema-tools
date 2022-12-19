@@ -21,27 +21,15 @@
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "identificatie": {
-            "type": "integer"
-          },
+          "identificatie": { "type": "integer" },
           "ligtInBuurt": {
             "relation": "gebieden:buurten",
             "type": "object",
             "properties": {
-              "identificatie": {
-                "type": "string"
-              },
-              "volgnummer": {
-                "type": "integer"
-              },
-              "beginGeldigheid": {
-                "type": "string",
-                "format": "date"
-              },
-              "eindGeldigheid": {
-                "type": "string",
-                "format": "date"
-              }
+              "identificatie": { "type": "string" },
+              "volgnummer": { "type": "integer" },
+              "beginGeldigheid": { "type": "string", "format": "date" },
+              "eindGeldigheid": { "type": "string", "format": "date" }
             },
             "description": "De buurt waarbinnen de meetbout ligt"
           },
@@ -92,11 +80,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "properties": {
-                "identificatie": {
-                  "type": "string"
-                }
-              }
+              "properties": { "identificatie": { "type": "string" } }
             },
             "description": "De referentiepunten waar de metingen aan worden opgehangen"
           }
@@ -130,5 +114,6 @@
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

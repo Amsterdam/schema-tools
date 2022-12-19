@@ -14,9 +14,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/kadastraleobjecten.json",
@@ -68,12 +66,8 @@
             "items": {
               "type": "object",
               "properties": {
-                "identificatie": {
-                  "type": "string"
-                },
-                "volgnummer": {
-                  "type": "integer"
-                }
+                "identificatie": { "type": "string" },
+                "volgnummer": { "type": "integer" }
               }
             },
             "relation": "brk:kadastraleobjecten",
@@ -83,5 +77,6 @@
         "mainGeometry": "geometrie"
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

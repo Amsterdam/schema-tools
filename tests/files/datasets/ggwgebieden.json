@@ -13,9 +13,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
@@ -54,7 +52,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -77,12 +75,8 @@
           "ligtInWijk": {
             "type": "object",
             "properties": {
-              "identificatie": {
-                "type": "string"
-              },
-              "volgnummer": {
-                "type": "integer"
-              }
+              "identificatie": { "type": "string" },
+              "volgnummer": { "type": "integer" }
             },
             "relation": "ggwgebieden:wijken",
             "description": "De wijk waar de buurt in ligt."
@@ -100,9 +94,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
@@ -128,7 +120,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -148,9 +140,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["begingeldigheid", "eindgeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["begingeldigheid", "eindgeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/ggwgebieden.json",
@@ -188,7 +178,7 @@
           "begingeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindgeldigheid": {
             "type": "string",
@@ -204,12 +194,8 @@
             "relation": "ggwgebieden:stadsdelen",
             "type": "object",
             "properties": {
-              "identificatie": {
-                "type": "string"
-              },
-              "volgnummer": {
-                "type": "integer"
-              }
+              "identificatie": { "type": "string" },
+              "volgnummer": { "type": "integer" }
             },
             "description": "Het stadsdeel waar het gebied in ligt."
           },
@@ -219,12 +205,8 @@
             "items": {
               "type": "object",
               "properties": {
-                "identificatie": {
-                  "type": "string"
-                },
-                "volgnummer": {
-                  "type": "integer"
-                }
+                "identificatie": { "type": "string" },
+                "volgnummer": { "type": "integer" }
               }
             },
             "description": "De buurten waaruit het object bestaat."
@@ -238,9 +220,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/stadsdelen.json",
@@ -266,7 +246,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -280,5 +260,6 @@
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

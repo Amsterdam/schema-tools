@@ -19,10 +19,7 @@
         "required": ["id", "schema"],
         "display": "id",
         "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Container-ID"
-          },
+          "id": { "type": "integer", "description": "Container-ID" },
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema"
           },
@@ -69,18 +66,14 @@
         "required": ["id", "schema"],
         "display": "id",
         "properties": {
-          "id": {
-            "type": "string"
-          },
+          "id": { "type": "string" },
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema"
           },
-          "status": {
-            "type": "string",
-            "description": "Status"
-          }
+          "status": { "type": "string", "description": "Status" }
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }
