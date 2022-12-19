@@ -1,22 +1,24 @@
 {
+  "id": "metaschema2",
   "type": "dataset",
-  "id": "stadsdelen",
-  "title": "gebieden",
   "status": "beschikbaar",
-  "version": "0.0.1",
+  "version": "2.0.0",
+  "default_version": "2.0.0",
   "crs": "EPSG:28992",
+  "publisher": {
+    "$ref": "/publishers/HARRY"
+  },
   "tables": [
     {
-      "id": "stadsdelen",
-      "mainGeometry": "geometrie",
+      "id": "tabelleke",
       "type": "table",
       "version": "1.0.0",
       "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/gebieden/stadsdelen.json",
+        "$id": "https://github.com/Amsterdam/schemas/tabelleke/referentiepunten.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "additionalProperties": false,
-        "identifier": ["id"],
+        "identifier": "identificatie",
         "required": ["schema", "id"],
         "display": "id",
         "properties": {
@@ -25,16 +27,14 @@
           },
           "id": {
             "type": "string",
-            "description": "Unieke identificatie voor dit object, inclusief volgnummer"
+            "description": "Unieke identificatie voor dit object"
           },
-          "ligtInGemeente": {
+          "identificatie": {
             "type": "string",
-            "$comment": "relation brk:gemeentes *stringify*",
-            "description": "De gemeente waar het stadsdeel in ligt."
+            "description": "Unieke identificatie van de meting"
           }
         }
       }
     }
-  ],
-  "publisher": "unknown"
+  ]
 }

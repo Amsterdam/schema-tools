@@ -12,6 +12,11 @@ DATABASE_SCHEMA_NAME_DEFAULT: Final[str] = "public"
 # Defaults
 DEFAULT_SCHEMA_URL: Final[str] = "https://schemas.data.amsterdam.nl/datasets/"
 DEFAULT_PROFILE_URL: Final[str] = "https://schemas.data.amsterdam.nl/profiles/"
+# The directory where all publisher objects are defined for amsterdam-schema
+PUBLISHER_DIR: Final[str] = "publishers"
+# Files that can exist in publishers directory but should be ignored by
+# the FileLoaders
+PUBLISHER_EXCLUDE_FILES: Final[str] = ["publishers.json", "index.json"]
 
 # Common coordinate reference systems
 CRS_WGS84: Final[str] = "EPSG:4326"  # World Geodetic System 1984, used in GPS

@@ -25,9 +25,7 @@
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "identifier": {
-            "type": "string"
-          },
+          "identifier": { "type": "string" },
           "sbiActiviteitNummer": {
             "type": "string",
             "description": "Samenstelling van KvK-nummer en/of Vestigingsnummer of {BSN- of RSIN-nummer}",
@@ -42,5 +40,6 @@
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

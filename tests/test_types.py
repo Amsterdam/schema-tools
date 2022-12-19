@@ -52,6 +52,7 @@ def test_datasetschema_from_file_not_a_dataset(schema_loader) -> None:
         # v1.0.0.json is a DatasetRow, not a DatasetSchema.
         schema_loader.get_dataset_from_file("gebieden_sep_tables/bouwblokken/v1.0.0.json")
 
+    error_msg = "Invalid JSON file"
     with pytest.raises(ValueError, match=error_msg):
         # not_a_json_file.txt is not a JSON file. We should still get our ValueError.
         schema_loader.get_dataset_from_file("not_a_json_file.txt")
@@ -260,3 +261,16 @@ def test_raise_exception_on_missing_properties_in_array(schema_loader):
         KeyError, match=r"Key 'properties' not defined in 'meetbouten.broken_array'"
     ):
         schema.get_table_by_id("meetbouten")
+
+
+def test_load_publisher_object_from_dataset(schema_loader):
+    """Test that we can retrieve a publisher object from a DatasetSchema
+    as defined by metaschema 2.0"""
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+
+    assert schema.publisher == {
+        "name": "Datateam Harry",
+        "id": "HARRY",
+        "shortname": "harhar",
+        "tags": {"team": "taggy", "costcenter": "123456789.4321.13519"},
+    }

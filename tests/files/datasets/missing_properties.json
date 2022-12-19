@@ -23,15 +23,12 @@
           },
           "broken_array": {
             "type": "array",
-            "items": {
-              "type": "object",
-              "exclusiveMaximum": 11,
-              "minimum": 1
-              },
+            "items": { "type": "object", "exclusiveMaximum": 11, "minimum": 1 },
             "description": "This array is incorrect because it is missing a 'properties' object."
           }
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

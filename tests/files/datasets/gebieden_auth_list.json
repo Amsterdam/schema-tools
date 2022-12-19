@@ -15,9 +15,7 @@
       "auth": ["LEVEL/B1", "LEVEL/B2"],
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
@@ -39,7 +37,7 @@
             "type": "string",
             "format": "date",
             "auth": ["LEVEL/C1", "LEVEL/C2"],
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -62,9 +60,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
@@ -103,7 +99,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -126,12 +122,8 @@
           "ligtInWijk": {
             "type": "object",
             "properties": {
-              "identificatie": {
-                "type": "string"
-              },
-              "volgnummer": {
-                "type": "integer"
-              }
+              "identificatie": { "type": "string" },
+              "volgnummer": { "type": "integer" }
             },
             "relation": "gebieden:wijken",
             "description": "De wijk waar de buurt in ligt."
@@ -149,9 +141,7 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
-        }
+        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
@@ -177,7 +167,7 @@
           "beginGeldigheid": {
             "type": "string",
             "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
+            "description": "De datum waarop het object is gecre\u00eberd."
           },
           "eindGeldigheid": {
             "type": "string",
@@ -191,5 +181,6 @@
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

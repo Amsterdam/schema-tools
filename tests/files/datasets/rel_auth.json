@@ -21,10 +21,7 @@
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "stop": {
-            "type": "string",
-            "description": "U can't touch this."
-          }
+          "stop": { "type": "string", "description": "U can't touch this." }
         }
       }
     },
@@ -43,10 +40,7 @@
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "id": {
-            "type": "string",
-            "description": "Whatever"
-          },
+          "id": { "type": "string", "description": "Whatever" },
           "rel": {
             "type": "string",
             "description": "This should not be allowed",
@@ -55,5 +49,6 @@
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

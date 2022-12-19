@@ -17,55 +17,30 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "geslachtsaanduiding": {
-            "type": "string"
-          },
+          "geslachtsaanduiding": { "type": "string" },
           "naam": {
             "type": "object",
             "properties": {
-              "aanduidingNaamgebruik": {
-                "type": "string"
-              },
-              "voornamen": {
-                "type": "string"
-              },
-              "voorletters": {
-                "type": "string"
-              },
-              "geslachtsnaam": {
-                "type": "string"
-              },
-              "voorvoegsel": {
-                "type": "string"
-              }
+              "aanduidingNaamgebruik": { "type": "string" },
+              "voornamen": { "type": "string" },
+              "voorletters": { "type": "string" },
+              "geslachtsnaam": { "type": "string" },
+              "voorvoegsel": { "type": "string" }
             },
             "required": []
           },
-          "leeftijd": {
-            "type": "integer"
-          },
-          "burgerservicenummer": {
-            "type": "string"
-          },
+          "leeftijd": { "type": "integer" },
+          "burgerservicenummer": { "type": "string" },
           "geboorte": {
             "type": "object",
             "properties": {
               "datum": {
                 "type": "object",
                 "properties": {
-                  "datum": {
-                    "type": "string",
-                    "format": "date"
-                  },
-                  "jaar": {
-                    "type": "integer"
-                  },
-                  "maand": {
-                    "type": "integer"
-                  },
-                  "dag": {
-                    "type": "integer"
-                  }
+                  "datum": { "type": "string", "format": "date" },
+                  "jaar": { "type": "integer" },
+                  "maand": { "type": "integer" },
+                  "dag": { "type": "integer" }
                 },
                 "required": []
               }
@@ -75,65 +50,35 @@
           "verblijfplaats": {
             "type": "object",
             "properties": {
-              "functieAdres": {
-                "type": "string"
-              },
-              "huisnummer": {
-                "type": "string"
-              },
-              "postcode": {
-                "type": "string"
-              },
-              "straatnaam": {
-                "type": "string"
-              },
+              "functieAdres": { "type": "string" },
+              "huisnummer": { "type": "string" },
+              "postcode": { "type": "string" },
+              "straatnaam": { "type": "string" },
               "datumAanvangAdreshouding": {
                 "type": "object",
                 "properties": {
-                  "datum": {
-                    "type": "string",
-                    "format": "date"
-                  },
-                  "jaar": {
-                    "type": "integer"
-                  },
-                  "maand": {
-                    "type": "integer"
-                  },
-                  "dag": {
-                    "type": "integer"
-                  }
+                  "datum": { "type": "string", "format": "date" },
+                  "jaar": { "type": "integer" },
+                  "maand": { "type": "integer" },
+                  "dag": { "type": "integer" }
                 },
                 "required": []
               },
               "datumInschrijvingInGemeente": {
                 "type": "object",
                 "properties": {
-                  "datum": {
-                    "type": "string",
-                    "format": "date"
-                  },
-                  "jaar": {
-                    "type": "integer"
-                  },
-                  "maand": {
-                    "type": "integer"
-                  },
-                  "dag": {
-                    "type": "integer"
-                  }
+                  "datum": { "type": "string", "format": "date" },
+                  "jaar": { "type": "integer" },
+                  "maand": { "type": "integer" },
+                  "dag": { "type": "integer" }
                 },
                 "required": []
               },
               "gemeenteVanInschrijving": {
                 "type": "object",
                 "properties": {
-                  "code": {
-                    "type": "string"
-                  },
-                  "omschrijving": {
-                    "type": "string"
-                  }
+                  "code": { "type": "string" },
+                  "omschrijving": { "type": "string" }
                 },
                 "required": []
               }
@@ -141,10 +86,9 @@
             "required": []
           }
         },
-        "required": [
-          "burgerservicenummer"
-        ]
+        "required": ["burgerservicenummer"]
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }

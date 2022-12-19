@@ -18,20 +18,16 @@
         "identifier": "foobar",
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "fubar",
-          "schema"
-        ],
+        "required": ["fubar", "schema"],
         "display": "fubar",
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "fubar": {
-            "type": "string"
-          }
+          "fubar": { "type": "string" }
         }
       }
     }
-  ]
+  ],
+  "publisher": "unknown"
 }
