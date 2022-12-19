@@ -323,11 +323,6 @@ class DatasetSchema(SchemaType):
         return self.get("license")
 
     @property
-    def identifier(self) -> str:
-        """Which fields acts as identifier. (default is Django "pk" field)."""
-        return self.get("identifier", "pk")
-
-    @property
     def version(self) -> str:
         """Dataset Schema version."""
         return self.get("version", None)
