@@ -1,4 +1,4 @@
-# 2022-12-14 (5.1.6)
+# 2022-12-19 (5.1.6)
 
 * Several minor fixes to tests.
 * Removal of unused DatasetSchema.identifier property
