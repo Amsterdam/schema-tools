@@ -1,3 +1,9 @@
+# 2022-12-14 (5.1.6)
+
+* Several minor fixes to tests.
+* Removal of unused DatasetSchema.identifier property
+* Add `neuronId` is mapping needed for through table identifiers
+
 # 2022-12-14 (5.1.5)
 
 * Mocked schemas now use properly camel-cased field names.
