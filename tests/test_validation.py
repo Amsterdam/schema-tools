@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from schematools import validation
 from schematools.permissions import PUBLIC_SCOPE
 from schematools.types import DatasetSchema
@@ -246,6 +248,7 @@ def test_rel_auth_field(here: Path) -> None:
     assert any("requires scopes ['HAMMERTIME']" in str(e) for e in errors)
 
 
+@pytest.mark.skip(reason="See comment in validator function")
 def test_repetitive_naming(here: Path, schema_loader) -> None:
     dataset = schema_loader.get_dataset("repetitive")
     errors = {str(e) for e in validation.run(dataset)}
