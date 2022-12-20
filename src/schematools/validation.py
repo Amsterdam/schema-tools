@@ -210,10 +210,18 @@ def _repetitive_naming(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:
         if table.id != dataset.id and table.id.startswith(dataset.id):
             yield f"table name {table.id!r} should not start with {dataset.id!r}"
-        for field in table.fields:
-            for prefix in [dataset.id, table.id]:
-                if field.id.startswith(prefix):
-                    yield f"field name {field.id!r} should not start with {prefix!r}"
+        # NOTE: The code below is temporarily commented out because a lot of datasets are not
+        # compliant with this rule (the precommit hook in ams-schema was
+        # misconfigured, causing it to bypass checks on a lot of schemas for a long time).
+        #
+        # Making all datasets compliant with this is a lot of work and there is no known
+        # component downstream which breaks because of violation of this rule, so until
+        # we get all datasets compliant, we bypass this check.
+
+        # for field in table.fields:
+        # for prefix in [dataset.id, table.id]:
+        # if field.id.startswith(prefix):
+        # yield f"field name {field.id!r} should not start with {prefix!r}"
 
 
 @_register_validator("identifier properties")
