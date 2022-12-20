@@ -399,12 +399,10 @@ def validate(
     for schema in additional_schemas:
         _get_dataset_schema(schema, schema_url)
 
-    ordered = sorted(
-        [(u, version_from_metaschema_url(u)) for u in set(meta_schema_url)],
-        key=lambda t: t[1],
+    for meta_schema_version, url in sorted(
+        [(version_from_metaschema_url(u), u) for u in set(meta_schema_url)],
         reverse=True,
-    )
-    for url, meta_schema_version in ordered:
+    ):
         click.echo(f"Validating against metaschema {meta_schema_version}")
         meta_schema = _fetch_json(url)
         if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
