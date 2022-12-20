@@ -18,7 +18,7 @@ class DatasetFieldNotFound(SchemaObjectNotFound):
     """The field could not be found."""
 
 
-class IncompatibleMetaschema(ValueError):
+class IncompatibleMetaschema(Exception):
     """This package version of schema-tools
     is being used with a metaschema that it is
     not compatible with."""
