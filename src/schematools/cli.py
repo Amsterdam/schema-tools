@@ -554,7 +554,10 @@ def batch_validate(
         if main_file in done:
             continue
 
-        for url in [meta_schema_url, extra_meta_schema_url]:
+        meta_schema_urls = [meta_schema_url]
+        if extra_meta_schema_url:
+            meta_schema_urls.append(extra_meta_schema_url)
+        for url in meta_schema_urls:
             meta_schema_version = version_from_metaschema_url(url)
             click.echo(f"Validating {main_file} against {meta_schema_version}")
 
