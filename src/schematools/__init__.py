@@ -31,3 +31,8 @@ SRID_3D: Final[List[int]] = [
     4979,  # WGS84 + height
     4978,  # WGS84 + geocentric height
 ]
+# The meta-schema major versions in amsterdam-schema that this
+# package version is compatible with. This means that it
+# can only handle schema objects that are compliant
+# under at least one of these versions.
+COMPATIBLE_METASCHEMAS = [1, 2]

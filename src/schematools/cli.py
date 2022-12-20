@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from collections import defaultdict
+from importlib.metadata import version
 from pathlib import Path, PosixPath
 from typing import Any, DefaultDict, Iterable, List
 
@@ -19,10 +20,21 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateTable
 
-from schematools import DEFAULT_PROFILE_URL, DEFAULT_SCHEMA_URL, ckan, validation
+from schematools import (
+    COMPATIBLE_METASCHEMAS,
+    DEFAULT_PROFILE_URL,
+    DEFAULT_SCHEMA_URL,
+    ckan,
+    validation,
+)
 from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
-from schematools.exceptions import DatasetNotFound, ParserError, SchemaObjectNotFound
+from schematools.exceptions import (
+    DatasetNotFound,
+    IncompatibleMetaschema,
+    ParserError,
+    SchemaObjectNotFound,
+)
 from schematools.factories import tables_factory
 from schematools.importer.base import BaseImporter
 from schematools.importer.geojson import GeoJSONImporter
@@ -37,7 +49,7 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema, Publisher
+from schematools.types import DatasetSchema, Publisher, SemVer
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
@@ -48,6 +60,7 @@ formatter = logging.Formatter("%(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
+pkg_version = version("amsterdam-schema-tools")
 
 option_db_url = click.option(
     "--db-url",
@@ -364,9 +377,9 @@ def _fetch_json(location: str) -> dict[str, Any]:
         "To be used mainly for schemas that are related to the schema that is being validated."
     ),
 )
-@click.argument("meta_schema_url")
+@click.argument("meta_schema_url", nargs=-1)
 def validate(
-    schema_url: str, dataset_id: str, additional_schemas: list[str], meta_schema_url: str
+    schema_url: str, dataset_id: str, additional_schemas: list[str], meta_schema_url: tuple[str]
 ) -> None:
     """Validate a schema against the Amsterdam Schema meta schema.
 
@@ -375,8 +388,9 @@ def validate(
     \b
         DATASET_ID: id of the dataset.
         META_SCHEMA_URL: URL where the meta schema for Amsterdam Schema definitions can be found.
+        If multiple are given, schematools will try to validate against the largest version,
+        working backwards and stopping at the first version that the objects are valid against.
     """  # noqa: D301,D412,D417
-    meta_schema = _fetch_json(meta_schema_url)
     dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
 
     # The additional schemas are fetched, but the result is not used
@@ -385,39 +399,63 @@ def validate(
     for schema in additional_schemas:
         _get_dataset_schema(schema, schema_url)
 
-    structural_errors = False
-    try:
-        jsonschema.validate(
-            instance=dataset.json_data(inline_tables=True, inline_publishers=True),
-            schema=meta_schema,
-            format_checker=draft7_format_checker,
-        )
-    except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
-        click.echo("Structural validation: ", nl=False)
-        structural_errors = True
-        click.echo(f"\n{e!s}", err=True)
+    ordered = sorted(
+        [(u, version_from_metaschema_url(u)) for u in set(meta_schema_url)],
+        key=lambda t: t[1],
+        reverse=True,
+    )
+    for url, meta_schema_version in ordered:
+        click.echo(f"Validating against metaschema {meta_schema_version}")
+        meta_schema = _fetch_json(url)
+        if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
+            raise IncompatibleMetaschema(
+                f"Schematools {pkg_version} is not compatible"
+                f" with metaschema {meta_schema_version}"
+            )
+        structural_errors = False
 
-    semantic_errors = False
-    for error in validation.run(dataset):
-        if not semantic_errors:  # Only print on first error.
-            click.echo("Semantic validation: ", nl=False)
-            semantic_errors = True
-        click.echo(f"\n{error!s}", err=True)
+        try:
+            jsonschema.validate(
+                instance=dataset.json_data(inline_tables=True, inline_publishers=True),
+                schema=meta_schema,
+                format_checker=draft7_format_checker,
+            )
+        except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+            click.echo("Structural validation: ", nl=False)
+            structural_errors = True
+            click.echo(f"\n{e!s}", err=True)
 
-    if structural_errors or semantic_errors:
-        sys.exit(1)
+        semantic_errors = False
+        for error in validation.run(dataset):
+            if not semantic_errors:  # Only print on first error.
+                click.echo("Semantic validation: ", nl=False)
+                semantic_errors = True
+            click.echo(f"\n{error!s}", err=True)
+
+        if structural_errors or semantic_errors:
+            continue
+        click.echo(f"Dataset is valid against {meta_schema_version}")
+        sys.exit(0)
+    click.echo("Dataset is invalid for all supplied metaschemas")
+    sys.exit(1)
+
+
+def version_from_metaschema_url(url: str) -> SemVer:
+    return SemVer(url.rpartition("@")[2])
 
 
 @schema.command()
 @option_schema_url
-@click.argument("meta_schema_url")
-def validate_publishers(schema_url: str, meta_schema_url: str) -> None:
+@click.argument("meta_schema_url", nargs=-1)
+def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
     """Validate all publishers against the Amsterdam Schema meta schema.
 
     Args:
 
     \b
         META_SCHEMA_URL: URL where the meta schema for Amsterdam Schema definitions can be found.
+        If multiple are given, schematools will try to validate against the largest version,
+        working backwards and stopping at the first version that the objects are valid against.
 
     Options:
 
@@ -427,32 +465,55 @@ def validate_publishers(schema_url: str, meta_schema_url: str) -> None:
         SCHEMA_URL=https://example.com/datasets, the publishers are extracted from
         https://example.com/publishers.
     """  # noqa: D301,D412,D417
-    meta_schema = _fetch_json(meta_schema_url)
-    publishers = _get_publishers(schema_url)
-
-    structural_errors = False
-    for id_, publisher in publishers.items():
-        try:
-            click.echo(f"Validating publisher with id {id_}")
-            jsonschema.validate(
-                instance=publisher.json_data(),
-                schema=meta_schema,
-                format_checker=draft7_format_checker,
+    ordered = sorted(
+        [(u, version_from_metaschema_url(u)) for u in set(meta_schema_url)],
+        key=lambda t: t[1],
+        reverse=True,
+    )
+    for url, meta_schema_version in ordered:
+        meta_schema = _fetch_json(url)
+        if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
+            raise IncompatibleMetaschema(
+                f"Schematools {pkg_version} is not"
+                f"compatible with metaschema {meta_schema_version}"
             )
-        except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
-            click.echo("Structural validation: ", nl=False)
-            structural_errors = True
-            click.echo(f"\n{e!s}", err=True)
+
+        click.echo(f"Validating against metaschema {meta_schema_version}")
+        publishers = _get_publishers(schema_url)
+
+        structural_errors = False
+        for id_, publisher in publishers.items():
+            try:
+                click.echo(f"Validating publisher with id {id_}")
+                jsonschema.validate(
+                    instance=publisher.json_data(),
+                    schema=meta_schema,
+                    format_checker=draft7_format_checker,
+                )
+            except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+                click.echo("Structural validation: ", nl=False)
+                structural_errors = True
+                click.echo(f"\n{e!s}", err=True)
 
         if structural_errors:
-            sys.exit(1)
-    click.echo("All publishers are structurally valid")
+            continue
+        click.echo("All publishers are structurally valid against {meta_schema_version}")
+        sys.exit(0)
+    click.echo("Publishers are structurally invalid against all supplied metaschema versions")
+    sys.exit(1)
 
 
 @schema.command()
 @click.argument("meta_schema_url")
 @click.argument("schema_files", nargs=-1)
-def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
+@click.option(
+    "-m",
+    "--extra_meta_schema_url",
+    help="An additional metaschema to try validation in case meta_schema_url fails",
+)
+def batch_validate(
+    meta_schema_url: str, schema_files: tuple[str], extra_meta_schema_url: str
+) -> None:
     """Batch validate schemas.
 
     This command was tailored so that it could be run from a pre-commit hook.
@@ -462,6 +523,7 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
     validated.
 
     It will perform both structural and semantic validation of schemas.
+    If extra_meta_schema_url is supplied, meta_schema_url will be tried first.
 
     Args:
 
@@ -469,8 +531,8 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
         META_SCHEMA_URL: the URL to the Amsterdam meta schema
         SCHEMA_FILES: one or more schema files to be validated
     """  # noqa: D301,D412,D417
-    meta_schema = _fetch_json(meta_schema_url)
-    errors: DefaultDict[str, list[str]] = defaultdict(list)
+
+    errors: DefaultDict[str, defaultdict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
 
     # Find the root "datasets" directory.
     datasets_dir = Path(os.path.commonpath(schema_files)).absolute()
@@ -495,31 +557,48 @@ def batch_validate(meta_schema_url: str, schema_files: tuple[str]) -> None:
         main_file = os.path.join(ds_dir.name, "dataset.json")
         if main_file in done:
             continue
+
+        for url in [meta_schema_url, extra_meta_schema_url]:
+            meta_schema_version = version_from_metaschema_url(url)
+            click.echo(f"Validating {main_file} against {meta_schema_version}")
+
+            try:
+                dataset = loader.get_dataset_from_file(main_file)
+            except ValueError as ve:
+                errors[schema_file][meta_schema_version].append(str(ve))
+                # No sense in continuing if we can't read the schema file.
+                break
+
+            meta_schema = _fetch_json(url)
+            try:
+                jsonschema.validate(
+                    instance=dataset.json_data(inline_tables=True, inline_publishers=True),
+                    schema=meta_schema,
+                    format_checker=draft7_format_checker,
+                )
+            except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
+                errors[schema_file][meta_schema_version].append(
+                    f"{struct_error.message}: ({', '.join(struct_error.path)})"
+                )
+
+            for sem_error in validation.run(dataset, schema_file):
+                errors[schema_file][meta_schema_version].append(str(sem_error))
+
+            if not errors[schema_file][meta_schema_version]:
+                click.echo(f"{schema_file} is valid against meta schema {meta_schema_version}")
+                # We dont show errors if the file is valid against one of the metaschemas
+                errors.pop(schema_file)
+                break
         done.add(main_file)
 
-        try:
-            dataset = loader.get_dataset_from_file(main_file)
-        except ValueError as ve:
-            errors[schema_file].append(str(ve))
-            # No sense in continuing if we can't read the schema file.
-            break
-        try:
-            jsonschema.validate(
-                instance=dataset.json_data(inline_tables=True, inline_publishers=True),
-                schema=meta_schema,
-                format_checker=draft7_format_checker,
-            )
-        except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
-            errors[schema_file].append(f"{struct_error.message}: ({', '.join(struct_error.path)})")
-
-        for sem_error in validation.run(dataset, schema_file):
-            errors[schema_file].append(str(sem_error))
-    if errors:
-        width = len(max(errors.keys()))
-        for schema_file, error_messages in errors.items():
-            for err_msg in error_messages:
-                click.echo(f"{schema_file:>{width}}: {err_msg}")
-        sys.exit(1)
+        if errors:
+            width = len(max(errors.keys(), key=lambda x: len(x)))
+            for schema_file, versions in errors.items():
+                click.echo(f"{schema_file} is invalid against all metaschema versions")
+                version_width = len(max(versions.keys(), key=lambda x: len(x)))
+                for version_, err_msg in versions.items():
+                    click.echo(f"{schema_file:>{width}} - {version_:>{version_width}}: {err_msg}")
+            sys.exit(1)
 
 
 @schema.command("ckan")

@@ -16,3 +16,13 @@ class DatasetTableNotFound(SchemaObjectNotFound):
 
 class DatasetFieldNotFound(SchemaObjectNotFound):
     """The field could not be found."""
+
+
+class IncompatibleMetaschema(ValueError):
+    """This package version of schema-tools
+    is being used with a metaschema that it is
+    not compatible with."""
+
+
+class PendingMetaschemaDeprecation(PendingDeprecationWarning):
+    """The used metaschema is marked for deprecation."""
