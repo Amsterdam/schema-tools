@@ -1,3 +1,11 @@
+# 2022-12-20 (5.2.0)
+
+* Support loading and validating publishers from the schema-server.
+* Make schematools aware of the metaschema major versions it can work with.
+* Support for attempting validation against multiple metaschemas.
+
+SUPPORTED METASCHEMAS: 1 2
+
 # 2022-12-19 (5.1.6)
 
 * Several minor fixes to tests.
