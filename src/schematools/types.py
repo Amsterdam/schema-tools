@@ -26,8 +26,6 @@ from typing import (
     cast,
 )
 
-import jsonschema
-from jsonschema import draft7_format_checker
 from methodtools import lru_cache
 
 from schematools import MAX_TABLE_NAME_LENGTH
@@ -297,8 +295,11 @@ class DatasetSchema(SchemaType):
         if inline_tables and any(t.get("$ref") for t in self["tables"]):
             data["tables"] = [t.data for t in self.tables]
         if inline_publishers:
-            data["publisher"] = self.publisher
-
+            # compatibility with metaschema 1 en 2
+            if type(self.publisher) == dict:
+                self["publisher"] = self.publisher.json_data()
+            else:
+                self["publisher"] = self["publisher"]
         return json.dumps(data)
 
     def json_data(self, inline_tables: bool = False, inline_publishers: bool = False) -> Json:
@@ -982,14 +983,6 @@ class DatasetTableSchema(SchemaType):
     def has_composite_key(self) -> bool:
         """Tell whether the table uses multiple attributes together as it's identifier."""
         return len(self.identifier) > 1
-
-    def validate(self, row: Json) -> None:
-        """Validate a record against the schema."""
-        jsonschema.validate(row, self.data["schema"], format_checker=draft7_format_checker)
-
-    def _resolve(self, ref: str) -> jsonschema.RefResolver:
-        """Resolve the actual data type of a remote URI reference."""
-        return jsonschema.RefResolver(ref, referrer=self)
 
     @property
     def has_parent_table(self) -> bool:
