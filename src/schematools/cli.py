@@ -465,12 +465,10 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
         SCHEMA_URL=https://example.com/datasets, the publishers are extracted from
         https://example.com/publishers.
     """  # noqa: D301,D412,D417
-    ordered = sorted(
-        [(u, version_from_metaschema_url(u)) for u in set(meta_schema_url)],
-        key=lambda t: t[1],
+    for meta_schema_version, url in sorted(
+        [(version_from_metaschema_url(u), u) for u in set(meta_schema_url)],
         reverse=True,
-    )
-    for url, meta_schema_version in ordered:
+    ):
         meta_schema = _fetch_json(url)
         if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
             raise IncompatibleMetaschema(
