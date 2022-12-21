@@ -1,3 +1,10 @@
+# 2022-12-21 (5.3.0)
+
+* Bugfix in batch_validate that treats extra_meta_schema_url as an argument instead of an option.
+* Add pre-commit hook for validating publishers
+
+SUPPORTED METASCHEMAS: 1 2
+
 # 2022-12-20 (5.2.0)
 
 * Support loading and validating publishers from the schema-server.
