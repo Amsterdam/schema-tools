@@ -13,7 +13,7 @@ def from_dataset(ds: DatasetSchema, path: str) -> dict[str, Any]:
 
     The output, as JSON, can be used in a CKAN create_package request.
 
-    Documentation for the format can be pieced together from:
+    A limited amount of documentation for the format can be pieced together from:
     * https://docs.ckan.org/en/2.9/api/index.html
     * https://ckanext-dcatdonl.readthedocs.io/en/latest/usage-creationandupdating.html
     * https://waardelijsten.dcat-ap-donl.nl/
@@ -28,11 +28,17 @@ def from_dataset(ds: DatasetSchema, path: str) -> dict[str, Any]:
     has_geo = any(table.has_geometry_fields for table in ds.tables)
     theme = THEME_RUIMTE if has_geo else THEME_BESTUUR
 
+    # Apparently, titles must be globally unique. If they're not, we get an error message that
+    # complains about non-unique identifiers. So, add "_amsterdam_dso-api" to prevent clashes.
+    #
+    # TODO if we upload anything with uppercase letters or spaces, we get an error message.
+    # But most datasets in the catalog at data.overheid.nl do use those. Figure out how to
+    # preserve uppercase and spaces.
     title = (
         ds.title.lower().replace(" ", "_")
         if ds.title is not None and ALMOST_NAME.match(ds.title)
         else ds.id.lower()
-    )
+    ) + "_amsterdam_dso-api"
 
     data = {
         "authority": "http://standaarden.overheid.nl/owms/terms/Amsterdam",
@@ -56,7 +62,7 @@ def from_dataset(ds: DatasetSchema, path: str) -> dict[str, Any]:
     }
 
     # XXX I can't find what the inverse is called, so we omit this field for
-    # niet_beschikbaar.
+    # niet_beschikbaar. The uploader in dcatd does the same.
     if ds.status == DatasetSchema.Status.beschikbaar:
         data["dataset_status"] = "http://data.overheid.nl/status/beschikbaar"
 
@@ -83,6 +89,7 @@ LICENSE_UNKNOWN = "http://standaarden.overheid.nl/owms/terms/licentieonbekend"
 # From https://waardelijsten.dcat-ap-donl.nl/donl_language.json
 NLD = "http://publications.europa.eu/resource/authority/language/NLD"
 
-# From https://github.com/dataoverheid/donlsync-mappings/blob/1c7b23f3f6dfc623/value-mappings/Eindhoven__Dataset__AccessRights.json
+# From
+# https://github.com/dataoverheid/donlsync-mappings/blob/1c7b23f3f6dfc623/value-mappings/Eindhoven__Dataset__AccessRights.json
 THEME_BESTUUR = "http://standaarden.overheid.nl/owms/terms/Bestuur"
 THEME_RUIMTE = "http://standaarden.overheid.nl/owms/terms/Ruimte_en_infrastructuur"
