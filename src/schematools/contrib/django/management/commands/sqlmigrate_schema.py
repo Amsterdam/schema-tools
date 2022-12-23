@@ -61,7 +61,9 @@ class Command(BaseCommand):
         # Retrieve schema objects, and bail out with proper errors.
         self.schema_dependencies = deque()
         self.verbosity = options["verbosity"]
-        self.loader = get_schema_loader(loaded_callback=self._loaded_callback)
+        self.loader = get_schema_loader(
+            options["schema_url"], loaded_callback=self._loaded_callback
+        )
 
         # Load the data from the schema repository
         dataset = self._load_dataset(options["schema"])
