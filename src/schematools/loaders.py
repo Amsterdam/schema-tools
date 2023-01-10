@@ -493,7 +493,7 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
 
     def get_all_publishers(self) -> dict[str, Publisher]:
         url = self._get_publisher_url()
-        index = self._read_json_url(url / "index.json")
+        index = self._read_json_url(url / "index")
         result = {}
         for id_ in index:
             result[id_] = Publisher.from_dict(self._read_json_url(url / id_))
