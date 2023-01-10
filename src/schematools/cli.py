@@ -821,7 +821,7 @@ def _get_dataset_schema(
 
 
 def _get_publishers(schema_url: str) -> dict[str, Publisher]:
-    """Find the dataset schema for the given dataset.
+    """Find the publishers from the given schema_url.
 
     Args:
         dataset_id: id of the dataset.
