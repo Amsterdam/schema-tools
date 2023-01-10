@@ -1,9 +1,15 @@
+# 2023-01-10 (5.4.0)
+
+* The `schema ckan` command was changed to generate unique (we hope) titles
+* Bugfix for getting pubishers from an online index
+* Bugfix in publisher validation logging
+
 # 2022-12-21 (5.3.0)
 
 * Bugfix in batch_validate that treats extra_meta_schema_url as an argument instead of an option.
 * Add pre-commit hook for validating publishers
 
-SUPPORTED METASCHEMAS: 1 2 
+SUPPORTED METASCHEMAS: 1 2
 
 Note that support is not guaranteed yet, for now this a declaration of intention. Any bugs should be reported.
 
