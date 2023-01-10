@@ -493,7 +493,7 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
 
         if structural_errors:
             continue
-        click.echo("All publishers are structurally valid against {meta_schema_version}")
+        click.echo(f"All publishers are structurally valid against {meta_schema_version}")
         sys.exit(0)
     click.echo("Publishers are structurally invalid against all supplied metaschema versions")
     sys.exit(1)
