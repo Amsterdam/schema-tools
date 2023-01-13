@@ -1,8 +1,17 @@
+# 2023-01-13 (5.5.0)
+
+* Bugfix in CLI batch_validate that caused validation to stop at the first invalid schema
+* Bugfix in CLI batch_validate that caused dataset.json files in nested directories to be unresolvable
+
+SUPPORTED METASCHEMAS: 1 2
+
 # 2023-01-10 (5.4.0)
 
 * The `schema ckan` command was changed to generate unique (we hope) titles
 * Bugfix for getting pubishers from an online index
 * Bugfix in publisher validation logging
+
+SUPPORTED METASCHEMAS: 1 2
 
 # 2022-12-21 (5.3.0)
 
