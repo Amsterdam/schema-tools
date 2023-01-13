@@ -544,13 +544,14 @@ def batch_validate(
 
     done = set()
     for schema_file in schema_files:
-        # Find the containing dataset.
+        # If the schema file is a table, find the dataset.json
+        # file in one of the parent directories.
         ds_dir = Path(schema_file).parent
         while not (ds_dir / "dataset.json").exists():
             ds_dir = ds_dir.parent
 
         # Don't run validations multiple times when several files in a dataset have changed.
-        main_file = os.path.join(ds_dir.name, "dataset.json")
+        main_file = os.path.join(ds_dir, "dataset.json")
         if main_file in done:
             continue
 
@@ -590,14 +591,14 @@ def batch_validate(
                 break
         done.add(main_file)
 
-        if errors:
-            width = len(max(errors.keys(), key=lambda x: len(x)))
-            for schema_file, versions in errors.items():
-                click.echo(f"{schema_file} is invalid against all metaschema versions")
-                version_width = len(max(versions.keys(), key=lambda x: len(x)))
-                for version_, err_msg in versions.items():
-                    click.echo(f"{schema_file:>{width}} - {version_:>{version_width}}: {err_msg}")
-            sys.exit(1)
+    if errors:
+        width = len(max(errors.keys(), key=lambda x: len(x)))
+        for schema_file, versions in errors.items():
+            click.echo(f"{schema_file} is invalid against all metaschema versions")
+            version_width = len(max(versions.keys(), key=lambda x: len(x)))
+            for version_, err_msg in versions.items():
+                click.echo(f"{schema_file:>{width}} - {version_:>{version_width}}: {err_msg}")
+        sys.exit(1)
 
 
 @schema.command("ckan")

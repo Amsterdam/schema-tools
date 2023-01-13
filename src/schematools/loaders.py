@@ -363,10 +363,20 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         """
         # Cleanup the path
         dataset_file = Path(dataset_file)
+
         if not dataset_file.is_absolute():
             # Assume relative path from the repository root, typically used from unit test code.
             # For any imports that use this code path to import relative to the app directory,
             # an easy fix to is to convert to absolute paths first before calling this function.
+
+            # Ensure that the path is lower than the root
+            if "datasets" in dataset_file.parts:
+                p = list(dataset_file.parts)
+                while True:
+                    if p.pop(0) == "datasets":
+                        break
+                dataset_file = Path(*p)
+
             dataset_file = self.root.joinpath(dataset_file)
         dataset_file = dataset_file.resolve()  # removes ../../ entries, so is_relative_to() works
 
