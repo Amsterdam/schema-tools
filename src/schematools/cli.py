@@ -578,7 +578,7 @@ def batch_validate(
                 )
             except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
                 errors[schema_file][meta_schema_version].append(
-                    f"{struct_error.message}: ({', '.join(struct_error.path)})"
+                    f"{struct_error}: ({', '.join(struct_error.path)})"
                 )
 
             for sem_error in validation.run(dataset, schema_file):

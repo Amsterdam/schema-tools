@@ -1,3 +1,7 @@
+# 2023-01-16 (5.5.1)
+
+* ``schema batch-validate`` now produces more readable error messages.
+
 # 2023-01-13 (5.5.0)
 
 * Bugfix in CLI batch_validate that caused validation to stop at the first invalid schema
