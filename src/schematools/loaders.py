@@ -370,12 +370,8 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
             # an easy fix to is to convert to absolute paths first before calling this function.
 
             # Ensure that the path is lower than the root
-            if "datasets" in dataset_file.parts:
-                p = list(dataset_file.parts)
-                while True:
-                    if p.pop(0) == "datasets":
-                        break
-                dataset_file = Path(*p)
+            if "datasets" in (parts := dataset_file.parts):
+                dataset_file = Path(*parts[parts.index("datasets")+1:])
 
             dataset_file = self.root.joinpath(dataset_file)
         dataset_file = dataset_file.resolve()  # removes ../../ entries, so is_relative_to() works
