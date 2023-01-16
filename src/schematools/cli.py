@@ -596,8 +596,9 @@ def batch_validate(
         for schema_file, versions in errors.items():
             click.echo(f"{schema_file} is invalid against all metaschema versions")
             version_width = len(max(versions.keys(), key=lambda x: len(x)))
-            for version_, err_msg in versions.items():
-                click.echo(f"{schema_file:>{width}} - {version_:>{version_width}}: {err_msg}")
+            for version_, err_msgs in versions.items():
+                for msg in err_msgs:
+                    click.echo(f"{schema_file:>{width}} - {version_:>{version_width}}: {msg}")
         sys.exit(1)
 
 
