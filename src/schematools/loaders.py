@@ -371,7 +371,7 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
 
             # Ensure that the path is lower than the root
             if "datasets" in (parts := dataset_file.parts):
-                dataset_file = Path(*parts[parts.index("datasets")+1:])
+                dataset_file = Path(*parts[parts.index("datasets") + 1 :])
 
             dataset_file = self.root.joinpath(dataset_file)
         dataset_file = dataset_file.resolve()  # removes ../../ entries, so is_relative_to() works
@@ -491,7 +491,7 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
         return self._read_json_url(self.schema_url / dataset_path / table_ref)
 
     def _get_publisher_url(self) -> URL:
-        return URL(self.schema_url.rpartition("/")[0]) / "publishers"
+        return URL(self.schema_url.rpartition("/datasets")[0]) / "publishers"
 
     def get_publisher(self, publisher_id: str) -> Publisher:
         url = self._get_publisher_url()
