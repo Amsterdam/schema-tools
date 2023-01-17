@@ -1,3 +1,7 @@
+# 2023-01-17 (5.5.2)
+
+* Correctly resolve the publisher URL, regardless of whether there is a trailing slash
+
 # 2023-01-16 (5.5.1)
 
 * ``schema batch-validate`` now produces more readable error messages.
