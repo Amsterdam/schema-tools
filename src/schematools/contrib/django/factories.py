@@ -172,27 +172,25 @@ def model_factory(
             field.type.endswith("definitions/schema")
             or field.is_nested_table
             or field.is_temporal_range
-            or field.is_nested_object
         ):
             continue
 
-        model_field = _model_field_factory(field)
+        for schema_field, model_field in _model_field_factories(field):
+            model_field.name = schema_field.python_name  # Generate name, fix if needed.
+            model_field.field_schema = schema_field  # avoid extra lookups.
+            fields[model_field.name] = model_field
 
-        model_field.name = field.python_name  # Generate name, fix if needed.
-        model_field.field_schema = field  # avoid extra lookups.
-        fields[model_field.name] = model_field
-
-        # Non-composite string identifiers may not contain forwardslashes, since this
-        # breaks URL matching when they are used in URL paths.
-        if field.is_primary and field.type == "string":
-            # To make sure OneToOneField relations also support the '__contains' lookup,
-            # that lookup type is registered with this field class in apps.py.
-            constraints.append(
-                CheckConstraint(
-                    check=~Q(**{f"{model_field.name}__contains": "/"}),
-                    name=f"{table_schema.db_name}_{field.db_name}_not_contains_slash",
+            # Non-composite string identifiers may not contain forwardslashes, since this
+            # breaks URL matching when they are used in URL paths.
+            if schema_field.is_primary and schema_field.type == "string":
+                # To make sure OneToOneField relations also support the '__contains' lookup,
+                # that lookup type is registered with this field class in apps.py.
+                constraints.append(
+                    CheckConstraint(
+                        check=~Q(**{f"{model_field.name}__contains": "/"}),
+                        name=f"{table_schema.db_name}_{schema_field.db_name}_not_contains_slash",
+                    )
                 )
-            )
 
     # Generate Meta part
     meta_cls = type(
@@ -230,14 +228,18 @@ def model_factory(
     return model_class
 
 
-def _model_field_factory(field: DatasetFieldSchema) -> models.Field:
+def _model_field_factories(
+    field: DatasetFieldSchema,
+) -> list[tuple[DatasetFieldSchema, models.Field]]:
     """Construct the Django model field for a schema field."""
     if field.relation:
-        return _fk_field_factory(field)
+        return [(field, _fk_field_factory(field))]
     elif field.nm_relation:
-        return _nm_field_factory(field)
+        return [(field, _nm_field_factory(field))]
+    elif field.is_nested_object:
+        return _nested_object_field_factory(field)
     else:
-        return _basic_field_factory(field)
+        return [(field, _basic_field_factory(field))]
 
 
 def _get_model_field_class(field: DatasetFieldSchema) -> type[models.Field]:
@@ -438,6 +440,12 @@ def _nm_field_factory(field: DatasetFieldSchema) -> models.ManyToManyField:
     return field_cls(**kwargs)
 
 
+def _nested_object_field_factory(
+    field: DatasetFieldSchema,
+) -> list[tuple[DatasetFieldSchema, models.Field]]:
+    return [(sub_field, _basic_field_factory(sub_field)) for sub_field in field.subfields]
+
+
 def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
     """Remove relation attributes from relation definitions.
 
@@ -484,7 +492,7 @@ def model_mocker_factory(
     """Generate a Django model mocker class from a JSON Schema definition."""
     # delayed import so Faker/shapely etc are not loaded for every application,
     # but only when mocker functionality is used.
-    from .faker import get_field_factory
+    from .faker import get_field_factories
 
     dataset_schema = dataset.schema
     app_label = f"{dataset_schema.id}"
@@ -506,15 +514,18 @@ def model_mocker_factory(
     for field in stripped_table_schema.fields:
         type_ = field.type
         # skip schema field for now
-        if type_.endswith("definitions/schema"):
-            continue
-        # skip nested tables and fields that are only added for temporality
-        if field.is_nested_table or field.is_temporal_range:
+        # Also skip nested tables, nested objects and temporal range fields.
+        if (
+            type_.endswith("definitions/schema")
+            or field.is_nested_table
+            or field.is_temporal_range
+            # or field.is_nested_object
+        ):
             continue
 
-        # Generate name, fix if needed.
-        field_name = to_snake_case(field.name)
-        fields[field_name] = get_field_factory(field)
+        for schema_field, model_field in get_field_factories(field):
+            field_name = to_snake_case(schema_field.name)
+            fields[field_name] = model_field
 
     # Generate Meta part
     meta_cls = type(

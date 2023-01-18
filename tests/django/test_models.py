@@ -388,3 +388,20 @@ def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_da
         ),
     ):
         model.objects.create(id="forbidden/slash")
+
+
+@pytest.mark.django_db
+def test_model_factory_sub_object_is_flattened(brk_dataset, verblijfsobjecten_dataset):
+    """Prove that object type fields are 'flattened' in the model.
+
+    The field `naamGebruik` is an object field with subfields `code` and `omschrijving`.
+
+    So, fields `naam_gebruik_code` and `naam_gebruik_omschrijving` should be generated.
+    """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(brk_dataset, base_app_name="dso_api.dynamic_api")
+    }
+    model_fields = [f for f in model_dict["kadastralesubjecten"]._meta.fields]
+    model_field_names = {f.name for f in model_dict["kadastralesubjecten"]._meta.fields}
+    assert {"naam_gebruik_code", "naam_gebruik_omschrijving"} < model_field_names

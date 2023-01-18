@@ -210,8 +210,21 @@ DECLARATION_LOOKUP = {
 }
 
 
-def get_field_factory(field: DatasetFieldSchema) -> BaseDeclaration:
-    """Gets the appropriate field factory."""
+def get_field_factories(
+    field: DatasetFieldSchema,
+) -> list[tuple, DatasetFieldSchema, BaseDeclaration]:
+    """Gets the appropriate field factories.
+
+    The result is a list, because for object type fields,
+    a list of factories for the subfields can be created.
+    """
+    if field.is_nested_object:
+        return _get_declaration_makers_for_nested_field(field)
+    return [(field, _get_declaration_maker(field))]
+
+
+def _get_declaration_maker(field: DatasetFieldSchema) -> BaseDeclaration:
+    """Gets the declaration maker for a field."""
     field_type = field.type
     # reduce amsterdam schema refs to their fragment
     if field_type.startswith(settings.SCHEMA_DEFS_URL):
@@ -234,3 +247,9 @@ def get_field_factory(field: DatasetFieldSchema) -> BaseDeclaration:
         raise ValueError(f"No declaration defined for field with type {field_type}")
 
     return declaration_maker(field, **schema_faker_kwargs)
+
+
+def _get_declaration_makers_for_nested_field(
+    field: DatasetFieldSchema,
+) -> list[tuple[DatasetFieldSchema, BaseDeclaration]]:
+    return [(sub_field, _get_declaration_maker(sub_field)) for sub_field in field.subfields]

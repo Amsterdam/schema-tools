@@ -7,7 +7,7 @@ from schematools.contrib.django.factories import (
     schema_model_mockers_factory,
     schema_models_factory,
 )
-from schematools.contrib.django.faker import get_field_factory
+from schematools.contrib.django.faker import get_field_factories
 from schematools.contrib.django.faker.create import create_data_for
 from schematools.contrib.django.faker.relate import relate_datasets
 from schematools.naming import to_snake_case
@@ -245,8 +245,8 @@ def test_mocker_params_are_not_leaking(
     table_schema = afvalwegingen_schema.get_table_by_id("containers")
     fractie_field_schema = table_schema.get_field_by_id("afvalfractie")
     locatie_field_schema = table_schema.get_field_by_id("containerlocatie id")
-    fractie_field_factory = get_field_factory(fractie_field_schema)
-    locatie_field_factory = get_field_factory(locatie_field_schema)
+    _, fractie_field_factory = get_field_factories(fractie_field_schema)[0]
+    _, locatie_field_factory = get_field_factories(locatie_field_schema)[0]
     fractie_provider_name = fractie_field_factory.provider
     locatie_provider_name = locatie_field_factory.provider
     fractie_faker = fractie_field_factory._get_faker()

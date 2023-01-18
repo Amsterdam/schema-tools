@@ -337,15 +337,16 @@
             "provenance": "$.geslacht.omschrijving",
             "description": "Geslacht van het geregistreerd persoon. Dit kenmerk kent een domein voor als de persoon in de BRP voorkomt en een domein voor als de persoon niet in de BRP voorkomt. omschrijving"
           },
-          "naamGebruikCode": {
-            "type": "string",
-            "provenance": "$.naamGebruik.code",
-            "description": "Aanduiding naam gebruik code"
-          },
-          "naamGebruikOmschrijving": {
-            "type": "string",
-            "provenance": "$.naamGebruik.omschrijving",
-            "description": "Aanduiding naam gebruik omschrijving"
+          "naamGebruik": {
+              "type": "object",
+              "properties": {
+                  "code": {
+                      "type": "string"
+                  },
+                  "omschrijving": {
+                      "type": "string"
+                  }
+              }
           },
           "geboortedatum": {
             "type": "string",
