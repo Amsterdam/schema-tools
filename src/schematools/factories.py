@@ -10,7 +10,7 @@ from typing import DefaultDict, cast
 
 from geoalchemy2.types import Geometry
 from psycopg2 import sql
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, Numeric, String, Time
+from sqlalchemy import JSON, BigInteger, Boolean, Date, DateTime, Float, Numeric, String, Time
 from sqlalchemy.sql.schema import Column, Index, MetaData, Table
 from sqlalchemy.types import ARRAY
 
@@ -32,6 +32,7 @@ FORMAT_MODELS_LOOKUP = {
     "date-time": DateTime,
     "uri": String,
     "email": String,
+    "json": JSON,
 }
 
 JSON_TYPE_TO_PG = {

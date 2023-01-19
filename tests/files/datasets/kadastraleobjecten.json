@@ -41,6 +41,35 @@
             "type": "integer",
             "description": "Uniek volgnummer van de toestand van het object."
           },
+          "soortGrootte": {
+              "type": "object",
+              "format": "json",
+              "properties": {
+                  "code": {
+                    "type": "string",
+                    "provenance": "$.soortGrootte.code",
+                    "description": "Aanduiding van soort grootte code"
+                  },
+                  "omschrijving": {
+                    "type": "string",
+                    "provenance": "$.soortGrootte.omschrijving",
+                    "description": "Aanduiding van soort grootte omschrijving"
+                  }
+              }
+          },
+          "soortCultuurOnbebouwd": {
+              "type": "object",
+              "properties": {
+                  "code": {
+                    "type": "string",
+                    "provenance": "$.soortCultuurOnbebouwd.code"
+                  },
+                  "omschrijving": {
+                    "type": "string",
+                    "provenance": "$.soortCultuurOnbebouwd.omschrijving"
+                  }
+              }
+          },
           "beginGeldigheid": {
             "type": "string",
             "format": "date-time",

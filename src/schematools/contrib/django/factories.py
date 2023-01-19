@@ -40,14 +40,16 @@ JSON_TYPE_TO_DJANGO = {
     "number": models.FloatField,
     "boolean": models.BooleanField,
     "array": ArrayField,
-    # Format variants of type string:
+    # Format variants of type string
     "date": models.DateField,
     "time": models.TimeField,
     "date-time": models.DateTimeField,
     "uri": models.URLField,
     "email": models.EmailField,
     "blob-azure": UnlimitedCharField,
-    # "object" handled elsewhere.
+    # "object" handled elsewhere, unless format is json
+    # Format variant for type = object and format = json
+    "json": models.JSONField,
     "/definitions/id": models.IntegerField,
     "/definitions/schema": UnlimitedCharField,
     "https://geojson.org/schema/Geometry.json": gis_models.GeometryField,
@@ -236,7 +238,7 @@ def _model_field_factories(
         return [(field, _fk_field_factory(field))]
     elif field.nm_relation:
         return [(field, _nm_field_factory(field))]
-    elif field.is_nested_object:
+    elif field.is_nested_object and not field.is_json_object:
         return _nested_object_field_factory(field)
     else:
         return [(field, _basic_field_factory(field))]
@@ -524,7 +526,7 @@ def model_mocker_factory(
             continue
 
         for schema_field, model_field in get_field_factories(field):
-            field_name = to_snake_case(schema_field.name)
+            field_name = schema_field.python_name
             fields[field_name] = model_field
 
     # Generate Meta part

@@ -391,17 +391,35 @@ def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_da
 
 
 @pytest.mark.django_db
-def test_model_factory_sub_object_is_flattened(brk_dataset, verblijfsobjecten_dataset):
+def test_model_factory_sub_object_is_flattened(kadastraleobjecten_dataset):
     """Prove that object type fields are 'flattened' in the model.
 
-    The field `naamGebruik` is an object field with subfields `code` and `omschrijving`.
+    The field `soortCultuurOnbebouwd` is an object field with subfields `code` and `omschrijving`.
 
-    So, fields `naam_gebruik_code` and `naam_gebruik_omschrijving` should be generated.
+    So, fields `soort_cultuur_onbebouwd_code`
+        and `soort_cultuur_onbebouwd_omschrijving` should be generated.
     """
     model_dict = {
         cls._meta.model_name: cls
-        for cls in schema_models_factory(brk_dataset, base_app_name="dso_api.dynamic_api")
+        for cls in schema_models_factory(
+            kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
+        )
     }
-    model_fields = [f for f in model_dict["kadastralesubjecten"]._meta.fields]
-    model_field_names = {f.name for f in model_dict["kadastralesubjecten"]._meta.fields}
-    assert {"naam_gebruik_code", "naam_gebruik_omschrijving"} < model_field_names
+    model_field_names = {f.name for f in model_dict["kadastraleobjecten"]._meta.fields}
+    assert {
+        "soort_cultuur_onbebouwd_code",
+        "soort_cultuur_onbebouwd_omschrijving",
+    } < model_field_names
+
+
+@pytest.mark.django_db
+def test_model_factory_sub_object_is_json(kadastraleobjecten_dataset):
+    """Prove that object type fields are JSONField when `"format" = "json"`."""
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    model_fields = {f.name: f for f in model_dict["kadastraleobjecten"]._meta.fields}
+    assert isinstance(model_fields["soort_grootte"], models.JSONField)

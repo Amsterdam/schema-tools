@@ -175,6 +175,7 @@ DECLARATION_LOOKUP = {
     "boolean": Faker("boolean"),
     "array": Faker("pylist", {"value_types": [str]}),
     "object": Faker("pystr"),  # needs a concatenated key field
+    "json": Faker("json"),
     "/definitions/id": Faker("pyint"),
     "/definitions/schema": Faker("text"),
     "https://geojson.org/schema/Geometry.json": GeoFaker(
@@ -218,7 +219,7 @@ def get_field_factories(
     The result is a list, because for object type fields,
     a list of factories for the subfields can be created.
     """
-    if field.is_nested_object:
+    if field.is_nested_object and not field.is_json_object:
         return _get_declaration_makers_for_nested_field(field)
     return [(field, _get_declaration_maker(field))]
 
