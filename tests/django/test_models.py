@@ -388,3 +388,38 @@ def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_da
         ),
     ):
         model.objects.create(id="forbidden/slash")
+
+
+@pytest.mark.django_db
+def test_model_factory_sub_object_is_flattened(kadastraleobjecten_dataset):
+    """Prove that object type fields are 'flattened' in the model.
+
+    The field `soortCultuurOnbebouwd` is an object field with subfields `code` and `omschrijving`.
+
+    So, fields `soort_cultuur_onbebouwd_code`
+        and `soort_cultuur_onbebouwd_omschrijving` should be generated.
+    """
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    model_field_names = {f.name for f in model_dict["kadastraleobjecten"]._meta.fields}
+    assert {
+        "soort_cultuur_onbebouwd_code",
+        "soort_cultuur_onbebouwd_omschrijving",
+    } < model_field_names
+
+
+@pytest.mark.django_db
+def test_model_factory_sub_object_is_json(kadastraleobjecten_dataset):
+    """Prove that object type fields are JSONField when `"format" = "json"`."""
+    model_dict = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
+        )
+    }
+    model_fields = {f.name: f for f in model_dict["kadastraleobjecten"]._meta.fields}
+    assert isinstance(model_fields["soort_grootte"], models.JSONField)

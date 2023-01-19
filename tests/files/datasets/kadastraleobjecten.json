@@ -41,6 +41,21 @@
             "type": "integer",
             "description": "Uniek volgnummer van de toestand van het object."
           },
+          "soortGrootte": {
+              "type": "object",
+              "format": "json"
+          },
+          "soortCultuurOnbebouwd": {
+              "type": "object",
+              "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "omschrijving": {
+                    "type": "string"
+                  }
+              }
+          },
           "beginGeldigheid": {
             "type": "string",
             "format": "date-time",

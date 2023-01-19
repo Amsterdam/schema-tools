@@ -172,6 +172,8 @@ class TableFieldMapper:
         elif field.id in self.inactive_relation_info:
             # Convert nested object to JSON string
             return json.dumps(value)
+        elif field.is_json_object:
+            return value
         elif isinstance(value, (dict, list)):
             raise ValueError(
                 f"Value of '{field.qualified_id}' should resolve to a scalar, not: {value!r}"
