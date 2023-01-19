@@ -12,11 +12,8 @@ from schematools.contrib.django.faker.create import create_data_for
 from schematools.contrib.django.faker.relate import relate_datasets
 from schematools.naming import to_snake_case
 
-from .conftest import DATABASE_URL
-
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
     size = 3
     create_tables(gebieden_dataset)
@@ -38,7 +35,6 @@ def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
 
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_take_min_max_into_account(
     afvalwegingen_dataset, verblijfsobjecten_dataset, gebieden_dataset
 ):
@@ -55,7 +51,6 @@ def test_mocking_take_min_max_into_account(
 
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_add_ids_for_relations(
     afvalwegingen_schema,
     afvalwegingen_dataset,
@@ -110,7 +105,6 @@ def test_mocking_add_ids_for_relations(
 
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_uses_enum(
     afvalwegingen_schema,
     afvalwegingen_dataset,
@@ -140,7 +134,6 @@ def test_mocking_uses_enum(
 
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_add_temporal_fields_for_1n_relations(
     gebieden_dataset,
     gebieden_schema,
@@ -165,7 +158,6 @@ def test_mocking_add_temporal_fields_for_1n_relations(
 
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_adds_nm_relations(
     kadastraleobjecten_dataset,
     kadastraleobjecten_schema,
@@ -215,7 +207,6 @@ def test_mocking_adds_nm_relations(
 
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocking_with_shortname_on_relation(gebieden_dataset, gebieden_schema):
     """Prove that a relation with a shortname produces a correct field."""
     create_tables(gebieden_dataset)
@@ -231,7 +222,6 @@ def test_mocking_with_shortname_on_relation(gebieden_dataset, gebieden_schema):
 
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_mocker_params_are_not_leaking(
     afvalwegingen_schema,
 ):

@@ -1,12 +1,6 @@
 """Extra fixtures for ``schematools.contrib.django``"""
-import os
-
 from django.conf import settings
 from pytest_django.plugin import _setup_django
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL is None:
-    collect_ignore_glob = "*"
 
 
 def pytest_configure(config):
