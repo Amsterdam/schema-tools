@@ -1,2 +1,2 @@
-{"id": "10", "identificatie": "KAD.001", "volgnummer": 1, "isOntstaanUitKadastraalobject": [{"identificatie": "KAD.002", "volgnummer": 1}]}
-{"id": "11", "identificatie": "KAD.002", "volgnummer": 1, "isOntstaanUitKadastraalobject": []}
+{"id": "10", "identificatie": "KAD.001", "volgnummer": 1, "isOntstaanUitKadastraalobject": [{"identificatie": "KAD.002", "volgnummer": 1}], "soortGrootte": {"foo": 12}, "soortCultuurOnbebouwd": null}
+{"id": "11", "identificatie": "KAD.002", "volgnummer": 1, "isOntstaanUitKadastraalobject": [], "soortGrootte": null, "soortCultuurOnbebouwd": {"code": "aa", "omschrijving": "foo"}}

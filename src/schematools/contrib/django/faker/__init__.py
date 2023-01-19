@@ -175,6 +175,7 @@ DECLARATION_LOOKUP = {
     "boolean": Faker("boolean"),
     "array": Faker("pylist", {"value_types": [str]}),
     "object": Faker("pystr"),  # needs a concatenated key field
+    "json": Faker("json"),
     "/definitions/id": Faker("pyint"),
     "/definitions/schema": Faker("text"),
     "https://geojson.org/schema/Geometry.json": GeoFaker(

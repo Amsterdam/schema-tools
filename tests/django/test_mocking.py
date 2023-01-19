@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 
 import pytest
@@ -258,3 +259,33 @@ def test_mocker_params_are_not_leaking(
     locatie_value = locatie_provider()
     assert locatie_value not in elements
     assert len(locatie_value) not in {len(e) for e in elements}
+
+
+@pytest.mark.django_db
+def test_mocking_fills_nested_objects(
+    kadastraleobjecten_dataset,
+    kadastraleobjecten_schema,
+):
+    """Prove that mocking adds data for nested objects."""
+    create_tables(kadastraleobjecten_dataset)
+    mockers = schema_model_mockers_factory(
+        kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
+    )
+    for mocker in mockers:
+        mocker.create()
+
+    models = {
+        cls._meta.model_name: cls
+        for cls in schema_models_factory(
+            kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
+        )
+    }
+
+    kad_obj = models["kadastraleobjecten"].objects.first()
+    # Random value in `soort_grootte` should be a valid json string.
+    json.loads(kad_obj.soort_grootte)
+
+    # Subfields should have been created, those could be null, so we cannot check if
+    # the value is a string or has a certain length
+    assert hasattr(kad_obj, "soort_cultuur_onbebouwd_code")
+    assert hasattr(kad_obj, "soort_cultuur_onbebouwd_omschrijving")

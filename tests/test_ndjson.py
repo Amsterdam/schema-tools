@@ -260,24 +260,30 @@ def test_ndjson_import_nm_composite_selfreferencing_keys(
     records = [dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten order by id")]
     assert records == [
         {
-            "id": "KAD.001.1",
-            "identificatie": "KAD.001",
-            "volgnummer": 1,
             "begin_geldigheid": None,
             "eind_geldigheid": None,
+            "id": "KAD.001.1",
+            "identificatie": "KAD.001",
             "koopsom": None,
             "neuron_id": "10",
             "registratiedatum": None,
+            "soort_cultuur_onbebouwd_code": None,
+            "soort_cultuur_onbebouwd_omschrijving": None,
+            "soort_grootte": {"foo": 12},
+            "volgnummer": 1,
         },
         {
-            "id": "KAD.002.1",
-            "identificatie": "KAD.002",
-            "volgnummer": 1,
             "begin_geldigheid": None,
             "eind_geldigheid": None,
+            "id": "KAD.002.1",
+            "identificatie": "KAD.002",
             "koopsom": None,
             "neuron_id": "11",
             "registratiedatum": None,
+            "soort_cultuur_onbebouwd_code": "aa",
+            "soort_cultuur_onbebouwd_omschrijving": "foo",
+            "soort_grootte": None,
+            "volgnummer": 1,
         },
     ]
 

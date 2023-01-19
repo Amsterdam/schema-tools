@@ -842,11 +842,12 @@ class DatasetTableSchema(SchemaType):
 
         # Reuse the cache to avoid recreating the field objects.
         for field_schema in self.fields:
-            yield field_schema
+            if not field_schema.is_nested_object or field_schema.is_json_object:
+                yield field_schema
 
             # When requested, expose the individual fields of a composite foreign keys.
             # These fields become part of the main table.
-            if field_schema.relation is not None and field_schema.is_object:
+            if field_schema.is_object and not field_schema.is_json_object:
                 # Temporal date fields are excluded, they shouldn't be part into the main table.
                 yield from (
                     subfield
@@ -1603,6 +1604,11 @@ class DatasetFieldSchema(DatasetType):
     def is_nested_object(self) -> bool:
         """Checks if field is a possible nested object definition."""
         return self.is_object and not self.get("relation")
+
+    @cached_property
+    def is_json_object(self) -> bool:
+        """Checks if field is a json object."""
+        return self.format == "json"
 
     @cached_property
     def nested_table(self) -> DatasetTableSchema | None:
