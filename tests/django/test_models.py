@@ -13,11 +13,8 @@ from schematools.contrib.django.models import (
     LooseRelationManyToManyField,
 )
 
-from .conftest import DATABASE_URL
-
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_model_factory_fields(afval_dataset) -> None:
     """Prove that the fields from the schema will be generated"""
     table = afval_dataset.schema.tables[0]
@@ -58,7 +55,6 @@ def test_model_factory_fields(afval_dataset) -> None:
 
 
 @pytest.mark.django_db
-@pytest.mark.skipif(DATABASE_URL is None, reason="DATABASE_URL not set")
 def test_model_factory_table_name_no_versions(afval_dataset):
     """Prove that relations between models can be resolved"""
     models = {
