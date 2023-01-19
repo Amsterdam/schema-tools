@@ -120,10 +120,22 @@ class TestReadPermissions:
         _check_select_permission_denied(engine, "bag_r", "afvalwegingen_clusters")
 
         apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "openbaar", "OPENBAAR"
+            engine=engine,
+            pg_schema="public",
+            ams_schema=ams_schema,
+            profiles=profiles,
+            role="openbaar",
+            scope="OPENBAAR",
+            create_roles=True,
         )
         apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "bag_r", "BAG/R"
+            engine=engine,
+            pg_schema="public",
+            ams_schema=ams_schema,
+            profiles=profiles,
+            role="bag_r",
+            scope="BAG/R",
+            create_roles=True,
         )
 
         _check_select_permission_granted(engine, "openbaar", "afvalwegingen_containers")
@@ -653,7 +665,7 @@ def _create_role(engine, role):
 def _check_role_does_not_exist(engine, role):
     """Check if role does not exist"""
     with engine.begin() as connection:
-        result = connection.execute(f"SELECT rolname FROM pg_roles WHERE rolname='{role}'")
+        result = connection.execute("SELECT rolname FROM pg_roles WHERE rolname=%s", role)
         rows = list(result)
         assert len(rows) == 0
 
@@ -732,7 +744,7 @@ def _check_delete_permission_granted(engine, role, table, condition):
     Fail if role, table or column does not exist, or value mismatches in datatype."""
     with engine.begin() as connection:
         connection.execute(f"SET ROLE {role}")
-        result = connection.execute(f"DELETE FROM {table} WHERE {condition}")
+        result = connection.execute(f"DELETE FROM {table} WHERE {condition}")  # noqa: S608
         connection.execute("RESET ROLE")
     assert result
 
@@ -743,7 +755,7 @@ def _check_delete_permission_denied(engine, role, table, condition):
     with pytest.raises(Exception) as e_info:
         with engine.begin() as connection:
             connection.execute(f"SET ROLE {role}")
-            connection.execute(f"DELETE FROM {table} WHERE {condition}")
+            connection.execute(f"DELETE FROM {table} WHERE {condition}")  # noqa: S608
             connection.execute("RESET ROLE")
     assert f"permission denied for table {table}" in str(e_info)
 
