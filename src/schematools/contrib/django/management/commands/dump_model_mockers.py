@@ -1,9 +1,8 @@
 from argparse import ArgumentParser
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, List, Tuple, Type
 
 from django.apps import AppConfig, apps
 from django.core.management import BaseCommand
-from django.utils.functional import partition
 
 from schematools.contrib.django.models import DynamicModel
 
@@ -66,7 +65,9 @@ class Command(BaseCommand):
         self.stdout.write(f"# ---- App: {app.verbose_name or app.label}\n\n\n")
 
     def write_model_mocker(self, model: Type[DynamicModel]) -> None:
-        """Write the representation of a complete DjangoModelFactory (ModelMocker in our terminology) to the output."""
+        """Write the representation of a complete DjangoModelFactory
+        (ModelMocker in our terminology) to the output.
+        """
         bases = ", ".join(base_class.__name__ for base_class in model.__bases__)
         self.stdout.write(f"class {model.__name__}({bases}):\n")
 

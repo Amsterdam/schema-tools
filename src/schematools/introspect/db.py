@@ -87,8 +87,7 @@ def introspect_db_schema(engine, dataset_id, tablenames, db_schema=None, prefix=
         table = copy.deepcopy(TABLE_TMPL)
         table["id"] = table_name
         table["schema"]["required"] = [
-            fix_name(fn, fv)
-            for fn, fv in map(lambda n: (n, columns.get(n, None)), required_field_names)
+            fix_name(n, columns.get(n, None)) for n in required_field_names
         ]
         table["schema"]["properties"].update({fix_name(fn, fv): fv for fn, fv in columns.items()})
         tables.append(table)

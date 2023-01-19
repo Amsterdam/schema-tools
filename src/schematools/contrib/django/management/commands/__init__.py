@@ -31,7 +31,7 @@ class BaseDatasetCommand(BaseCommand):
         if options["dataset"]:
             names = set(options["dataset"]) - set(options["exclude"])
             datasets = datasets.filter(name__in=names)
-            if invalid_names := names - set(ds.name for ds in datasets):
+            if invalid_names := names - {ds.name for ds in datasets}:
                 raise CommandError(f"Datasets not found: {', '.join(sorted(invalid_names))}")
         elif options["exclude"]:
             datasets = datasets.exclude(name__in=options["exclude"])
