@@ -14,6 +14,16 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
 
+    services:
+      db:
+        image: amsterdam/postgres11
+        env:
+          POSTGRES_DB: cicd
+          POSTGRES_USER: dataservices
+          POSTGRES_PASSWORD: insecure
+        ports:
+          - 5432:5432
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -22,8 +32,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt install -y libgdal30
         python -m pip install --upgrade pip
-        python -m pip install .[tests]
+        python -m pip install .[django,tests]
     - name: Test
       run: |
         pytest tests
+      env:
+        DATABASE_URL: postgresql://dataservices:insecure@localhost:5432/cicd
