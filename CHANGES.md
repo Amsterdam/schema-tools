@@ -1,3 +1,10 @@
+# 2023-01- 23(5.6.0)
+
+* Feature added to enable use of object fields in amsterdam schema.
+  Those fields are flattened in the relational schema (added to the parent table).
+  Furthermore, a second type of object field with `"format": "json"` has been added.
+  For those fields an opaque json blob will be added in the relational database.
+
 # 2023-01-17 (5.5.2)
 
 * Correctly resolve the publisher URL, regardless of whether there is a trailing slash
