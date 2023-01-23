@@ -29,9 +29,9 @@ from typing import Callable, Iterator, Optional, Set, cast
 from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools.exceptions import DatasetFieldNotFound, SchemaObjectNotFound
+from schematools.exceptions import SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
-from schematools.types import DatasetSchema, TableVersions
+from schematools.types import DatasetSchema
 
 
 @dataclass(frozen=True)
@@ -163,19 +163,6 @@ def _id_type(dataset: DatasetSchema) -> Iterator[str]:
                 yield f"{ident!r} listed in identifier list {table.identifier}, but: {e}"
 
 
-@_register_validator("'id' field in the presence of composite primary key")
-def _id_and_composite(dataset: DatasetSchema) -> Iterator[str]:
-    for table in dataset.tables:
-        if len(table.identifier) < 2:
-            continue
-        try:
-            table.get_field_by_id("id")
-        except DatasetFieldNotFound:
-            pass
-        else:
-            yield f"table {table.qualified_id!r} has a field called 'id'"
-
-
 @_register_validator("PostgreSQL identifier length")
 def _postgres_identifier_length(dataset: DatasetSchema) -> Iterator[str]:
     """Validate inferred PostgreSQL table names for not exceeding max length.
@@ -291,7 +278,7 @@ def _active_versions(dataset: DatasetSchema) -> Iterator[str]:
     # we do, we are in a position to restructure our abstraction (eg :class:`DatasetSchema`,
     # etc) more definitely. And as a result can rely on those abstractions for our
     # validation instead of some internal representation.
-    for table_versions in dataset.table_versions.values():  # type: TableVersions
+    for table_versions in dataset.table_versions.values():
         for version in table_versions.keys():
             try:
                 # Runtime checking already happens on retrieval of the tables,
