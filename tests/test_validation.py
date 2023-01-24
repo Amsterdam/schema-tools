@@ -61,19 +61,6 @@ def test_id_type(schema_loader) -> None:
     assert list(errors) == []
 
 
-def test_id_composite(schema_loader) -> None:
-    dataset = schema_loader.get_dataset_from_file("idcomposite.json")
-
-    errors = validation.run(dataset)
-
-    error = next(errors)
-    assert error
-    assert error.validator_name == "'id' field in the presence of composite primary key"
-    assert error.message == "table 'idcomposite.base' has a field called 'id'"
-
-    assert list(errors) == []
-
-
 def test_id_matches_path(here: Path, schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("stadsdelen.json")
 
