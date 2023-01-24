@@ -109,6 +109,8 @@ def _id_matches_path(dataset: DatasetSchema, location: str | None) -> Iterator[s
     For datasets is subdirectories the path components should match the id like:
     'my/nested/location/dataset.json' -> 'myNestedLocation'
 
+    Arguments:
+        location: Location of the dataset file (relative to root or absolute)
     """
     if location is not None:
         path = Path(location)

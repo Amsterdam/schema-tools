@@ -581,7 +581,7 @@ def batch_validate(
                     f"{struct_error}: ({', '.join(struct_error.path)})"
                 )
 
-            for sem_error in validation.run(dataset, schema_file):
+            for sem_error in validation.run(dataset, main_file):
                 errors[schema_file][meta_schema_version].append(str(sem_error))
 
             if not errors[schema_file][meta_schema_version]:
