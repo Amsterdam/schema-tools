@@ -1,4 +1,9 @@
-# 2023-01- 23(5.6.0)
+# 2023-01-24 23(5.6.1)
+
+* Bugfix for regression which caused dataset id to be matched with the path of a table
+when the validated schemafile is a table.
+
+# 2023-01-23 (5.6.0)
 
 * Feature added to enable use of object fields in amsterdam schema.
   Those fields are flattened in the relational schema (added to the parent table).
