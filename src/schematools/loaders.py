@@ -395,13 +395,13 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
             if not isinstance(file_json, dict) or file_json.get("type") != "dataset":
                 continue
 
-            id = file_json.get("id")
-            if id in id_to_path:
+            id_ = file_json.get("id")
+            if id_ in id_to_path:
                 raise RuntimeError(
-                    f"Schema root '{self.root}' contains multiple datasets that named '{id}', "
+                    f"Schema root '{self.root}' contains multiple datasets that named '{id_}', "
                     f"this will break relating datasets!"
                 )
-            id_to_path[id] = str(path.parent.relative_to(self.root))
+            id_to_path[id_] = str(path.parent.resolve().relative_to(self.root))
         return id_to_path
 
     def _read_dataset(self, dataset_id):
@@ -414,7 +414,7 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
 
 
 def _read_json_path(dataset_file: Path) -> Json:
-    """Load JSON from a path"""
+    """Load JSON from a path."""
     try:
         with dataset_file.open() as stream:
             try:
