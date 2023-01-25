@@ -344,6 +344,7 @@ def _get_fk_related_name(field: DatasetFieldSchema) -> str:
         # Won't ever show related name for internal tables
         return to_snake_case(parent_table["originalID"])
     elif parent_table.is_through_table:
+        dataset_name = parent_table.dataset.db_name
         # This provides a reverse-link from each FK in the M2M table to the linked tables,
         # allowing to walk *inside* the M2M table instead of over it.
         # For debugging purposes these names are clarified depending on what direction
@@ -352,20 +353,20 @@ def _get_fk_related_name(field: DatasetFieldSchema) -> str:
         through_fields = parent_table["throughFields"]
         if field.name == through_fields[0]:
             # First model, can resemble the original field name,
-            return f"rev_m2m_{to_snake_case(m2m_field.name)}"
+            return f"{dataset_name}_rev_m2m_{to_snake_case(m2m_field.name)}"
         elif field.name == through_fields[1]:
             # Second model, can resemble the reverse name if it exists.
             m2m_reverse_name = m2m_field.reverse_relation
             if m2m_reverse_name is not None:
                 # As the field exists on the second model,
                 # let the reverse relation also reflect that.
-                return f"rev_m2m_{to_snake_case(m2m_reverse_name.id)}"
+                return f"{dataset_name}_rev_m2m_{to_snake_case(m2m_reverse_name.id)}"
 
         # By default, create something unique and recognizable.
         # The "m2m" would be snake_cased as m_2_m, so it's added afterwards.
         # The parent table ID already has the main field name included, but for tables
         # with a self-reference, the field is still added to guarantee uniqueness.
-        return "rev_m2m_" + to_snake_case(f"{parent_table.id}_via_{field.id}")
+        return f"{dataset_name}_rev_m2m_" + to_snake_case(f"{parent_table.id}_via_{field.id}")
     elif (additional_relation := field.reverse_relation) is not None:
         # The relation is described by the other table, return it
         return additional_relation.id
