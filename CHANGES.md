@@ -1,3 +1,8 @@
+# 2023-01-25 23(5.6.2)
+
+* Bugfix for for name clashes that occur in Django ORM relation fields
+  when two versions of the same dataset are deployed next to eachother.
+
 # 2023-01-24 23(5.6.1)
 
 * Bugfix for regression which caused dataset id to be matched with the path of a table
