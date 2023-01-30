@@ -74,7 +74,7 @@ def test_id_matches_path(here: Path, schema_loader) -> None:
     assert error
     assert error.validator_name == "ID does not match file path"
     assert (
-        """Id of the dataset stadsdelen does not match the parent directory regios."""
+        """Id of the dataset stadsdelen does not match the parent directory /app/tests/files/datasets/regios."""  # noqa: E501
         in error.message
     )
     assert list(errors) == []
@@ -86,7 +86,7 @@ def test_id_matches_path(here: Path, schema_loader) -> None:
     assert error
     assert error.validator_name == "ID does not match file path"
     assert (
-        """Id of the dataset beheerkaartCbsGrid does not match the parent directory bierkaart."""
+        """Id of the dataset beheerkaartCbsGrid does not match the parent directory /app/tests/files/datasets/bierkaart/cbs_grid."""  # noqa: E501
         in error.message
     )
     assert list(errors) == []
