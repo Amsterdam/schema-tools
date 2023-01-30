@@ -410,12 +410,20 @@ class DatasetSchema(SchemaType):
         }
 
     @cached_property
-    def publisher(self) -> Publisher | str:
+    def publisher(self) -> Publisher | None:
         """Access the publisher within the file."""
         raw_publisher = self.json_data()["publisher"]
         if type(raw_publisher) == str:
             # Compatibility with meta-schemas prior to 2.0
-            return self["publisher"]
+            publishers = self.loader.get_all_publishers()
+            try:
+                return [
+                    publisher
+                    for publisher in publishers.values()
+                    if publisher["name"] == raw_publisher
+                ][0]
+            except IndexError:
+                return None
 
         # From metaschema 2.0 it is an object { "$ref": "/publishers/ID" }
         if self.loader is None:
