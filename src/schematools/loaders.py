@@ -83,6 +83,7 @@ class CachedSchemaLoader(SchemaLoader):
         self._cache: dict[str, DatasetSchema] = {}
         self._publisher_cache: dict[str, Publisher] = {}
         self._table_cache: dict[tuple[str, str], DatasetTableSchema] = {}
+        self._has_all_publishers = False
         self._has_all = False
 
     def __repr__(self):
@@ -164,7 +165,7 @@ class CachedSchemaLoader(SchemaLoader):
             self._publisher_cache = self._loader.get_all_publishers()
             self._has_all_publishers = True
 
-        return self._cache
+        return self._publisher_cache
 
 
 class _FileBasedSchemaLoader(SchemaLoader):
