@@ -127,7 +127,7 @@ def _id_matches_path(dataset: DatasetSchema, location: str | None) -> Iterator[s
             if not id.endswith(temp_path.name):
                 yield (
                     f"Id of the dataset {dataset.id} does not match "
-                    f"the parent directory {location}."
+                    f"the parent directory {path.parent}."
                 )
                 break
             id = id[: -len(temp_path.name) - 1]
