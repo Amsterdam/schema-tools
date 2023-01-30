@@ -1,3 +1,7 @@
+# 2023-01-30(5.6.4)
+
+* Add whitelist to exclude certain datasets from the path-id validator.
+
 # 2023-01-30(5.6.3)
 
 * Pin SQLAlchemy to a version smaller than 1.4.0, because `pg_grant` breaks on
