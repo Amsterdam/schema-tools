@@ -117,7 +117,7 @@ def _id_matches_path(dataset: DatasetSchema, location: str | None) -> Iterator[s
         id_ = to_snake_case(dataset.id)
 
         # Two proxied datasets do have an id that is not
-        # according tot the general path rule.
+        # according to the general path rule.
         if id_ in ("haalcentraalbag", "haalcentraalbrk"):
             return
 
