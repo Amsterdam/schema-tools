@@ -1,4 +1,9 @@
-# 2023-01-25 23(5.6.2)
+# 2023-01-30(5.6.3)
+
+* Pin SQLAlchemy to a version smaller than 1.4.0, because `pg_grant` breaks on
+  a higher version.
+
+# 2023-01-25(5.6.2)
 
 * Bugfix for for name clashes that occur in Django ORM relation fields
   when two versions of the same dataset are deployed next to eachother.
