@@ -114,23 +114,28 @@ def _id_matches_path(dataset: DatasetSchema, location: str | None) -> Iterator[s
     """
     if location is not None:
         path = Path(location)
-        id = to_snake_case(dataset.id)
+        id_ = to_snake_case(dataset.id)
+
+        # Two proxied datasets do have an id that is not
+        # according tot the general path rule.
+        if id_ in ("haalcentraalbag", "haalcentraalbrk"):
+            return
 
         # Ids are allowed to end with a number,
         # but the number should not be camelCased in the path.
         # So in this case the last instance of '_' is removed
-        if id.split("_")[-1].isdigit():
-            id = "".join(id.rsplit("_", 1))
+        if id_.split("_")[-1].isdigit():
+            id_ = "".join(id_.rsplit("_", 1))
         temp_path = path
-        while len(id):
+        while len(id_):
             temp_path = temp_path.parent
-            if not id.endswith(temp_path.name):
+            if not id_.endswith(temp_path.name):
                 yield (
                     f"Id of the dataset {dataset.id} does not match "
                     f"the parent directory {path.parent}."
                 )
                 break
-            id = id[: -len(temp_path.name) - 1]
+            id_ = id_[: -len(temp_path.name) - 1]
 
 
 @_register_validator("Auth on identifier field")
