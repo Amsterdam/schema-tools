@@ -149,7 +149,7 @@ class CachedSchemaLoader(SchemaLoader):
         return self._cache
 
     def get_publisher(self, publisher_id: str) -> Publisher:
-        if publisher := self._publisher_cache.get(publisher_id) is not None:
+        if (publisher := self._publisher_cache.get(publisher_id)) is not None:
             return publisher
 
         publisher = self._loader.get_publisher(publisher_id)
