@@ -1,3 +1,9 @@
+# 2023-01-30(5.6.5)
+
+* Print error path as is from batch-validate.
+* Bugfix for loader methods get_publisher and get_all_publishers.
+* Dataset.publisher returns publisher object irrespective of schema version.
+
 # 2023-01-30(5.6.4)
 
 * Add whitelist to exclude certain datasets from the path-id validator.
