@@ -1,3 +1,8 @@
+# 2023-02-07(5.6.6)
+
+* Fix names for the subfields of an objectfield. These names need a prefix,
+  because they are exposed externally in the DSO API.
+
 # 2023-01-30(5.6.5)
 
 * Print error path as is from batch-validate.
