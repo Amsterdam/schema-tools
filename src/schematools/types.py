@@ -1267,8 +1267,13 @@ class DatasetFieldSchema(DatasetType):
         """The name as it is shown to the external world, camel-cased.
         In general, the "id" field is already camel-cased,
         but in case that didn't happen this property will fix that.
+        For nested subfields (not a relation), the name needs to be prefixed
+        for the external world.
         """
-        return toCamelCase(self._id)
+        name = self._id
+        if self._parent_field is not None and self._parent_field.is_nested_object:
+            name = f"{self._parent_field.name}_{name}"  # Note: recursive use of .name.
+        return toCamelCase(name)
 
     @cached_property
     def python_name(self) -> str:
@@ -1572,7 +1577,7 @@ class DatasetFieldSchema(DatasetType):
         if self.is_object:
             # Field has direct subfields (type=object)
             required = set(self.get("required", []))
-            properties = self["properties"]
+            properties = self.get("properties", {})
         elif self.is_array_of_objects and self.field_items is not None:
             # Field has an array of objects (type=array, items are objects)
             required = set(self.field_items.get("required") or ())
