@@ -293,13 +293,9 @@ class DatasetSchema(SchemaType):
 
         data = self.data.copy()
         if inline_tables and any(t.get("$ref") for t in self["tables"]):
-            data["tables"] = [t.data for t in self.tables]
-        if inline_publishers:
-            # compatibility with metaschema 1 en 2
-            if type(self.publisher) == dict:
-                self["publisher"] = self.publisher.json_data()
-            else:
-                self["publisher"] = self["publisher"]
+            data["tables"] = [t.json_data() for t in self.tables]
+        if inline_publishers and self.publisher is not None:
+            data["publisher"] = self.publisher.json_data()
         return json.dumps(data)
 
     def json_data(self, inline_tables: bool = False, inline_publishers: bool = False) -> Json:
@@ -412,7 +408,7 @@ class DatasetSchema(SchemaType):
     @cached_property
     def publisher(self) -> Publisher | None:
         """Access the publisher within the file."""
-        raw_publisher = self.json_data()["publisher"]
+        raw_publisher = self["publisher"]
         if type(raw_publisher) == str:
             # Compatibility with meta-schemas prior to 2.0
             if self.loader is None:
