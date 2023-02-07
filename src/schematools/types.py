@@ -415,6 +415,8 @@ class DatasetSchema(SchemaType):
         raw_publisher = self.json_data()["publisher"]
         if type(raw_publisher) == str:
             # Compatibility with meta-schemas prior to 2.0
+            if self.loader is None:
+                return None
             publishers = self.loader.get_all_publishers()
             try:
                 return [
