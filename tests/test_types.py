@@ -254,6 +254,24 @@ def test_subfields(ggwgebieden_schema: DatasetSchema) -> None:
         field.get_field_by_id("iDoNotExist")
 
 
+def test_names_of_subobject_fields(kadastraleobjecten_schema: DatasetSchema) -> None:
+    """Prove that the subfields of an object field get prefixed."""
+    field = kadastraleobjecten_schema.get_table_by_id("kadastraleobjecten").get_field_by_id(
+        "soortCultuurOnbebouwd"
+    )
+    assert {"soortCultuurOnbebouwdCode", "soortCultuurOnbebouwdOmschrijving"} == {
+        sf.name for sf in field.subfields
+    }
+
+
+def test_json_subfield_does_not_crash(kadastraleobjecten_schema: DatasetSchema) -> None:
+    """Prove that the subfields of an object field get prefixed."""
+    field = kadastraleobjecten_schema.get_table_by_id("kadastraleobjecten").get_field_by_id(
+        "soortGrootte"
+    )
+    assert len(field.subfields) == 0
+
+
 def test_raise_exception_on_missing_properties_in_array(schema_loader):
     """Test if a human-readable error is raised on missing properties key."""
     schema = schema_loader.get_dataset_from_file("missing_properties.json")
