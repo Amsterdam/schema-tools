@@ -1,3 +1,7 @@
+# 2023-02-14(5.6.8)
+
+* Pin pg-grant to 0.3.2 to stay compatible with SQLAlchemy
+
 # 2023-02-07(5.6.7)
 
 * Bugfix Dataset.json not properly dereferencing publisher property
