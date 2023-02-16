@@ -28,7 +28,7 @@ def is_remote(table_name: str) -> bool:
     can interrogate schematools to find out whether a table
     is remote.
     """
-    return table_name.startswith("haalcentraalbrk") or table_name.startswith("brp")
+    return table_name.startswith("brp")
 
 
 def introspect_permissions(engine: Engine, role: str) -> None:
