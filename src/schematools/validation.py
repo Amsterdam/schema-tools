@@ -116,11 +116,6 @@ def _id_matches_path(dataset: DatasetSchema, location: str | None) -> Iterator[s
         path = Path(location)
         id_ = to_snake_case(dataset.id)
 
-        # One proxied dataset has an id that is not
-        # according to the general path rule.
-        if id_ == "haalcentraalbrk":
-            return
-
         # Ids are allowed to end with a number,
         # but the number should not be camelCased in the path.
         # So in this case the last instance of '_' is removed
