@@ -1,3 +1,7 @@
+# 2023-02-21(5.6.9)
+
+* Fix structural validation of publisher references by not inlining them in the json held against the metaschema.
+
 # 2023-02-14(5.6.8)
 
 * Pin pg-grant to 0.3.2 to stay compatible with SQLAlchemy

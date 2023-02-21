@@ -572,7 +572,7 @@ def batch_validate(
             meta_schema = _fetch_json(url)
             try:
                 jsonschema.validate(
-                    instance=dataset.json_data(inline_tables=True, inline_publishers=True),
+                    instance=dataset.json_data(inline_tables=True, inline_publishers=False),
                     schema=meta_schema,
                     format_checker=draft7_format_checker,
                 )
