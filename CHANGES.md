@@ -1,3 +1,5 @@
+# 2023-02-22(5.6.10)
+* Require SqlAlchemy <= 1.12.5
 # 2023-02-21(5.6.9)
 
 * Fix structural validation of publisher references by not inlining them in the json held against the metaschema.
