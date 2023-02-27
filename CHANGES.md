@@ -1,6 +1,7 @@
-# Upcoming release
+# 2023-02-27(5.6.11)
 
 * The ``schema validate`` command was fixed to work with v2 publishers.
+* Validation errors are reporting in a hopefully more readable format.
 
 # 2023-02-22(5.6.10)
 
