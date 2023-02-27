@@ -391,6 +391,10 @@ def validate(
         If multiple are given, schematools will try to validate against the largest version,
         working backwards and stopping at the first version that the objects are valid against.
     """  # noqa: D301,D412,D417
+    if not meta_schema_url:
+        click.echo("META_SCHEMA_URL not provided", err=True)
+        sys.exit(1)
+
     dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
 
     # The additional schemas are fetched, but the result is not used
@@ -398,6 +402,8 @@ def validate(
     # available in the cache that is part of the DatasetSchema class
     for schema in additional_schemas:
         _get_dataset_schema(schema, schema_url)
+
+    exit_status = 0
 
     for meta_schema_version, url in sorted(
         [(version_from_metaschema_url(u), u) for u in set(meta_schema_url)],
@@ -414,7 +420,7 @@ def validate(
 
         try:
             jsonschema.validate(
-                instance=dataset.json_data(inline_tables=True, inline_publishers=True),
+                instance=dataset.json_data(inline_tables=True, inline_publishers=False),
                 schema=meta_schema,
                 format_checker=draft7_format_checker,
             )
@@ -431,11 +437,12 @@ def validate(
             click.echo(f"\n{error!s}", err=True)
 
         if structural_errors or semantic_errors:
-            continue
-        click.echo(f"Dataset is valid against {meta_schema_version}")
-        sys.exit(0)
-    click.echo("Dataset is invalid for all supplied metaschemas")
-    sys.exit(1)
+            click.echo(f"Dataset is invalid against {meta_schema_version}")
+            exit_status = 1
+        else:
+            click.echo(f"Dataset is valid against {meta_schema_version}")
+
+    sys.exit(exit_status)
 
 
 def version_from_metaschema_url(url: str) -> SemVer:

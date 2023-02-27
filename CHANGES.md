@@ -1,5 +1,11 @@
+# Upcoming release
+
+* The ``schema validate`` command was fixed to work with v2 publishers.
+
 # 2023-02-22(5.6.10)
-* Require SqlAlchemy <= 1.12.5
+
+* Require SQLAlchemy <= 1.12.5
+
 # 2023-02-21(5.6.9)
 
 * Fix structural validation of publisher references by not inlining them in the json held against the metaschema.
@@ -20,7 +26,7 @@
 # 2023-02-01(5.6.5)
 
 * Print error path as is from batch-validate.
-* Bugfix for loader methods get_publisher and get_all_publishers.
+* Bugfix for loader methods ``get_publisher`` and ``get_all_publishers``.
 * Dataset.publisher returns publisher object irrespective of schema version.
 
 # 2023-01-30(5.6.4)
