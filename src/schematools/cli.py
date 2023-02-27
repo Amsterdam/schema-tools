@@ -1,6 +1,7 @@
 """Cli tools."""
 from __future__ import annotations
 
+import io
 import logging
 import os
 import sys
@@ -427,7 +428,7 @@ def validate(
         except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
             click.echo("Structural validation: ", nl=False)
             structural_errors = True
-            click.echo(f"\n{e!s}", err=True)
+            click.echo(format_schema_error(e), err=True)
 
         semantic_errors = False
         for error in validation.run(dataset):
@@ -496,7 +497,7 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
             except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
                 click.echo("Structural validation: ", nl=False)
                 structural_errors = True
-                click.echo(f"\n{e!s}", err=True)
+                click.echo(format_schema_error(e), err=True)
 
         if structural_errors:
             continue
@@ -584,9 +585,7 @@ def batch_validate(
                     format_checker=draft7_format_checker,
                 )
             except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
-                errors[schema_file][meta_schema_version].append(
-                    f"{struct_error}: {struct_error.path}"
-                )
+                errors[schema_file][meta_schema_version].append(format_schema_error(struct_error))
 
             for sem_error in validation.run(dataset, main_file):
                 errors[schema_file][meta_schema_version].append(str(sem_error))
@@ -607,6 +606,15 @@ def batch_validate(
                 for msg in err_msgs:
                     click.echo(f"{schema_file:>{width}} - {version_:>{version_width}}: {msg}")
         sys.exit(1)
+
+
+def format_schema_error(e: jsonschema.SchemaError | jsonschema.ValidationError) -> str:
+    s = io.StringIO()
+    s.write(f"{e.json_path}, {list(e.schema_path)}")
+    if e.context:
+        for ec in e.context:
+            s.write("\n\t" + ec.message.strip())
+    return s.getvalue()
 
 
 @schema.command("ckan")
