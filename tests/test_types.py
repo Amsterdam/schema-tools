@@ -3,7 +3,14 @@ import operator
 import pytest
 
 from schematools.exceptions import SchemaObjectNotFound
-from schematools.types import DatasetSchema, Permission, PermissionLevel, ProfileSchema, SemVer
+from schematools.types import (
+    DatasetSchema,
+    DatasetTableSchema,
+    Permission,
+    PermissionLevel,
+    ProfileSchema,
+    SemVer,
+)
 
 
 def test_permission_level_ordering() -> None:
@@ -292,3 +299,13 @@ def test_load_publisher_object_from_dataset(schema_loader):
         "shortname": "harhar",
         "tags": {"team": "taggy", "costcenter": "123456789.4321.13519"},
     }
+
+
+def test_repr_broken_schema():
+    """Regression test: __repr__ and __missing__ performed infinite mutual recursion
+    when dealing with broken schemas.
+    """
+    try:
+        DatasetTableSchema({}, parent_schema=None)
+    except KeyError:  # KeyError is ok, RecursionError isn't.
+        pass
