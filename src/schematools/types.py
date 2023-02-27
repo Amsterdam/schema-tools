@@ -205,7 +205,7 @@ class SchemaType(JsonDict):
         return f"{self.__class__.__name__}({self.data!r})"
 
     def __missing__(self, key: str) -> NoReturn:
-        raise KeyError(f"No field named '{key}' exists in {self!r}")
+        raise KeyError(f"No field named '{key}' exists in {self.__class__.__name__}")
 
     def __hash__(self) -> int:
         return id(self)  # allow usage in lru_cache()
