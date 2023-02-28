@@ -1,50 +1,50 @@
-# 2023-02-27(5.6.11)
+# 2023-02-27 (5.6.11)
 
 * The ``schema validate`` command was fixed to work with v2 publishers.
 * Validation errors are reporting in a hopefully more readable format.
 
-# 2023-02-22(5.6.10)
+# 2023-02-22 (5.6.10)
 
 * Require SQLAlchemy <= 1.12.5
 
-# 2023-02-21(5.6.9)
+# 2023-02-21 (5.6.9)
 
 * Fix structural validation of publisher references by not inlining them in the json held against the metaschema.
 
-# 2023-02-14(5.6.8)
+# 2023-02-14 (5.6.8)
 
 * Pin pg-grant to 0.3.2 to stay compatible with SQLAlchemy
 
-# 2023-02-07(5.6.7)
+# 2023-02-07 (5.6.7)
 
 * Bugfix Dataset.json not properly dereferencing publisher property
 
-# 2023-02-07(5.6.6)
+# 2023-02-07 (5.6.6)
 
 * Fix names for the subfields of an objectfield. These names need a prefix,
   because they are exposed externally in the DSO API.
 
-# 2023-02-01(5.6.5)
+# 2023-02-01 (5.6.5)
 
 * Print error path as is from batch-validate.
 * Bugfix for loader methods ``get_publisher`` and ``get_all_publishers``.
 * Dataset.publisher returns publisher object irrespective of schema version.
 
-# 2023-01-30(5.6.4)
+# 2023-01-30 (5.6.4)
 
 * Add whitelist to exclude certain datasets from the path-id validator.
 
-# 2023-01-30(5.6.3)
+# 2023-01-30 (5.6.3)
 
 * Pin SQLAlchemy to a version smaller than 1.4.0, because `pg_grant` breaks on
   a higher version.
 
-# 2023-01-25(5.6.2)
+# 2023-01-25 (5.6.2)
 
 * Bugfix for for name clashes that occur in Django ORM relation fields
   when two versions of the same dataset are deployed next to eachother.
 
-# 2023-01-24 23(5.6.1)
+# 2023-01-24 (5.6.1)
 
 * Bugfix for regression which caused dataset id to be matched with the path of a table
 when the validated schemafile is a table.
