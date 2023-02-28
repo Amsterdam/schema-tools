@@ -2,7 +2,7 @@
   "type": "dataset",
   "id": "brk",
   "title": "brk",
-  "status": "niet_beschikbaar",
+  "status": "beschikbaar",
   "version": "0.0.1",
   "crs": "EPSG:28992",
   "auth": "BRK/RSN",
