@@ -473,7 +473,7 @@ class Profile(models.Model):
 
     def get_scopes(self):
         """The auth scopes for this profile"""
-        return json.loads(self.scopes.replace("'", '"'))
+        return set(json.loads(self.scopes))
 
     @classmethod
     def create_for_schema(cls, profile_schema: ProfileSchema) -> Profile:
@@ -484,7 +484,7 @@ class Profile(models.Model):
 
     def save_for_schema(self, profile_schema: ProfileSchema) -> Profile:
         self.name = profile_schema.name
-        self.scopes = profile_schema.scopes
+        self.scopes = json.dumps(sorted(profile_schema.scopes))
         self.schema_data = profile_schema.json()
         self.save()
         return self
