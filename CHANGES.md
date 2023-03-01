@@ -2,6 +2,7 @@
 
 * The ``schema validate`` command was fixed to work with v2 publishers.
 * Validation errors are reporting in a hopefully more readable format.
+* ``enum`` values in schemas are now type-checked during validation.
 
 # 2023-02-22 (5.6.10)
 
