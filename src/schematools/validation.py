@@ -102,6 +102,29 @@ def _camelcase_ident(ident: str) -> str | None:
     return f"{ident} does not survive conversion to snake case and back; suggestion: {camel}"
 
 
+@_register_validator("enum type error")
+def _enum_types(dataset: DatasetSchema, location: str | None) -> Iterator[str]:
+    for table in dataset.tables:
+        for field in table.fields:
+            enum = field.get("enum")
+            if not enum:
+                continue
+
+            if field.type == "integer":
+                typ = int
+                a = "an"
+            elif field.type == "string":
+                typ = str
+                a = "a"
+            else:
+                yield f"{field.id}: enum of type {field.type} not possible"
+                continue
+
+            for v in enum:
+                if not isinstance(v, typ):
+                    yield f"value {v!r} in field {field.id} is not {a} {field.type}"
+
+
 @_register_validator("ID does not match file path")
 def _id_matches_path(dataset: DatasetSchema, location: str | None) -> Iterator[str]:
     """Dataset Identifiers should equal the parent paths to assure uniqueness.

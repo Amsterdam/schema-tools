@@ -35,6 +35,26 @@ def test_camelcase() -> None:
         assert error.endswith(f"suggestion: {suggest}")
 
 
+def test_enum_types(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("enum_types.json")
+
+    errors = validation.run(dataset)
+
+    error = next(errors)
+    assert error.validator_name == "enum type error"
+    assert error.message == "value 'foo' in field enumInts is not an integer"
+
+    error = next(errors)
+    assert error.validator_name == "enum type error"
+    assert error.message == "value 2 in field enumStrs is not a string"
+
+    error = next(errors)
+    assert error.validator_name == "enum type error"
+    assert error.message == "enumFloats: enum of type number not possible"
+
+    assert list(errors) == []
+
+
 def test_id_auth(schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("id_auth.json")
 
