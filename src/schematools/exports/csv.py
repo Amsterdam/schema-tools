@@ -1,0 +1,27 @@
+import csv
+
+from geoalchemy2 import functions as func  # ST_AsEWKT
+from sqlalchemy import MetaData, select
+
+from schematools.exports import BaseExporter
+from schematools.naming import toCamelCase
+
+metadata = MetaData()
+
+
+class CsvExporter(BaseExporter):  # noqa: D101
+    extension = "csv"
+    geo_modifier = staticmethod(lambda col, fn: func.ST_AsEWKT(col).label(fn))
+
+    def write_rows(self, file_handle, table, sa_table, srid):  # noqa: D102
+        field_names = [f.db_name for f in table.fields]
+        writer = csv.DictWriter(file_handle, field_names, extrasaction="ignore")
+        writer.writerow({fn: toCamelCase(fn) for fn in field_names})
+        for r in self.connection.execute(select(self._get_columns(sa_table, table))):
+            writer.writerow(dict(r))
+
+
+def export_csvs(connection, dataset_chema, table_ids):
+    """Utility function to wrap the Exporter."""
+    exporter = CsvExporter(connection, dataset_chema, table_ids)
+    exporter.export_tables()
