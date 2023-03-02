@@ -36,6 +36,9 @@ from schematools.exceptions import (
     ParserError,
     SchemaObjectNotFound,
 )
+from schematools.exports.csv import export_csvs
+from schematools.exports.geopackage import export_geopackages
+from schematools.exports.jsonlines import export_jsonls
 from schematools.factories import tables_factory
 from schematools.importer.base import BaseImporter
 from schematools.importer.geojson import GeoJSONImporter
@@ -990,6 +993,58 @@ def export_events_for(
     with engine.begin() as connection:
         for event in export_events(dataset_schemas, dataset_id, table_id, connection):
             click.echo(event)
+
+
+@export.command("geopackage")
+@option_db_url
+@option_schema_url
+@argument_dataset_id
+@click.option("--table-ids", "-t", multiple=True)
+def export_geopackages_for(
+    db_url: str,
+    schema_url: str,
+    dataset_id: str,
+    table_ids: list[str],
+) -> None:
+    """Export geopackages from postgres."""
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
+    export_geopackages(db_url, dataset_schema, table_ids=table_ids)
+
+
+@export.command("csv")
+@option_db_url
+@option_schema_url
+@argument_dataset_id
+@click.option("--table-ids", "-t", multiple=True)
+def export_csvs_for(
+    db_url: str,
+    schema_url: str,
+    dataset_id: str,
+    table_ids: list[str],
+) -> None:
+    """Export csv files from postgres."""
+    engine = _get_engine(db_url)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
+    with engine.begin() as connection:
+        export_csvs(connection, dataset_schema, table_ids=table_ids)
+
+
+@export.command("jsonlines")
+@option_db_url
+@option_schema_url
+@argument_dataset_id
+@click.option("--table-ids", "-t", multiple=True)
+def export_jsonls_for(
+    db_url: str,
+    schema_url: str,
+    dataset_id: str,
+    table_ids: list[str],
+) -> None:
+    """Export csv files from postgres."""
+    engine = _get_engine(db_url)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
+    with engine.begin() as connection:
+        export_jsonls(connection, dataset_schema, table_ids=table_ids)
 
 
 @kafka.command()
