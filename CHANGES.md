@@ -1,3 +1,8 @@
+# 2023-03-08 (5.6.12)
+
+* Security fix: authorisation on fields with subfields was incorrectly
+  handled.
+
 # 2023-02-27 (5.6.11)
 
 * The ``schema validate`` command was fixed to work with v2 publishers.
