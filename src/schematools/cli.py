@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import io
 import logging
+import operator
 import os
 import sys
 from collections import defaultdict
+from functools import reduce
 from importlib.metadata import version
 from pathlib import Path, PosixPath
 from typing import Any, DefaultDict, Iterable, List
@@ -449,7 +451,7 @@ def validate(
     sys.exit(exit_status)
 
 
-def version_from_metaschema_url(url: str) -> SemVer:
+def version_from_metaschema_url(url: str) -> SemVer:  # noqa: D103
     return SemVer(url.rpartition("@")[2])
 
 
@@ -538,7 +540,6 @@ def batch_validate(
         META_SCHEMA_URL: the URL to the Amsterdam meta schema
         SCHEMA_FILES: one or more schema files to be validated
     """  # noqa: D301,D412,D417
-
     errors: DefaultDict[str, defaultdict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
 
     # Find the root "datasets" directory.
@@ -654,7 +655,7 @@ def to_ckan(schema_url: str, upload_url: str):
 
     if upload_url is None:
         for ds in data:
-            print(ds)
+            click.echo(ds)
         exit(0)
 
     headers = {"Authorization": api_key}
@@ -721,6 +722,19 @@ def show_mapfile(schema_url: str, dataset_id: str) -> None:
     except KeyError:
         raise click.BadParameter(f"Schema {dataset_id} not found.") from None
     click.echo(create_mapfile(dataset_schema))
+
+
+@show.command("scopes")
+@option_schema_url
+@argument_dataset_id
+def show_scopes(schema_url: str, dataset_id: str) -> None:
+    """Generate a list of all the scopes used in the indicated dataset."""
+    # We need to `unfreeze` the sets, to make the set operations work.
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
+    scopes = set(dataset_schema.auth)
+    for table in dataset_schema.tables:
+        scopes |= set(table.auth) | reduce(operator.or_, (set(f.auth) for f in table.fields))
+    click.echo(" ".join(str(scope) for scope in scopes - {"OPENBAAR"}))
 
 
 @introspect.command("db")
@@ -837,7 +851,7 @@ def _get_dataset_schema(
     try:
         return loader.get_dataset(dataset_id, prefetch_related=prefetch_related)
     except DatasetNotFound as e:
-        raise click.ClickException(str(e))
+        raise click.ClickException(str(e)) from None
 
 
 def _get_publishers(schema_url: str) -> dict[str, Publisher]:
@@ -852,7 +866,7 @@ def _get_publishers(schema_url: str) -> dict[str, Publisher]:
     try:
         return loader.get_all_publishers()
     except SchemaObjectNotFound as e:
-        raise click.ClickException(str(e))
+        raise click.ClickException(str(e)) from None
 
 
 @create.command("extra_index")
@@ -999,52 +1013,79 @@ def export_events_for(
 @option_db_url
 @option_schema_url
 @argument_dataset_id
+@click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
 @click.option("--table-ids", "-t", multiple=True)
+@click.option("--scopes", "-s", multiple=True)
+@click.option("--size")
 def export_geopackages_for(
     db_url: str,
     schema_url: str,
     dataset_id: str,
+    output: str,
     table_ids: list[str],
+    scopes: list[str],
+    size: int,
 ) -> None:
     """Export geopackages from postgres."""
+    engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    export_geopackages(db_url, dataset_schema, table_ids=table_ids)
+    with engine.begin() as connection:
+        export_geopackages(
+            connection, dataset_schema, output, table_ids=table_ids, scopes=scopes, size=size
+        )
 
 
 @export.command("csv")
 @option_db_url
 @option_schema_url
 @argument_dataset_id
+@click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
 @click.option("--table-ids", "-t", multiple=True)
+@click.option("--scopes", "-s", multiple=True)
+@click.option("--size", type=int)
 def export_csvs_for(
     db_url: str,
     schema_url: str,
     dataset_id: str,
+    output: str,
     table_ids: list[str],
+    scopes: list[str],
+    size: int,
 ) -> None:
     """Export csv files from postgres."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     with engine.begin() as connection:
-        export_csvs(connection, dataset_schema, table_ids=table_ids)
+        export_csvs(
+            connection, dataset_schema, output, table_ids=table_ids, scopes=scopes, size=size
+        )
 
 
 @export.command("jsonlines")
 @option_db_url
 @option_schema_url
 @argument_dataset_id
+@click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
+@click.option("--size")
 @click.option("--table-ids", "-t", multiple=True)
+@click.option("--scopes", "-s", multiple=True)
+@click.option("--size")
 def export_jsonls_for(
     db_url: str,
     schema_url: str,
     dataset_id: str,
+    output: str,
     table_ids: list[str],
+    scopes: list[str],
+    size: int,
 ) -> None:
     """Export csv files from postgres."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     with engine.begin() as connection:
-        export_jsonls(connection, dataset_schema, table_ids=table_ids)
+        export_jsonls(
+            connection, dataset_schema, output, table_ids=table_ids, scopes=scopes, size=size
+        )
 
 
 @kafka.command()
