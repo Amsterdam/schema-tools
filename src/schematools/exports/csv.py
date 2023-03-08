@@ -14,14 +14,18 @@ class CsvExporter(BaseExporter):  # noqa: D101
     geo_modifier = staticmethod(lambda col, fn: func.ST_AsEWKT(col).label(fn))
 
     def write_rows(self, file_handle, table, sa_table, srid):  # noqa: D102
-        field_names = [f.db_name for f in table.fields]
+        columns = list(self._get_columns(sa_table, table))
+        field_names = [c.name for c in columns]
         writer = csv.DictWriter(file_handle, field_names, extrasaction="ignore")
         writer.writerow({fn: toCamelCase(fn) for fn in field_names})
-        for r in self.connection.execute(select(self._get_columns(sa_table, table))):
+        query = select(self._get_columns(sa_table, table))
+        if self.size is not None:
+            query = query.limit(self.size)
+        for r in self.connection.execute(query):
             writer.writerow(dict(r))
 
 
-def export_csvs(connection, dataset_chema, table_ids):
+def export_csvs(connection, dataset_chema, output, table_ids, scopes, size):
     """Utility function to wrap the Exporter."""
-    exporter = CsvExporter(connection, dataset_chema, table_ids)
+    exporter = CsvExporter(connection, dataset_chema, output, table_ids, scopes, size)
     exporter.export_tables()

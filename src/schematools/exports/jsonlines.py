@@ -29,11 +29,14 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
     def write_rows(self, file_handle, table, sa_table, srid):  # noqa: D102
         writer = jsonlines.Writer(file_handle, dumps=orjson.dumps)
         row_modifier = self._get_row_modifier(table)
-        for r in self.connection.execute(select(self._get_columns(sa_table, table))):
+        query = select(self._get_columns(sa_table, table))
+        if self.size is not None:
+            query = query.limit(self.size)
+        for r in self.connection.execute(query):
             writer.write({toCamelCase(k): row_modifier[k](v) for k, v in dict(r).items()})
 
 
-def export_jsonls(connection, dataset_chema, table_ids):
+def export_jsonls(connection, dataset_chema, output, table_ids, scopes, size):
     """Utility function to wrap the Exporter."""
-    exporter = JsonLinesExporter(connection, dataset_chema, table_ids)
+    exporter = JsonLinesExporter(connection, dataset_chema, output, table_ids, scopes, size)
     exporter.export_tables()

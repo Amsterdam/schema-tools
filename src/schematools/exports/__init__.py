@@ -1,13 +1,10 @@
-import operator
 from functools import reduce
 from pathlib import Path
-from tempfile import mkdtemp
 
-from geoalchemy2 import functions as func  # ST_AsEWKT
 from sqlalchemy import MetaData
 
 from schematools.factories import tables_factory
-from schematools.types import DatasetSchema
+from schematools.types import _PUBLIC_SCOPE, DatasetSchema
 
 metadata = MetaData()
 
@@ -21,27 +18,36 @@ class BaseExporter:
         self,
         connection,
         dataset_schema: DatasetSchema,
+        output: str,
         table_ids: list[str] | None = None,
-        base_dir_str: str | None = None,
+        scopes: list[str] | None = None,
+        size: int | None = None,
     ):
+        """Constructor.
+
+        Args:
+        connection: SQLAlchemy connection object.
+        dataset_schema: Schema that needs export as geopackageself.
+        output: path on the filesystem where output should be storedself.
+        table_ids: optional parameter for a subset for the tables of the datasetself.
+        scopes: Keycloak scopes that need to be taken into accountself.
+            The geopackage will be produced contains information that is only
+            accessible with these scopes.
+        size: To produce a subset of the rows, mainly for testing.
+        """
         self.connection = connection
         self.dataset_schema = dataset_schema
         self.table_ids = table_ids
+        self.scopes = set(scopes)
+        self.size = size
 
-        self.base_dir = Path(base_dir_str or mkdtemp())
+        self.base_dir = Path(output)
         self.tables = (
             dataset_schema.tables
             if not table_ids
             else [dataset_schema.get_table_by_id(table_id) for table_id in table_ids]
         )
         self.sa_tables = tables_factory(dataset_schema, metadata)
-
-    def _get_scopes(self, table):
-        """Return all the scopes involved in this table.
-
-        User need all the scopes for this particular table to be able to download data.
-        """
-        return reduce(operator.or_, (f.auth for f in table.fields))
 
     def _get_column(self, sa_table, field):
         column = getattr(sa_table.c, field.db_name)
@@ -50,7 +56,7 @@ class BaseExporter:
 
     def _get_columns(self, sa_table, table):
 
-        for field in table.fields:
+        for field in _get_fields(self.dataset_schema, table, self.scopes):
             try:
                 yield self._get_column(sa_table, field)
             except AttributeError:
@@ -65,5 +71,12 @@ class BaseExporter:
             with open(self.base_dir / f"{table.db_name}.{self.extension}", "w") as file_handle:
                 self.write_rows(file_handle, table, sa_table, srid)
 
-    def write_rows(self, file_handle, table, sa_table, srid):
+    def write_rows(self, file_handle, table, sa_table, srid):  # type: ignore
         raise NotImplementedError
+
+
+def _get_fields(dataset_schema, table, scopes):
+    parent_scopes = set(dataset_schema.auth | table.auth) - {_PUBLIC_SCOPE}
+    for field in table.fields:
+        if parent_scopes | set(field.auth) - {_PUBLIC_SCOPE} <= set(scopes):
+            yield field
