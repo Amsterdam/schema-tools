@@ -497,7 +497,7 @@ class DatasetSchema(SchemaType):
             "originalID": field.id,
             "type": "table",
             "version": str(table.version),
-            "auth": list(field.auth | table.auth),  # pass same auth rules as field has
+            "auth": list(table.auth),
             "description": f"Auto-generated table for nested field: {table.id}.{field.id}",
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
@@ -507,7 +507,11 @@ class DatasetSchema(SchemaType):
                 "properties": {
                     "id": {"type": "integer/autoincrement", "description": ""},
                     "schema": {"$ref": "#/definitions/schema"},
-                    "parent": {"type": parent_fk_type, "relation": f"{self.id}:{table.id}"},
+                    "parent": {
+                        "type": parent_fk_type,
+                        "relation": f"{self.id}:{table.id}",
+                        "auth": list(field.auth),
+                    },
                     **field["items"]["properties"],
                 },
             },
