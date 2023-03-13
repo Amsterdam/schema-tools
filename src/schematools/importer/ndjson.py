@@ -215,10 +215,17 @@ class TableFieldMapper:
             if subfield.is_temporal_range:
                 continue
 
-            if value is None:
-                subfield_value = None
-            else:
+            subfield_value = None
+
+            try:
                 subfield_value = value[subfield.id]
+            except TypeError:
+                # value is None
+                pass
+            except KeyError:
+                # skip subfields which don't have a value from result
+                continue
+            else:
                 fk_value_parts.append(subfield_value)
 
             row[subfield.db_name] = subfield_value
