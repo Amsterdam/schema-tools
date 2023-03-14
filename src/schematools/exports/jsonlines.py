@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import jsonlines
 import orjson
 from geoalchemy2 import functions as func
