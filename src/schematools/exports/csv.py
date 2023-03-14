@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import csv
 
 from geoalchemy2 import functions as func  # ST_AsEWKT
