@@ -14,7 +14,9 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
+        "dimensions": {
+          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+        }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/kadastraleobjecten.json",
@@ -28,7 +30,10 @@
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "id": { "type": "string", "description": "Neuron ID" },
+          "id": {
+            "type": "string",
+            "description": "Neuron ID"
+          },
           "volgnummer": {
             "type": "integer",
             "description": "Uniek volgnummer van de toestand van het object."
@@ -58,7 +63,10 @@
             "type": "integer",
             "description": "Volgnummer van het Appartementsrecht"
           },
-          "gemeente": { "type": "string", "description": "" },
+          "gemeente": {
+            "type": "string",
+            "description": ""
+          },
           "soortGrootteCode": {
             "type": "string",
             "provenance": "$.soortGrootte.code",
@@ -88,8 +96,12 @@
             "items": {
               "type": "object",
               "properties": {
-                "code": { "type": "string" },
-                "omschrijving": { "type": "string" }
+                "code": {
+                  "type": "string"
+                },
+                "omschrijving": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -165,8 +177,12 @@
             "items": {
               "type": "object",
               "properties": {
-                "identificatie": { "type": "string" },
-                "volgnummer": { "type": "string" }
+                "identificatie": {
+                  "type": "string"
+                },
+                "volgnummer": {
+                  "type": "string"
+                }
               }
             },
             "relation": "verblijfsobjecten:verblijfsobjecten",
@@ -182,7 +198,9 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
+        "dimensions": {
+          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+        }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/zakelijkerechten.json",
@@ -226,8 +244,12 @@
           "rustOpKadastraalobject": {
             "type": "object",
             "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "string" }
+              "identificatie": {
+                "type": "string"
+              },
+              "volgnummer": {
+                "type": "string"
+              }
             },
             "relation": "brk:kadastraleobjecten",
             "description": "Het kadastraal object en volgnummer waarop het zakelijk recht rust"
@@ -578,7 +600,9 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
+        "dimensions": {
+          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+        }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/tenaamstellingen.json",
@@ -596,10 +620,21 @@
             "type": "string",
             "description": "De identificatie is een uniek nummer aan deze tenaamstelling binnen de kadastrale registratie."
           },
-          "volgnummer": { "type": "integer", "description": "" },
+          "volgnummer": {
+            "type": "integer",
+            "description": ""
+          },
           "vanKadastraalsubject": {
             "type": "object",
-            "properties": { "identificatie": { "type": "string" } },
+            "properties": {
+              "identificatie": {
+                "type": "string"
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
             "relation": "brk:kadastralesubjecten",
             "description": "Het Subject waarvoor deze tenaamstelling geldt."
           },
@@ -653,12 +688,19 @@
             "provenance": "$.verkregenNamensSamenwerkingsverband.omschrijving",
             "description": "De aard van het samenwerkingsverband (zoals Maatschap, VOF of CV) namens welke een natuurlijk persoon deze tenaamstelling heeft verkregen. omschrijving"
           },
-          "inOnderzoek": { "type": "string", "description": "" },
+          "inOnderzoek": {
+            "type": "string",
+            "description": ""
+          },
           "vanZakelijkrecht": {
             "type": "object",
             "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "string" }
+              "identificatie": {
+                "type": "string"
+              },
+              "volgnummer": {
+                "type": "string"
+              }
             },
             "relation": "brk:zakelijkerechten",
             "description": "Het Zakelijk recht waarover deze tenaamstelling gaat."
@@ -687,7 +729,10 @@
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "id": { "type": "string", "description": "Neuron ID" },
+          "id": {
+            "type": "string",
+            "description": "Neuron ID"
+          },
           "identificatie": {
             "type": "string",
             "description": "Het aan deze aantekening toegekende landelijk unieke nummer."
@@ -715,13 +760,27 @@
             "type": "array",
             "items": {
               "type": "object",
-              "properties": { "identificatie": { "type": "string" } }
+              "properties": {
+                "identificatie": {
+                  "type": "string"
+                }
+              }
             },
             "relation": "brk:kadastralesubjecten",
             "description": "Identificatie van het betrokken subject"
           },
           "isGebaseerdOpStukdeel": {
-            "type": "string",
+            "shortname": "isGbsdOpSdl",
+            "type": "object",
+            "properties": {
+              "identificatie": {
+                "type": "string"
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
             "relation": "brk:stukdelen",
             "description": "Identificatie van het betrokken stukdeel"
           },
@@ -744,7 +803,9 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
+        "dimensions": {
+          "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
+        }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/brk/aantekeningenkadastraleobjecten.json",
@@ -799,7 +860,11 @@
             "type": "array",
             "items": {
               "type": "object",
-              "properties": { "identificatie": { "type": "string" } }
+              "properties": {
+                "identificatie": {
+                  "type": "string"
+                }
+              }
             },
             "relation": "brk:kadastralesubjecten",
             "description": "Identificatie van het betrokken subject"
@@ -807,8 +872,12 @@
           "heeftBetrekkingOpKadastraalObject": {
             "type": "object",
             "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "string" }
+              "identificatie": {
+                "type": "string"
+              },
+              "volgnummer": {
+                "type": "string"
+              }
             },
             "relation": "brk:kadastraleobjecten",
             "description": "Identificatie van het kadastrale object (onroerende zaak)"
@@ -874,8 +943,12 @@
             "items": {
               "type": "object",
               "properties": {
-                "identificatie": { "type": "string" },
-                "volgnummer": { "type": "string" }
+                "identificatie": {
+                  "type": "string"
+                },
+                "volgnummer": {
+                  "type": "string"
+                }
               }
             },
             "relation": "brk:aantekeningenkadastraleobjecten",
@@ -885,7 +958,11 @@
             "type": "array",
             "items": {
               "type": "object",
-              "properties": { "identificatie": { "type": "string" } }
+              "properties": {
+                "identificatie": {
+                  "type": "string"
+                }
+              }
             },
             "relation": "brk:aantekeningenrechten",
             "description": "Geeft weer welke aantekening recht is ontstaan op basis van dit stukdeel"
@@ -895,8 +972,12 @@
             "items": {
               "type": "object",
               "properties": {
-                "identificatie": { "type": "string" },
-                "volgnummer": { "type": "string" }
+                "identificatie": {
+                  "type": "string"
+                },
+                "volgnummer": {
+                  "type": "string"
+                }
               }
             },
             "relation": "brk:zakelijkerechten",
@@ -1057,7 +1138,10 @@
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
-          "id": { "type": "integer", "description": "" },
+          "id": {
+            "type": "integer",
+            "description": ""
+          },
           "kennisgevingsdatum": {
             "type": "string",
             "format": "date-time",
@@ -1092,7 +1176,11 @@
           },
           "isOnderdeelVanKadastralegemeentecode": {
             "type": "object",
-            "properties": { "identificatie": { "type": "string" } },
+            "properties": {
+              "identificatie": {
+                "type": "string"
+              }
+            },
             "relation": "brk:kadastralegemeentecodes",
             "description": "Een alfanumerieke aanduiding van de kadastrale gemeentecode, deel van de kadastrale aanduiding van de onroerende zaak. (bv. ASD02)."
           },
@@ -1126,7 +1214,11 @@
           },
           "isOnderdeelVanKadastralegemeente": {
             "type": "object",
-            "properties": { "identificatie": { "type": "string" } },
+            "properties": {
+              "identificatie": {
+                "type": "string"
+              }
+            },
             "relation": "brk:kadastralegemeentes",
             "description": "De kadastrale gemeente waar de kadastrale gemeentecode onderdeel van is (bv. Sloten)."
           },
@@ -1160,7 +1252,11 @@
           },
           "ligtInGemeente": {
             "type": "object",
-            "properties": { "identificatie": { "type": "string" } },
+            "properties": {
+              "identificatie": {
+                "type": "string"
+              }
+            },
             "relation": "brk:gemeentes",
             "description": "De burgelijke gemeente waarin de kadastrale gemeente ligt."
           },

@@ -233,7 +233,9 @@
             "type": "object",
             "properties": {
               "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" }
+              "volgnummer": { "type": "integer" },
+              "beginGeldigheid": { "type": "string", "format": "date-time" },
+              "eindGeldigheid": { "type": "string", "format": "date-time" }
             },
             "relation": "gebieden:stadsdelen",
             "description": "Het stadsdeel waar de wijk in ligt."
@@ -383,7 +385,9 @@
             "type": "object",
             "properties": {
               "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" }
+              "volgnummer": { "type": "integer" },
+              "beginGeldigheid": { "type": "string", "format": "date-time" },
+              "eindGeldigheid": { "type": "string", "format": "date-time" }
             },
             "relation": "gebieden:stadsdelen",
             "description": "Het stadsdeel waar het ggwgebied in ligt."

@@ -75,7 +75,8 @@
             "shortname": "gevestigdIn",
             "properties": {
               "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" }
+              "volgnummer": { "type": "integer" },
+              "beginGeldigheid": { "type": "string", "format": "date-time" }
             },
             "relation": "verblijfsobjecten:verblijfsobjecten",
             "description": "Relatie naar verblijfsobject",

@@ -210,9 +210,10 @@ class TableFieldMapper:
         """Process a composite foreign key"""
         # Flatten subfields, as they are part of the same record.
         fk_value_parts = []
+        relation_attributes = rel_field.relation_attributes
         for subfield in rel_field.subfields:
             # Any date-ranges of a composite key are not inlined in the main object
-            if subfield.is_temporal_range:
+            if subfield.is_temporal_range or subfield.id in relation_attributes:
                 continue
 
             if value is None:
