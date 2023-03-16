@@ -309,3 +309,9 @@ def test_repr_broken_schema():
         DatasetTableSchema({}, parent_schema=None)
     except KeyError:  # KeyError is ok, RecursionError isn't.
         pass
+
+
+def test_relation_with_extra_properties_has_through_table(gebieden_schema):
+    """Prove that a 1-N relation with extra properties on the relates add a through table."""
+    tables_including_through = {t.id for t in gebieden_schema.get_tables(include_through=True)}
+    assert "ggwgebieden_ligtInStadsdeel" in tables_including_through

@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import typing
+import warnings
 from collections import UserDict
 from collections.abc import Mapping
 from enum import Enum
@@ -630,7 +631,6 @@ class DatasetSchema(SchemaType):
         # For both types of through tables (M2M and FK), we add extra fields
         # to the table (see docstring).
         if field.is_through_table:
-
             dim_fields = {}
 
             if field.is_object:
@@ -857,7 +857,10 @@ class DatasetTableSchema(SchemaType):
 
             # When requested, expose the individual fields of a composite foreign keys.
             # These fields become part of the main table.
-            if field_schema.is_object and not field_schema.is_json_object:
+            if field_schema.is_composite_key or (
+                field_schema.is_nested_object and not field_schema.is_json_object
+            ):
+                #     breakpoint()
                 # Temporal date fields are excluded, they shouldn't be part into the main table.
                 yield from (
                     subfield
@@ -934,7 +937,7 @@ class DatasetTableSchema(SchemaType):
                 f"Error in '{self.id}' table; temporal identifier/range fields don't exist: {e}"
             ) from None
 
-    @property
+    @cached_property
     def is_temporal(self) -> bool:
         """Indicates if this is a table with temporal characteristics"""
         return "temporal" in self
@@ -1557,7 +1560,7 @@ class DatasetFieldSchema(DatasetType):
                 return field_schema
 
         name = self.table.id + "." + self.id
-        raise DatasetFieldNotFound(f"Subfield '{field_id}' does not exist in field '{name}'.")
+        raise DatasetFieldNotFound(f"Subfield {field_id!r} does not exist in field {name!r}.")
 
     @cached_property
     def subfields(self) -> list[DatasetFieldSchema]:
@@ -1634,13 +1637,24 @@ class DatasetFieldSchema(DatasetType):
 
     @cached_property
     def is_through_table(self) -> bool:
-        """
-        Checks if field is a possible through table.
+        """Checks if field is a possible through table.
 
         NM tables always are through tables. For 1N tables, there is a through
-        tables if the target of the relation is temporal.
+        tables if the relations has additional attributes that are not part of the key.
         """
-        return self.nm_relation is not None or self.is_relation_temporal
+        return self.nm_relation is not None or self.relation_attributes
+
+    @cached_property
+    def relation_attributes(self) -> set[str]:
+        """Check if the relation has additional attributes.
+
+        Some relations have attributes that are not part of key,
+        but are only attributed to the relation itself,
+        e.g. `beginGeldigheid`.
+        """
+        if self.get("relation") is None:
+            return set()
+        return {sf.id for sf in self.subfields} - set(self.related_table.identifier)
 
     @cached_property
     def through_table(self) -> DatasetTableSchema | None:
@@ -1651,9 +1665,15 @@ class DatasetFieldSchema(DatasetType):
 
     @cached_property
     def is_relation_temporal(self):
-        """Tell whether the 1-N relationship is modelled by an intermediate table.
+        """Tell whether the 1-N relationship is modeled by an intermediate table.
         This allows tracking multiple versions of the relationship.
         """
+        warnings.warn(
+            "Using `is_relation_temporal()` is deprecated, "
+            "use `self.related_table.is_temporal` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # The "is_composite_key" check is a performance win,
         # as that avoids having to fetch the related table object.
         return self.relation is not None and (
@@ -1668,7 +1688,7 @@ class DatasetFieldSchema(DatasetType):
     @cached_property
     def is_composite_key(self):
         """Tell whether the relation uses a composite key"""
-        return self.get("relation") and self.is_object and len(self["properties"]) > 1
+        return self.get("relation") and self.is_object and len(self.related_table.identifier) > 1
 
     @property
     def is_loose_relation(self):

@@ -467,6 +467,31 @@ def test_ndjson_import_with_shortnames_in_identifier(here, engine, hr_schema, db
     assert records == [{"sbi_act_nr": "12"}, {"sbi_act_nr": "16"}]
 
 
+def test_ndjson_import_with_attributes_on_relation(
+    here, engine, brk_schema, verblijfsobjecten_schema, dbsession
+):
+    """Prove that extra attributes on a relation do not interfere with ndjson import."""
+    ndjson_path = here / "files" / "data" / "brk_aantek_rechten.ndjson"
+    importer = NDJSONImporter(brk_schema, engine)
+    importer.generate_db_objects("aantekeningenrechten", truncate=True, ind_extra_index=False)
+    importer.load_file(ndjson_path)
+
+    records = [dict(r) for r in engine.execute("SELECT * from brk_aantekeningenrechten")]
+    assert records == [
+        {
+            "aard_code": None,
+            "aard_omschrijving": None,
+            "betrokken_tenaamstelling_id": None,
+            "einddatum": None,
+            "id": "01",
+            "identificatie": "01",
+            "is_gbsd_op_sdl_id": "013",
+            "omschrijving": None,
+            "toestandsdatum": None,
+        }
+    ]
+
+
 def test_provenance_for_schema_field_ids_equal_to_ndjson_keys(
     here, engine, woonplaatsen_schema, dbsession
 ):
