@@ -1015,7 +1015,12 @@ def export_events_for(
 @argument_dataset_id
 @click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
 @click.option("--table-ids", "-t", multiple=True)
-@click.option("--scopes", "-s", multiple=True)
+@click.option(
+    "--scopes",
+    "-s",
+    multiple=True,
+    help="Scopes option has been disabled for now, only public data can be exported.",
+)
 @click.option("--size")
 def export_geopackages_for(
     db_url: str,
@@ -1031,7 +1036,7 @@ def export_geopackages_for(
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     with engine.begin() as connection:
         export_geopackages(
-            connection, dataset_schema, output, table_ids=table_ids, scopes=scopes, size=size
+            connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size
         )
 
 
@@ -1041,7 +1046,12 @@ def export_geopackages_for(
 @argument_dataset_id
 @click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
 @click.option("--table-ids", "-t", multiple=True)
-@click.option("--scopes", "-s", multiple=True)
+@click.option(
+    "--scopes",
+    "-s",
+    multiple=True,
+    help="Scopes option has been disabled for now, only public data can be exported.",
+)
 @click.option("--size", type=int)
 def export_csvs_for(
     db_url: str,
@@ -1056,9 +1066,7 @@ def export_csvs_for(
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     with engine.begin() as connection:
-        export_csvs(
-            connection, dataset_schema, output, table_ids=table_ids, scopes=scopes, size=size
-        )
+        export_csvs(connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size)
 
 
 @export.command("jsonlines")
@@ -1068,7 +1076,12 @@ def export_csvs_for(
 @click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
 @click.option("--size")
 @click.option("--table-ids", "-t", multiple=True)
-@click.option("--scopes", "-s", multiple=True)
+@click.option(
+    "--scopes",
+    "-s",
+    multiple=True,
+    help="Scopes option has been disabled for now, only public data can be exported.",
+)
 @click.option("--size")
 def export_jsonls_for(
     db_url: str,
@@ -1084,7 +1097,7 @@ def export_jsonls_for(
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     with engine.begin() as connection:
         export_jsonls(
-            connection, dataset_schema, output, table_ids=table_ids, scopes=scopes, size=size
+            connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size
         )
 
 
