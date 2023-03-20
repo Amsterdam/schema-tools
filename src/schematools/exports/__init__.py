@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import IO
 
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, Table
+from sqlalchemy.engine import Connection
 
 from schematools.factories import tables_factory
-from schematools.types import _PUBLIC_SCOPE, DatasetSchema
+from schematools.types import _PUBLIC_SCOPE, DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 metadata = MetaData()
 
@@ -17,7 +19,7 @@ class BaseExporter:
 
     def __init__(
         self,
-        connection,
+        connection: Connection,
         dataset_schema: DatasetSchema,
         output: str,
         table_ids: list[str] | None = None,
@@ -50,13 +52,12 @@ class BaseExporter:
         )
         self.sa_tables = tables_factory(dataset_schema, metadata)
 
-    def _get_column(self, sa_table, field):
+    def _get_column(self, sa_table: Table, field: DatasetFieldSchema):
         column = getattr(sa_table.c, field.db_name)
-        processor = self.geo_modifier if field.is_geo else lambda col, fn: col
+        processor = self.geo_modifier if field.is_geo else lambda col, _fn: col
         return processor(column, field.db_name)
 
-    def _get_columns(self, sa_table, table):
-
+    def _get_columns(self, sa_table: Table, table: DatasetTableSchema):
         for field in _get_fields(self.dataset_schema, table, self.scopes):
             try:
                 yield self._get_column(sa_table, field)
@@ -72,11 +73,13 @@ class BaseExporter:
             with open(self.base_dir / f"{table.db_name}.{self.extension}", "w") as file_handle:
                 self.write_rows(file_handle, table, sa_table, srid)
 
-    def write_rows(self, file_handle, table, sa_table, srid):  # type: ignore
+    def write_rows(
+        self, file_handle: IO[str], table: DatasetTableSchema, sa_table: Table, srid: str
+    ):
         raise NotImplementedError
 
 
-def _get_fields(dataset_schema, table, scopes):
+def _get_fields(dataset_schema: DatasetSchema, table: DatasetTableSchema, scopes: list[str]):
     parent_scopes = set(dataset_schema.auth | table.auth) - {_PUBLIC_SCOPE}
     for field in table.fields:
         if field.nm_relation is not None:
