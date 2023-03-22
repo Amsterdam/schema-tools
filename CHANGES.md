@@ -1,3 +1,8 @@
+# 2023-03-22 (5.8.1)
+
+* Pin SQLAlchemy to >= 1.4, < 2.0 to make schematools usable
+  from Airflow 2.4.1.
+
 # 2023-03-22 (5.8.0)
 
 * Add export cli commands to export geopackages, csv and jsonlines.
