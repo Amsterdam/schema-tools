@@ -1,3 +1,13 @@
+# 2023-03-22 (5.8.0)
+
+* Add export cli commands to export geopackages, csv and jsonlines.
+
+# 2023-03-20 (5.7.0)
+
+* Through tables for a 1-N relation is now based on the fact that
+  the object field definition in the schema has additional attributes
+  that are not part of the relation key.
+
 # 2023-03-08 (5.6.12)
 
 * Security fix: authorisation on fields with subfields was incorrectly
