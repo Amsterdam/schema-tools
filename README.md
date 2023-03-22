@@ -65,6 +65,18 @@ It is also possible to read GOB events from a batch file with line-separeted eve
 
     schema import events <path-to-dataset> <path-to-file-with-events>
 
+
+## Export datasets
+
+Datasets can be exported to different file formats. Currently supported are geopackage,
+csv and jsonlines. The command for exporting the dataset tables is:
+
+    schema export [geopackage|csv|jsonlines] <id of dataset>
+
+The command has several command-line options that can be used. Documentations about these
+flags can be shown using the `--help` options.
+
+
 ## Schema Tools as a pre-commit hook
 
 Included in the project is a `pre-commit` hook
