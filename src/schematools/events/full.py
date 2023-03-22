@@ -5,6 +5,7 @@ import json
 import logging
 from collections import defaultdict
 
+from sqlalchemy import inspect
 from sqlalchemy.engine import Connection
 
 from schematools.events import metadata
@@ -231,6 +232,7 @@ class EventsProcessor:
         self.conn = connection
         _metadata = local_metadata or metadata  # mainly for testing
         _metadata.bind = connection.engine
+        inspector = inspect(connection.engine)
         self.tables = {}
         for dataset_id, dataset in self.datasets.items():
             base_tables_ids = {dataset_table.id for dataset_table in dataset.tables}
@@ -243,7 +245,7 @@ class EventsProcessor:
             }
             self.geo_fields = defaultdict(lambda: defaultdict(list))
             for table_id, table in tfac.items():
-                if not table.exists():
+                if not inspector.has_table(table.name):
                     table.create()
                 elif truncate:
                     with self.conn.begin():
