@@ -91,6 +91,12 @@ def brk_dataset(brk_schema: DatasetSchema) -> Dataset:
 
 
 @pytest.fixture
+def nap_dataset(nap_schema: DatasetSchema) -> Dataset:
+    """Create NAP dataset."""
+    return Dataset.create_for_schema(nap_schema)
+
+
+@pytest.fixture
 def gebieden_dataset(gebieden_schema: DatasetSchema) -> Dataset:
     """Create gebieden dataset. DO NOT USE TOGETHER WITH ggwgebieden_dataset."""
     return Dataset.create_for_schema(gebieden_schema)

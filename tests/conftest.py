@@ -297,6 +297,11 @@ def gebieden_schema(schema_loader) -> DatasetSchema:
 
 
 @pytest.fixture
+def nap_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("nap.json")
+
+
+@pytest.fixture
 def bouwblokken_schema(schema_loader, gebieden_schema) -> DatasetSchema:
     # gebieden_schema is listed as dependency to resolve relations
     return schema_loader.get_dataset_from_file("bouwblokken.json")

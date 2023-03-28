@@ -10,7 +10,7 @@ from sqlalchemy.engine import Connection
 
 from schematools.events import metadata
 from schematools.factories import tables_factory
-from schematools.naming import to_snake_case, toCamelCase
+from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema
 
 # Enable the sqlalchemy logger by uncommenting the following 2 lines to debug SQL related issues
@@ -30,171 +30,6 @@ EVENT_TYPE_MAPPINGS = {
     "MODIFY": ("update", True),
     "DELETE": ("delete", True),
 }
-
-
-class DataSplitter:
-    """Helper class to split a data event record.
-
-    Data is split into scalar fields and relational fields.
-    Scalar data can be used directly to provide SQL queries with data.
-    Relational data is used to update records with FK colums, or, for NM relations,
-    to construct SQL statement to update junction tables.
-    """
-
-    def __init__(
-        self, events_processor: EventsProcessor, dataset_id: str, table_id: str, event_data: dict
-    ) -> None:
-        """Construct the DataSplitter.
-
-        Args:
-            events_processor: reference to the EventsProcessor, usually,
-                this is a backref. where the EventsProcessor is instantiating the DataSplitter
-            dataset_id: identifier of the dataset
-            table_id: identifier of the table
-            event_data: the actual event data
-        """
-        self.events_processor = events_processor
-        self.dataset_id = dataset_id
-        self.table_id = table_id
-        self.dataset_table = events_processor.datasets[dataset_id].get_table_by_id(table_id)
-        self.junction_table_rows = {}
-        relational_data, self.row_data = self._split_data(event_data)
-        self.process_relational_data(relational_data)
-
-    def _split_data(self, event_data: dict) -> list[dict]:
-        """Split the event_data in 2 parts, one with scalars, the other with relations."""
-        data_bags = [{}, {}]
-        for field in self.dataset_table.fields:
-            snaked_field_id = field.python_name
-            if snaked_field_id in event_data:
-                data_bags[field.is_scalar][snaked_field_id] = event_data[snaked_field_id]
-        return data_bags
-
-    def process_relational_data(self, relational_data: dict) -> None:
-        """Process the relational_data.
-
-        Determines if relation is FK or NM. Handles appropriately.
-        """
-        for field_id, field_data in relational_data.items():
-            field = self.dataset_table.get_field_by_id(toCamelCase(field_id))
-            if field.relation is not None:
-                self._handle_fk(field_id, field_data, field.relation)
-                field_data = [] if field_data is None else [field_data]
-                self._handle_junction_table(field_id, field_data, field.relation)
-            elif field.nm_relation is not None:
-                self._handle_junction_table(field_id, field_data, field.nm_relation)
-            else:
-                raise Exception("Relation should be either FK or NM")
-
-    def fetch_row(self) -> dict:
-        """Fetch the row data.
-
-        To be used in a SQL update or insert query.
-        """
-        return self.row_data
-
-    def _handle_fk(self, field_id: str, field_data: dict, relation: str):
-        """Handle FK relation."""
-        fk_row_data = {}
-        snaked_field_id = to_snake_case(field_id)
-        target_identifier_fields = self._fetch_target_identifier_fields(relation)
-
-        # id for target side of relation
-        if field_data:
-            id_value = ".".join(str(field_data[fn]) for fn in target_identifier_fields)
-        else:
-            id_value = None
-
-        fk_row_data[f"{snaked_field_id}_id"] = id_value
-        for fn in self._fetch_target_identifier_fields(relation):
-            fk_row_data[f"{snaked_field_id}_{fn}"] = (field_data or {}).get(fn)
-
-        self.row_data.update(fk_row_data)
-
-    def _fetch_target_identifier_fields(self, relation: str) -> list[str]:
-        """Fetch the identifier fields for the target side of a relation.
-
-        These fields will be ordered with the main identifier first, and
-        on the second position the sequence identifier.
-        """
-        dataset_id, table_id = relation.split(":")
-        target_dataset = self.events_processor.datasets[dataset_id]
-        target_dataset_table = target_dataset.get_table_by_id(table_id)
-        return target_dataset_table.identifier
-
-    def _fetch_source_id_info(self):
-        # id info for source side of relation (for updates/deletes)
-        snaked_source_table = to_snake_case(self.table_id)
-        identifier = self.dataset_table.identifier
-        id_part_values = {fn: self.row_data[fn] for fn in identifier}
-        id_value = ".".join(str(part) for part in id_part_values.values())
-        return (f"{snaked_source_table}_id", id_value, id_part_values)
-
-    def _handle_junction_table(self, field_id: str, field_data: dict, nm_relation):
-        """Handle NM relation."""
-        snaked_field_id = to_snake_case(field_id)
-        target_identifier_fields = self._fetch_target_identifier_fields(nm_relation)
-        snaked_source_table_id, id_value, id_part_values = self._fetch_source_id_info()
-
-        # Short circuit when no data
-        if not field_data:
-            self.junction_table_rows[snaked_field_id] = []
-            return
-
-        nm_rows = []
-
-        for row_data in field_data:
-            nm_row_data = {}
-
-            # relation fields for source side
-            # XXX add support for shortnames!
-            for identifier_field in self.dataset_table.identifier_fields:
-                subfield_id = f"{self.table_id}_{identifier_field.id}"
-                nm_row_data[subfield_id] = id_part_values[identifier_field.id]
-
-            # relation fields for target side
-            for fn, fv in row_data.items():
-                name_prefix = f"{snaked_field_id}_" if fn in target_identifier_fields else ""
-                nm_row_data[f"{name_prefix}{fn}"] = fv
-
-            # id for source side of relation
-            nm_row_data[snaked_source_table_id] = id_value
-
-            # id for target side of relation
-            target_id_value = ".".join(str(row_data[fn]) for fn in target_identifier_fields)
-            nm_row_data[f"{snaked_field_id}_id"] = target_id_value
-
-            # PK field, needed by Django
-            # PK has been changed to an autonumber
-            # nm_row_data["id"] = f"{id_value}.{target_id_value}"
-
-            nm_rows.append(nm_row_data)
-
-        self.junction_table_rows[snaked_field_id] = nm_rows
-
-    def update_relations(self):
-        """Perform SQL calls to update the relations.
-
-        Update is performed by first deleting all records pointing
-        to the source table, and then re-inserting those records.
-
-        Assertion is that GOB always provides fully populated records.
-        """
-        conn = self.events_processor.conn
-        tables = self.events_processor.tables[self.dataset_id]
-
-        with conn.begin():
-            for snaked_field_id, nm_row_data in self.junction_table_rows.items():
-
-                snaked_source_table_id = to_snake_case(self.table_id)
-                junction_table_id = f"{snaked_source_table_id}_{snaked_field_id}"
-                sa_table = tables[junction_table_id]
-                source_id, source_id_value, _ = self._fetch_source_id_info()
-
-                source_id_column = getattr(sa_table.c, source_id)
-                conn.execute(sa_table.delete().where(source_id_column == source_id_value))
-                if nm_row_data:
-                    conn.execute(sa_table.insert(), nm_row_data)
 
 
 class EventsProcessor:
@@ -258,6 +93,17 @@ class EventsProcessor:
                     if field.is_geo:
                         self.geo_fields[dataset_id][table_id].append(field)
 
+    def _flatten_event_data(self, event_data: dict) -> dict:
+        result = {}
+        for k, v in event_data.items():
+            if isinstance(v, dict):
+                flattened = self._flatten_event_data(v)
+                for k2, v2 in flattened.items():
+                    result[f"{k}_{k2}"] = v2
+            else:
+                result[k] = v
+        return result
+
     def process_row(self, event_id: str, event_meta: dict, event_data: dict) -> None:
         """Process one row of data.
 
@@ -270,9 +116,8 @@ class EventsProcessor:
         db_operation_name, needs_select = EVENT_TYPE_MAPPINGS[event_type]
         dataset_id = event_meta["dataset_id"]
         table_id = event_meta["table_id"]
-        data_splitter = DataSplitter(self, dataset_id, table_id, event_data)
 
-        row = data_splitter.fetch_row()
+        row = self._flatten_event_data(event_data)
 
         for geo_field in self.geo_fields[dataset_id][table_id]:
             geo_value = row.get(geo_field.name)
@@ -283,16 +128,13 @@ class EventsProcessor:
         id_value = ".".join(str(row[fn]) for fn in identifier)
         row["id"] = id_value
 
-        table = self.tables[dataset_id][table_id]
+        table = self.tables[dataset_id][to_snake_case(table_id)]
         db_operation = getattr(table, db_operation_name)()
         if needs_select:
             # XXX Can we assume 'id' is always available?
             db_operation = db_operation.where(table.c.id == id_value)
         with self.conn.begin():
             self.conn.execute(db_operation, row)
-
-        # now process the relations (if any)
-        data_splitter.update_relations()
 
     def process_event(self, event_id: str, event_meta: dict, event_data: dict):
         """Do inserts/updates/deletes."""
