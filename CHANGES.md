@@ -1,3 +1,7 @@
+# 2023-03-28 (5.8.2)
+
+* Fix condition for through tables for a 1-N relation.
+
 # 2023-03-22 (5.8.1)
 
 * Pin SQLAlchemy to >= 1.4, < 2.0 to make schematools usable
