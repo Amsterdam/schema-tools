@@ -860,7 +860,6 @@ class DatasetTableSchema(SchemaType):
             if field_schema.is_composite_key or (
                 field_schema.is_nested_object and not field_schema.is_json_object
             ):
-                #     breakpoint()
                 # Temporal date fields are excluded, they shouldn't be part into the main table.
                 yield from (
                     subfield
@@ -1640,9 +1639,12 @@ class DatasetFieldSchema(DatasetType):
         """Checks if field is a possible through table.
 
         NM tables always are through tables. For 1N tables, there is a through
-        tables if the relations has additional attributes that are not part of the key.
+        tables if the relations has additional attributes that are not part of the key,
+        or if the relation is temporal.
         """
-        return self.nm_relation is not None or self.relation_attributes
+        return (
+            self.nm_relation is not None or self.relation_attributes or self.is_relation_temporal
+        )
 
     @cached_property
     def relation_attributes(self) -> set[str]:
