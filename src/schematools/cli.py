@@ -30,7 +30,6 @@ from schematools import (
     ckan,
     validation,
 )
-from schematools.events.export import export_events
 from schematools.events.full import EventsProcessor
 from schematools.exceptions import (
     DatasetNotFound,
@@ -1006,30 +1005,6 @@ def diff_schemas(schema_url: str, diff_schema_url: str) -> None:
     schemas = get_schema_loader(schema_url).get_all_datasets()
     diff_schemas = get_schema_loader(diff_schema_url).get_all_datasets()
     click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
-
-
-@export.command("events")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.option("--additional-schemas", "-a", multiple=True)
-@click.argument("table_id")
-def export_events_for(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    additional_schemas: str,
-    table_id: str,
-) -> None:
-    """Export events from postgres."""
-    engine = _get_engine(db_url)
-    dataset_schemas = [_get_dataset_schema(dataset_id, schema_url)]
-    for schema in additional_schemas:
-        dataset_schemas.append(_get_dataset_schema(schema, schema_url))
-    # Run as a transaction
-    with engine.begin() as connection:
-        for event in export_events(dataset_schemas, dataset_id, table_id, connection):
-            click.echo(event)
 
 
 @export.command("geopackage")
