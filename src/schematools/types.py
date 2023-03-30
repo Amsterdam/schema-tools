@@ -424,7 +424,11 @@ class DatasetSchema(SchemaType):
             except IndexError:
                 return None
 
-        # From metaschema 2.0 it is an object { "$ref": "/publishers/ID" }
+        # From metaschema 2.0 it is an object { "$ref": "/publishers/ID" }.
+        # First check if we already replaced the publisher in the schema.
+        if "$ref" not in raw_publisher:
+            return Publisher.from_dict(raw_publisher)
+
         if self.loader is None:
             raise RuntimeError(f"{self!r} has no loader defined, can't resolve publisher.")
 
