@@ -124,15 +124,21 @@ class EventsProcessor:
             if geo_value is not None and not geo_value.startswith("SRID"):
                 row[geo_field.name] = f"SRID={geo_field.srid};{geo_value}"
 
-        identifier = self.datasets[dataset_id].get_table_by_id(table_id).identifier
+        schema_table = self.datasets[dataset_id].get_table_by_id(table_id)
+        identifier = schema_table.identifier
         id_value = ".".join(str(row[fn]) for fn in identifier)
         row["id"] = id_value
 
         table = self.tables[dataset_id][to_snake_case(table_id)]
         db_operation = getattr(table, db_operation_name)()
+        id_field = (
+            table.c.id
+            if schema_table.has_composite_key
+            else getattr(table.c, schema_table.identifier[0])
+        )
         if needs_select:
             # XXX Can we assume 'id' is always available?
-            db_operation = db_operation.where(table.c.id == id_value)
+            db_operation = db_operation.where(id_field == id_value)
         with self.conn.begin():
             self.conn.execute(db_operation, row)
 
