@@ -74,3 +74,45 @@ def test_event_process_nm_relation_delete(here, tconn, local_metadata, gebieden_
         dict(r) for r in tconn.execute("SELECT * FROM gebieden_ggwgebieden_bestaat_uit_buurten")
     ]
     assert len(records) == 0
+
+
+def test_event_process_relation_update_parent_table(
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+):
+    events_path = here / "files" / "data" / "peilmerken.gobevents"
+    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer.load_events_from_file(events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
+
+    # Imported objects without relations
+    assert len(records) == 1
+    assert records[0]["ligt_in_bouwblok_id"] is None
+    assert records[0]["ligt_in_bouwblok_identificatie"] is None
+    assert records[0]["ligt_in_bouwblok_volgnummer"] is None
+
+    events_path = here / "files" / "data" / "peilmerken_ligt_in_bouwblok.gobevents"
+    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer.load_events_from_file(events_path)
+    rel_records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken_ligt_in_bouwblok")]
+    parent_records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
+
+    # Should have inserted the rel and updated relation columns in  parent (object) table
+    assert len(rel_records) == 1
+    assert len(parent_records) == 1
+
+    assert parent_records[0]["ligt_in_bouwblok_id"] == "03630012095746.1"
+    assert parent_records[0]["ligt_in_bouwblok_identificatie"] == "03630012095746"
+    assert parent_records[0]["ligt_in_bouwblok_volgnummer"] == 1
+
+    events_path = here / "files" / "data" / "peilmerken_ligt_in_bouwblok.delete.gobevents"
+    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer.load_events_from_file(events_path)
+    rel_records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken_ligt_in_bouwblok")]
+    parent_records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
+
+    # Rel table row should be deleted, fields in parent table should be set to None again
+    assert len(rel_records) == 0
+    assert len(parent_records) == 1
+    assert records[0]["ligt_in_bouwblok_id"] is None
+    assert records[0]["ligt_in_bouwblok_identificatie"] is None
+    assert records[0]["ligt_in_bouwblok_volgnummer"] is None
