@@ -136,11 +136,42 @@ class EventsProcessor:
             if schema_table.has_composite_key
             else getattr(table.c, schema_table.identifier[0])
         )
+
+        update_parent_op = update_parent_row = None
+        if schema_table.has_parent_table:
+            # Have relation. We need to update the relation columns in the parent table as well
+            rel_field_prefix = to_snake_case(schema_table.parent_table_field.name)
+            parent_schema_table = schema_table.parent_table
+            parent_table = self.tables[dataset_id][parent_schema_table.id]
+            parent_id_field = (
+                parent_table.c.id
+                if parent_schema_table.has_composite_key
+                else getattr(parent_table.c, parent_schema_table.identifier[0])
+            )
+
+            parent_id_value = ".".join(
+                [
+                    str(row[f"{parent_schema_table.id}_{fn}"])
+                    for fn in parent_schema_table.identifier
+                ]
+            )
+
+            update_parent_op = parent_table.update()
+            update_parent_op = update_parent_op.where(parent_id_field == parent_id_value)
+
+            update_parent_row = {
+                k: v for k, v in event_data.items() if k.startswith(rel_field_prefix)
+            }
+            if event_type == "DELETE":
+                update_parent_row = {k: None for k in update_parent_row.keys()}
+
         if needs_select:
-            # XXX Can we assume 'id' is always available?
             db_operation = db_operation.where(id_field == id_value)
         with self.conn.begin():
             self.conn.execute(db_operation, row)
+
+            if update_parent_op is not None:
+                self.conn.execute(update_parent_op, update_parent_row)
 
     def process_event(self, event_id: str, event_meta: dict, event_data: dict):
         """Do inserts/updates/deletes."""
