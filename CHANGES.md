@@ -1,3 +1,7 @@
+# 2023-03-30 (5.8.3)
+
+* Workaround for DSO-API docs not loading.
+
 # 2023-03-28 (5.8.2)
 
 * Fix condition for through tables for a 1-N relation.
