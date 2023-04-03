@@ -704,6 +704,25 @@ def show_tablenames(db_url: str) -> None:
     click.echo("\n".join(names))
 
 
+@show.command("datasets")
+@option_schema_url
+def show_datasets(schema_url: str) -> None:
+    """Retrieve the ids of all the datasets."""
+    loader = get_schema_loader(schema_url)
+    for dataset_schema_id in loader.get_all_datasets().keys():
+        click.echo(dataset_schema_id)
+
+
+@show.command("datasettables")
+@option_schema_url
+@argument_dataset_id
+def show_datasettables(schema_url: str, dataset_id: str) -> None:
+    """Retrieve the ids of the datasettables for the indicated dataset."""
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=False)
+    for dataset_table in dataset_schema.tables:
+        click.echo(dataset_table.id)
+
+
 @show.command("mapfile")
 @click.option(
     "--schema-url",
