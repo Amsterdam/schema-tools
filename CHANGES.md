@@ -1,3 +1,7 @@
+# 2023-04-03 (5.8.4)
+
+* Add cli commands to list schemas and tables.
+
 # 2023-03-30 (5.8.3)
 
 * Workaround for DSO-API docs not loading.
