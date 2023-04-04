@@ -1,3 +1,7 @@
+# 2023-04-04 (5.8.5)
+
+* Exclude all array-type fields during exports.
+
 # 2023-04-03 (5.8.4)
 
 * Add cli commands to list schemas and tables.

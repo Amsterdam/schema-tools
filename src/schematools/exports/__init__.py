@@ -82,7 +82,7 @@ class BaseExporter:
 def _get_fields(dataset_schema: DatasetSchema, table: DatasetTableSchema, scopes: list[str]):
     parent_scopes = set(dataset_schema.auth | table.auth) - {_PUBLIC_SCOPE}
     for field in table.fields:
-        if field.nm_relation is not None:
+        if field.is_array:
             continue
         if parent_scopes | set(field.auth) - {_PUBLIC_SCOPE} <= set(scopes):
             yield field
