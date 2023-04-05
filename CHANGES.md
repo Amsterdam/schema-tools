@@ -1,3 +1,7 @@
+# 2023-04-05 (5.8.6)
+
+* Apply some small fixes to cli commands and update template used to generate schema by introspection.
+
 # 2023-04-04 (5.8.5)
 
 * Exclude all array-type fields during exports.

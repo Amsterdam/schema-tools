@@ -396,6 +396,8 @@ def validate(
         META_SCHEMA_URL: URL where the meta schema for Amsterdam Schema definitions can be found.
         If multiple are given, schematools will try to validate against the largest version,
         working backwards and stopping at the first version that the objects are valid against.
+
+        Usually META_SCHEMA_URL is something like: https://schemas.data.amsterdam.nl/schema@vn
     """  # noqa: D301,D412,D417
     if not meta_schema_url:
         click.echo("META_SCHEMA_URL not provided", err=True)
@@ -615,6 +617,8 @@ def batch_validate(
 def format_schema_error(e: jsonschema.SchemaError | jsonschema.ValidationError) -> str:
     s = io.StringIO()
     s.write(f"{e.json_path}, {list(e.schema_path)}")
+    if e.message and not e.context:
+        s.write("\n\t" + e.message)
     if e.context:
         for ec in e.context:
             s.write("\n\t" + ec.message.strip())
@@ -709,8 +713,8 @@ def show_tablenames(db_url: str) -> None:
 def show_datasets(schema_url: str) -> None:
     """Retrieve the ids of all the datasets."""
     loader = get_schema_loader(schema_url)
-    for dataset_schema_id in loader.get_all_datasets().keys():
-        click.echo(dataset_schema_id)
+    for dataset_schema in loader.get_all_datasets().values():
+        click.echo(dataset_schema.id)
 
 
 @show.command("datasettables")

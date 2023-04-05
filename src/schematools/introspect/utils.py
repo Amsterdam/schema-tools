@@ -4,8 +4,12 @@ DATASET_TMPL = {
     "title": None,
     "status": "beschikbaar",
     "description": None,
-    "version": "0.0.1",
     "crs": "EPSG:28992",
+    "auth": "OPENBAAR",
+    "authorizationGrantor": "n.v.t.",
+    "owner": "Gemeente Amsterdam",
+    "creator": "bronhouder onbekend",
+    "publisher": "Datateam xyz",
     "tables": [],
 }
 
@@ -14,6 +18,7 @@ DATASET_TMPL = {
 TABLE_TMPL = {
     "id": None,
     "type": "table",
+    "version": "0.0.1",
     "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -22,7 +27,7 @@ TABLE_TMPL = {
         "display": "id",
         "properties": {
             "schema": {
-                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.3.0#/definitions/schema"
             },
         },
     },
