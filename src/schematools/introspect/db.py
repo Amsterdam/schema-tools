@@ -96,5 +96,7 @@ def introspect_db_schema(engine, dataset_id, tablenames, db_schema=None, prefix=
     dataset = copy.deepcopy(DATASET_TMPL)
     dataset["id"] = dataset_id
     dataset["title"] = dataset_id
+    dataset["description"] = dataset_id
+    dataset["version"] = "0.0.1"
     dataset["tables"] = tables
     return dataset

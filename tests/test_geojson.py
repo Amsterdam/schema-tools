@@ -58,7 +58,7 @@ def test_geojson_to_table():
                 "properties": {
                     "schema": {
                         "$ref": (
-                            "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                            "https://schemas.data.amsterdam.nl/schema@v1.3.0"
                             "#/definitions/schema"
                         )
                     },
