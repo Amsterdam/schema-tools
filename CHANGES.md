@@ -1,3 +1,7 @@
+# 2023-04-06 (5.9.0)
+
+* Simplification of the events importer. Relations are now imported as separate objects.
+
 # 2023-04-05 (5.8.6)
 
 * Apply some small fixes to cli commands and update template used to generate schema by introspection.
