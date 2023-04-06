@@ -10,6 +10,7 @@ from sqlalchemy.engine import Connection
 
 from schematools.events import metadata
 from schematools.factories import tables_factory
+from schematools.importer.base import BaseImporter
 from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema
 
@@ -18,7 +19,6 @@ from schematools.types import DatasetSchema
 # logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 logger = logging.getLogger(__name__)
-
 
 # Configuration information to map the event-type
 # to the following fields:
@@ -30,6 +30,8 @@ EVENT_TYPE_MAPPINGS = {
     "MODIFY": ("update", True),
     "DELETE": ("delete", True),
 }
+
+FULL_LOAD_TABLE_POSTFIX = "_full_load"
 
 
 class EventsProcessor:
@@ -117,6 +119,24 @@ class EventsProcessor:
         dataset_id = event_meta["dataset_id"]
         table_id = event_meta["table_id"]
 
+        if event_meta.get("full_load_sequence", False):
+            # Initialise fresh table for full load.
+            dataset_schema = self.datasets[dataset_id]
+            schema_table = dataset_schema.get_table_by_id(table_id)
+            db_table_name = schema_table.db_name_variant(postfix=FULL_LOAD_TABLE_POSTFIX)
+            importer = BaseImporter(dataset_schema, self.conn.engine, logger)
+            importer.generate_db_objects(
+                table_id,
+                db_table_name=db_table_name,
+                truncate=event_meta.get("first_of_sequence", False),
+                is_versioned_dataset=importer.is_versioned_dataset,
+            )
+
+            table = importer.tables[table_id]
+        else:
+            schema_table = self.datasets[dataset_id].get_table_by_id(table_id)
+            table = self.tables[dataset_id][to_snake_case(table_id)]
+
         row = self._flatten_event_data(event_data)
 
         for geo_field in self.geo_fields[dataset_id][table_id]:
@@ -124,12 +144,10 @@ class EventsProcessor:
             if geo_value is not None and not geo_value.startswith("SRID"):
                 row[geo_field.name] = f"SRID={geo_field.srid};{geo_value}"
 
-        schema_table = self.datasets[dataset_id].get_table_by_id(table_id)
         identifier = schema_table.identifier
         id_value = ".".join(str(row[fn]) for fn in identifier)
         row["id"] = id_value
 
-        table = self.tables[dataset_id][to_snake_case(table_id)]
         db_operation = getattr(table, db_operation_name)()
         id_field = (
             table.c.id
@@ -148,7 +166,6 @@ class EventsProcessor:
                 if parent_schema_table.has_composite_key
                 else getattr(parent_table.c, parent_schema_table.identifier[0])
             )
-
             parent_id_value = ".".join(
                 [
                     str(row[f"{parent_schema_table.id}_{fn}"])
@@ -158,7 +175,6 @@ class EventsProcessor:
 
             update_parent_op = parent_table.update()
             update_parent_op = update_parent_op.where(parent_id_field == parent_id_value)
-
             update_parent_row = {
                 k: v for k, v in event_data.items() if k.startswith(rel_field_prefix)
             }
@@ -172,6 +188,20 @@ class EventsProcessor:
 
             if update_parent_op is not None:
                 self.conn.execute(update_parent_op, update_parent_row)
+
+        if event_meta.get("full_load_sequence", False) and event_meta.get(
+            "last_of_sequence", False
+        ):
+            table_to_replace = self.tables[dataset_id][to_snake_case(table_id)]
+
+            logger.info("End of full load sequence. Replacing active table.")
+            with self.conn.begin():
+                self.conn.execute(f"TRUNCATE {table_to_replace.name}")
+                self.conn.execute(
+                    f"INSERT INTO {table_to_replace.name} "  # nosec B608 # noqa: S608
+                    f"SELECT * FROM {table.name}"  # nosec B608 # noqa: S608
+                )
+                self.conn.execute(f"DROP TABLE {table.name} CASCADE")
 
     def process_event(self, event_id: str, event_meta: dict, event_data: dict):
         """Do inserts/updates/deletes."""
