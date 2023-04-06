@@ -116,3 +116,62 @@ def test_event_process_relation_update_parent_table(
     assert records[0]["ligt_in_bouwblok_id"] is None
     assert records[0]["ligt_in_bouwblok_identificatie"] is None
     assert records[0]["ligt_in_bouwblok_volgnummer"] is None
+
+
+def test_event_process_full_load_sequence(
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+):
+    """Test consists of three parts:
+
+    - First, load usual peilmerken events from peilmerken.gobevents.
+    - Then, load events from peilmerken_full_load_sequence_start.gobevents. This should
+      create the tmp table and not change the active table.
+    - Lastly, load events from peilmerken_full_load_sequence_end.gobevents. This should
+      end the full load sequence and
+      replace the active table with the tmp table. Also, the tmp table should be removed.
+
+    The peilmerken identificaties in the *.gobevents files used are unique, so we can
+    check that the objects are in the expected tables.
+    """
+
+    def load_events(events_file):
+        events_path = here / "files" / "data" / events_file
+        importer = EventsProcessor(
+            [nap_schema, gebieden_schema], tconn, local_metadata=local_metadata
+        )
+        importer.load_events_from_file(events_path)
+
+    # 1.
+    load_events("peilmerken.gobevents")
+    records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
+    assert len(records) == 1
+    assert records[0]["identificatie"] == "70780001"
+
+    # 2.
+    load_events("peilmerken_full_load_sequence_start.gobevents")
+    records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
+    assert len(records) == 1
+    assert records[0]["identificatie"] == "70780001"
+
+    records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken_full_load")]
+    assert len(records) == 3
+    assert records[0]["identificatie"] == "70780002"
+    assert records[1]["identificatie"] == "70780003"
+    assert records[2]["identificatie"] == "70780004"
+
+    # 3.
+    load_events("peilmerken_full_load_sequence_end.gobevents")
+    records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
+    assert len(records) == 4
+    assert records[0]["identificatie"] == "70780002"
+    assert records[1]["identificatie"] == "70780003"
+    assert records[2]["identificatie"] == "70780004"
+    assert records[3]["identificatie"] == "70780005"
+
+    res = next(
+        tconn.execute(
+            "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' "
+            "AND tablename  = 'nap_peilmerken_full_load');"
+        )
+    )
+    assert res[0] is False
