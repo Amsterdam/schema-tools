@@ -1,3 +1,7 @@
+# 2023-04-07 (5.9.1)
+
+* Add support for `first_` and `last_of_sequence` headers for event importer.
+
 # 2023-04-06 (5.9.0)
 
 * Simplification of the events importer. Relations are now imported as separate objects.
