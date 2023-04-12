@@ -4,7 +4,7 @@ import json
 from pathlib import PosixPath
 from typing import Any, Iterator
 
-import ndjson
+import orjson
 from shapely.geometry import shape
 
 from schematools.types import DatasetFieldSchema, DatasetTableSchema
@@ -21,9 +21,9 @@ class NDJSONImporter(BaseImporter):
         """Provide an iterator the reads the NDJSON records."""
         # Initializes the field mapper once for the table
         field_mapper = TableFieldMapper(dataset_table)
-        with open(file_name) as fh:
-            for row in ndjson.reader(fh):
-                records = field_mapper.parse_object(row)
+        with open(file_name, "rb") as fh:
+            for row in fh:
+                records = field_mapper.parse_object(orjson.loads(row))
                 yield records
 
 
