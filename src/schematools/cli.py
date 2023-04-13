@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import json
 import logging
 import operator
 import os
@@ -17,7 +18,6 @@ import jsonschema
 import requests
 import sqlalchemy
 from deepdiff import DeepDiff
-from json_encoder import json
 from jsonschema import draft7_format_checker
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import SQLAlchemyError

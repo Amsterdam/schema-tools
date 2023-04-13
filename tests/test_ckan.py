@@ -1,6 +1,6 @@
+import json
 import re
 
-import json_encoder.json
 import pytest
 
 from schematools import ckan
@@ -26,7 +26,7 @@ from schematools.types import DatasetSchema
 def test_convert(here, name):
     filename = here / f"files/datasets/{name}.json"
     with open(filename) as f:
-        schema = DatasetSchema.from_dict(json_encoder.json.load(f))
+        schema = DatasetSchema.from_dict(json.load(f))
 
     data = ckan.from_dataset(schema, name)
 
