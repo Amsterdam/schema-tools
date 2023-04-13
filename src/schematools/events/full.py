@@ -128,9 +128,12 @@ class EventsProcessor:
             importer.generate_db_objects(
                 table_id,
                 db_table_name=db_table_name,
-                truncate=event_meta.get("first_of_sequence", False),
                 is_versioned_dataset=importer.is_versioned_dataset,
+                ind_extra_index=False,
             )
+
+            if event_meta.get("first_of_sequence", False):
+                self.conn.engine.execute(f"TRUNCATE {db_table_name}")
 
             table = importer.tables[table_id]
         else:
