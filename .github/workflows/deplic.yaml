@@ -1,0 +1,40 @@
+# Finds dependencies with problematic licenses: either no license,
+# or incompatible with MPL.
+
+name: Check licenses of dependencies
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  deplic:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.11
+    - name: Install tools
+      run: |
+        sudo apt install -y jq
+        python -m pip install dep-license
+    - name: Run deplic
+      # deplic can take a config file with problematic licenses,
+      # but it doesn't seem to allow adding exceptions for specific
+      # packages. flake8-builtins is ok, because we don't import it,
+      # we just check code with it.
+      #
+      # The tail command skips deplic's status messages.
+      run: >
+        deplic -f json . |
+        tail -n +4 |
+        jq '
+          map(select(
+            .Meta == "" and .Classifier == ""
+            or (.Meta | startswith("GPL")) and (.Name != "flake8-builtins")
+          )) | if length > 0 then halt_error(1) else . end
+        '
