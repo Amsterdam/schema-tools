@@ -4,9 +4,9 @@ from django.core.management import call_command
 from django.db import IntegrityError, connection
 from django.db.models.base import ModelBase
 from django.db.models.fields import DateTimeField
-from django_postgres_unlimited_varchar import UnlimitedCharField
 
 from schematools.contrib.django.factories import model_factory, schema_models_factory
+from schematools.contrib.django.fields import UnlimitedCharField
 from schematools.contrib.django.models import (
     Dataset,
     LooseRelationField,

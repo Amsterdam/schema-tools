@@ -48,7 +48,7 @@ class Command(BaseCommand):
     path_aliases: list[tuple[str, str]] = [
         ("django.db.models.", "models."),
         ("django.contrib.gis.db.models.fields.", ""),
-        ("django_postgres_unlimited_varchar.", ""),
+        ("schematools.contrib.django.fields.", ""),
     ]
 
     def add_arguments(self, parser: ArgumentParser) -> None:
