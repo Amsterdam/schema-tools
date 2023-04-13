@@ -10,10 +10,10 @@ from django.contrib.gis.db import models as gis_models
 from django.contrib.postgres.fields import ArrayField
 from django.db.models import CheckConstraint, Q
 from django.db.models.base import ModelBase
-from django_postgres_unlimited_varchar import UnlimitedCharField
 
 from schematools import SRID_3D
 from schematools.contrib.django import app_config, signals
+from schematools.contrib.django.fields import UnlimitedCharField
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.types import DatasetFieldSchema, DatasetTableSchema
 
