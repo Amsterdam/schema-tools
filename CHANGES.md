@@ -1,3 +1,8 @@
+# 2023-04-13 (5.9.2)
+
+* Skip index creation on temporary full load table from event importer.
+* Fix truncate bug that truncated all associated tables when updating a relation table.
+
 # 2023-04-07 (5.9.1)
 
 * Add support for `first_` and `last_of_sequence` headers for event importer.
