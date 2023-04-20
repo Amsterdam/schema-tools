@@ -1,3 +1,9 @@
+# 2023-04-20 (5.9.3)
+
+* Disable the versioning that creates postgresql schemas for new tables.
+  This functionality is not fully completed and accepted and is now
+  blocking the event processing code.
+
 # 2023-04-13 (5.9.2)
 
 * Skip index creation on temporary full load table from event importer.

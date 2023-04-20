@@ -407,6 +407,10 @@ class BaseImporter:
     def is_versioned_dataset(self) -> bool:
         """Returns whether versioning will be employed for the current dataset.
 
+        NB. Because the versioning has not been fully completed yet,
+        this method always return False for now.
+
+
         Strictly speaking datasets are not directly (as in: on the dataset level) versioned
         anymore. Its tables, however, are! That is, in the Amsterdam Schema corresponding to the
         dataset. Whether we employ versioning on the DB level depends on whether we are dealing
@@ -416,14 +420,17 @@ class BaseImporter:
             * a dataset in a dataset specific PostgreSQL schema
             * a brand new dataset with no current DB representation.
 
-        Versioning will be used for the latter two. Not for the first one.
-        """
-        with self.engine.connect() as connection:
-            is_versioned = cast(
-                bool,
-                connection.scalar(IS_VERSIONED_DATASET_SQL, dataset_name=self.dataset_schema.id),
-            )
-        return is_versioned
+        Versioning will be used for the latter two. Not for the first one."""
+        return False
+
+        # XXX Disabled until the decision has been made how to continue with versioning!
+
+        # with self.engine.connect() as connection:
+        #     is_versioned = cast(
+        #         bool,
+        #         connection.scalar(IS_VERSIONED_DATASET_SQL, dataset_name=self.dataset_schema.id),
+        #     )
+        # return is_versioned
 
     def create_schema(self, db_schema_name: str) -> None:
         """Create DB Schema.
