@@ -81,7 +81,7 @@ def test_event_process_relation_update_parent_table(
 ):
     events_path = here / "files" / "data" / "peilmerken.gobevents"
     importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
-    importer.load_events_from_file(events_path)
+    importer.load_events_from_file_using_bulk(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
 
     # Imported objects without relations
@@ -92,7 +92,7 @@ def test_event_process_relation_update_parent_table(
 
     events_path = here / "files" / "data" / "peilmerken_ligt_in_bouwblok.gobevents"
     importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
-    importer.load_events_from_file(events_path)
+    importer.load_events_from_file_using_bulk(events_path)
     rel_records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken_ligt_in_bouwblok")]
     parent_records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
 
@@ -106,7 +106,7 @@ def test_event_process_relation_update_parent_table(
 
     events_path = here / "files" / "data" / "peilmerken_ligt_in_bouwblok.delete.gobevents"
     importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
-    importer.load_events_from_file(events_path)
+    importer.load_events_from_file_using_bulk(events_path)
     rel_records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken_ligt_in_bouwblok")]
     parent_records = [dict(r) for r in tconn.execute("SELECT * from nap_peilmerken")]
 
@@ -139,7 +139,7 @@ def test_event_process_full_load_sequence(
         importer = EventsProcessor(
             [nap_schema, gebieden_schema], tconn, local_metadata=local_metadata
         )
-        importer.load_events_from_file(events_path)
+        importer.load_events_from_file_using_bulk(events_path)
 
     # 1.
     load_events("peilmerken.gobevents")
