@@ -1,3 +1,9 @@
+# 2023-05-04 (5.10.0)
+
+* Add support for loading events in batches.
+  Extract initialisation and finalisation into separate methods to improve performance.
+  Cache initialised tables.
+
 # 2023-04-20 (5.9.3)
 
 * Disable the versioning that creates postgresql schemas for new tables.
