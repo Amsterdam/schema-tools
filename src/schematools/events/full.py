@@ -1,10 +1,10 @@
 """Module implementing an event processor, that processes full events."""
 from __future__ import annotations
 
-import json
 import logging
 from collections import defaultdict
 
+import orjson
 from sqlalchemy import Table, inspect
 from sqlalchemy.engine import Connection
 
@@ -278,12 +278,12 @@ class EventsProcessor:
 
     def load_events_from_file(self, events_path: str):
         """Load events from a file, primarily used for testing."""
-        with open(events_path) as ef:
+        with open(events_path, "rb") as ef:
             for line in ef:
-                if line.strip():
-                    event_id, event_meta_str, data_str = line.split("|", maxsplit=2)
-                    event_meta = json.loads(event_meta_str)
-                    event_data = json.loads(data_str)
+                if line := line.strip():
+                    event_id, event_meta_str, data_str = line.split(b"|", maxsplit=2)
+                    event_meta = orjson.loads(event_meta_str)
+                    event_data = orjson.loads(data_str)
                     self.process_event(
                         event_meta,
                         event_data,
@@ -291,12 +291,12 @@ class EventsProcessor:
 
     def load_events_from_file_using_bulk(self, events_path: str):
         """Load events from a file, primarily used for testing."""
-        with open(events_path) as ef:
+        with open(events_path, "rb") as ef:
             events = []
             for line in ef:
-                if line.strip():
-                    event_id, event_meta_str, data_str = line.split("|", maxsplit=2)
-                    event_meta = json.loads(event_meta_str)
-                    event_data = json.loads(data_str)
+                if line := line.strip():
+                    event_id, event_meta_str, data_str = line.split(b"|", maxsplit=2)
+                    event_meta = orjson.loads(event_meta_str)
+                    event_data = orjson.loads(data_str)
                     events.append((event_meta, event_data))
             self.process_events(events)
