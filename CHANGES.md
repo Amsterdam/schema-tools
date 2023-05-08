@@ -1,3 +1,7 @@
+# 2023-05-08 (5.10.1)
+
+* Add a `--to-snake-case` option to the `schema show dataset[table]` cli functions.
+
 # 2023-05-04 (5.10.0)
 
 * Add support for loading events in batches.

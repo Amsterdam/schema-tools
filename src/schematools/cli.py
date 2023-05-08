@@ -48,6 +48,7 @@ from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
 from schematools.maps import create_mapfile
+from schematools.naming import to_snake_case
 from schematools.permissions.db import (
     apply_schema_and_profile_permissions,
     introspect_permissions,
@@ -709,21 +710,25 @@ def show_tablenames(db_url: str) -> None:
 
 @show.command("datasets")
 @option_schema_url
-def show_datasets(schema_url: str) -> None:
+@click.option("--to-snake-case", "snake_it", is_flag=True)
+def show_datasets(schema_url: str, snake_it: bool) -> None:
     """Retrieve the ids of all the datasets."""
     loader = get_schema_loader(schema_url)
+    modifier = to_snake_case if snake_it else lambda x: x
     for dataset_schema in loader.get_all_datasets().values():
-        click.echo(dataset_schema.id)
+        click.echo(modifier(dataset_schema.id))
 
 
 @show.command("datasettables")
 @option_schema_url
 @argument_dataset_id
-def show_datasettables(schema_url: str, dataset_id: str) -> None:
+@click.option("--to-snake-case", "snake_it", is_flag=True)
+def show_datasettables(schema_url: str, dataset_id: str, snake_it: bool) -> None:
     """Retrieve the ids of the datasettables for the indicated dataset."""
     dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=False)
+    modifier = to_snake_case if snake_it else lambda x: x
     for dataset_table in dataset_schema.tables:
-        click.echo(dataset_table.id)
+        click.echo(modifier(dataset_table.id))
 
 
 @show.command("mapfile")
