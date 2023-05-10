@@ -13,6 +13,7 @@ DB_TO_ASCHEMA_TYPE = {
     "TIME": {"type": "string", "format": "time"},
     "TIMESTAMP": {"type": "string", "format": "date-time"},
     "VARCHAR": {"type": "string"},
+    "UUID": {"type": "string"},
     "INTEGER": {"type": "integer"},
     "BIGINT": {"type": "integer"},
     "SMALLINT": {"type": "integer"},
