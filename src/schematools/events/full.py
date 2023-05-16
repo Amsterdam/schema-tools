@@ -124,6 +124,7 @@ class EventsProcessor:
                 db_table_name=db_table_name,
                 is_versioned_dataset=importer.is_versioned_dataset,
                 ind_extra_index=False,
+                ind_create_pk_lookup=False,
             )
 
             table = importer.tables[table_id]
