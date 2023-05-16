@@ -1,3 +1,8 @@
+# 2023-05-16 (5.11.0)
+
+* Add option ``ind_create_pk_lookup`` to ``EventsProcessor``, to skip
+  expensive index creation.
+
 # 2023-05-10 (5.10.2)
 
 * Add UUID column type for introspection of PostgreSQL db.
