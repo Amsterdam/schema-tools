@@ -6,7 +6,7 @@ from contextlib import closing
 from functools import cached_property
 from itertools import islice
 from pathlib import Path
-from typing import Any, Final, Iterator, TypeVar, cast
+from typing import Any, Final, Iterator, TypeVar
 
 import click
 import jsonpath_rw
@@ -192,6 +192,7 @@ class BaseImporter:
         ind_extra_index: bool = True,
         limit_tables_to: set | None = None,
         is_versioned_dataset: bool = False,
+        ind_create_pk_lookup: bool = True,
     ) -> None:
         """Generate the tablemodels, tables and indexes.
 
@@ -267,7 +268,8 @@ class BaseImporter:
 
         if ind_tables:
             self.prepare_tables(self.tables, truncate=truncate)
-            self.create_pk_lookup(self.tables)
+            if ind_create_pk_lookup:
+                self.create_pk_lookup(self.tables)
             self.prepare_views()
 
         if ind_extra_index:
