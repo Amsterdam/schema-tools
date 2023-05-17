@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import IO
+from decimal import Decimal
+from typing import IO, Any
 
 import jsonlines
 import orjson
@@ -13,6 +14,21 @@ from schematools.naming import toCamelCase
 from schematools.types import DatasetSchema, DatasetTableSchema
 
 metadata = MetaData()
+
+
+def _default(obj: Any) -> str:
+    if isinstance(obj, Decimal):
+        return str(obj)
+    raise TypeError
+
+
+def _dumps(obj: Any) -> str:
+    """Json serializer.
+
+    Unfortunately, orjson does not support Decimal serialization,
+    so we need this extra function.
+    """
+    return orjson.dumps(obj, default=_default)
 
 
 class JsonLinesExporter(BaseExporter):  # noqa: D101
@@ -34,7 +50,7 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
     def write_rows(  # noqa: D102
         self, file_handle: IO[str], table: DatasetTableSchema, sa_table: Table, srid: str
     ):
-        writer = jsonlines.Writer(file_handle, dumps=orjson.dumps)
+        writer = jsonlines.Writer(file_handle, dumps=_dumps)
         row_modifier = self._get_row_modifier(table)
         query = select(self._get_columns(sa_table, table))
         if self.size is not None:
