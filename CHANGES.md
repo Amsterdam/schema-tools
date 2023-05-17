@@ -1,3 +1,7 @@
+# 2023-05-17 (5.11.1)
+
+* Add serialization of Decimal for orjson.dump() in exporter.
+
 # 2023-05-16 (5.11.0)
 
 * Add option ``ind_create_pk_lookup`` to ``EventsProcessor``, to skip
