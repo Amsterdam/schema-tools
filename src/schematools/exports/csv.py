@@ -28,8 +28,10 @@ class CsvExporter(BaseExporter):  # noqa: D101
         query = select(self._get_columns(sa_table, table))
         if self.size is not None:
             query = query.limit(self.size)
-        for r in self.connection.execute(query):
-            writer.writerow(dict(r))
+        result = self.connection.execution_options(yield_per=1000).execute(query)
+        for partition in result.partitions():
+            for r in partition:
+                writer.writerow(dict(r))
 
 
 def export_csvs(

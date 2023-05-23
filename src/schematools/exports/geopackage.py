@@ -22,10 +22,10 @@ def export_geopackages(
     Args:
         connection: SQLAlchemy connection object. Is needed for the `psycopg2`
         formatting.
-        dataset_schema: Schema that needs export as geopackageself.
-        output: path on the filesystem where output should be storedself.
+        dataset_schema: Schema that needs export as geopackage.
+        output: path on the filesystem where output should be stored.
         table_ids: optional parameter for a subset for the tables of the datasetself.
-        scopes: Keycloak scopes that need to be taken into accountself.
+        scopes: Keycloak scopes that need to be taken into account.
             The geopackage will be produced contains information that is only
             accessible with these scopes.
         size: To produce a subset of the rows, mainly for testing.
