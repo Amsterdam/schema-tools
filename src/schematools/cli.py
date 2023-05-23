@@ -19,8 +19,9 @@ import requests
 import sqlalchemy
 from deepdiff import DeepDiff
 from jsonschema import draft7_format_checker
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.future import create_engine
 from sqlalchemy.schema import CreateTable
 
 from schematools import (
