@@ -29,6 +29,7 @@ def test_model_factory_fields(afval_dataset) -> None:
         "datum_creatie",
         "datum_leegmaken",
         "geometry",
+        "kortenaam",
     }
     assert meta.get_field("id").primary_key
 

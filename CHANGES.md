@@ -1,3 +1,8 @@
+# 2023-05-24 (5.11.4)
+
+* Recognize more than 2 consecutive capital letters as word boundaries
+* Fix database column naming in model mocker class construction
+
 # 2023-05-24 (5.11.3)
 
 * Fix handling of geometry fields containing underscores in the attribute name.
