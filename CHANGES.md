@@ -1,3 +1,12 @@
+# 2023-05-24 (5.11.3)
+
+* Fix handling of geometry fields containing underscores in the attribute name.
+* Add utility cli commands for case-changes (snake, camel).
+
+# 2023-05-23 (5.11.2)
+
+* Make export to csv/jsonlines less memory hungry.
+
 # 2023-05-17 (5.11.1)
 
 * Add serialization of Decimal for orjson.dump() in exporter.
