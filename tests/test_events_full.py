@@ -175,3 +175,20 @@ def test_event_process_full_load_sequence(
         )
     )
     assert res[0] is False
+
+
+def test_event_process_geometry_attrs(
+    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations
+):
+    events_path = here / "files" / "data" / "kadastraleobjecten_geometry.gobevents"
+
+    importer = EventsProcessor(
+        [brk_schema_without_bag_relations], tconn, local_metadata=local_metadata
+    )
+    importer.load_events_from_file_using_bulk(events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * from brk_kadastraleobjecten")]
+
+    assert len(records) == 1
+    record = records[0]
+    assert record["bijpijling_geometrie"] is not None
+    assert record["geometrie"] is not None

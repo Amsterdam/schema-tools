@@ -265,6 +265,11 @@ def brk_schema(schema_loader) -> DatasetSchema:
 
 
 @pytest.fixture
+def brk_schema_without_bag_relations(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("brk_without_bag_relations.json")
+
+
+@pytest.fixture
 def composite_key_schema(schema_loader) -> ProfileSchema:
     return schema_loader.get_dataset_from_file("composite_key.json")
 

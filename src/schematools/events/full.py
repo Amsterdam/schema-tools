@@ -175,9 +175,10 @@ class EventsProcessor:
         row = self._flatten_event_data(event_data)
 
         for geo_field in self.geo_fields[dataset_id][table_id]:
-            geo_value = row.get(geo_field.name)
+            row_key = to_snake_case(geo_field.name)
+            geo_value = row.get(row_key)
             if geo_value is not None and not geo_value.startswith("SRID"):
-                row[geo_field.name] = f"SRID={geo_field.srid};{geo_value}"
+                row[row_key] = f"SRID={geo_field.srid};{geo_value}"
 
         identifier = schema_table.identifier
         id_value = ".".join(str(row[fn]) for fn in identifier)
