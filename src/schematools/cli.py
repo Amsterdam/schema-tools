@@ -49,7 +49,7 @@ from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
 from schematools.maps import create_mapfile
-from schematools.naming import to_snake_case
+from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.db import (
     apply_schema_and_profile_permissions,
     introspect_permissions,
@@ -149,6 +149,12 @@ def import_() -> None:
 @schema.group("export")
 def export() -> None:
     """Subcommand to export data."""
+    pass
+
+
+@schema.group("tocase")
+def tocase() -> None:
+    """Subcommand to make case-changes."""
     pass
 
 
@@ -1103,6 +1109,20 @@ def export_jsonls_for(
         export_jsonls(
             connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size
         )
+
+
+@tocase.command("camel")
+@click.argument("input_str")
+def convert_to_camel_case(input_str: str) -> str:
+    """Converts INPUT_STR to camel case."""
+    click.echo(toCamelCase(input_str))
+
+
+@tocase.command("snake")
+@click.argument("input_str")
+def convert_to_snake_case(input_str: str) -> str:
+    """Converts INPUT_STR to snake case."""
+    click.echo(to_snake_case(input_str))
 
 
 @kafka.command()
