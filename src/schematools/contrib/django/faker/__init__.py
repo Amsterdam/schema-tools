@@ -27,10 +27,10 @@ LOCALE = "nl_NL"
 
 @dataclass
 class Declaration:
-    """Sets up a BaseDeclaration and it parameters to be used for FactoryBoy.
+    """Sets up a BaseDeclaration and its parameters to be used for FactoryBoy.
 
     This wrapper class around BaseDeclaration enables a layered approach,
-    where the parameters can be overridden a several levels.
+    where the parameters can be overridden at several levels.
     """
 
     cls: ClassVar[type] = BaseDeclaration

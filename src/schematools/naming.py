@@ -9,7 +9,7 @@ from string_utils import slugify
 from schematools import RELATION_INDICATOR
 
 _RE_CAMEL_CASE: Final[Pattern[str]] = re.compile(
-    r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z])"
+    r"(((?<=[^A-Z])[A-Z])|([A-Z](?![A-Z]))|((?<=[a-z])[0-9])|(?<=[0-9])[a-z]|((?<=[A-Z])[A-Z](?=[A-Z])))"  # noqa: E501
 )
 
 _CAMEL_CASE_REPLACE_PAT: Final[Pattern[str]] = re.compile(

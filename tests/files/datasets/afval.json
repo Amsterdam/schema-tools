@@ -47,6 +47,11 @@
             "format": "date-time",
             "description": "Datum leeggemaakt"
           },
+          "kortenaam": {
+            "type": "string",
+            "shortname": "afvalCL",
+            "relation": "afvalwegingen:clusters"
+          },
           "geometry": {
             "$ref": "https://geojson.org/schema/Point.json",
             "description": "Geometrie"

@@ -14,7 +14,7 @@ from django.db.models.base import ModelBase
 from schematools import SRID_3D
 from schematools.contrib.django import app_config, signals
 from schematools.contrib.django.fields import UnlimitedCharField
-from schematools.naming import to_snake_case, toCamelCase
+from schematools.naming import to_snake_case
 from schematools.types import DatasetFieldSchema, DatasetTableSchema
 
 from .mockers import DynamicModelMocker
@@ -445,6 +445,12 @@ def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
 
     This prevents the creation of Django FK and M2M fields,
     because we don't want to use those during mocking.
+
+    The returned DatasetTableSchema has mangled relation fields
+    in which we lose the information required to reconstruct the db_name
+    later on. The returned schema therefore uses the db_name as the field id.
+    The objects returned from this function should therefore only be used for
+    supplying model classes to mocking factories.
     """
     new_table_data = table_schema.json_data()
     new_table_data["schema"]["properties"] = {}
@@ -474,9 +480,9 @@ def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
             # Add autoincrementing behaviour to the identifier fields
             # by adding a `faker` attribute
             field_definition["faker"] = "nuller"
-        # We need to convert the db_name back to the proper camelCasing
-        # that is being used in amsterdam schemas.
-        new_table_data["schema"]["properties"][toCamelCase(db_name)] = field_definition
+        # We have lost the information to reconstruct the db_name.
+        # Therefore we use the db_name as the field name here.
+        new_table_data["schema"]["properties"][db_name] = field_definition
     return DatasetTableSchema(new_table_data, parent_schema=table_schema._parent_schema)
 
 
@@ -501,6 +507,7 @@ def model_mocker_factory(
     # This table_schema is stripped from relation info, we want to use simple
     # scalars for relations.
     stripped_table_schema = _simplify_table_schema_relations(table_schema)
+    # register the model.
     model_factory(dataset, stripped_table_schema, base_app_name=base_app_name)
 
     # Generate fields
@@ -514,7 +521,7 @@ def model_mocker_factory(
         if field.is_nested_table or field.is_temporal_range:
             continue
 
-        # Generate name, fix if needed.
+        # Generate attribute name of the mocker class, fix if needed.
         field_name = field.python_name
         fields[field_name] = get_field_factory(field)
 
