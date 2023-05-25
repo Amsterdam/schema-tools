@@ -29,7 +29,7 @@ from typing import (
 
 from methodtools import lru_cache
 
-from schematools import MAX_TABLE_NAME_LENGTH
+from schematools import MAX_TABLE_NAME_LENGTH, DEFAULT_SCHEMA_URL
 from schematools.exceptions import (
     DatasetFieldNotFound,
     DatasetTableNotFound,
@@ -745,6 +745,30 @@ class DatasetTableSchema(SchemaType):
     def python_name(self) -> str:
         """The 'id', but camel cased like a class name."""
         return toCamelCase(self.id, first_upper=True)
+
+    @property
+    def is_view(self) -> bool:
+        """Whether this table is a view."""
+        if self.get("derivedFrom", False):
+            return True
+
+    @property
+    def derived_from(self) -> list:
+        if self.get("derivedFrom", False):
+            return self.get("derivedFrom")
+
+    def get_view_url(self) -> str:
+        """Get the URL where the SQL is located for this view."""
+        if self._parent_schema.id == self.id:
+            return f"{DEFAULT_SCHEMA_URL}{self.id}/dataset.sql"
+        else:
+            return f"{DEFAULT_SCHEMA_URL}{self._parent_schema.id}/{self.id}/v{self.version}.sql"
+
+    def get_view_user(self) -> str:
+        if self._parent_schema.id == self.id:
+            return f"write_{self.id}"
+        else:
+            return f"write_{self._parent_schema.id}_{self.id}"
 
     @property
     def shortname(self) -> str:

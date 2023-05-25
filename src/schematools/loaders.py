@@ -40,6 +40,10 @@ class SchemaLoader:
         """Retrieves a versioned table by reference"""
         raise NotImplementedError
 
+    def get_view(self, dataset: DatasetSchema, table_ref: str) -> str:
+        """Retrieves a view by reference"""
+        raise NotImplementedError
+
     def get_dataset_path(self, dataset_id: str) -> str:
         """Find the relative path of a dataset within the location"""
         raise NotImplementedError
@@ -455,6 +459,16 @@ class _SharedConnectionMixin:
         response.raise_for_status()  # All extend from OSError
         return response.json()
 
+    def _read_sql_url(self, url) -> str:
+        """ Load SQL from URL """
+        print(f"Loading SQL from {url}")
+        response = (self._connection or requests).get(url, timeout=60)
+        if response.status_code == 404:
+            # Normalize the exception type for "not found" errors.
+            raise SchemaObjectNotFound(url)
+        response.raise_for_status()  # All extend from OSError
+        return response.text
+
 
 class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
     """Loader that loads dataset schemas from an URL."""
@@ -490,6 +504,10 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
     def _read_table(self, dataset_id: str, table_ref: str) -> Json:
         dataset_path = self.get_dataset_path(dataset_id)
         return self._read_json_url(self.schema_url / dataset_path / table_ref)
+
+    def _read_view(self, dataset_id: str, table_ref: str) -> str:
+        dataset_path = self.get_dataset_path(dataset_id)
+        return self._read_sql_url(self.schema_url / dataset_path / table_ref)
 
     def _get_publisher_url(self) -> URL:
         return URL(self.schema_url.rpartition("/datasets")[0]) / "publishers"

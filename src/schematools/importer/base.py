@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Final, Iterator, TypeVar, cast
 
 import click
+import requests
 import jsonpath_rw
 import psycopg2
 from psycopg2 import sql
@@ -218,6 +219,11 @@ class BaseImporter:
         self.dataset_table = self.dataset_schema.get_table_by_id(table_id)
         table_id = self.dataset_table.id  # get real-cased ID.
 
+        # check if the dataset is a view
+        if self.dataset_table.is_view:
+            self.logger.log_info("Dataset %s is a view, skipping table generation", table_id)
+            return False
+
         if is_versioned_dataset:
             if db_schema_name is None:
                 # private DB schema instead of `public`
@@ -286,6 +292,55 @@ class BaseImporter:
                 metadata.bind,
                 db_schema_name,
             )
+
+    def load_view_sql(self, url: str) -> str:
+        """Load a view SQL file from a URL."""
+        if not url.startswith("http"):
+            raise ValueError(f"View URL {url} is not a valid URL")
+
+        response = requests.get(url)
+
+        try:
+            response = requests.get(url, timeout=30)
+        except requests.exceptions.Timeout:
+            self.logger.log_error(f"Timeout while loading view SQL from {url}")
+        except requests.exceptions.TooManyRedirects:
+            self.logger.log_error(f"Too many redirects while loading view SQL from {url}")
+        except requests.exceptions.RequestException as e:
+            self.logger.log_error(f"Error while loading view SQL from {url}: {e}")
+
+        if response.status_code == 200:
+            return response.text
+        else:
+            self.logger.log_error(f"Error while loading view SQL from {url}: {e}")
+            raise ValueError(f"Could not load view SQL from {url}: {response.status_code}")
+
+    def table_exists(self, table_name: str) -> bool:
+        """Check if a table exists in the database."""
+        return table_name in self.engine.table_names()
+
+    def create_view_user(self, table) -> None:
+        """Create view users/owner in the database."""
+        view_user = table.get_view_user()
+        if view_user is not None:
+            with closing(self.engine.raw_connection()) as conn, closing(conn.cursor()) as cur:
+                cur.execute(f"CREATE USER {view_user}")
+                conn.commit()
+
+    def generate_view(self, table: DatasetTableSchema) -> None:
+        """Generate a view for a schema."""
+        view_url = table.get_view_url()
+        if view_url is None:
+            raise ValueError(f"Table {table.id} does not have a view URL")
+
+        with closing(self.engine.raw_connection()) as conn, closing(conn.cursor()) as cur:
+            if view_sql := self.load_view_sql(view_url):
+                view = sql.SQL(view_sql)
+                cur.execute(view)
+                conn.commit()
+            else:
+                self.logger.log_error(f"Table {table.id} does not have a view URL")
+                raise ValueError(f"Table {table.id} does not have a view URL")
 
     def load_file(self, file_name: Path, batch_size: int = 100, **kwargs: Any) -> Record | None:
         """Import a file into the database table, returns the last record, if available."""

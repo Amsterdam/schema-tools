@@ -175,7 +175,6 @@ def tables_factory(
 
         columns = []
         for field in dataset_table.get_fields(include_subfields=True):
-
             # Exclude nested and nm_relation fields,
             # and fields that are added only for temporality
             if (
