@@ -22,14 +22,9 @@ def create_views(
     datasets: Iterable[Dataset],
     base_app_name: Optional[str] = None,
 ) -> None:  # noqa: C901
-    """Create tables for all updated datasets.
-    This is a separate function to allow easy reuse.
-    """
+    """Create views. This is a separate function to allow easy reuse."""
     errors = 0
-    command.stdout.write("Creating tables")
-
-    # First create all models. This allows Django to resolve  model relations.
-    models = []
+    command.stdout.write("Creating views")
 
     # Because datasets are related, we need to 'prewarm'
     # the datasets cache (the DatasetSchema.dataset_collection)
@@ -41,26 +36,23 @@ def create_views(
         if not dataset.enable_db:
             continue  # in case create_tables() is called by import_schemas
 
-        models.extend(schema_models_factory(dataset, base_app_name=base_app_name))
+    import pdb
 
-    # Grouping multiple versions of same model by table name
-    models_by_table = defaultdict(list)
-    for model in models:
-        models_by_table[model._meta.db_table].append(model)
-
-    # Create all tables
-    with connection.schema_editor() as schema_editor:
-        for db_table_name, models_group in models_by_table.items():
-            model = max(models_group, key=lambda model: model._dataset.version)
-            if model.is_view():
+    pdb.set_trace()
+    # Create all views
+    for dataset in datasets:
+        for table in dataset.schema.tables:
+            if table.is_view():
+                """
+                view_sql = table.view_sql
                 try:
-                    command.stdout.write(f"* Creating view {model._meta.db_table}")
-                    with transaction.atomic():
-                        schema_editor.create_model(model)
+                    with connection.cursor() as cursor:
+                        cursor.execute(f"SET ROLE write_{table.schema_name}")
+                        cursor.execute(view_sql)
+                        command.stdout.write(f"* Creating view {table.name}")
                 except (DatabaseError, ValueError) as e:
-                    command.stderr.write(f"  Tables not created: {e}")
-                    if not re.search(r'relation "[^"]+" already exists', str(e)):
-                        errors += 1
-
+                    command.stderr.write(f"  Views not created: {e}")
+                    errors += 1
+                """
     if errors:
         raise CommandError("Not all tables could be created")

@@ -336,6 +336,7 @@ class BaseImporter:
         with closing(self.engine.raw_connection()) as conn, closing(conn.cursor()) as cur:
             if view_sql := self.load_view_sql(view_url):
                 view = sql.SQL(view_sql)
+                cur.execute(f"set role write_{table.id};")
                 cur.execute(view)
                 conn.commit()
             else:
