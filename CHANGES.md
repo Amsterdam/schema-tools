@@ -1,3 +1,7 @@
+# 2023-05-24 (5.11.5)
+
+* Patch to fix custom implementation of UnlimitedCharField.max_length
+
 # 2023-05-24 (5.11.4)
 
 * Recognize more than 2 consecutive capital letters as word boundaries
