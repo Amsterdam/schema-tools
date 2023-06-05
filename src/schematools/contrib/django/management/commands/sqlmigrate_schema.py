@@ -32,7 +32,7 @@ class Command(BaseCommand):
     the current schemas from the default remote repository.
     """
 
-    requires_system_checks = False
+    requires_system_checks = []
     help = """Print the SQL statements to migrate between two schema versions."""
 
     def add_arguments(self, parser: CommandParser) -> None:
@@ -190,7 +190,7 @@ class Command(BaseCommand):
         if self.verbosity >= 2:
             self.stdout.write(f"-- Building shared state for {dataset_model.name}")
 
-        project_state = ProjectState(real_apps=real_apps)
+        project_state = ProjectState(real_apps=set(real_apps))
 
         # Generate model states for all other tables in the dataset
         for table in dataset_model.schema.get_tables(include_nested=True, include_through=True):
