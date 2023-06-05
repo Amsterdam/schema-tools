@@ -1,3 +1,9 @@
+# 2023-06-05 (5.11.6)
+
+* Two small fixes to make `sqlmigrate_schema` work:
+  - requires_system_checks needs to be a list (from Django 1.4)
+  - list of datsets need to be a set when calling Django schema migrate API
+
 # 2023-05-24 (5.11.5)
 
 * Patch to fix custom implementation of UnlimitedCharField.max_length
