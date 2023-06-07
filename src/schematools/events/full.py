@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from dataclasses import dataclass
 
 import orjson
 from sqlalchemy import Table, inspect
@@ -32,6 +33,16 @@ EVENT_TYPE_MAPPINGS = {
 }
 
 FULL_LOAD_TABLE_POSTFIX = "_full_load"
+
+
+@dataclass
+class RunConfiguration:
+    check_existence_on_add = False
+    process_events = True
+    execute_after_process = True
+
+    table = None
+    schema_table = None
 
 
 class EventsProcessor:
@@ -132,23 +143,13 @@ class EventsProcessor:
 
         return table, schema_table
 
-    def _before_process(self, event_meta: dict) -> tuple[Table, DatasetTableSchema]:
-        dataset_id = event_meta["dataset_id"]
-        table_id = event_meta["table_id"]
-
+    def _before_process(self, run_configuration: RunConfiguration, event_meta: dict) -> None:
         if event_meta.get("full_load_sequence", False):
-            table, schema_table = self._get_full_load_tables(dataset_id, table_id)
 
             if event_meta.get("first_of_sequence", False):
-                self.conn.engine.execute(f"TRUNCATE {table.name}")
+                self.conn.execute(f"TRUNCATE {run_configuration.table.name}")
 
-            return table, schema_table
-        else:
-            schema_table = self.datasets[dataset_id].get_table_by_id(table_id)
-            table = self.tables[dataset_id][to_snake_case(table_id)]
-            return table, schema_table
-
-    def _after_process(self, event_meta: dict, table: Table):
+    def _after_process(self, run_configuration: RunConfiguration, event_meta: dict):
         if event_meta.get("full_load_sequence", False) and event_meta.get(
             "last_of_sequence", False
         ):
@@ -161,9 +162,9 @@ class EventsProcessor:
                 self.conn.execute(f"TRUNCATE {table_to_replace.name}")
                 self.conn.execute(
                     f"INSERT INTO {table_to_replace.name} "  # nosec B608 # noqa: S608
-                    f"SELECT * FROM {table.name}"  # nosec B608 # noqa: S608
+                    f"SELECT * FROM {run_configuration.table.name}"  # nosec B608 # noqa: S608
                 )
-                self.conn.execute(f"DROP TABLE {table.name} CASCADE")
+                self.conn.execute(f"DROP TABLE {run_configuration.table.name} CASCADE")
             self.full_load_tables[dataset_id].pop(table_id)
 
     def _prepare_row(
@@ -186,7 +187,7 @@ class EventsProcessor:
         return row
 
     def _process_row(
-        self, event_meta: dict, event_data: dict, table: Table, schema_table: DatasetTableSchema
+        self, run_configuration: RunConfiguration, event_meta: dict, event_data: dict
     ) -> None:
         """Process one row of data.
 
@@ -195,11 +196,22 @@ class EventsProcessor:
             event_meta: Metadata about the event
             event_data: Data containing the fields of the event
         """
+        table = run_configuration.table
+        schema_table = run_configuration.schema_table
 
         row = self._prepare_row(event_meta, event_data, schema_table)
         id_value = row["id"]
 
         event_type = event_meta["event_type"]
+
+        if (
+            run_configuration.check_existence_on_add
+            and event_type == "ADD"
+            and self._row_exists_in_database(run_configuration, id_value)
+        ):
+            logger.info("Row with id %s already exists in database. Skipping.", row)
+            return
+
         db_operation_name, needs_select = EVENT_TYPE_MAPPINGS[event_type]
         db_operation = getattr(table, db_operation_name)()
 
@@ -243,40 +255,157 @@ class EventsProcessor:
             if update_parent_op is not None:
                 self.conn.execute(update_parent_op, update_parent_row)
 
-    def process_event(self, event_meta: dict, event_data: dict):
-        table, schema_table = self._before_process(event_meta)
-        """Do inserts/updates/deletes."""
-        self._process_row(event_meta, event_data, table, schema_table)
-        self._after_process(event_meta, table)
+    def _row_exists_in_database(self, run_configuration: RunConfiguration, id_value: str):
+        table = run_configuration.table
+        schema_table = run_configuration.schema_table
+        id_field = (
+            table.c.id
+            if schema_table.has_composite_key
+            else getattr(table.c, schema_table.identifier[0])
+        )
 
-    def process_events(self, events: list[tuple[dict, dict]]):
+        with self.conn.begin():
+            res = self.conn.execute(table.select().where(id_field == id_value))
+            try:
+                next(res)
+            except StopIteration:
+                return False
+            return True
+
+    def _table_empty(self, table: Table):
+        with self.conn.begin():
+            res = self.conn.execute(table.select())
+            try:
+                next(res)
+            except StopIteration:
+                return True
+            return False
+
+    def _get_run_configuration(
+        self, first_event_meta: dict, last_event_meta: dict, recovery_mode: bool
+    ) -> RunConfiguration:
+        run_configuration = RunConfiguration()
+        dataset_id = first_event_meta["dataset_id"]
+        table_id = first_event_meta["table_id"]
+
+        if first_event_meta.get("full_load_sequence", False):
+            table, schema_table = self._get_full_load_tables(dataset_id, table_id)
+        else:
+            schema_table = self.datasets[dataset_id].get_table_by_id(table_id)
+            table = self.tables[dataset_id][to_snake_case(table_id)]
+
+        run_configuration.table = table
+        run_configuration.schema_table = schema_table
+
+        if recovery_mode:
+            self._recover(run_configuration, first_event_meta, last_event_meta)
+        return run_configuration
+
+    def _recover(
+        self, run_configuration: RunConfiguration, first_event_meta: dict, last_event_meta: dict
+    ):
+        # If a message is redelivered, we need to enter recovery mode. Redelivery means something
+        # has gone wrong
+        # somewhere. We need to get back to a consistent state.
+        # The actions to take in recovery mode depend on the type of message:
+        # 1. full_load_sequence = False: This was a regular update event. Can be of any type
+        #     (ADD/MODIFY/DELETE). MODIFY
+        #     and DELETE are idempotent, but ADD is not. We need to check if the data is already
+        #     in the database before
+        #     trying to add it again.
+        # 2. full_load_sequence = True with first_of_sequence = True: This should not be a problem.
+        #     The first_of_sequence
+        #     causes the table to be truncated, so we can just continue as normal. No need to check
+        #     for existence.
+        # 3. full_load_sequence = True with first_of_sequence = False and last_of_sequence = False:
+        #     We should check
+        #     for existence before adding event data to the table. Because first_of_sequence and
+        #     last_of_sequence are
+        #     both False, there are no other possible side effects to consider.
+        # 4. full_load_sequence = True with first_of_sequence = False and last_of_sequence = True:
+        #    If the target table
+        #    is empty, we know that after_process was executed and that this message was handled
+        #    correctly the first
+        #    time it got delivered (because first_of_sequence = False, there should already have
+        #    been data in the
+        #    table). In that case we can ignore everything in this message; skip processing the
+        #    events and skip the
+        #    after_process step (4a). If the target table is not empty, we know that after_process
+        #    was not executed. We
+        #    should process the events and check for existence of the first event. After that we
+        #    should execute
+        #    after_process (4b).
+        if first_event_meta.get("full_load_sequence", False):
+            if first_event_meta.get("first_of_sequence", False):
+                # Case 2.
+                pass
+            elif not last_event_meta.get("last_of_sequence", False):
+                # Case 3.
+                run_configuration.check_existence_on_add = True
+            else:
+                # Case 4.
+                if self._table_empty(run_configuration.table):
+                    # Case 4a.
+                    run_configuration.execute_after_process = False
+                    run_configuration.process_events = False
+                else:
+                    # Case 4b.
+                    run_configuration.check_existence_on_add = True
+        else:
+            # Case 1.
+            run_configuration.check_existence_on_add = True
+
+    def process_event(self, event_meta: dict, event_data: dict, recovery_mode: bool = False):
+        run_configuration = self._get_run_configuration(event_meta, event_meta, recovery_mode)
+
+        self._before_process(run_configuration, event_meta)
+
+        if run_configuration.process_events:
+            self._process_row(run_configuration, event_meta, event_data)
+        if run_configuration.execute_after_process:
+            self._after_process(run_configuration, event_meta)
+
+    def process_events(self, events: list[tuple[dict, dict]], recovery_mode: bool = False):
         if len(events) == 0:
             return
 
-        first_event_meta = events[0][0]
-        last_event_meta = events[-1][0]
-        table, schema_table = self._before_process(first_event_meta)
+        first_event_meta, last_event_meta = events[0][0], events[-1][0]
+        run_configuration = self._get_run_configuration(
+            first_event_meta, last_event_meta, recovery_mode
+        )
 
-        if first_event_meta.get("full_load_sequence", False):
-            # full_load_sequence only contains add events. Take more efficient shortcut.
-            self._process_bulk_adds(events, table, schema_table)
-        else:
-            for event_meta, event_data in events:
-                self._process_row(event_meta, event_data, table, schema_table)
+        self._before_process(run_configuration, first_event_meta)
 
-        self._after_process(last_event_meta, table)
+        if run_configuration.process_events:
+            if first_event_meta.get("full_load_sequence", False):
+                # full_load_sequence only contains add events. Take more efficient shortcut.
+                self._process_bulk_adds(run_configuration, events)
+            else:
+                for event_meta, event_data in events:
+                    self._process_row(run_configuration, event_meta, event_data)
 
-    def _process_bulk_adds(self, events: list[tuple[dict, dict]], table, schema_table):
+        if run_configuration.execute_after_process:
+            self._after_process(run_configuration, last_event_meta)
+
+    def _process_bulk_adds(
+        self, run_configuration: RunConfiguration, events: list[tuple[dict, dict]]
+    ):
+        first = True
         rows = []
         for event_meta, event_data in events:
             if event_meta["event_type"] != "ADD":
                 raise Exception("This method should only be called when processing ADD events.")
 
-            row = self._prepare_row(event_meta, event_data, schema_table)
+            row = self._prepare_row(event_meta, event_data, run_configuration.schema_table)
+            if run_configuration.check_existence_on_add and first:
+                if self._row_exists_in_database(run_configuration, row["id"]):
+                    logger.info("Skip bulk adds, as the first row already exists in the database.")
+                    return
+                first = False
             rows.append(row)
 
         with self.conn.begin():
-            self.conn.execute(table.insert(), rows)
+            self.conn.execute(run_configuration.table.insert(), rows)
 
     def load_events_from_file(self, events_path: str):
         """Load events from a file, primarily used for testing."""
