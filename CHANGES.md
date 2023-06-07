@@ -1,3 +1,7 @@
+# 2023-06-07 (5.12.0)
+
+* Implement logic to recover from failed event messages
+
 # 2023-06-05 (5.11.6)
 
 * Two small fixes to make `sqlmigrate_schema` work:
