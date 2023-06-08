@@ -161,6 +161,30 @@ def test_event_process_relation_skip_update_parent_table_nm_relations(
     assert records[0]["bestaat_uit_buurten_id"] == "03630023754008MOD.1"
 
 
+def test_event_process_relation_update_parent_table_shortname(
+    here, db_schema, tconn, local_metadata, gebieden_schema
+):
+    """Tests updating of the parent table with a relation attribute with a shortname."""
+
+    # Import bouwblokken in object table
+    events_path = here / "files" / "data" / "bouwblokken.gobevents"
+    importer = EventsProcessor([gebieden_schema], tconn, local_metadata=local_metadata)
+    importer.load_events_from_file(events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * FROM gebieden_bouwblokken")]
+    assert len(records) == 2
+
+    # Import relation table row event for relation with shortname
+    events_path = here / "files" / "data" / "bouwblokken_ligt_in_buurt_met_te_lange_naam.gobevents"
+    importer.load_events_from_file(events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * FROM gebieden_bouwblokken")]
+    assert len(records) == 2
+
+    record = [r for r in records if r["identificatie"] == "03630012096976"][0]
+    assert record["lgt_in_brt_id"] == "03630023754008ADD.1"
+    assert record["lgt_in_brt_identificatie"] == "03630023754008ADD"
+    assert record["lgt_in_brt_volgnummer"] == 1
+
+
 def test_event_process_full_load_sequence(
     here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
 ):

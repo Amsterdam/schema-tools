@@ -221,7 +221,7 @@ class EventsProcessor:
             # well. Skips this for n:m relations (schematable.parent_table_field.relation only
             # returns 1:n relations)
             dataset_id = event_meta["dataset_id"]
-            rel_field_prefix = to_snake_case(schema_table.parent_table_field.name)
+            rel_field_prefix = to_snake_case(schema_table.parent_table_field.shortname)
             parent_schema_table = schema_table.parent_table
             parent_table = self.tables[dataset_id][parent_schema_table.id]
             parent_id_field = (
