@@ -1,3 +1,7 @@
+# 2023-06-08 (5.12.1)
+
+* Fix bug in event processor. Don't try to update parent tables for relation tables of n:m relations.
+
 # 2023-06-07 (5.12.0)
 
 * Implement logic to recover from failed event messages
