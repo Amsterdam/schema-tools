@@ -120,6 +120,48 @@ def test_event_process_relation_update_parent_table(
     assert records[0]["ligt_in_bouwblok_volgnummer"] is None
 
 
+def test_event_process_relation_skip_update_parent_table_nm_relations(
+    here, db_schema, tconn, local_metadata, gebieden_schema
+):
+    events_path = here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten.gobevents"
+    importer = EventsProcessor([gebieden_schema], tconn, local_metadata=local_metadata)
+
+    # First import row in parent table
+    importer.load_events_from_file(events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * FROM gebieden_ggwgebieden")]
+    assert len(records) == 1
+
+    # Then import row in relation table and check that parent table is not updated and no error is
+    # raised
+    events_path = (
+        here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten_reltable_add.gobevents"
+    )
+    importer.load_events_from_file(events_path)
+    records = [
+        dict(r) for r in tconn.execute("SELECT * FROM gebieden_ggwgebieden_bestaat_uit_buurten")
+    ]
+    assert len(records) == 1
+    print(records[0])
+    assert records[0]["ggwgebieden_id"] == "03630950000000.1"
+    assert records[0]["bestaat_uit_buurten_id"] == "03630023754008ADD.1"
+
+    # Update row in relation table and check that parent table is not updated and no error is
+    # raised
+    events_path = (
+        here
+        / "files"
+        / "data"
+        / "gebieden_ggwgebieden_bestaat_uit_buurten_reltable_modify.gobevents"
+    )
+    importer.load_events_from_file(events_path)
+    records = [
+        dict(r) for r in tconn.execute("SELECT * FROM gebieden_ggwgebieden_bestaat_uit_buurten")
+    ]
+    assert len(records) == 1
+    assert records[0]["ggwgebieden_id"] == "03630950000000.1"
+    assert records[0]["bestaat_uit_buurten_id"] == "03630023754008MOD.1"
+
+
 def test_event_process_full_load_sequence(
     here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
 ):

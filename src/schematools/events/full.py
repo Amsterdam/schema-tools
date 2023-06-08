@@ -216,9 +216,11 @@ class EventsProcessor:
         db_operation = getattr(table, db_operation_name)()
 
         update_parent_op = update_parent_row = None
-        if schema_table.has_parent_table:
+        if schema_table.has_parent_table and schema_table.parent_table_field.relation:
+            # Have 1:n relation. We need to update the relation columns in the parent table as
+            # well. Skips this for n:m relations (schematable.parent_table_field.relation only
+            # returns 1:n relations)
             dataset_id = event_meta["dataset_id"]
-            # Have relation. We need to update the relation columns in the parent table as well
             rel_field_prefix = to_snake_case(schema_table.parent_table_field.name)
             parent_schema_table = schema_table.parent_table
             parent_table = self.tables[dataset_id][parent_schema_table.id]
