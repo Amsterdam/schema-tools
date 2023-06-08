@@ -141,7 +141,6 @@ def test_event_process_relation_skip_update_parent_table_nm_relations(
         dict(r) for r in tconn.execute("SELECT * FROM gebieden_ggwgebieden_bestaat_uit_buurten")
     ]
     assert len(records) == 1
-    print(records[0])
     assert records[0]["ggwgebieden_id"] == "03630950000000.1"
     assert records[0]["bestaat_uit_buurten_id"] == "03630023754008ADD.1"
 
