@@ -178,7 +178,8 @@ class BaseImporter:
                 continue
 
             self.pk_colname_lookup[table_name] = pk_name
-            pks = {getattr(r, pk_name) for r in self.engine.execute(table.select())}
+            with self.engine.connect() as conn:
+                pks = {getattr(r, pk_name) for r in conn.execute(table.select())}
 
             self.pk_values_lookup[table_name] = pks
 

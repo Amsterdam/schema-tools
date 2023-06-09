@@ -209,7 +209,7 @@ class EventsProcessor:
             and event_type == "ADD"
             and self._row_exists_in_database(run_configuration, id_value)
         ):
-            logger.info("Row with id %s already exists in database. Skipping.", row)
+            logger.info("Row with id %s already exists in database. Skipping.", row["id"])
             return
 
         db_operation_name, needs_select = EVENT_TYPE_MAPPINGS[event_type]
