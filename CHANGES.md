@@ -1,3 +1,7 @@
+# 2023-06-09 (5.12.3)
+
+* Bugfix: Use engine.connect() instead of engine.execute() directly. Not supported anymore in SQLAlchemy 1.4.
+
 # 2023-06-08 (5.12.2)
 
 * Fix bug in event processor. Use shortname attribute when updating parent table.
