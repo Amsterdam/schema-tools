@@ -871,6 +871,22 @@ class DatasetTableSchema(SchemaType):
                     if not subfield.is_temporal_range
                 )
 
+    def get_db_fields(self) -> Iterator[DatasetFieldSchema]:
+        """Get the fields for this table that are included in the main table."""
+        for field in self.get_fields(include_subfields=True):
+
+            # Exclude nested and nm_relation fields,
+            # and fields that are added only for temporality
+            if (
+                field.type.endswith("#/definitions/schema")
+                or field.nm_relation
+                or field.is_array_of_objects
+                or field.is_nested_table
+                or field.is_temporal_range
+            ):
+                continue
+            yield field
+
     @lru_cache()  # type: ignore[misc]
     def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
         """Get a fields based on the ids of the field."""
