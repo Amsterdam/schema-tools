@@ -173,21 +173,7 @@ def tables_factory(
             else:
                 db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
 
-        columns = []
-        for field in dataset_table.get_fields(include_subfields=True):
-
-            # Exclude nested and nm_relation fields,
-            # and fields that are added only for temporality
-            if (
-                field.type.endswith("#/definitions/schema")
-                or field.nm_relation
-                or field.is_array_of_objects
-                or field.is_nested_table
-                or field.is_temporal_range
-            ):
-                continue
-
-            columns.append(_column_factory(field))
+        columns = [_column_factory(field) for field in dataset_table.get_db_fields()]
 
         alchemy_table = Table(
             db_table_name,

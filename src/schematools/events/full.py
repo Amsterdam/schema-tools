@@ -157,12 +157,16 @@ class EventsProcessor:
             table_id = event_meta["table_id"]
             table_to_replace = self.tables[dataset_id][to_snake_case(table_id)]
 
+            fieldnames = ", ".join(
+                [field.db_name for field in run_configuration.schema_table.get_db_fields()]
+            )
+
             logger.info("End of full load sequence. Replacing active table.")
             with self.conn.begin():
                 self.conn.execute(f"TRUNCATE {table_to_replace.name}")
                 self.conn.execute(
-                    f"INSERT INTO {table_to_replace.name} "  # nosec B608 # noqa: S608
-                    f"SELECT * FROM {run_configuration.table.name}"  # nosec B608 # noqa: S608
+                    f"INSERT INTO {table_to_replace.name} ({fieldnames}) "  # noqa: S608
+                    f"SELECT {fieldnames} FROM {run_configuration.table.name}"  # noqa: S608
                 )
                 self.conn.execute(f"DROP TABLE {run_configuration.table.name} CASCADE")
             self.full_load_tables[dataset_id].pop(table_id)
