@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import IO
+from decimal import Decimal
+from typing import IO, Any
 
 import jsonlines
 import orjson
@@ -13,6 +14,21 @@ from schematools.naming import toCamelCase
 from schematools.types import DatasetSchema, DatasetTableSchema
 
 metadata = MetaData()
+
+
+def _default(obj: Any) -> str:
+    if isinstance(obj, Decimal):
+        return str(obj)
+    raise TypeError
+
+
+def _dumps(obj: Any) -> str:
+    """Json serializer.
+
+    Unfortunately, orjson does not support Decimal serialization,
+    so we need this extra function.
+    """
+    return orjson.dumps(obj, default=_default)
 
 
 class JsonLinesExporter(BaseExporter):  # noqa: D101
@@ -34,23 +50,25 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
     def write_rows(  # noqa: D102
         self, file_handle: IO[str], table: DatasetTableSchema, sa_table: Table, srid: str
     ):
-        writer = jsonlines.Writer(file_handle, dumps=orjson.dumps)
+        writer = jsonlines.Writer(file_handle, dumps=_dumps)
         row_modifier = self._get_row_modifier(table)
         query = select(self._get_columns(sa_table, table))
         if self.size is not None:
             query = query.limit(self.size)
-        for r in self.connection.execute(query):
-            writer.write({toCamelCase(k): row_modifier[k](v) for k, v in dict(r).items()})
+        result = self.connection.execution_options(yield_per=1000).execute(query)
+        for partition in result.partitions():
+            for r in partition:
+                writer.write({toCamelCase(k): row_modifier[k](v) for k, v in dict(r).items()})
 
 
 def export_jsonls(
     connection: Connection,
-    dataset_chema: DatasetSchema,
+    dataset_schema: DatasetSchema,
     output: str,
     table_ids: list[str],
     scopes: list[str],
     size: int,
 ):
     """Utility function to wrap the Exporter."""
-    exporter = JsonLinesExporter(connection, dataset_chema, output, table_ids, scopes, size)
+    exporter = JsonLinesExporter(connection, dataset_schema, output, table_ids, scopes, size)
     exporter.export_tables()

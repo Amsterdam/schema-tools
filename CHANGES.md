@@ -1,3 +1,67 @@
+# 2023-06-09 (5.12.3)
+
+* Bugfix: Use engine.connect() instead of engine.execute() directly. Not supported anymore in SQLAlchemy 1.4.
+* Bugfix: Use column names in INSERT INTO statement instead of column positions.
+
+# 2023-06-08 (5.12.2)
+
+* Fix bug in event processor. Use shortname attribute when updating parent table.
+
+# 2023-06-08 (5.12.1)
+
+* Fix bug in event processor. Don't try to update parent tables for relation tables of n:m relations.
+
+# 2023-06-07 (5.12.0)
+
+* Implement logic to recover from failed event messages
+
+# 2023-06-05 (5.11.6)
+
+* Two small fixes to make `sqlmigrate_schema` work:
+  - requires_system_checks needs to be a list (from Django 1.4)
+  - list of datsets need to be a set when calling Django schema migrate API
+
+# 2023-05-24 (5.11.5)
+
+* Patch to fix custom implementation of UnlimitedCharField.max_length
+
+# 2023-05-24 (5.11.4)
+
+* Recognize more than 2 consecutive capital letters as word boundaries
+* Fix database column naming in model mocker class construction
+
+# 2023-05-24 (5.11.3)
+
+* Fix handling of geometry fields containing underscores in the attribute name.
+* Add utility cli commands for case-changes (snake, camel).
+
+# 2023-05-23 (5.11.2)
+
+* Make export to csv/jsonlines less memory hungry.
+
+# 2023-05-17 (5.11.1)
+
+* Add serialization of Decimal for orjson.dump() in exporter.
+
+# 2023-05-16 (5.11.0)
+
+* Add option ``ind_create_pk_lookup`` to ``EventsProcessor``, to skip
+  expensive index creation.
+
+# 2023-05-10 (5.10.2)
+
+* Add UUID column type for introspection of PostgreSQL db.
+
+# 2023-05-08 (5.10.1)
+
+* Add a `--to-snake-case` option to the `schema show dataset[table]` cli functions.
+
+# 2023-05-04 (5.10.0)
+
+* Add support for loading events in batches.
+  Extract initialisation and finalisation into separate methods to improve performance.
+  Cache initialised tables.
+
 # 2023-04-20 (5.9.3)
 
 * Disable the versioning that creates postgresql schemas for new tables.
