@@ -71,9 +71,10 @@ def create_tables(
             # - create table for latest version of this dataset group
             model = max(models_group, key=lambda model: model._dataset.version)
 
-            if model.is_view():
-                command.stdout.write(f"  Skipping view: {db_table_name}")
-                continue
+            for view_table in model._dataset.schema.tables:
+                if view_table.is_view:
+                    command.stdout.write(f"  Skipping view: {view_table.id}")
+                    continue
 
             router_allows = router.allow_migrate_model(model._meta.app_label, model)
 

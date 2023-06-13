@@ -757,12 +757,14 @@ class DatasetTableSchema(SchemaType):
         if self.get("derivedFrom", False):
             return self.get("derivedFrom")
 
-    def get_view_url(self) -> str:
+    @property
+    def view_url(self) -> str:
         """Get the URL where the SQL is located for this view."""
-        if self._parent_schema.id == self.id:
-            return f"{DEFAULT_SCHEMA_URL}{self.id}/dataset.sql"
+        if self.is_view:
+            path = self._parent_schema.db_name.replace("_", "/") + "/" + "dataset.sql"
+            return f"{DEFAULT_SCHEMA_URL}{path}"
         else:
-            return f"{DEFAULT_SCHEMA_URL}{self._parent_schema.id}/{self.id}/v{self.version}.sql"
+            return None
 
     def get_view_user(self) -> str:
         if self._parent_schema.id == self.id:

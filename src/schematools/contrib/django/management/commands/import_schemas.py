@@ -13,6 +13,7 @@ from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema
 
 from .create_tables import create_tables
+from .create_views import create_views
 
 
 class Command(BaseCommand):
@@ -31,8 +32,10 @@ class Command(BaseCommand):
             help=f"Schema URL (default: {settings.SCHEMA_URL})",
         )
         parser.add_argument("--create-tables", dest="create_tables", action="store_true")
+        parser.add_argument("--create-views", dest="create_views", action="store_true")
         parser.add_argument("--no-create-tables", dest="create_tables", action="store_false")
         parser.set_defaults(create_tables=False)
+        parser.set_defaults(create_views=False)
 
     def handle(self, *args, **options):
         if options["schema"]:
@@ -48,6 +51,9 @@ class Command(BaseCommand):
         # "Datasets" model flags first. E.g. disable "enable_db", set a remote URL.
         if options["create_tables"]:
             create_tables(self, datasets, allow_unmanaged=True)
+
+        if options["create_views"]:
+            create_views(self, datasets)
 
     def import_from_files(self, schema_files) -> List[Dataset]:
         """Import all schema definitions from the given files."""

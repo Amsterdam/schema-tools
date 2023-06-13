@@ -329,19 +329,21 @@ class BaseImporter:
 
     def generate_view(self, table: DatasetTableSchema) -> None:
         """Generate a view for a schema."""
-        view_url = table.get_view_url()
+        view_url = table.view_url
         if view_url is None:
-            raise ValueError(f"Table {table.id} does not have a view URL")
+            raise ValueError(f"Table {table._parent_schema.db_name} does not have a view URL")
 
         with closing(self.engine.raw_connection()) as conn, closing(conn.cursor()) as cur:
             if view_sql := self.load_view_sql(view_url):
                 view = sql.SQL(view_sql)
-                cur.execute(f"set role write_{table.id};")
+                cur.execute(f"set role write_{table._parent_schema.db_name};")
                 cur.execute(view)
                 conn.commit()
             else:
-                self.logger.log_error(f"Table {table.id} does not have a view URL")
-                raise ValueError(f"Table {table.id} does not have a view URL")
+                self.logger.log_error(
+                    f"Table {table._parent_schema.db_name} does not have a view URL"
+                )
+                raise ValueError(f"Table {table._parent_schema.db_name} does not have a view URL")
 
     def load_file(self, file_name: Path, batch_size: int = 100, **kwargs: Any) -> Record | None:
         """Import a file into the database table, returns the last record, if available."""
