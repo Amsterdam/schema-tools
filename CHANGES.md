@@ -1,3 +1,8 @@
+# 2023-06-14 (5.12.4)
+
+* Added django command create_views to facilitate the making of view based dataset
+* Added cli command create views to facilitate the creation of view based datasets
+
 # 2023-06-09 (5.12.3)
 
 * Bugfix: Use engine.connect() instead of engine.execute() directly. Not supported anymore in SQLAlchemy 1.4.
