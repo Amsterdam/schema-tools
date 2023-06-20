@@ -360,9 +360,6 @@ def set_dataset_read_permissions(
         If NM and nested relation fields (type `array` in the schema) have a scope `bar`
         the associated sub-table gets the grant `scope_bar`.
     """
-    if ams_schema.status != ams_schema.Status.beschikbaar:
-        return
-
     grantee: str | None = f"write_{ams_schema.db_name}"
 
     grantee = None if role == "AUTO" else role
