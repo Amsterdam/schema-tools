@@ -1,6 +1,7 @@
 # 2023-06-21 (5.12.4)
 
 * Bugfix: Removed a check for datasets with status beschikbaar in schematools/permissions/db.py set_dataset_read_permissions.
+* Bigfix: Changed tests/test_export.py test_jsonlines_export to account for percision differences
 
 # 2023-06-09 (5.12.3)
 

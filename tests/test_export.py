@@ -32,12 +32,15 @@ def test_jsonlines_export(here, engine, meetbouten_schema, dbsession, tmp_path):
     _load_meetbouten_content(here, engine, meetbouten_schema)
     export_jsonls(engine, meetbouten_schema, str(tmp_path), [], [], 1)
     with open(tmp_path / "meetbouten_meetbouten.jsonl") as out_file:
-        assert orjson.loads(out_file.read()) == {
+        result = orjson.loads(out_file.read())
+        result["geometrie"]["coordinates"][1] = round(result["geometrie"]["coordinates"][1], 5)
+        result["geometrie"]["coordinates"][0] = round(result["geometrie"]["coordinates"][0], 5)
+        assert result == {
             "identificatie": 1,
             "ligtInBuurtId": "10180001.1",
             "merkCode": "12",
             "merkOmschrijving": "De meetbout",
-            "geometrie": {"type": "Point", "coordinates": [4.86496792570404, 52.3705502607103]},
+            "geometrie": {"type": "Point", "coordinates": [4.86497, 52.37055]},
         }
 
 
