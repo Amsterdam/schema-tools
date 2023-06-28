@@ -245,7 +245,8 @@ class DatasetType(JsonDict):
     def __missing__(self, key: str) -> NoReturn:
         raise KeyError(f"No field named '{key}' exists in {self!r}")
 
-
+    
+    
 class DatasetSchema(SchemaType):
     """The schema of a dataset.
 
@@ -258,18 +259,21 @@ class DatasetSchema(SchemaType):
         beschikbaar = "beschikbaar"
         niet_beschikbaar = "niet_beschikbaar"
 
-    def __init__(self, data: dict, dataset_collection: CachedSchemaLoader | None = None) -> None:
+    def __init__(self, data: dict, view_sql: str = None, dataset_collection: CachedSchemaLoader | None = None) -> None:
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
         about the related datasets.
 
         Args:
             data: The JSON data from the file.
+            view_sql: The SQL to create the view for this dataset.
             dataset_collection: The shared collection that the dataset should become part of.
                                 This is used to resolve relations between different datasets.
         """
         if data.get("type") != "dataset" or not isinstance(data.get("tables"), list):
             raise ValueError("Invalid Amsterdam Dataset schema file")
+
+        self.view_sql = view_sql if view_sql is not None else None
 
         super().__init__(data)
 
@@ -305,6 +309,16 @@ class DatasetSchema(SchemaType):
             self.json(inline_tables=inline_tables, inline_publishers=inline_publishers)
         )
 
+    def get_view_sql(self) -> str:
+        """Return the SQL for the view of the given table."""
+        if self.view_sql is None:
+            return None
+        return self.view_sql
+    
+    def get_view_user(self) -> str:
+        """Return the user that should be used to create the view for the given view """
+        return f"write_{self.db_name}"
+        
     @cached_property
     def python_name(self) -> str:
         """The 'id', but camel cased like a class name."""
@@ -756,21 +770,6 @@ class DatasetTableSchema(SchemaType):
     def derived_from(self) -> list:
         if self.get("derivedFrom", False):
             return self.get("derivedFrom")
-
-    @property
-    def view_url(self) -> str:
-        """Get the URL where the SQL is located for this view."""
-        if self.is_view:
-            path = self._parent_schema.db_name.replace("_", "/") + "/" + "dataset.sql"
-            return f"{DEFAULT_SCHEMA_URL}{path}"
-        else:
-            return None
-
-    def get_view_user(self) -> str:
-        if self._parent_schema.id == self.id:
-            return f"write_{self.id}"
-        else:
-            return f"write_{self._parent_schema.id}_{self.id}"
 
     @property
     def shortname(self) -> str:

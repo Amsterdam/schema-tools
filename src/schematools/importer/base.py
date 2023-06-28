@@ -296,28 +296,6 @@ class BaseImporter:
                 db_schema_name,
             )
 
-    def load_view_sql(self, url: str) -> str:
-        """Load a view SQL file from a URL."""
-        if not url.startswith("http"):
-            raise ValueError(f"View URL {url} is not a valid URL")
-
-        response = requests.get(url)
-
-        try:
-            response = requests.get(url, timeout=30)
-        except requests.exceptions.Timeout:
-            self.logger.log_error(f"Timeout while loading view SQL from {url}")
-        except requests.exceptions.TooManyRedirects:
-            self.logger.log_error(f"Too many redirects while loading view SQL from {url}")
-        except requests.exceptions.RequestException as e:
-            self.logger.log_error(f"Error while loading view SQL from {url}: {e}")
-
-        if response.status_code == 200:
-            return response.text
-        else:
-            self.logger.log_error(f"Error while loading view SQL from {url}: {e}")
-            raise ValueError(f"Could not load view SQL from {url}: {response.status_code}")
-
     def table_exists(self, table_name: str) -> bool:
         """Check if a table exists in the database."""
         return table_name in self.engine.table_names()
@@ -330,7 +308,7 @@ class BaseImporter:
                 cur.execute(f"CREATE USER {view_user}")
                 conn.commit()
 
-    def generate_view(self, table: DatasetTableSchema) -> None:
+    def generate_view(self, dataset: DatasetSchema) -> None:
         """Generate a view for a schema."""
         view_url = table.view_url
         if view_url is None:

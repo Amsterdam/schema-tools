@@ -154,6 +154,7 @@ class Dataset(models.Model):
 
     name = models.CharField(_("Name"), unique=True, max_length=50)
     schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
+    view_data = models.TextField(_("View SQL"), blank=True, null=True)
     version = models.CharField(_("Schema Version"), blank=True, null=True, max_length=250)
     is_default_version = models.BooleanField(_("Default version"), default=False)
 
@@ -202,6 +203,7 @@ class Dataset(models.Model):
         obj = cls(
             name=name,
             schema_data=schema.json(inline_tables=True, inline_publishers=True),
+            view_data=schema.get_view_sql(),
             auth=" ".join(schema.auth),
             path=path,
             version=schema.version,

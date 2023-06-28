@@ -68,7 +68,6 @@ class Command(BaseCommand):
                     path, loaded_callback=self._loaded_callback
                 )
             return loader
-
         for filename in schema_files:
             self.stdout.write(f"Loading schemas from {filename}")
             file = Path(filename).resolve()
@@ -90,7 +89,6 @@ class Command(BaseCommand):
                     path = dataset.id  # workaround for unit tests
 
                 files = {path: dataset}
-
             datasets.extend(self._run_import(files))
 
         return datasets

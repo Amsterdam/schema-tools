@@ -17,7 +17,7 @@ from schematools import (
     PUBLISHER_DIR,
     PUBLISHER_EXCLUDE_FILES,
 )
-from schematools.exceptions import DatasetNotFound, DatasetTableNotFound, SchemaObjectNotFound
+from schematools.exceptions import DatasetNotFound, DatasetTableNotFound, SchemaObjectNotFound, ViewObjectNotFound
 from schematools.types import DatasetSchema, DatasetTableSchema, Json, ProfileSchema, Publisher
 
 __all__ = (
@@ -204,17 +204,21 @@ class _FileBasedSchemaLoader(SchemaLoader):
     def _read_dataset(self, dataset_id: str) -> Json:
         raise NotImplementedError
 
+    def _read_view(self, dataset_id: str) -> str:
+        raise NotImplementedError
+    
     def _read_table(self, dataset_id: str, table_ref: str) -> Json:
         raise NotImplementedError
 
     def get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
         """Gets a dataset from the filesystem for dataset_id."""
         schema_json = self._read_dataset(dataset_id)
-        return self._as_dataset(schema_json)
-
-    def _as_dataset(self, schema_json: dict, prefetch_related: bool = False) -> DatasetSchema:
+        view_sql = self._read_view(dataset_id)
+        return self._as_dataset(schema_json, view_sql)
+    
+    def _as_dataset(self, schema_json: dict, view_sql: str = None, prefetch_related: bool = False) -> DatasetSchema:
         """Convert the read JSON into a real object that can resolve its relations."""
-        dataset_schema = DatasetSchema(schema_json, dataset_collection=self.dataset_collection)
+        dataset_schema = DatasetSchema(schema_json, view_sql, dataset_collection=self.dataset_collection)
 
         if self._loaded_callback is not None:
             self._loaded_callback(dataset_schema)
@@ -387,7 +391,8 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
             )
 
         schema_json = _read_json_path(dataset_file)
-        return self._as_dataset(schema_json, prefetch_related=prefetch_related)
+        view_sql = _read_sql_path(dataset_file)
+        return self._as_dataset(schema_json, view_sql, prefetch_related=prefetch_related)
 
     def _read_index(self) -> dict[str, str]:
         """A mapping of dataset ID to path."""
@@ -417,6 +422,9 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         dataset_path = self.get_dataset_path(dataset_id)
         return _read_json_path(self.root / dataset_path / f"{table_ref}.json")
 
+    def _read_view(self, dataset_id: str) -> str:
+        dataset_path = self.get_dataset_path(dataset_id)
+        return _read_sql_path(self.root / dataset_path / "dataset.sql")
 
 def _read_json_path(dataset_file: Path) -> Json:
     """Load JSON from a path."""
@@ -430,6 +438,14 @@ def _read_json_path(dataset_file: Path) -> Json:
         # Normalize the exception type for "not found" errors.
         raise SchemaObjectNotFound(str(dataset_file)) from e
 
+
+def _read_sql_path(dataset_file: Path) -> str:
+    """ Load view SQL from a path"""
+    try:
+        with dataset_file.open() as stream:
+            return stream.read()
+    except FileNotFoundError as e:
+        return None
 
 class _SharedConnectionMixin:
     """Internal mixin for connection sharing."""
@@ -458,16 +474,6 @@ class _SharedConnectionMixin:
             raise SchemaObjectNotFound(url)
         response.raise_for_status()  # All extend from OSError
         return response.json()
-
-    def _read_sql_url(self, url) -> str:
-        """ Load SQL from URL """
-        print(f"Loading SQL from {url}")
-        response = (self._connection or requests).get(url, timeout=60)
-        if response.status_code == 404:
-            # Normalize the exception type for "not found" errors.
-            raise SchemaObjectNotFound(url)
-        response.raise_for_status()  # All extend from OSError
-        return response.text
 
 
 class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
@@ -504,10 +510,6 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
     def _read_table(self, dataset_id: str, table_ref: str) -> Json:
         dataset_path = self.get_dataset_path(dataset_id)
         return self._read_json_url(self.schema_url / dataset_path / table_ref)
-
-    def _read_view(self, dataset_id: str, table_ref: str) -> str:
-        dataset_path = self.get_dataset_path(dataset_id)
-        return self._read_sql_url(self.schema_url / dataset_path / table_ref)
 
     def _get_publisher_url(self) -> URL:
         return URL(self.schema_url.rpartition("/datasets")[0]) / "publishers"

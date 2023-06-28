@@ -372,7 +372,6 @@ def set_dataset_read_permissions(
     all_scopes = get_all_dataset_scopes(ams_schema, role, scope)
 
     for table_name, grant_params in all_scopes.items():
-
         for grant_param in grant_params:
             for _grantee in grant_param["grantees"]:
                 if create_roles:
