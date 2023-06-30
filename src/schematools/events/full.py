@@ -186,7 +186,7 @@ class EventsProcessor:
                 row[row_key] = f"SRID={geo_field.srid};{geo_value}"
 
         identifier = schema_table.identifier
-        id_value = ".".join(str(row[fn]) for fn in identifier)
+        id_value = ".".join(str(row[to_snake_case(fn)]) for fn in identifier)
         row["id"] = id_value
         return row
 
@@ -235,7 +235,7 @@ class EventsProcessor:
             )
             parent_id_value = ".".join(
                 [
-                    str(row[f"{parent_schema_table.id}_{fn}"])
+                    str(row[to_snake_case(f"{parent_schema_table.id}_{fn}")])
                     for fn in parent_schema_table.identifier
                 ]
             )
