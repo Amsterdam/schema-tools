@@ -1,3 +1,7 @@
+# 2023-06-30 (5.12.5)
+
+* Bugfix: Fix constructing id's for tables where the id keys contain underscores.
+
 # 2023-06-21 (5.12.4)
 
 * Bugfix: Removed a check for datasets with status beschikbaar in schematools/permissions/db.py set_dataset_read_permissions.
