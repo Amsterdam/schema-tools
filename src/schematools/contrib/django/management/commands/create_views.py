@@ -2,7 +2,7 @@ import re
 from collections import defaultdict, abc
 from typing import Iterable, List, Optional
 import requests
-import sqlvalidator
+import sqlparse
 
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, router, transaction
@@ -77,12 +77,23 @@ def _check_permissions_exist(table_auth: frozenset, dataset_auth: frozenset, req
             return False
     return True
 
-def _is_valid_sql(sql: str) -> bool:
-    sql_query = sqlvalidator.parse(sql)
-    if not sql_query.is_valid():
+def clean_and_validate_sql(sql):
+    # Remove newline characters
+    import pdb
+    pdb.set_trace()
+    sql = sql.replace('\n', ' ')
+    sql = sql.lower()
+    
+    # Check if the SQL statement is a valid view
+    statements = sqlparse.parse(sql)
+    if len(statements) != 1:
         return False
-    else:
-        return True
+
+    statement = statements[0]
+    if not isinstance(statement, sqlparse.sql.Statement) or  statement[0].value.lower() != 'create or replace':
+        return False
+
+    return True
 
 def create_views(
     command: BaseCommand,
@@ -107,8 +118,9 @@ def create_views(
     for dataset in datasets:
         for table in dataset.schema.tables:
             if table.is_view:
-                import pdb; pdb.set_trace()
                 view_sql = dataset.schema.get_view_sql()
+                if not clean_and_validate_sql(view_sql):
+                    raise CommandError(f"Invalid view SQL for {table.id}")
                 required_permissions = _get_required_permissions(table)
                 if _check_permissions_exist(table.auth, dataset.schema.auth, required_permissions):
                     try:
