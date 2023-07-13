@@ -1,3 +1,7 @@
+# 2023-07-13 (5.13.0)
+
+* Feature: EventProcessor: Track processed event ids to avoid duplicate processing and key collisions.
+
 # 2023-06-30 (5.12.5)
 
 * Bugfix: Fix constructing id's for tables where the id keys contain underscores.

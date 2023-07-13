@@ -12,6 +12,7 @@ from sqlalchemy.engine import Connection
 from schematools.events import metadata
 from schematools.factories import tables_factory
 from schematools.importer.base import BaseImporter
+from schematools.loaders import get_schema_loader
 from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema, DatasetTableSchema
 
@@ -45,6 +46,32 @@ class RunConfiguration:
     schema_table = None
 
 
+class LastEventIds:
+    BENK_DATASET = "benk"
+    LASTEVENTIDS_TABLE = "lasteventids"
+
+    def __init__(self):
+        loader = get_schema_loader()
+        self.dataset = loader.get_dataset(self.BENK_DATASET)
+        self.table = self.dataset.get_table_by_id(self.LASTEVENTIDS_TABLE)
+        self.lasteventid_column = self.table.get_field_by_id("lastEventId")
+
+    def is_event_processed(self, conn, schema_table: DatasetTableSchema, event_id: int) -> bool:
+        res = conn.execute(
+            f"SELECT {self.lasteventid_column.db_name} FROM {self.table.db_name} "  # noqa: S608
+            f"WHERE \"table\" = '{schema_table.db_name}'"  # noqa: S608
+        ).fetchone()
+
+        return False if res is None else res[0] >= event_id
+
+    def update_eventid(self, conn, schema_table: DatasetTableSchema, event_id: int):
+        conn.execute(
+            f"INSERT INTO {self.table.db_name} "  # noqa: S608  # nosec: B608
+            f"VALUES ('{schema_table.db_name}', {event_id}) "
+            f'ON CONFLICT ("table") DO UPDATE SET {self.lasteventid_column.db_name} = {event_id}'
+        )
+
+
 class EventsProcessor:
     """The core event processing class.
 
@@ -76,7 +103,9 @@ class EventsProcessor:
                 in unit tests.
             truncate: indicates if the relational tables need to be truncated
         """
-        self.datasets: dict[str, DatasetSchema] = {ds.id: ds for ds in datasets}
+        self.lasteventids = LastEventIds()
+        benk_dataset = self.lasteventids.table.dataset
+        self.datasets = {benk_dataset.id: benk_dataset} | {ds.id: ds for ds in datasets}
         self.conn = connection
         _metadata = local_metadata or metadata  # mainly for testing
         _metadata.bind = connection.engine
@@ -203,6 +232,10 @@ class EventsProcessor:
         table = run_configuration.table
         schema_table = run_configuration.schema_table
 
+        if self.lasteventids.is_event_processed(self.conn, schema_table, event_meta["event_id"]):
+            logger.warning("Event with id %s already processed. Skipping.", event_meta["event_id"])
+            return
+
         row = self._prepare_row(event_meta, event_data, schema_table)
         id_value = row["id"]
 
@@ -257,6 +290,7 @@ class EventsProcessor:
             db_operation = db_operation.where(id_field == id_value)
         with self.conn.begin():
             self.conn.execute(db_operation, row)
+            self.lasteventids.update_eventid(self.conn, schema_table, event_meta["event_id"])
 
             if update_parent_op is not None:
                 self.conn.execute(update_parent_op, update_parent_row)
@@ -362,14 +396,7 @@ class EventsProcessor:
             run_configuration.check_existence_on_add = True
 
     def process_event(self, event_meta: dict, event_data: dict, recovery_mode: bool = False):
-        run_configuration = self._get_run_configuration(event_meta, event_meta, recovery_mode)
-
-        self._before_process(run_configuration, event_meta)
-
-        if run_configuration.process_events:
-            self._process_row(run_configuration, event_meta, event_data)
-        if run_configuration.execute_after_process:
-            self._after_process(run_configuration, event_meta)
+        self.process_events([(event_meta, event_data)], recovery_mode)
 
     def process_events(self, events: list[tuple[dict, dict]], recovery_mode: bool = False):
         if len(events) == 0:

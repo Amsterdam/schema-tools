@@ -8,7 +8,9 @@ from schematools.events.full import EventsProcessor
 # pytestmark = pytest.mark.skip("all tests disabled")
 
 
-def test_event_process_insert(here, db_schema, tconn, local_metadata, gebieden_schema):
+def test_event_process_insert(
+    here, db_schema, tconn, local_metadata, gebieden_schema, benk_schema
+):
     """Prove that event gets inserted."""
     events_path = here / "files" / "data" / "bouwblokken.gobevents"
     importer = EventsProcessor(
@@ -346,28 +348,28 @@ def test_event_process_recovery_regular(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("1", 2018),
-                _create_peilmerken_event("2", 2019),
+                _create_peilmerken_event("1", 2018, event_id=1),
+                _create_peilmerken_event("2", 2019, event_id=2),
             ],
             [("1", 2018), ("2", 2019)],
         )
 
         # 1. One that already exists, with recovery_mode = False. Should raise an error.
         _import_assert_result_expect_exception(
-            importer, [_create_peilmerken_event("1", 2017)], [("1", 2018), ("2", 2019)]
+            importer, [_create_peilmerken_event("1", 2017, event_id=3)], [("1", 2018), ("2", 2019)]
         )
 
         # 2. One that doesn't exist, with recovery_mode = False. Should be added.
         _import_assert_result(
             importer,
-            [_create_peilmerken_event("3", 2020)],
+            [_create_peilmerken_event("3", 2020, event_id=4)],
             [("1", 2018), ("2", 2019), ("3", 2020)],
         )
 
         # 3. One that already exists, with recovery_mode = True. Should be ignored.
         _import_assert_result(
             importer,
-            [_create_peilmerken_event("3", 2019)],
+            [_create_peilmerken_event("3", 2019, event_id=5)],
             [("1", 2018), ("2", 2019), ("3", 2020)],
             recovery_mode=True,
         )
@@ -375,7 +377,7 @@ def test_event_process_recovery_regular(
         # 4. One that doesn't exist, with recovery_mode = True. Should be added.
         _import_assert_result(
             importer,
-            [_create_peilmerken_event("4", 2021)],
+            [_create_peilmerken_event("4", 2021, event_id=6)],
             [("1", 2018), ("2", 2019), ("3", 2020), ("4", 2021)],
             recovery_mode=True,
         )
@@ -720,3 +722,123 @@ def test_event_process_recovery_full_load_last_table_not_empty(
             [("1", 2018), ("2", 2019), ("3", 2020), ("4", 2021)],
             recovery_mode=True,
         )
+
+
+def test_event_process_last_event_id(
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema, benk_schema
+):
+    def get_last_event_id(tablename: str = "nap_peilmerken"):
+        res = tconn.execute(
+            f"SELECT last_event_id FROM benk_lasteventids "  # noqa: S608  # nosec: B608
+            f"WHERE \"table\"='{tablename}'"
+        ).fetchone()
+
+        return res[0] if res is not None else None
+
+    importer = EventsProcessor(
+        [nap_schema, gebieden_schema, benk_schema], tconn, local_metadata=local_metadata
+    )
+
+    # 1. Assert start state
+    assert get_last_event_id() is None
+
+    events = [
+        _create_peilmerken_event("1", 2018, event_id=203),
+        _create_peilmerken_event("2", 2019, event_id=210),
+    ]
+    importer.process_events(events)
+
+    # 2. Add rows and assert they exist
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
+    assert [2018, 2019] == [r["jaar"] for r in records]
+    assert get_last_event_id() == 210
+
+    events = [
+        _create_peilmerken_event("2", 2020, type="MODIFY", event_id=211),
+    ]
+    importer.process_events(events)
+
+    # 3. Assert event with newer ID is applied
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
+    assert [2018, 2020] == [r["jaar"] for r in records]
+    assert get_last_event_id() == 211
+
+    events = [
+        _create_peilmerken_event("1", 2021, type="MODIFY", event_id=204),
+        _create_peilmerken_event("2", 2021, type="MODIFY", event_id=211),
+    ]
+    importer.process_events(events)
+
+    # 4. Assert event with older IDs are ignored
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
+    assert [2018, 2020] == [r["jaar"] for r in records]
+    assert get_last_event_id() == 211
+
+
+# TODO replace 'recovery mode' in full load with this logic later, but first make sure it
+# really solves our problem, because 'recovery mode' works and we don't want to replace is
+# with something that may not work as well.
+# def test_event_process_last_event_id_full_load_sequence(here, db_schema, tconn, local_metadata,
+#       nap_schema, gebieden_schema, benk_schema):
+#     def get_last_event_id(tablename: str = 'nap_peilmerken'):
+#         res = tconn.execute(f"SELECT last_event_id FROM benk_lasteventids
+#         WHERE \"table\"='{tablename}'").fetchone()
+#
+#         return res[0] if res is not None else None
+#
+#     importer = EventsProcessor(
+#         [nap_schema, gebieden_schema, benk_schema], tconn, local_metadata=local_metadata
+#     )
+#
+#     # 1. Assert start state
+#     assert get_last_event_id("nap_peilmerken") is None
+#     assert get_last_event_id("nap_peilmerken_full_load") is None
+#
+#     events = [
+#         _create_peilmerken_event("1", 2018, event_id=203, full_load_sequence=True,
+#         first_of_sequence=True),
+#         _create_peilmerken_event("2", 2019, event_id=210, full_load_seuqence=True),
+#     ]
+#     importer.process_events(events)
+#
+#     # 2. Add rows and assert they exist
+#     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+#     assert [2018, 2019] == [r["jaar"] for r in records]
+#     assert get_last_event_id("nap_peilmerken") is None
+#     assert get_last_event_id("nap_peilmerken_full_load") == 210
+#
+#     events = [
+#         _create_peilmerken_event("3", 2020, type="ADD", event_id=212),
+#     ]
+#     importer.process_events(events)
+#
+#     # 3. Assert event with newer ID is applied
+#     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+#     assert [2018, 2019, 2020] == [r["jaar"] for r in records]
+#     assert get_last_event_id("nap_peilmerken") is None
+#     assert get_last_event_id("nap_peilmerken_full_load") == 212
+#
+#     events = [
+#         _create_peilmerken_event("4", 2021, type="ADD", event_id=204),
+#         _create_peilmerken_event("5", 2021, type="ADD", event_id=211),
+#     ]
+#     importer.process_events(events)
+#
+#     # 4. Assert event with older IDs are ignored
+#     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+#     assert [2018, 2019, 2020] == [r["jaar"] for r in records]
+#     assert get_last_event_id("nap_peilmerken") is None
+#     assert get_last_event_id("nap_peilmerken_full_load") == 212
+#
+#     # 5. End full load. Table should be replaced and last_event_id copied to main table and reset
+#     events = [
+#         _create_peilmerken_event("4", 2021, type="ADD", event_id=213),
+#         _create_peilmerken_event("5", 2022, type="ADD", event_id=217),
+#     ]
+#     importer.process_events(events)
+#
+#     # 4. Assert event with older IDs are ignored
+#     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+#     assert [2018, 2019, 2020, 2021, 2022] == [r["jaar"] for r in records]
+#     assert get_last_event_id("nap_peilmerken") == 217
+#     assert get_last_event_id("nap_peilmerken_full_load") is None
