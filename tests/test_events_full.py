@@ -413,9 +413,9 @@ def test_event_process_recovery_full_load_first(
             importer,
             [
                 _create_peilmerken_event(
-                    "1", 2018, full_load_sequence=True, first_of_sequence=True
+                    "1", 2018, full_load_sequence=True, first_of_sequence=True, event_id=1
                 ),
-                _create_peilmerken_event("2", 2019, full_load_sequence=True),
+                _create_peilmerken_event("2", 2019, full_load_sequence=True, event_id=2),
             ],
             [("1", 2018), ("2", 2019)],
             check_full_load_table=True,
@@ -426,9 +426,9 @@ def test_event_process_recovery_full_load_first(
             importer,
             [
                 _create_peilmerken_event(
-                    "1", 2020, full_load_sequence=True, first_of_sequence=True
+                    "1", 2020, full_load_sequence=True, first_of_sequence=True, event_id=3
                 ),
-                _create_peilmerken_event("2", 2021, full_load_sequence=True),
+                _create_peilmerken_event("2", 2021, full_load_sequence=True, event_id=4),
             ],
             [("1", 2020), ("2", 2021)],
             check_full_load_table=True,
@@ -439,9 +439,9 @@ def test_event_process_recovery_full_load_first(
             importer,
             [
                 _create_peilmerken_event(
-                    "3", 2020, full_load_sequence=True, first_of_sequence=True
+                    "3", 2020, full_load_sequence=True, first_of_sequence=True, event_id=5
                 ),
-                _create_peilmerken_event("4", 2021, full_load_sequence=True),
+                _create_peilmerken_event("4", 2021, full_load_sequence=True, event_id=6),
             ],
             [("3", 2020), ("4", 2021)],
             check_full_load_table=True,
@@ -452,9 +452,9 @@ def test_event_process_recovery_full_load_first(
             importer,
             [
                 _create_peilmerken_event(
-                    "3", 2022, full_load_sequence=True, first_of_sequence=True
+                    "3", 2022, full_load_sequence=True, first_of_sequence=True, event_id=7
                 ),
-                _create_peilmerken_event("4", 2023, full_load_sequence=True),
+                _create_peilmerken_event("4", 2023, full_load_sequence=True, event_id=8),
             ],
             [("3", 2022), ("4", 2023)],
             check_full_load_table=True,
@@ -466,9 +466,9 @@ def test_event_process_recovery_full_load_first(
             importer,
             [
                 _create_peilmerken_event(
-                    "5", 2020, full_load_sequence=True, first_of_sequence=True
+                    "5", 2020, full_load_sequence=True, first_of_sequence=True, event_id=9
                 ),
-                _create_peilmerken_event("6", 2021, full_load_sequence=True),
+                _create_peilmerken_event("6", 2021, full_load_sequence=True, event_id=10),
             ],
             [("5", 2020), ("6", 2021)],
             check_full_load_table=True,
@@ -501,9 +501,9 @@ def test_event_process_recovery_full_load_no_first_no_last(
             importer,
             [
                 _create_peilmerken_event(
-                    "1", 2018, full_load_sequence=True, first_of_sequence=True
+                    "1", 2018, full_load_sequence=True, first_of_sequence=True, event_id=1
                 ),
-                _create_peilmerken_event("2", 2019, full_load_sequence=True),
+                _create_peilmerken_event("2", 2019, full_load_sequence=True, event_id=2),
             ],
             [("1", 2018), ("2", 2019)],
             check_full_load_table=True,
@@ -513,8 +513,8 @@ def test_event_process_recovery_full_load_no_first_no_last(
         _import_assert_result_expect_exception(
             importer,
             [
-                _create_peilmerken_event("1", 2022, full_load_sequence=True),
-                _create_peilmerken_event("2", 2023, full_load_sequence=True),
+                _create_peilmerken_event("1", 2022, full_load_sequence=True, event_id=3),
+                _create_peilmerken_event("2", 2023, full_load_sequence=True, event_id=4),
             ],
             [("1", 2018), ("2", 2019)],
             check_full_load_table=True,
@@ -524,8 +524,8 @@ def test_event_process_recovery_full_load_no_first_no_last(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("3", 2020, full_load_sequence=True),
-                _create_peilmerken_event("4", 2021, full_load_sequence=True),
+                _create_peilmerken_event("3", 2020, full_load_sequence=True, event_id=5),
+                _create_peilmerken_event("4", 2021, full_load_sequence=True, event_id=6),
             ],
             [("1", 2018), ("2", 2019), ("3", 2020), ("4", 2021)],
             check_full_load_table=True,
@@ -535,8 +535,8 @@ def test_event_process_recovery_full_load_no_first_no_last(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("1", 2022, full_load_sequence=True),
-                _create_peilmerken_event("2", 2023, full_load_sequence=True),
+                _create_peilmerken_event("1", 2022, full_load_sequence=True, event_id=7),
+                _create_peilmerken_event("2", 2023, full_load_sequence=True, event_id=8),
             ],
             [("1", 2018), ("2", 2019), ("3", 2020), ("4", 2021)],
             check_full_load_table=True,
@@ -547,8 +547,8 @@ def test_event_process_recovery_full_load_no_first_no_last(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("5", 2022, full_load_sequence=True),
-                _create_peilmerken_event("6", 2023, full_load_sequence=True),
+                _create_peilmerken_event("5", 2022, full_load_sequence=True, event_id=9),
+                _create_peilmerken_event("6", 2023, full_load_sequence=True, event_id=10),
             ],
             [("1", 2018), ("2", 2019), ("3", 2020), ("4", 2021), ("5", 2022), ("6", 2023)],
             check_full_load_table=True,
@@ -581,9 +581,9 @@ def test_event_process_recovery_full_load_last_table_empty(
                 importer,
                 [
                     _create_peilmerken_event(
-                        "1", 2018, full_load_sequence=True, first_of_sequence=True
+                        "1", 2018, full_load_sequence=True, first_of_sequence=True, event_id=1
                     ),
-                    _create_peilmerken_event("2", 2019, full_load_sequence=True),
+                    _create_peilmerken_event("2", 2019, full_load_sequence=True, event_id=2),
                 ],
                 [("1", 2018), ("2", 2019)],
                 check_full_load_table=True,
@@ -596,9 +596,9 @@ def test_event_process_recovery_full_load_last_table_empty(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("1", 2018, full_load_sequence=True),
+                _create_peilmerken_event("1", 2018, full_load_sequence=True, event_id=3),
                 _create_peilmerken_event(
-                    "2", 2019, full_load_sequence=True, last_of_sequence=True
+                    "2", 2019, full_load_sequence=True, last_of_sequence=True, event_id=4
                 ),
             ],
             [
@@ -613,9 +613,9 @@ def test_event_process_recovery_full_load_last_table_empty(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("3", 2018, full_load_sequence=True),
+                _create_peilmerken_event("3", 2018, full_load_sequence=True, event_id=5),
                 _create_peilmerken_event(
-                    "4", 2019, full_load_sequence=True, last_of_sequence=True
+                    "4", 2019, full_load_sequence=True, last_of_sequence=True, event_id=6
                 ),
             ],
             [
@@ -648,18 +648,20 @@ def test_event_process_recovery_full_load_last_table_not_empty(
         )
 
         def _init_full_load_table(importer):
-            try:
-                importer.conn.execute("TRUNCATE TABLE nap_peilmerken_full_load")
-            except Exception:  # noqa: S110
-                pass
+            for table in ["nap_peilmerken_full_load", "benk_lasteventids"]:
+                try:
+                    conn.execute(f"TRUNCATE TABLE {table}")  # noqa: S608
+                except Exception:  # noqa: S110
+                    pass
+            importer.lasteventids.clear_cache()
 
             _import_assert_result(
                 importer,
                 [
                     _create_peilmerken_event(
-                        "1", 2018, full_load_sequence=True, first_of_sequence=True
+                        "1", 2018, full_load_sequence=True, first_of_sequence=True, event_id=1
                     ),
-                    _create_peilmerken_event("2", 2019, full_load_sequence=True),
+                    _create_peilmerken_event("2", 2019, full_load_sequence=True, event_id=2),
                 ],
                 [("1", 2018), ("2", 2019)],
                 check_full_load_table=True,
@@ -670,9 +672,9 @@ def test_event_process_recovery_full_load_last_table_not_empty(
         _import_assert_result_expect_exception(
             importer,
             [
-                _create_peilmerken_event("1", 2022, full_load_sequence=True),
+                _create_peilmerken_event("1", 2022, full_load_sequence=True, event_id=3),
                 _create_peilmerken_event(
-                    "2", 2023, full_load_sequence=True, last_of_sequence=True
+                    "2", 2023, full_load_sequence=True, last_of_sequence=True, event_id=4
                 ),
             ],
             [("1", 2018), ("2", 2019)],
@@ -685,9 +687,9 @@ def test_event_process_recovery_full_load_last_table_not_empty(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("3", 2020, full_load_sequence=True),
+                _create_peilmerken_event("3", 2020, full_load_sequence=True, event_id=5),
                 _create_peilmerken_event(
-                    "4", 2021, full_load_sequence=True, last_of_sequence=True
+                    "4", 2021, full_load_sequence=True, last_of_sequence=True, event_id=6
                 ),
             ],
             [("1", 2018), ("2", 2019), ("3", 2020), ("4", 2021)],
@@ -699,9 +701,9 @@ def test_event_process_recovery_full_load_last_table_not_empty(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("1", 2023, full_load_sequence=True),
+                _create_peilmerken_event("1", 2023, full_load_sequence=True, event_id=7),
                 _create_peilmerken_event(
-                    "2", 2024, full_load_sequence=True, last_of_sequence=True
+                    "2", 2024, full_load_sequence=True, last_of_sequence=True, event_id=8
                 ),
             ],
             [("1", 2018), ("2", 2019)],
@@ -714,9 +716,9 @@ def test_event_process_recovery_full_load_last_table_not_empty(
         _import_assert_result(
             importer,
             [
-                _create_peilmerken_event("3", 2020, full_load_sequence=True),
+                _create_peilmerken_event("3", 2020, full_load_sequence=True, event_id=9),
                 _create_peilmerken_event(
-                    "4", 2021, full_load_sequence=True, last_of_sequence=True
+                    "4", 2021, full_load_sequence=True, last_of_sequence=True, event_id=10
                 ),
             ],
             [("1", 2018), ("2", 2019), ("3", 2020), ("4", 2021)],
@@ -775,70 +777,73 @@ def test_event_process_last_event_id(
     assert get_last_event_id() == 211
 
 
-# TODO replace 'recovery mode' in full load with this logic later, but first make sure it
-# really solves our problem, because 'recovery mode' works and we don't want to replace is
-# with something that may not work as well.
-# def test_event_process_last_event_id_full_load_sequence(here, db_schema, tconn, local_metadata,
-#       nap_schema, gebieden_schema, benk_schema):
-#     def get_last_event_id(tablename: str = 'nap_peilmerken'):
-#         res = tconn.execute(f"SELECT last_event_id FROM benk_lasteventids
-#         WHERE \"table\"='{tablename}'").fetchone()
-#
-#         return res[0] if res is not None else None
-#
-#     importer = EventsProcessor(
-#         [nap_schema, gebieden_schema, benk_schema], tconn, local_metadata=local_metadata
-#     )
-#
-#     # 1. Assert start state
-#     assert get_last_event_id("nap_peilmerken") is None
-#     assert get_last_event_id("nap_peilmerken_full_load") is None
-#
-#     events = [
-#         _create_peilmerken_event("1", 2018, event_id=203, full_load_sequence=True,
-#         first_of_sequence=True),
-#         _create_peilmerken_event("2", 2019, event_id=210, full_load_seuqence=True),
-#     ]
-#     importer.process_events(events)
-#
-#     # 2. Add rows and assert they exist
-#     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
-#     assert [2018, 2019] == [r["jaar"] for r in records]
-#     assert get_last_event_id("nap_peilmerken") is None
-#     assert get_last_event_id("nap_peilmerken_full_load") == 210
-#
-#     events = [
-#         _create_peilmerken_event("3", 2020, type="ADD", event_id=212),
-#     ]
-#     importer.process_events(events)
-#
-#     # 3. Assert event with newer ID is applied
-#     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
-#     assert [2018, 2019, 2020] == [r["jaar"] for r in records]
-#     assert get_last_event_id("nap_peilmerken") is None
-#     assert get_last_event_id("nap_peilmerken_full_load") == 212
-#
-#     events = [
-#         _create_peilmerken_event("4", 2021, type="ADD", event_id=204),
-#         _create_peilmerken_event("5", 2021, type="ADD", event_id=211),
-#     ]
-#     importer.process_events(events)
-#
-#     # 4. Assert event with older IDs are ignored
-#     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
-#     assert [2018, 2019, 2020] == [r["jaar"] for r in records]
-#     assert get_last_event_id("nap_peilmerken") is None
-#     assert get_last_event_id("nap_peilmerken_full_load") == 212
-#
-#     # 5. End full load. Table should be replaced and last_event_id copied to main table and reset
-#     events = [
-#         _create_peilmerken_event("4", 2021, type="ADD", event_id=213),
-#         _create_peilmerken_event("5", 2022, type="ADD", event_id=217),
-#     ]
-#     importer.process_events(events)
-#
-#     # 4. Assert event with older IDs are ignored
-#     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
-#     assert [2018, 2019, 2020, 2021, 2022] == [r["jaar"] for r in records]
-#     assert get_last_event_id("nap_peilmerken") == 217
-#     assert get_last_event_id("nap_peilmerken_full_load") is None
+def test_event_process_last_event_id_full_load_sequence(
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema, benk_schema
+):
+    def get_last_event_id(tablename: str = "nap_peilmerken"):
+        res = tconn.execute(
+            f"SELECT last_event_id FROM benk_lasteventids "  # noqa: S608
+            f"WHERE \"table\"='{tablename}'"  # noqa: S608
+        ).fetchone()
+
+        return res[0] if res is not None else None
+
+    importer = EventsProcessor(
+        [nap_schema, gebieden_schema, benk_schema], tconn, local_metadata=local_metadata
+    )
+
+    # 1. Assert start state
+    assert get_last_event_id("nap_peilmerken") is None
+    assert get_last_event_id("nap_peilmerken_full_load") is None
+
+    events = [
+        _create_peilmerken_event(
+            "1", 2018, event_id=203, full_load_sequence=True, first_of_sequence=True
+        ),
+        _create_peilmerken_event("2", 2019, event_id=210, full_load_seuqence=True),
+    ]
+    importer.process_events(events)
+
+    # 2. Add rows and assert they exist
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+    assert [2018, 2019] == [r["jaar"] for r in records]
+    assert get_last_event_id("nap_peilmerken") is None
+    assert get_last_event_id("nap_peilmerken_full_load") == 210
+
+    events = [
+        _create_peilmerken_event("3", 2020, type="ADD", event_id=212, full_load_sequence=True),
+    ]
+    importer.process_events(events)
+
+    # 3. Assert event with newer ID is applied
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+    assert [2018, 2019, 2020] == [r["jaar"] for r in records]
+    assert get_last_event_id("nap_peilmerken") is None
+    assert get_last_event_id("nap_peilmerken_full_load") == 212
+
+    events = [
+        _create_peilmerken_event("4", 2021, type="ADD", event_id=204, full_load_sequence=True),
+        _create_peilmerken_event("5", 2021, type="ADD", event_id=211, full_load_sequence=True),
+    ]
+    importer.process_events(events)
+
+    # 4. Assert event with older IDs are ignored
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+    assert [2018, 2019, 2020] == [r["jaar"] for r in records]
+    assert get_last_event_id("nap_peilmerken") is None
+    assert get_last_event_id("nap_peilmerken_full_load") == 212
+
+    # 5. End full load. Table should be replaced and last_event_id copied to main table and reset
+    events = [
+        _create_peilmerken_event("4", 2021, type="ADD", event_id=213, full_load_sequence=True),
+        _create_peilmerken_event(
+            "5", 2022, type="ADD", event_id=217, full_load_sequence=True, last_of_sequence=True
+        ),
+    ]
+    importer.process_events(events)
+
+    # 4. Assert event with older IDs are ignored
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
+    assert [2018, 2019, 2020, 2021, 2022] == [r["jaar"] for r in records]
+    assert get_last_event_id("nap_peilmerken") == 217
+    assert get_last_event_id("nap_peilmerken_full_load") is None

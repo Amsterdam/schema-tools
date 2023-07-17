@@ -1,3 +1,7 @@
+# 2023-07-13 (5.13.1)
+
+* Feature: EventProcessor: Track processed event ids now for full load sequences as well.
+
 # 2023-07-13 (5.13.0)
 
 * Feature: EventProcessor: Track processed event ids to avoid duplicate processing and key collisions.
