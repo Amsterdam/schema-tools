@@ -53,23 +53,44 @@ class LastEventIds:
     def __init__(self):
         loader = get_schema_loader()
         self.dataset = loader.get_dataset(self.BENK_DATASET)
-        self.table = self.dataset.get_table_by_id(self.LASTEVENTIDS_TABLE)
-        self.lasteventid_column = self.table.get_field_by_id("lastEventId")
+        self.lasteventids_table = self.dataset.get_table_by_id(self.LASTEVENTIDS_TABLE)
+        self.lasteventid_column = self.lasteventids_table.get_field_by_id("lastEventId")
 
-    def is_event_processed(self, conn, schema_table: DatasetTableSchema, event_id: int) -> bool:
-        res = conn.execute(
-            f"SELECT {self.lasteventid_column.db_name} FROM {self.table.db_name} "  # noqa: S608
-            f"WHERE \"table\" = '{schema_table.db_name}'"  # noqa: S608
-        ).fetchone()
+        self.cache = defaultdict(int)
 
-        return False if res is None else res[0] >= event_id
+    def is_event_processed(self, conn, table: Table, event_id: int) -> bool:
+        last_eventid = self.get_last_eventid(conn, table)
 
-    def update_eventid(self, conn, schema_table: DatasetTableSchema, event_id: int):
+        return False if last_eventid is None else last_eventid >= event_id
+
+    def update_eventid(self, conn, table: Table, event_id: int | None):
+        value = event_id if event_id is not None else "NULL"
         conn.execute(
-            f"INSERT INTO {self.table.db_name} "  # noqa: S608  # nosec: B608
-            f"VALUES ('{schema_table.db_name}', {event_id}) "
-            f'ON CONFLICT ("table") DO UPDATE SET {self.lasteventid_column.db_name} = {event_id}'
+            f"INSERT INTO {self.lasteventids_table.db_name} "  # noqa: S608  # nosec: B608
+            f"VALUES ('{table.name}', {value}) "
+            f'ON CONFLICT ("table") DO UPDATE SET {self.lasteventid_column.db_name} = {value}'
         )
+        self.cache[table.name] = event_id
+
+    def get_last_eventid(self, conn, table: Table) -> int | None:
+        if table.name in self.cache:
+            return self.cache[table.name]
+
+        res = conn.execute(
+            f"SELECT {self.lasteventid_column.db_name} "  # noqa: S608
+            f"FROM {self.lasteventids_table.db_name} "  # noqa: S608
+            f"WHERE \"table\" = '{table.name}'"  # noqa: S608
+        ).fetchone()
+        last_eventid = None if res is None else res[0]
+        self.cache[table.name] = last_eventid
+        return last_eventid
+
+    def copy_lasteventid(self, conn, from_table: Table, to_table: Table):
+        eventid = self.get_last_eventid(conn, from_table)
+        self.update_eventid(conn, to_table, eventid)
+
+    def clear_cache(self):
+        self.cache = defaultdict(int)
 
 
 class EventsProcessor:
@@ -104,7 +125,7 @@ class EventsProcessor:
             truncate: indicates if the relational tables need to be truncated
         """
         self.lasteventids = LastEventIds()
-        benk_dataset = self.lasteventids.table.dataset
+        benk_dataset = self.lasteventids.lasteventids_table.dataset
         self.datasets = {benk_dataset.id: benk_dataset} | {ds.id: ds for ds in datasets}
         self.conn = connection
         _metadata = local_metadata or metadata  # mainly for testing
@@ -198,6 +219,13 @@ class EventsProcessor:
                     f"SELECT {fieldnames} FROM {run_configuration.table.name}"  # noqa: S608
                 )
                 self.conn.execute(f"DROP TABLE {run_configuration.table.name} CASCADE")
+
+                # Copy full_load lasteventid to active table and set full_load lasteventid to None
+                self.lasteventids.copy_lasteventid(
+                    self.conn, run_configuration.table, table_to_replace
+                )
+                self.lasteventids.update_eventid(self.conn, run_configuration.table, None)
+
             self.full_load_tables[dataset_id].pop(table_id)
 
     def _prepare_row(
@@ -232,7 +260,7 @@ class EventsProcessor:
         table = run_configuration.table
         schema_table = run_configuration.schema_table
 
-        if self.lasteventids.is_event_processed(self.conn, schema_table, event_meta["event_id"]):
+        if self.lasteventids.is_event_processed(self.conn, table, event_meta["event_id"]):
             logger.warning("Event with id %s already processed. Skipping.", event_meta["event_id"])
             return
 
@@ -290,7 +318,7 @@ class EventsProcessor:
             db_operation = db_operation.where(id_field == id_value)
         with self.conn.begin():
             self.conn.execute(db_operation, row)
-            self.lasteventids.update_eventid(self.conn, schema_table, event_meta["event_id"])
+            self.lasteventids.update_eventid(self.conn, table, event_meta["event_id"])
 
             if update_parent_op is not None:
                 self.conn.execute(update_parent_op, update_parent_row)
@@ -425,6 +453,7 @@ class EventsProcessor:
     ):
         first = True
         rows = []
+        last_eventid = None
         for event_meta, event_data in events:
             if event_meta["event_type"] != "ADD":
                 raise Exception("This method should only be called when processing ADD events.")
@@ -435,10 +464,26 @@ class EventsProcessor:
                     logger.info("Skip bulk adds, as the first row already exists in the database.")
                     return
                 first = False
+
+            # Note: This has some overlap with the recovery mode
+            if self.lasteventids.is_event_processed(
+                self.conn, run_configuration.table, event_meta["event_id"]
+            ):
+                logger.warning(
+                    "Skip event with id %s, as the event has already been processed.",
+                    event_meta["event_id"],
+                )
+                continue
+
             rows.append(row)
+            last_eventid = event_meta["event_id"]
+
+        if len(rows) == 0:
+            return
 
         with self.conn.begin():
             self.conn.execute(run_configuration.table.insert(), rows)
+            self.lasteventids.update_eventid(self.conn, run_configuration.table, last_eventid)
 
     def load_events_from_file(self, events_path: str):
         """Load events from a file, primarily used for testing."""
