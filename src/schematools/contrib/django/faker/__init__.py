@@ -137,6 +137,8 @@ class NullableIntFaker(Faker):
 
     def get_call_param_modifiers(self, field) -> tuple(Any, dict[str, Any]):
         arg, kwargs = super().get_call_param_modifiers(field)
+        if arg == "random_element":  # for enums, we return here
+            return arg, kwargs
         if (min_ := field.get("minimum")) is not None:
             kwargs["min_"] = min_
         if (max_ := field.get("maximum")) is not None:

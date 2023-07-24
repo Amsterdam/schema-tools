@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import List
 
@@ -11,9 +13,14 @@ logger = logging.getLogger(__name__)
 
 
 def create_data_for(
-    *datasets: Dataset, start_at: int = 1, size: int = 50, sql: bool = False
+    *datasets: Dataset,
+    start_at: int = 1,
+    size: int = 50,
+    sql: bool = False,
+    tables: List[str] | None = None,
 ) -> List[str]:
     """Create mock data for the indicated datasets."""
+    limit_tables_to = set(tables) if tables is not None else set()
     for dataset in datasets:
         if not dataset.enable_db:
             logger.warning("Skipping `%s`, `enable_db` is False", dataset.name)
@@ -24,6 +31,8 @@ def create_data_for(
         }
 
         for mock_model in model_mockers.values():
+            if limit_tables_to and mock_model._meta.model.__name__ not in limit_tables_to:
+                continue
             if start_at > 1:
                 mock_model._setup_next_sequence = lambda: start_at
             if sql:
