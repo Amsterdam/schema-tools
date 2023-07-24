@@ -1,3 +1,8 @@
+# 2023-07-24 (5.13.2)
+
+* Bugfix: nullable_int faker did not play well with enums, is now fixed.
+* Added cli option to mocker to limit the tables.
+
 # 2023-07-13 (5.13.1)
 
 * Feature: EventProcessor: Track processed event ids now for full load sequences as well.
