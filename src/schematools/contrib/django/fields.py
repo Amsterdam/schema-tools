@@ -8,7 +8,7 @@ class UnlimitedCharField(models.CharField):
 
     def __init__(self, *args, **kwargs):
         if "max_length" in kwargs:
-            raise Exception("max_length not supported, use an ordinary CharField")
+            kwargs.pop("max_length")
         super().__init__(*args, max_length=self.max_length, **kwargs)
 
     def db_type(self, connection):
