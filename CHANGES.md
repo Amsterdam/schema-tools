@@ -1,3 +1,7 @@
+# 2023-08-16 (5.13.3)
+
+* Bugfix: Altered UnlimitedCharField to not throw an exception when max_length is found in kwargs
+
 # 2023-07-24 (5.13.2)
 
 * Bugfix: nullable_int faker did not play well with enums, is now fixed.
