@@ -1,3 +1,10 @@
+# 2023-08-22 (5.13.4)
+
+* Bugfix: Fix missing fields in through table.
+  If a relation has extra properties defined on the relation,
+  these properties should also be available on the through table that is
+  created for this relation.
+
 # 2023-08-16 (5.13.3)
 
 * Bugfix: Altered UnlimitedCharField to not throw an exception when max_length is found in kwargs
