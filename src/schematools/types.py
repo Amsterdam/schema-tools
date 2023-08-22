@@ -654,21 +654,27 @@ class DatasetSchema(SchemaType):
             right_table = self._get_dataset_schema(right_dataset_id).get_table_by_id(
                 right_table_id, include_nested=False, include_through=False
             )
-            for fk_target_table, relation_field_id in (
-                (table, left_table_id),
-                (right_table, target_field_id),
-            ):
-                if fk_target_table.has_composite_key and not field.is_loose_relation:
-                    # Change the spec of a relation inside a schema to an object.
-                    # Originally, the spec for the relation is based on singular key.
-                    # When the relation has a composite key,
-                    # the spec needs to be expanded into an object.
-                    spec = sub_table_schema["schema"]["properties"][relation_field_id]
-                    spec["type"] = "object"
-                    spec["properties"] = {
-                        id_field.id: {"type": id_field.type}
-                        for id_field in fk_target_table.identifier_fields
-                    }
+
+            if table.has_composite_key and not field.is_loose_relation:
+                # Change the spec of a relation inside a schema to an object.
+                # Initially, the spec for the relation is based on a singular key.
+                # When the relation has a composite key,
+                # the spec needs to be expanded into an object.
+                spec = sub_table_schema["schema"]["properties"][left_table_id]
+                spec["type"] = "object"
+                spec["properties"] = {
+                    id_field.id: {"type": id_field.type} for id_field in table.identifier_fields
+                }
+
+            # For a through table based on a non-scalar relation field that is not a loose relation,
+            # we convert the spec of the field to an object
+            # and we copy the field definition of the incoming field
+            # because this relation field can have extra properties that also need to
+            # end up in the through table.
+            if not field.is_scalar and not field.is_loose_relation:
+                spec = sub_table_schema["schema"]["properties"][target_field_id]
+                spec["type"] = "object"
+                spec["properties"] = properties
 
             sub_table_schema["schema"]["properties"].update(dim_fields)
 
@@ -874,7 +880,6 @@ class DatasetTableSchema(SchemaType):
     def get_db_fields(self) -> Iterator[DatasetFieldSchema]:
         """Get the fields for this table that are included in the main table."""
         for field in self.get_fields(include_subfields=True):
-
             # Exclude nested and nm_relation fields,
             # and fields that are added only for temporality
             if (

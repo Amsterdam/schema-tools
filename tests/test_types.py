@@ -315,3 +315,17 @@ def test_relation_with_extra_properties_has_through_table(gebieden_schema):
     """Prove that a 1-N relation with extra properties on the relates add a through table."""
     tables_including_through = {t.id for t in gebieden_schema.get_tables(include_through=True)}
     assert "ggwgebieden_ligtInStadsdeel" in tables_including_through
+
+
+def test_extra_properties_of_relation_field_are_also_in_through_table(gebieden_schema):
+    """Prove that extra fields defined on the relation are also showing up in the through table."""
+    tables_including_through = {t.id: t for t in gebieden_schema.get_tables(include_through=True)}
+    fields_on_through_table = {
+        f.id: f for f in tables_including_through["bouwblokken_ligtInBuurt"].fields
+    }
+    # the field `ligtInBuurt` that is on the through table should have the fields
+    # `beginGeldigheid` and `eindGeldigheid` because those are also defined on the field
+    # in the source table of the relation.
+    assert {"beginGeldigheid", "eindGeldigheid"} < fields_on_through_table[
+        "ligtInBuurt"
+    ].json_data()["properties"].keys()
