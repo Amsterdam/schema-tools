@@ -187,6 +187,43 @@ def test_event_process_relation_update_parent_table_shortname(
     assert record["lgt_in_brt_volgnummer"] == 1
 
 
+def test_events_process_relation_without_table_update_parent_table(
+    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations
+):
+    # First, verify that the relation table indeed does not exist
+    res = next(
+        tconn.execute(
+            "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' "
+            "AND tablename  = 'brk_tenaamstellingen_van_kadastraalsubject');"
+        )
+    )
+    assert res[0] is False
+
+    importer = EventsProcessor(
+        [brk_schema_without_bag_relations], tconn, local_metadata=local_metadata
+    )
+
+    # Import relation vanKadastraalsubject. Has no table, but we want to update the parent table
+    events_path = here / "files" / "data" / "tenaamstellingen.gobevents"
+    importer.load_events_from_file(events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * FROM brk_tenaamstellingen")]
+    assert len(records) == 2
+    assert [(r["identificatie"], r["van_kadastraalsubject_id"]) for r in records] == [
+        ("NL.IMKAD.Tenaamstelling.ajdkfl4j4", "NL.IMKAD.Persoon.1124ji44kd"),
+        ("NL.IMKAD.Tenaamstelling.adkfkadfkjld", "NL.IMKAD.Persoon.2f4802kkdd"),
+    ]
+
+    # Test that parent table is updated
+    events_path = here / "files" / "data" / "tenaamstellingen_van_kadastraalsubject.gobevents"
+    importer.load_events_from_file(events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * FROM brk_tenaamstellingen")]
+    assert len(records) == 2
+    assert [(r["identificatie"], r["van_kadastraalsubject_id"]) for r in records] == [
+        ("NL.IMKAD.Tenaamstelling.ajdkfl4j4", "NL.IMKAD.Persoon.20042004eeeeefjd"),
+        ("NL.IMKAD.Tenaamstelling.adkfkadfkjld", None),
+    ]
+
+
 def test_event_process_full_load_sequence(
     here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
 ):
@@ -847,3 +884,8 @@ def test_event_process_last_event_id_full_load_sequence(
     assert [2018, 2019, 2020, 2021, 2022] == [r["jaar"] for r in records]
     assert get_last_event_id("nap_peilmerken") == 217
     assert get_last_event_id("nap_peilmerken_full_load") is None
+
+
+def test_events_process_full_load_relation_update_parent_table():
+    # TODO: Implement test
+    pass

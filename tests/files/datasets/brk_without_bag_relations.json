@@ -628,10 +628,6 @@
             "properties": {
               "identificatie": {
                 "type": "string"
-              },
-              "beginGeldigheid": {
-                "type": "string",
-                "format": "date-time"
               }
             },
             "relation": "brk:kadastralesubjecten",
