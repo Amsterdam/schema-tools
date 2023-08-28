@@ -763,6 +763,16 @@
               "properties": {
                 "identificatie": {
                   "type": "string"
+                },
+                "beginGeldigheid": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": ""
+                },
+                "eindGeldigheid": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": ""
                 }
               }
             },
@@ -947,7 +957,17 @@
                   "type": "string"
                 },
                 "volgnummer": {
-                  "type": "string"
+                  "type": "integer"
+                },
+                "beginGeldigheid": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": ""
+                },
+                "eindGeldigheid": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": ""
                 }
               }
             },

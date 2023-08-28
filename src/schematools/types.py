@@ -644,17 +644,6 @@ class DatasetSchema(SchemaType):
             else:
                 properties = {}
 
-            # Add the dimension fields to the through table,
-            # but only if those were defined in the fields of the relation.
-            if field.related_table and (related_temporal := field.related_table.temporal):
-                for dim_field in related_temporal.dimensions.get("geldigOp", []):
-                    if dim_field.id in properties:
-                        dim_fields[dim_field.id] = properties[dim_field.id]
-
-            right_table = self._get_dataset_schema(right_dataset_id).get_table_by_id(
-                right_table_id, include_nested=False, include_through=False
-            )
-
             if table.has_composite_key and not field.is_loose_relation:
                 # Change the spec of a relation inside a schema to an object.
                 # Initially, the spec for the relation is based on a singular key.
@@ -666,17 +655,19 @@ class DatasetSchema(SchemaType):
                     id_field.id: {"type": id_field.type} for id_field in table.identifier_fields
                 }
 
-            # For a through table based on a non-scalar relation field that is not a loose relation,
-            # we convert the spec of the field to an object
-            # and we copy the field definition of the incoming field
-            # because this relation field can have extra properties that also need to
-            # end up in the through table.
+            # We change the spec of the target field if the field is composite
             if not field.is_scalar and not field.is_loose_relation:
                 spec = sub_table_schema["schema"]["properties"][target_field_id]
                 spec["type"] = "object"
                 spec["properties"] = properties
 
-            sub_table_schema["schema"]["properties"].update(dim_fields)
+                # Any additional parts of the field (properties of the relation)
+                # will be copied into the definition of the through table.
+                sub_table_schema["schema"]["properties"] |= {
+                    name: value
+                    for name, value in properties.items()
+                    if name not in field.related_table.identifier
+                }
 
         return DatasetTableSchema(
             sub_table_schema, parent_schema=self, _parent_table=table, through_table=True

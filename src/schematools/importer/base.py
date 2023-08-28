@@ -261,6 +261,7 @@ class BaseImporter:
                 limit_tables_to=limit_tables_to,
                 is_versioned_dataset=is_versioned_dataset,
             )
+
             if is_versioned_dataset:
                 self.views = views_factory(dataset, self.tables)
 
