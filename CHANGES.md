@@ -1,3 +1,7 @@
+# 2023-08-30 (5.14.1)
+
+* Bugfix: Fix missing fields in through table (second try).
+
 # 2023-08-28 (5.14.0)
 
 * Feature: EventProcessor: Process events for which no relation table exists, does update parent table.
