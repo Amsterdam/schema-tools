@@ -552,19 +552,26 @@ def batch_validate(
     errors: DefaultDict[str, defaultdict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
 
     # Find the root "datasets" directory.
-    datasets_dir = Path(os.path.commonpath(schema_files)).absolute()
-    root = Path(datasets_dir.root)
-    while True:
-        if datasets_dir.name == "datasets":
-            break
-        if datasets_dir == root:
-            raise ValueError("dataset files do not live in a common 'datasets' dir")
-        datasets_dir = datasets_dir.parent
+    datasets_dir = Path(os.path.commonpath(schema_files)).absolute().resolve()
+    path_parts = datasets_dir.parts
+
+    # Bail out if there is no `datasets` directory
+    try:
+        datasets_idx = path_parts.index("datasets")
+    except ValueError:
+        raise ValueError("dataset files do not live in a common 'datasets' dir")
+
+    # Find out if we need to go up the directory tree to get at `datasets` dir
+    # This could be needed if we are only checking one dataset,
+    # because in that case datasets_dir is initially the full path to
+    # the `dataset.json` file.
+    up_tree_count = len(path_parts) - 2 - datasets_idx
+    if up_tree_count > 0:
+        datasets_dir = datasets_dir.parents[up_tree_count]
 
     loader = FileSystemSchemaLoader(datasets_dir)
 
     done = set()
-    breakpoint()
     for schema_file in schema_files:
         # If the schema file is a table, find the dataset.json
         # file in one of the parent directories.
