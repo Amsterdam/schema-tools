@@ -1,3 +1,8 @@
+# 2023-09-05 (5.14.2)
+
+* Bugfix: For the edge case that the dataset has the id `datasets`
+  the validator was not behaving correctly. That has now been fixed.
+
 # 2023-08-30 (5.14.1)
 
 * Bugfix: Fix missing fields in through table (second try).
