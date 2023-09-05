@@ -564,6 +564,7 @@ def batch_validate(
     loader = FileSystemSchemaLoader(datasets_dir)
 
     done = set()
+    breakpoint()
     for schema_file in schema_files:
         # If the schema file is a table, find the dataset.json
         # file in one of the parent directories.
