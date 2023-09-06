@@ -1,3 +1,12 @@
+# 2023-09-06 (5.15.0)
+
+* Feature: Added the option `--additional-grants` to the
+  `schema permissions apply` script to be able to set grants
+  for non-amsterdam-schema tables. This is needed for the `datasets_*` tables,
+  because on Azure these tables are accessed in PostgreSQL from a user
+  (or the anonymous) account and the `scope_openbaar` scopt has to be granted for
+  these tables.
+
 # 2023-09-05 (5.14.2)
 
 * Bugfix: For the edge case that the dataset has the id `datasets`

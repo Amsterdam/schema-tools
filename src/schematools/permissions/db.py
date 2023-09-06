@@ -81,6 +81,7 @@ def apply_schema_and_profile_permissions(
     create_roles: bool = False,
     revoke: bool = False,
     verbose: int = 0,
+    additional_grants: tuple[str] = (),
 ) -> None:
     """Apply permissions for schema and profile."""
     SessionCls = sessionmaker(bind=engine)
@@ -111,6 +112,10 @@ def apply_schema_and_profile_permissions(
         if profiles:
             profile_list = cast(List[Dict[str, Any]], profiles.values())
             create_acl_from_profiles(engine, pg_schema, profile_list, role, scope, verbose)
+
+        if additional_grants:
+            set_additional_grants(session, pg_schema, dry_run, additional_grants, bool(verbose))
+
         session.commit()
     except Exception:
         session.rollback()
@@ -369,7 +374,6 @@ def set_dataset_read_permissions(
     all_scopes = get_all_dataset_scopes(ams_schema, role, scope)
 
     for table_name, grant_params in all_scopes.items():
-
         for grant_param in grant_params:
             for _grantee in grant_param["grantees"]:
                 if create_roles:
@@ -387,6 +391,54 @@ def set_dataset_read_permissions(
                     echo=echo,
                     dry_run=dry_run,
                 )
+
+
+def set_additional_grants(
+    session: Session,
+    pg_schema: str,
+    dry_run: bool,
+    additional_grants: tuple[str],
+    echo: bool = False,
+) -> None:
+    """Sets additional grants
+
+    Args:
+        session: SQLAlchemy type session
+        pg_schema: schema in the postgres database
+        dry_run: do not apply the grants
+        additional_grants: tuple with the following structure:
+            <table_name>:<privilege_1>[,<privilege_n>]*;<grantee_1>[,grantee_n]*
+        echo: show output
+    """
+
+    for additional_grant in additional_grants:
+        try:
+            table_name, grant_params = additional_grant.split(":")
+            privileges_str, grantees_str = grant_params.split(";")
+            privileges = privileges_str.split(",")
+            grantees = grantees_str.split(",")
+        except ValueError:
+            logger.error(
+                "Incorrect grant definition: `%r`,"
+                "grant should have format"
+                "<table_name>:<privilege_1>[,<privilege_n>]*;<grantee_1>[,grantee_n]*",
+                additional_grant,
+            )
+            raise  #  re-raise to trigger rollback
+        for _grantee in grantees:
+            _execute_grant(
+                session,
+                grant(
+                    privileges,
+                    PgObjectType.TABLE,
+                    table_name,
+                    _grantee,
+                    grant_option=False,
+                    schema=pg_schema,
+                ),
+                echo=echo,
+                dry_run=dry_run,
+            )
 
 
 def create_acl_from_schemas(
