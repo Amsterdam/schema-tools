@@ -310,6 +310,12 @@ class DatasetSchema(SchemaType):
         """The 'id', but camel cased like a class name."""
         return toCamelCase(self.id, first_upper=True)
 
+    @cached_property
+    def db_name(self) -> str:
+        """The `id`, or the `shortname` if defined."""
+        db_name = self.get("shortname", self.id)
+        return to_snake_case(db_name)
+
     @property
     def title(self) -> str | None:
         """Title of the dataset (if set)"""
@@ -1095,7 +1101,7 @@ class DatasetTableSchema(SchemaType):
         if with_version:
             version_postfix = self.version.signif
         if with_dataset_prefix:
-            dataset_prefix = to_snake_case(self.dataset.id)
+            dataset_prefix = self.dataset.db_name
 
         shortname = to_snake_case(self.shortname)
         if self.nested_table or self.through_table:
