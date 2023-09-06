@@ -650,6 +650,34 @@ class TestWritePermissions:
             "'berry','14641','15101051'",
         )
 
+    def test_setting_additional_grants(self, here, engine, meetbouten_schema, dbsession):
+        """
+        Prove that additional grants can be set using the extra argument.
+        """
+
+        importer = NDJSONImporter(meetbouten_schema, engine)
+        importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
+        importer.generate_db_objects("metingen", truncate=True, ind_extra_index=False)
+        importer.generate_db_objects("referentiepunten", truncate=True, ind_extra_index=False)
+
+        # Create the datasets_dataset table
+        with engine.begin() as connection:
+            connection.execute("CREATE TABLE datasets_dataset (id integer)")
+
+        # Apply the permissions to meetbouten and add the extra grants to datasets_dataset
+        apply_schema_and_profile_permissions(
+            engine,
+            "public",
+            meetbouten_schema,
+            None,
+            "AUTO",
+            "ALL",
+            create_roles=True,
+            additional_grants=("datasets_dataset:SELECT;scope_openbaar",),
+        )
+        # Check perms on the datasets_dataset table
+        _check_select_permission_granted(engine, "scope_openbaar", "datasets_dataset")
+
 
 def _create_role(engine, role):
     """Create role. If role already exists just fail and ignore.

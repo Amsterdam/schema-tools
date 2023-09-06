@@ -260,6 +260,16 @@ def permissions_revoke(db_url: str, role: str, verbose: int) -> None:
     help="Before granting new permissions, revoke first all previous table and column permissions",
 )
 @click.option("-v", "--verbose", count=True)
+@click.option(
+    "-a",
+    "--additional-grants",
+    multiple=True,
+    help="""Additional grants can be defined in the following format:
+            `<table_name>:<privilege_1>[,<privilege_n>]*;<grantee_1>[,grantee_n]*`
+            Add one option for every table.
+            NB: Surround values with double quotes!
+              """,
+)
 def permissions_apply(
     db_url: str,
     schema_url: str,
@@ -276,6 +286,7 @@ def permissions_apply(
     set_write_permissions: bool,
     revoke: bool,
     verbose: int,
+    additional_grants: tuple[str] = (),
 ) -> None:
     """Set permissions for a postgres role.
 
@@ -318,6 +329,7 @@ def permissions_apply(
             create_roles,
             revoke,
             verbose=verbose,
+            additional_grants=additional_grants,
         )
     else:
         click.echo(
