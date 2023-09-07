@@ -259,7 +259,7 @@ def test_event_process_full_load_sequence(
     assert len(records) == 1
     assert records[0]["identificatie"] == "70780001"
 
-    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap.nap_peilmerken_full_load")]
     assert len(records) == 3
     assert records[0]["identificatie"] == "70780002"
     assert records[1]["identificatie"] == "70780003"
@@ -338,7 +338,7 @@ def _create_peilmerken_event(id: str, jaar: int, type: str = "ADD", **kwargs) ->
 def _assert_have_peilmerken(
     id_years: list[tuple[str, int]], tconn, check_full_load_table: bool = False
 ):
-    tablename = "nap_peilmerken" if not check_full_load_table else "nap_peilmerken_full_load"
+    tablename = "nap_peilmerken" if not check_full_load_table else "nap.nap_peilmerken_full_load"
     records = [dict(r) for r in tconn.execute(f"SELECT * FROM {tablename}")]  # noqa: S608
     assert len(records) == len(id_years)
 
@@ -625,7 +625,7 @@ def test_event_process_recovery_full_load_last_table_empty(
                 [("1", 2018), ("2", 2019)],
                 check_full_load_table=True,
             )
-            importer.conn.execute("TRUNCATE TABLE nap_peilmerken_full_load")
+            importer.conn.execute("TRUNCATE TABLE nap.nap_peilmerken_full_load")
 
         # 1. Doesn't exist, with recovery_mode = False. New rows should be added and object
         #    table replaced.
@@ -842,7 +842,7 @@ def test_event_process_last_event_id_full_load_sequence(
     importer.process_events(events)
 
     # 2. Add rows and assert they exist
-    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap.nap_peilmerken_full_load")]
     assert [2018, 2019] == [r["jaar"] for r in records]
     assert get_last_event_id("nap_peilmerken") is None
     assert get_last_event_id("nap_peilmerken_full_load") == 210
@@ -853,7 +853,7 @@ def test_event_process_last_event_id_full_load_sequence(
     importer.process_events(events)
 
     # 3. Assert event with newer ID is applied
-    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap.nap_peilmerken_full_load")]
     assert [2018, 2019, 2020] == [r["jaar"] for r in records]
     assert get_last_event_id("nap_peilmerken") is None
     assert get_last_event_id("nap_peilmerken_full_load") == 212
@@ -865,7 +865,7 @@ def test_event_process_last_event_id_full_load_sequence(
     importer.process_events(events)
 
     # 4. Assert event with older IDs are ignored
-    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_full_load")]
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap.nap_peilmerken_full_load")]
     assert [2018, 2019, 2020] == [r["jaar"] for r in records]
     assert get_last_event_id("nap_peilmerken") is None
     assert get_last_event_id("nap_peilmerken_full_load") == 212
