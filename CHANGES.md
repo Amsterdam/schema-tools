@@ -1,3 +1,7 @@
+# 2023-09-07 (5.16.0)
+
+* Feature: Use dataset-specific schema to store temporary full load tables.
+
 # 2023-09-07 (5.15.1)
 
 * Bugfix: Fix case of updating parent table where two relations exist where the name of one

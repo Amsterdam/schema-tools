@@ -226,6 +226,7 @@ class EventsProcessor:
             importer = BaseImporter(dataset_schema, self.conn.engine, logger)
             importer.generate_db_objects(
                 table_id,
+                db_schema_name=dataset_id,
                 db_table_name=db_table_name,
                 is_versioned_dataset=importer.is_versioned_dataset,
                 ind_extra_index=False,
@@ -243,7 +244,7 @@ class EventsProcessor:
         if event_meta.get("full_load_sequence", False):
 
             if event_meta.get("first_of_sequence", False):
-                self.conn.execute(f"TRUNCATE {run_configuration.table.name}")
+                self.conn.execute(f"TRUNCATE {run_configuration.table.fullname}")
 
     def _after_process(self, run_configuration: RunConfiguration, event_meta: dict):
         if not run_configuration.update_table:
@@ -262,12 +263,12 @@ class EventsProcessor:
 
             logger.info("End of full load sequence. Replacing active table.")
             with self.conn.begin():
-                self.conn.execute(f"TRUNCATE {table_to_replace.name}")
+                self.conn.execute(f"TRUNCATE {table_to_replace.fullname}")
                 self.conn.execute(
-                    f"INSERT INTO {table_to_replace.name} ({fieldnames}) "  # noqa: S608
-                    f"SELECT {fieldnames} FROM {run_configuration.table.name}"  # noqa: S608
+                    f"INSERT INTO {table_to_replace.fullname} ({fieldnames}) "  # noqa: S608
+                    f"SELECT {fieldnames} FROM {run_configuration.table.fullname}"  # noqa: S608
                 )
-                self.conn.execute(f"DROP TABLE {run_configuration.table.name} CASCADE")
+                self.conn.execute(f"DROP TABLE {run_configuration.table.fullname} CASCADE")
 
                 # Copy full_load lasteventid to active table and set full_load lasteventid to None
                 self.lasteventids.copy_lasteventid(
