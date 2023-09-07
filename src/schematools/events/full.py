@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -61,7 +62,8 @@ class UpdateParentTableConfiguration:
 
     @property
     def parent_fields(self):
-        return [f.name for f in self.parent_table.columns if f.name.startswith(self.relation_name)]
+        pattern = re.compile(f"{self.relation_name}_[a-zA-Z]+")
+        return [f.name for f in self.parent_table.columns if re.match(pattern, f.name) is not None]
 
     def parent_field_values(self, data: dict):
         return {k: data[k] for k in self.parent_fields}

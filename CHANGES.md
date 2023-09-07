@@ -1,3 +1,8 @@
+# 2023-09-07 (5.15.1)
+
+* Bugfix: Fix case of updating parent table where two relations exist where the name of one
+  relation is a prefix of the other relation.
+
 # 2023-09-06 (5.15.0)
 
 * Feature: Added the option `--additional-grants` to the
