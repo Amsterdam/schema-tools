@@ -326,13 +326,6 @@ class EventsProcessor:
         self.conn.execute(stmt, update_row)
 
     def _update_parent_table_bulk(self, run_configuration: RunConfiguration):
-
-        """
-        UPDATE main_table m
-        SET  (parent_field_1, parent_field_2) = (s.parent_field_1, s.parent_field_2)
-        FROM staging_table s
-        WHERE m.id = s.id;
-        """
         update_parent_table_config = run_configuration.update_parent_table_configuration
         parent_table_ref_id = f"{run_configuration.schema_table.id.split('_')[0]}_id"
 
