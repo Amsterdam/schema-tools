@@ -52,7 +52,7 @@ class UpdateParentTableConfiguration:
             else getattr(self.parent_table.c, self.parent_schema_table.identifier[0])
         )
 
-    def parent_id_value(self, prepared_row: dict):
+    def parent_id_value(self, prepared_row: dict) -> str:
         return ".".join(
             [
                 str(prepared_row[to_snake_case(f"{self.parent_schema_table.id}_{fn}")])
@@ -61,11 +61,11 @@ class UpdateParentTableConfiguration:
         )
 
     @property
-    def parent_fields(self):
+    def parent_fields(self) -> list[str]:
         pattern = re.compile(f"{self.relation_name}_[a-zA-Z]+")
         return [f.name for f in self.parent_table.columns if re.match(pattern, f.name) is not None]
 
-    def parent_field_values(self, data: dict):
+    def parent_field_values(self, data: dict) -> dict:
         return {k: data[k] for k in self.parent_fields}
 
 
@@ -268,6 +268,8 @@ class EventsProcessor:
                     f"INSERT INTO {table_to_replace.fullname} ({fieldnames}) "  # noqa: S608
                     f"SELECT {fieldnames} FROM {run_configuration.table.fullname}"  # noqa: S608
                 )
+                if run_configuration.update_parent_table_configuration:
+                    self._update_parent_table_bulk(run_configuration)
                 self.conn.execute(f"DROP TABLE {run_configuration.table.fullname} CASCADE")
 
                 # Copy full_load lasteventid to active table and set full_load lasteventid to None
@@ -306,7 +308,6 @@ class EventsProcessor:
         self,
         configuration: UpdateParentTableConfiguration,
         event_meta: dict,
-        event_data: dict,
         prepared_row: dict,
     ):
         # Have 1:n relation. We need to update the relation columns in the parent table as
@@ -323,6 +324,28 @@ class EventsProcessor:
         )
 
         self.conn.execute(stmt, update_row)
+
+    def _update_parent_table_bulk(self, run_configuration: RunConfiguration):
+
+        """
+        UPDATE main_table m
+        SET  (parent_field_1, parent_field_2) = (s.parent_field_1, s.parent_field_2)
+        FROM staging_table s
+        WHERE m.id = s.id;
+        """
+        update_parent_table_config = run_configuration.update_parent_table_configuration
+        parent_table_ref_id = f"{run_configuration.schema_table.id.split('_')[0]}_id"
+
+        query = f"""
+        UPDATE {update_parent_table_config.parent_table.fullname} p
+        SET  ({", ".join(update_parent_table_config.parent_fields)}) =
+             (s.{", s.".join(update_parent_table_config.parent_fields)})
+        FROM {run_configuration.table.fullname} s
+        WHERE p.{update_parent_table_config.parent_id_field.name} = s.{parent_table_ref_id}
+        ;
+        """  # noqa: S608
+
+        self.conn.execute(query)
 
     def _process_row(
         self, run_configuration: RunConfiguration, event_meta: dict, event_data: dict
@@ -379,7 +402,6 @@ class EventsProcessor:
                 self._update_parent_table(
                     run_configuration.update_parent_table_configuration,
                     event_meta,
-                    event_data,
                     row,
                 )
 
