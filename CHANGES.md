@@ -1,6 +1,7 @@
 # 2023-09-07 (5.16.0)
 
 * Feature: Use dataset-specific schema to store temporary full load tables.
+* Bugfix: Update main table relations after full load of relation table.
 
 # 2023-09-07 (5.15.1)
 

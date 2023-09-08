@@ -886,6 +886,47 @@ def test_event_process_last_event_id_full_load_sequence(
     assert get_last_event_id("nap_peilmerken_full_load") is None
 
 
-def test_events_process_full_load_relation_update_parent_table():
-    # TODO: Implement test
-    pass
+def test_events_process_full_load_relation_update_parent_table(
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+):
+    events_path = here / "files" / "data" / "peilmerken.gobevents"
+    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer.load_events_from_file_using_bulk(events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
+
+    # Imported objects without relations
+    assert len(records) == 1
+    assert records[0]["ligt_in_bouwblok_id"] is None
+    assert records[0]["ligt_in_bouwblok_identificatie"] is None
+    assert records[0]["ligt_in_bouwblok_volgnummer"] is None
+
+    event_meta = {
+        "event_type": "ADD",
+        "event_id": 1,
+        "dataset_id": "nap",
+        "table_id": "peilmerken_ligtInBouwblok",
+        "full_load_sequence": True,
+        "first_of_sequence": True,
+        "last_of_sequence": True,
+    }
+    event_data = {
+        "id": 1,
+        "peilmerken_id": "70780001",
+        "peilmerken_identificatie": "70780001",
+        "ligt_in_bouwblok_id": "03630012095746.1",
+        "ligt_in_bouwblok_identificatie": "03630012095746",
+        "ligt_in_bouwblok_volgnummer": 1,
+    }
+
+    importer.process_event(event_meta, event_data)
+
+    rel_records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_ligt_in_bouwblok")]
+    parent_records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
+
+    # Should have updated relation columns in  parent (object) table
+    assert len(rel_records) == 1
+    assert len(parent_records) == 1
+
+    assert parent_records[0]["ligt_in_bouwblok_id"] == "03630012095746.1"
+    assert parent_records[0]["ligt_in_bouwblok_identificatie"] == "03630012095746"
+    assert parent_records[0]["ligt_in_bouwblok_volgnummer"] == 1
