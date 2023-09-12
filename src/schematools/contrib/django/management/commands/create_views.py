@@ -1,9 +1,9 @@
 import re
-from collections import defaultdict, abc
+from collections import abc, defaultdict
 from typing import Iterable, List, Optional
+
 import requests
 import sqlparse
-
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, router, transaction
 
@@ -57,6 +57,25 @@ def _get_scopes(datasetname: str, tablename: str) -> str:
     return all_scopes
 
 
+def _is_valid_sql(sql: str) -> bool:
+    # Check if the SQL statement is a valid view
+    import pdb
+
+    pdb.set_trace()
+    statements = sqlparse.parse(sql)
+    if len(statements) != 1:
+        return False
+
+    statement = statements[0]
+    if (
+        not isinstance(statement, sqlparse.sql.Statement)
+        or statement[0].value.lower() != "create or replace"
+    ):
+        return False
+
+    return True
+
+
 def _get_required_permissions(
     table: DatasetTableSchema,
 ) -> list[str]:
@@ -70,30 +89,41 @@ def _get_required_permissions(
                 all_scopes.append(scope)
     return all_scopes
 
-def _check_permissions_exist(table_auth: frozenset, dataset_auth: frozenset, required_permissions: list[str]) -> bool:
+
+def _check_permissions_exist(
+    table_auth: frozenset, dataset_auth: frozenset, required_permissions: list[str]
+) -> bool:
     for permission in required_permissions:
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
         if permission not in table_auth or permission not in dataset_auth:
             return False
     return True
 
+
 def clean_and_validate_sql(sql):
     # Remove newline characters
     import pdb
+
     pdb.set_trace()
-    sql = sql.replace('\n', ' ')
+    sql = sql.replace("\n", " ")
     sql = sql.lower()
-    
+
     # Check if the SQL statement is a valid view
     statements = sqlparse.parse(sql)
     if len(statements) != 1:
         return False
 
     statement = statements[0]
-    if not isinstance(statement, sqlparse.sql.Statement) or  statement[0].value.lower() != 'create or replace':
+    if (
+        not isinstance(statement, sqlparse.sql.Statement)
+        or statement[0].value.lower() != "create or replace"
+    ):
         return False
 
     return True
+
 
 def create_views(
     command: BaseCommand,

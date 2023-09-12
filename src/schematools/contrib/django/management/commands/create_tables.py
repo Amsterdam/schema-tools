@@ -70,7 +70,9 @@ def create_tables(
             # - user overrides this (e.g. developer)
             # - create table for latest version of this dataset group
             model = max(models_group, key=lambda model: model._dataset.version)
+            import pdb
 
+            pdb.set_trace()
             for view_table in model._dataset.schema.tables:
                 if view_table.is_view:
                     command.stdout.write(f"  Skipping view: {view_table.id}")
