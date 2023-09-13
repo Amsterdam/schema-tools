@@ -1,7 +1,5 @@
-# This compose file is supplied for local dev
-# Since there is no running process, it just starts a bash
-# session in order to run tests etc.
-version: "3.0"
+# This compose file is supplied for local testrunning.
+version: "3.7"
 services:
   database:
     image: amsterdam/postgres11
@@ -11,18 +9,21 @@ services:
       POSTGRES_DB: dataservices
       POSTGRES_USER: dataservices
       POSTGRES_PASSWORD: insecure
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 2s
+      timeout: 1s
+      retries: 3
+      start_period: 3s
 
-  app:
+  tests:
     build: .
-    links:
-      - database
+    depends_on:
+      database:
+        condition: service_healthy
     environment:
       SECRET_KEY: insecure
       # In order to use local datasets
-      SCHEMA_URL: /tmp/ams-schema/datasets
+      SCHEMA_URL: /app/ams-schema/datasets
       DATABASE_URL: "postgresql://dataservices:insecure@database/dataservices"
     env_file: .env
-    volumes:
-      - ".:/app"
-    command: >
-      bash
