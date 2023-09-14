@@ -1,6 +1,10 @@
+# 2023-09-14 (5.16.2)
+
+* Feature: Added create-views command to django management commands to facilitate creating views. 
+
 # 2023-09-14 (5.16.1)
 
-* Added django command create_views to facilitate the making of view based dataset
+* Bugfix: Ignore empty input lines in NDJSONImporter.
 
 # 2023-09-07 (5.16.0)
 
