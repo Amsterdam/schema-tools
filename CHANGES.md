@@ -1,7 +1,6 @@
 # 2023-09-14 (5.16.1)
 
 * Added django command create_views to facilitate the making of view based dataset
-* Added cli command create views to facilitate the creation of view based datasets
 
 # 2023-09-07 (5.16.0)
 

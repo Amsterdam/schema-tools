@@ -960,32 +960,6 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
             is_versioned_dataset=importer.is_versioned_dataset,
         )
 
-
-@create.command("views")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-def create_views(db_url: str, schema_url: str, dataset_id: str) -> None:
-    """Execute SQLalchemy View objects."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
-    has_missing_relation = False
-    importer = BaseImporter(dataset_schema, engine)
-    for table in dataset_schema.get_tables():
-        if table.is_view:
-            derived_from = table.derived_from
-            for relation in derived_from:
-                table_name = relation.replace(":", "_")
-                if not importer.table_exists(table_name):
-                    has_missing_relation = True
-
-            if not has_missing_relation:
-                click.echo(f"Creating view {table.id}")
-                importer.generate_view(table)
-            else:
-                click.echo(f"Required relation table not found, skipping view {table.id}")
-
-
 @create.command("sql")
 @click.option("--versioned/--no-versioned", default=True)
 @option_db_url

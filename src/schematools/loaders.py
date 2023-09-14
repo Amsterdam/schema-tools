@@ -209,8 +209,8 @@ class _FileBasedSchemaLoader(SchemaLoader):
     def _read_dataset(self, dataset_id: str) -> Json:
         raise NotImplementedError
 
-    # def _read_view(self, dataset_id: str) -> str:
-    #     raise NotImplementedError
+    def _read_view(self, dataset_id: str) -> str:
+        raise NotImplementedError
 
     def _read_table(self, dataset_id: str, table_ref: str) -> Json:
         raise NotImplementedError
