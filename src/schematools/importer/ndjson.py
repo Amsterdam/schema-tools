@@ -23,8 +23,9 @@ class NDJSONImporter(BaseImporter):
         field_mapper = TableFieldMapper(dataset_table)
         with open(file_name, "rb") as fh:
             for row in fh:
-                records = field_mapper.parse_object(orjson.loads(row))
-                yield records
+                if row != b"\n":
+                    records = field_mapper.parse_object(orjson.loads(row))
+                    yield records
 
 
 class TableFieldMapper:
