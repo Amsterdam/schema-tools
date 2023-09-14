@@ -1,3 +1,7 @@
+# 2023-09-14 (5.16.1)
+
+* Bugfix: Ignore empty input lines in NDJSONImporter.
+
 # 2023-09-07 (5.16.0)
 
 * Feature: Use dataset-specific schema to store temporary full load tables.
