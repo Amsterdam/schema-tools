@@ -30,46 +30,17 @@ def _is_valid_sql(sql: str) -> bool:
             with connection.cursor() as cursor:
                 cursor.execute(sql)
             transaction.savepoint_rollback(sid)
-    except:
+    except Exception:
         return False
     return True
 
 
-def _get_scopes(datasetname: str, tablename: str) -> str:
-    all_scopes = []
-    datasetname = to_snake_case(datasetname)
-    tables = DATASETS.get(name=datasetname).schema.tables
-    for table in tables:
-        if table.id == tablename:
-            # Found table name, now extract scopes from main auth and field auths
-            if table.auth is not None:
-                if not isinstance(table.auth, abc.Iterable):
-                    if table.auth not in all_scopes:
-                        all_scopes.append(list(table.auth)[0])
-                else:
-                    for scope in table.auth:
-                        if scope not in all_scopes:
-                            all_scopes.append(scope)
-            else:
-                dataset_auth = list(DATASETS.get(name=datasetname).schema.auth)[0]
-                if dataset_auth:
-                    if not isinstance(dataset_auth, abc.Iterable):
-                        if dataset_auth not in all_scopes:
-                            all_scopes.append(dataset_auth)
-                    else:
-                        for scope in dataset_auth:
-                            if scope not in all_scopes:
-                                all_scopes.append(scope)
-            for field in table.fields:
-                if field.auth is not None:
-                    if not isinstance(field.auth, abc.Iterable):
-                        if field.auth not in all_scopes:
-                            all_scopes.append(list(field.auth)[0])
-                    else:
-                        for scope in field.auth:
-                            if scope not in all_scopes:
-                                all_scopes.append(scope)
-    return all_scopes
+def _get_scopes(datasetname: str, tablename: str) -> list[str]:
+    from operator import __or__
+    from functools import reduce
+    dataset = DATASETS.get(name=to_snake_case(datasetname)).schema
+    table = dataset.get_table_by_id(tablename)
+    return table.auth | reduce(__or__, [f.auth for f in table.fields])
 
 
 def _get_required_permissions(
@@ -108,7 +79,7 @@ def _check_required_permissions_exist(
     return True
 
 
-def _clean_sql(sql):
+def _clean_sql(sql) -> str:
     """Clean the SQL to make it easier to parse."""
 
     sql = sql.replace("\n", " ").lower().strip()

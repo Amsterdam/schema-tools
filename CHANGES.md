@@ -1,4 +1,4 @@
-# 2023-09-14 (5.16.2)
+# 2023-09-14 (5.17.0)
 
 * Feature: Added create-views command to django management commands to facilitate creating views. 
 
