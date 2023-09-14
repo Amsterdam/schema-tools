@@ -11,6 +11,7 @@ from typing import Any, Final, Iterator, TypeVar
 import click
 import jsonpath_rw
 import psycopg2
+import requests
 from psycopg2 import sql
 from sqlalchemy import Boolean, exc, inspect, text
 from sqlalchemy.dialects.postgresql.base import PGInspector
@@ -220,6 +221,11 @@ class BaseImporter:
         self.dataset_table = self.dataset_schema.get_table_by_id(table_id)
         table_id = self.dataset_table.id  # get real-cased ID.
 
+        # check if the dataset is a view
+        if self.dataset_table.is_view:
+            self.logger.log_info("Dataset %s is a view, skipping table generation", table_id)
+            return False
+
         if is_versioned_dataset:
             if db_schema_name is None:
                 # private DB schema instead of `public`
@@ -290,6 +296,22 @@ class BaseImporter:
                 metadata.bind,
                 db_schema_name,
             )
+
+    def table_exists(self, table_name: str) -> bool:
+        """Check if a table exists in the database."""
+        return table_name in self.engine.table_names()
+
+    def create_view_user(self, table) -> None:
+        """Create view users/owner in the database."""
+        view_user = table.get_view_user()
+        if view_user is not None:
+            with closing(self.engine.raw_connection()) as conn, closing(conn.cursor()) as cur:
+                cur.execute(f"CREATE USER {view_user}")
+                conn.commit()
+
+    def generate_view(self, dataset: DatasetSchema) -> None:
+        """Generate a view for a schema."""
+        raise NotImplementedError
 
     def load_file(self, file_name: Path, batch_size: int = 100, **kwargs: Any) -> Record | None:
         """Import a file into the database table, returns the last record, if available."""

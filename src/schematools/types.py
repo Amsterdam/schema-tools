@@ -29,7 +29,7 @@ from typing import (
 
 from methodtools import lru_cache
 
-from schematools import MAX_TABLE_NAME_LENGTH
+from schematools import DEFAULT_SCHEMA_URL, MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import (
     DatasetFieldNotFound,
     DatasetTableNotFound,
@@ -258,18 +258,26 @@ class DatasetSchema(SchemaType):
         beschikbaar = "beschikbaar"
         niet_beschikbaar = "niet_beschikbaar"
 
-    def __init__(self, data: dict, dataset_collection: CachedSchemaLoader | None = None) -> None:
+    def __init__(
+        self,
+        data: dict,
+        view_sql: str = None,
+        dataset_collection: CachedSchemaLoader | None = None,
+    ) -> None:
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
         about the related datasets.
 
         Args:
             data: The JSON data from the file.
+            view_sql: The SQL to create the view for this dataset.
             dataset_collection: The shared collection that the dataset should become part of.
                                 This is used to resolve relations between different datasets.
         """
         if data.get("type") != "dataset" or not isinstance(data.get("tables"), list):
             raise ValueError("Invalid Amsterdam Dataset schema file")
+
+        self.view_sql = view_sql if view_sql is not None else None
 
         super().__init__(data)
 
@@ -304,6 +312,16 @@ class DatasetSchema(SchemaType):
         return json.loads(
             self.json(inline_tables=inline_tables, inline_publishers=inline_publishers)
         )
+
+    def get_view_sql(self) -> str:
+        """Return the SQL for the view of the given table."""
+        if self.view_sql is None:
+            return None
+        return self.view_sql
+
+    def get_view_user(self) -> str:
+        """Return the user that should be used to create the view for the given view"""
+        return f"write_{self.db_name}"
 
     @cached_property
     def python_name(self) -> str:
@@ -742,6 +760,17 @@ class DatasetTableSchema(SchemaType):
     def python_name(self) -> str:
         """The 'id', but camel cased like a class name."""
         return toCamelCase(self.id, first_upper=True)
+
+    @property
+    def is_view(self) -> bool:
+        """Whether this table is a view."""
+        if self.get("derivedFrom", False):
+            return True
+
+    @property
+    def derived_from(self) -> list:
+        if self.get("derivedFrom", False):
+            return self.get("derivedFrom")
 
     @property
     def shortname(self) -> str:

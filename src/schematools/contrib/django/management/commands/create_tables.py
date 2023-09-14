@@ -65,10 +65,21 @@ def create_tables(
         for db_table_name, models_group in models_by_table.items():
             # Only create tables if migration is allowed
             # - router allows it (not some external database)
+            # - table is not a view
             # - model is managed (not by default)
             # - user overrides this (e.g. developer)
             # - create table for latest version of this dataset group
             model = max(models_group, key=lambda model: model._dataset.version)
+
+            is_view = False
+
+            for view_table in model._dataset.schema.tables:
+                if view_table.is_view:
+                    command.stdout.write(f"  Skipping view: {db_table_name}")
+                    is_view = True
+
+            if is_view:
+                continue
 
             router_allows = router.allow_migrate_model(model._meta.app_label, model)
             if not router_allows:

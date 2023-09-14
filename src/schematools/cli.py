@@ -56,7 +56,7 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema, Publisher, SemVer
+from schematools.types import DatasetSchema, DatasetTableSchema, Publisher, SemVer
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
@@ -959,7 +959,6 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
             ind_tables=True,
             is_versioned_dataset=importer.is_versioned_dataset,
         )
-
 
 @create.command("sql")
 @click.option("--versioned/--no-versioned", default=True)

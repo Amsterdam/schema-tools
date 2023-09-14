@@ -6,6 +6,10 @@ class SchemaObjectNotFound(ValueError):
     """Field does not exist."""
 
 
+class ViewObjectNotFound(ValueError):
+    """SQL view does not exist."""
+
+
 class DatasetNotFound(SchemaObjectNotFound):
     """The dataset could not be found."""
 
