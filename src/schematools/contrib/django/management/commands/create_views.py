@@ -39,9 +39,10 @@ def _get_scopes(datasetname: str, tablename: str) -> list[str]:
     from operator import __or__
     from functools import reduce
     dataset = DATASETS.get(name=to_snake_case(datasetname)).schema
-    table = dataset.get_table_by_id(tablename)
-    return table.auth | reduce(__or__, [f.auth for f in table.fields])
-
+    if tablename in [table.id for table in dataset.tables]:
+        table = dataset.get_table_by_id(tablename)
+        return table.auth | reduce(__or__, [f.auth for f in table.fields])
+    return []
 
 def _get_required_permissions(
     table: DatasetTableSchema,
@@ -126,16 +127,13 @@ def create_views(
                         with connection.cursor() as cursor:
                             write_role_name = f"write_{table._parent_schema.db_name}"
 
-                            # REMOVE VIEW IF IT EXISTS
+                            # Remove the view if it exists
                             cursor.execute(f"DROP VIEW IF EXISTS {table.db_name} CASCADE")
 
-                            # CREATE ROLE AND GRANT PERMISSIONS
-                            if (
-                                cursor.execute(
-                                    f"SELECT 1 FROM pg_roles WHERE rolname='{write_role_name}'"
-                                )
-                                == 0
-                            ):
+                            # Create the role if it doesn't exist
+                            cursor.execute(f"SELECT 1 FROM pg_roles WHERE rolname='{write_role_name}'")
+                            role_exists = cursor.fetchone()
+                            if not role_exists:
                                 cursor.execute(f"CREATE ROLE {write_role_name}")
 
                             # Loop though all required permissions and and grant them to the write user
