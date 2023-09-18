@@ -7,7 +7,7 @@ from geoalchemy2 import functions as func  # ST_AsEWKT
 from sqlalchemy import MetaData, Table, select
 from sqlalchemy.engine import Connection
 
-from schematools.exports import BaseExporter
+from schematools.exports import BaseExporter, enable_datetime_cast
 from schematools.naming import toCamelCase
 from schematools.types import DatasetSchema
 
@@ -43,5 +43,6 @@ def export_csvs(
     size: int,
 ):
     """Utility function to wrap the Exporter."""
+    enable_datetime_cast()
     exporter = CsvExporter(connection, dataset_schema, output, table_ids, scopes, size)
     exporter.export_tables()
