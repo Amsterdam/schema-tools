@@ -30,54 +30,48 @@ def _is_valid_sql(sql: str) -> bool:
             with connection.cursor() as cursor:
                 cursor.execute(sql)
             transaction.savepoint_rollback(sid)
-    except Exception:
+    except Exception as e:
         return False
     return True
 
 
-def _get_scopes(datasetname: str, tablename: str) -> list[str]:
-    from operator import __or__
+def _get_scopes(datasetname: str, tablename: str) -> frozenset[str]:
     from functools import reduce
+    from operator import __or__
+
     dataset = DATASETS.get(name=to_snake_case(datasetname)).schema
     if tablename in [table.id for table in dataset.tables]:
         table = dataset.get_table_by_id(tablename)
         return table.auth | reduce(__or__, [f.auth for f in table.fields])
-    return []
+    return frozenset()
+
 
 def _get_required_permissions(
     table: DatasetTableSchema,
-) -> list[str]:
+) -> frozenset[str]:
     derived_from = table.derived_from
-    all_scopes = []
+    all_scopes = frozenset()
     for relation in derived_from:
         datasetname, tablename = relation.split(":")
-        scopes = _get_scopes(datasetname, tablename)
-        for scope in scopes:
-            if scope not in all_scopes:
-                all_scopes.append(scope)
+        all_scopes |= _get_scopes(datasetname, tablename)
     return all_scopes
 
 
 def _check_required_permissions_exist(
-    view_dataset_auth: frozenset, required_permissions: list[str]
+    view_dataset_auth: frozenset[str], required_permissions: frozenset[str]
 ) -> bool:
     """Check if the required permissions exist in the table and dataset auth.
 
     Args:
-        view_dataset_auth (frozenset): The auth parameter of the dataset the view is in.
-        required_permissions (list[str]): The required permissions for the view.
+        view_dataset_auth (frozenset[str]): The auth parameter of the dataset the view is in.
+        required_permissions (frozenset[str]): The required permissions for the view.
 
     returns:
         bool: True if all required permissions exist in the view dataset auth, False if not.
 
     """
-    view_dataset_auth = list(map(str, view_dataset_auth))
-    if len(required_permissions) > 1 and "OPENBAAR" in required_permissions:
-        required_permissions.remove("OPENBAAR")
-    for permission in required_permissions:
-        if permission not in view_dataset_auth:
-            return False
-    return True
+
+    return required_permissions <= (view_dataset_auth | {"OPENBAAR"})
 
 
 def _clean_sql(sql) -> str:
@@ -131,7 +125,9 @@ def create_views(
                             cursor.execute(f"DROP VIEW IF EXISTS {table.db_name} CASCADE")
 
                             # Create the role if it doesn't exist
-                            cursor.execute(f"SELECT 1 FROM pg_roles WHERE rolname='{write_role_name}'")
+                            cursor.execute(
+                                f"SELECT 1 FROM pg_roles WHERE rolname='{write_role_name}'"  # nosec
+                            )
                             role_exists = cursor.fetchone()
                             if not role_exists:
                                 cursor.execute(f"CREATE ROLE {write_role_name}")
