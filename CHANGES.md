@@ -1,3 +1,8 @@
+# 2023-09-21 (5.17.3)
+
+* Bugfix: check for required permissions was not taking the `OPENBAAR`
+  scope into account in the correct way.
+
 # 2023-09-16 (5.17.2)
 
 * Fix: Cast datetime type to string, because of a out-of-range year in bag_panden.
