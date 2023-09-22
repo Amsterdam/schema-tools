@@ -1,6 +1,8 @@
 """Event tests."""
+import json
 from datetime import date, datetime
 
+import orjson
 import pytest
 
 from schematools.events.full import EventsProcessor
@@ -930,3 +932,106 @@ def test_events_process_full_load_relation_update_parent_table(
     assert parent_records[0]["ligt_in_bouwblok_id"] == "03630012095746.1"
     assert parent_records[0]["ligt_in_bouwblok_identificatie"] == "03630012095746"
     assert parent_records[0]["ligt_in_bouwblok_volgnummer"] == 1
+
+
+def load_json_results_file(location):
+    class _JSONDecoder(json.JSONDecoder):
+        """Custom JSON decoder that converts date(time) strings to date(time) objects."""
+
+        def __init__(self, *args, **kwargs):
+            json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+        def object_hook(self, obj):
+            ret = {}
+            for key, value in obj.items():
+                if key in ("begin_geldigheid", "eind_geldigheid") and value is not None:
+                    if len(value) == 10:
+                        ret[key] = date.fromisoformat(value)
+                    else:
+                        ret[key] = datetime.fromisoformat(value)
+                else:
+                    ret[key] = value
+            return ret
+
+    with open(location) as f:
+        return json.load(f, cls=_JSONDecoder)
+
+
+def delete_id(d: dict):
+    return {k: v for k, v in d.items() if k != "id"}
+
+
+def delete_ids(lst: list[dict]):
+    return [delete_id(d) for d in lst]
+
+
+def assert_results(tconn, expected_results: dict, testname: str):
+    for table_name, expected_result in expected_results.items():
+        records = [dict(r) for r in tconn.execute(f"SELECT * FROM {table_name}")]  # noqa: S608
+        records = delete_ids(records)
+
+        assert len(records) == len(
+            expected_result
+        ), f"Number of records in {table_name} does not match for test {testname}"
+        for res in expected_result:
+            assert res in records, f"Record {res} not found in {table_name} for test {testname}"
+        for rec in records:
+            assert (
+                rec in expected_result
+            ), f"Unexpected record {rec} found in {table_name} for test {testname}"
+
+
+def test_events_nested_table(here, db_schema, tconn, local_metadata, bag_verblijfsobjecten_schema):
+    expected_results = load_json_results_file(
+        here / "files" / "data" / "expect" / "events_nested_table.json"
+    )
+
+    importer = EventsProcessor(
+        [bag_verblijfsobjecten_schema], tconn, local_metadata=local_metadata
+    )
+
+    # Load initial data with nested objects
+    events_path = here / "files" / "data" / "verblijfsobjecten.gobevents"
+    importer.load_events_from_file(events_path)
+    assert_results(tconn, expected_results["initial_add"], "Load initial data")
+
+    # Modify nested objects
+    events_path = here / "files" / "data" / "verblijfsobjecten.modify_nested.gobevents"
+    importer.load_events_from_file(events_path)
+    assert_results(tconn, expected_results["modify_nested"], "Modify nested objects")
+
+    # Empty nested objects
+    events_path = here / "files" / "data" / "verblijfsobjecten.empty_nested.gobevents"
+    importer.load_events_from_file(events_path)
+    assert_results(tconn, expected_results["empty_nested"], "Remove nested objects")
+
+    # Modify nested objects again
+    events_path = here / "files" / "data" / "verblijfsobjecten.modify_nested_2.gobevents"
+    importer.load_events_from_file(events_path)
+    assert_results(tconn, expected_results["modify_nested"], "Modify nested objects again")
+
+    # Delete full object
+    events_path = here / "files" / "data" / "verblijfsobjecten.delete.gobevents"
+    importer.load_events_from_file(events_path)
+    assert_results(tconn, expected_results["delete"], "Delete everything")
+
+    # Now test full load. Full load only works with ADD events, so we reuse the ADD event from
+    # above and add the full load metadata.
+    events_path = here / "files" / "data" / "verblijfsobjecten.gobevents"
+    with open(events_path, "rb") as ef:
+        for line in ef:
+            if line := line.strip():
+                event_id, event_meta_str, data_str = line.split(b"|", maxsplit=2)
+                event_meta = orjson.loads(event_meta_str)
+                event_meta |= {
+                    "full_load_sequence": True,
+                    "first_of_sequence": True,
+                    "last_of_sequence": True,
+                }
+                event_data = orjson.loads(data_str)
+                importer.process_event(
+                    event_meta,
+                    event_data,
+                )
+
+    assert_results(tconn, expected_results["initial_add"], "Load initial data using full load")

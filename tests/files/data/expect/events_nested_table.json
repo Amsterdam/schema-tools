@@ -1,0 +1,73 @@
+{
+  "initial_add": {
+    "bag_verblijfsobjecten": [
+      {
+        "identificatie": "VB",
+        "volgnummer": 1,
+        "begin_geldigheid": "2018-10-22T00:00:00",
+        "eind_geldigheid": null,
+        "ligt_in_buurt_id": null,
+        "ligt_in_buurt_identificatie": null,
+        "ligt_in_buurt_volgnummer": null
+      }
+    ],
+    "bag_verblijfsobjecten_gebruiksdoel": [
+      {
+        "parent_id": "VB.1",
+        "code": "1",
+        "omschrijving": "doel 1"
+      },
+      {
+        "parent_id": "VB.1",
+        "code": "2",
+        "omschrijving": "doel 2"
+      }
+    ]
+  },
+  "modify_nested": {
+    "bag_verblijfsobjecten": [
+      {
+        "identificatie": "VB",
+        "volgnummer": 1,
+        "begin_geldigheid": "2018-10-22T00:00:00",
+        "eind_geldigheid": null,
+        "ligt_in_buurt_id": null,
+        "ligt_in_buurt_identificatie": null,
+        "ligt_in_buurt_volgnummer": null
+      }
+    ],
+    "bag_verblijfsobjecten_gebruiksdoel": [
+      {
+        "parent_id": "VB.1",
+        "code": "3",
+        "omschrijving": "doel 3"
+      },
+      {
+        "parent_id": "VB.1",
+        "code": "2",
+        "omschrijving": "doel 2"
+      }
+    ]
+  },
+  "empty_nested": {
+    "bag_verblijfsobjecten": [
+      {
+        "identificatie": "VB",
+        "volgnummer": 1,
+        "begin_geldigheid": "2018-10-22T00:00:00",
+        "eind_geldigheid": null,
+        "ligt_in_buurt_id": null,
+        "ligt_in_buurt_identificatie": null,
+        "ligt_in_buurt_volgnummer": null
+      }
+    ],
+    "bag_verblijfsobjecten_gebruiksdoel": [
+    ]
+  },
+  "delete": {
+    "bag_verblijfsobjecten": [
+    ],
+    "bag_verblijfsobjecten_gebruiksdoel": [
+    ]
+  }
+}
