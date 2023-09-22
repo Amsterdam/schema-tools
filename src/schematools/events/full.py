@@ -16,7 +16,7 @@ from schematools.factories import tables_factory
 from schematools.importer.base import BaseImporter
 from schematools.loaders import get_schema_loader
 from schematools.naming import to_snake_case
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 # Enable the sqlalchemy logger by uncommenting the following 2 lines to debug SQL related issues
 # logging.basicConfig()
@@ -88,6 +88,8 @@ class RunConfiguration:
     schema_table: DatasetTableSchema = None
 
     update_parent_table_configuration: UpdateParentTableConfiguration = None
+
+    nested_table_fields: list[DatasetFieldSchema] = None
 
 
 class LastEventIds:
@@ -219,22 +221,28 @@ class EventsProcessor:
             # Cached
             table, schema_table = self.full_load_tables[dataset_id][table_id]
         except KeyError:
-            # Initialise fresh table for full load.
-            dataset_schema = self.datasets[dataset_id]
-            schema_table = dataset_schema.get_table_by_id(table_id)
-            db_table_name = schema_table.db_name_variant(postfix=FULL_LOAD_TABLE_POSTFIX)
-            importer = BaseImporter(dataset_schema, self.conn.engine, logger)
-            importer.generate_db_objects(
-                table_id,
-                db_schema_name=dataset_id,
-                db_table_name=db_table_name,
-                is_versioned_dataset=importer.is_versioned_dataset,
-                ind_extra_index=False,
-                ind_create_pk_lookup=False,
-            )
+            # Initialise fresh tables for full load.
+            dataset_schema: DatasetSchema = self.datasets[dataset_id]
+            tables = dataset_schema.get_tables(include_nested=True, include_through=True)
 
-            table = importer.tables[table_id]
-            self.full_load_tables[dataset_id][table_id] = table, schema_table
+            importer = BaseImporter(dataset_schema, self.conn.engine, logger)
+            for schema_table in tables:
+                this_table_id = schema_table.id
+                db_table_name = schema_table.db_name_variant(postfix=FULL_LOAD_TABLE_POSTFIX)
+
+                importer.generate_db_objects(
+                    this_table_id,
+                    db_schema_name=dataset_id,
+                    db_table_name=db_table_name,
+                    is_versioned_dataset=importer.is_versioned_dataset,
+                    ind_extra_index=False,
+                    ind_create_pk_lookup=False,
+                )
+
+                table = importer.tables[this_table_id]
+                self.full_load_tables[dataset_id][this_table_id] = table, schema_table
+
+            table, schema_table = self.full_load_tables[dataset_id][table_id]
 
         return table, schema_table
 
@@ -255,22 +263,36 @@ class EventsProcessor:
         ):
             dataset_id = event_meta["dataset_id"]
             table_id = event_meta["table_id"]
-            table_to_replace = self.tables[dataset_id][to_snake_case(table_id)]
 
-            fieldnames = ", ".join(
-                [field.db_name for field in run_configuration.schema_table.get_db_fields()]
-            )
+            table_ids_to_replace = [
+                table_id,
+            ] + [to_snake_case(f.nested_table.id) for f in run_configuration.nested_table_fields]
 
             logger.info("End of full load sequence. Replacing active table.")
             with self.conn.begin():
-                self.conn.execute(f"TRUNCATE {table_to_replace.fullname}")
-                self.conn.execute(
-                    f"INSERT INTO {table_to_replace.fullname} ({fieldnames}) "  # noqa: S608
-                    f"SELECT {fieldnames} FROM {run_configuration.table.fullname}"  # noqa: S608
-                )
+
+                full_load_tables = []
+                for t_id in table_ids_to_replace:
+                    table_to_replace = self.tables[dataset_id][to_snake_case(t_id)]
+                    full_load_table, full_load_schema_table = self._get_full_load_tables(
+                        dataset_id, t_id
+                    )
+                    full_load_tables.append(full_load_table)
+
+                    fieldnames = ", ".join(
+                        [field.db_name for field in full_load_schema_table.get_db_fields()]
+                    )
+
+                    self.conn.execute(f"TRUNCATE {table_to_replace.fullname}")
+                    self.conn.execute(
+                        f"INSERT INTO {table_to_replace.fullname} ({fieldnames}) "  # noqa: S608
+                        f"SELECT {fieldnames} FROM {full_load_table.fullname}"  # noqa: S608
+                    )
                 if run_configuration.update_parent_table_configuration:
                     self._update_parent_table_bulk(run_configuration)
-                self.conn.execute(f"DROP TABLE {run_configuration.table.fullname} CASCADE")
+
+                for full_load_table in full_load_tables:
+                    self.conn.execute(f"DROP TABLE {full_load_table.fullname} CASCADE")
 
                 # Copy full_load lasteventid to active table and set full_load lasteventid to None
                 self.lasteventids.copy_lasteventid(
@@ -291,6 +313,15 @@ class EventsProcessor:
         table_id = event_meta["table_id"]
 
         row = self._flatten_event_data(event_data)
+
+        # Set null values for missing fields after flattening (e.g. when a 1-1 relation is empty)
+        # Only applies to events for which we have a table
+        if schema_table:
+            row |= {
+                f.db_name: None
+                for f in schema_table.get_fields(include_subfields=True)
+                if f.db_name not in row and f.db_name not in ("id", "schema")
+            }
 
         for geo_field in self.geo_fields[dataset_id][table_id]:
             row_key = to_snake_case(geo_field.name)
@@ -387,6 +418,7 @@ class EventsProcessor:
         with self.conn.begin():
             if run_configuration.update_table:
                 self.conn.execute(db_operation, row)
+                self._update_nested_tables(run_configuration, row, event_type, id_value)
             self.lasteventids.update_eventid(
                 self.conn, run_configuration.table_name, event_meta["event_id"]
             )
@@ -397,6 +429,49 @@ class EventsProcessor:
                     event_meta,
                     row,
                 )
+
+    def _update_nested_tables(
+        self, run_configuration: RunConfiguration, prepared_row: dict, event_type: str, id_value
+    ):
+        is_delete = event_type == "DELETE"
+
+        for field in run_configuration.nested_table_fields:
+            schema_table: DatasetTableSchema = field.nested_table
+            table = self.tables[run_configuration.schema_table.dataset.id][
+                to_snake_case(schema_table.id)
+            ]
+
+            self.conn.execute(table.delete().where(table.c.parent_id == id_value))
+
+            if is_delete:
+                continue
+
+            if value := prepared_row.get(field.id, []):
+                rows = self._prepare_nested_rows(field, value, id_value)
+                self.conn.execute(table.insert(), rows)
+
+    def _prepare_nested_rows(self, field, value, parent_id_value: str):
+        rows = [
+            {
+                "parent_id": parent_id_value,
+            }
+            | {subfield.db_name: v[subfield.db_name] for subfield in field.subfields}
+            for v in value
+        ]
+        return rows
+
+    def _update_nested_tables_bulk(self, run_configuration: RunConfiguration, rows: list[dict]):
+
+        for field in run_configuration.nested_table_fields:
+            schema_table: DatasetTableSchema = field.nested_table
+            table, _ = self._get_full_load_tables(
+                run_configuration.schema_table.dataset.id, to_snake_case(schema_table.id)
+            )
+
+            nested_rows = []
+            for row in rows:
+                nested_rows += self._prepare_nested_rows(field, row[field.id], row["id"])
+            self.conn.execute(table.insert(), nested_rows)
 
     def _row_exists_in_database(self, run_configuration: RunConfiguration, id_value: str):
         table = run_configuration.table
@@ -440,6 +515,9 @@ class EventsProcessor:
             run_configuration.table = table
             run_configuration.schema_table = schema_table
             run_configuration.table_name = table.name
+            run_configuration.nested_table_fields = [
+                f for f in schema_table.fields if f.is_nested_table
+            ]
 
             if schema_table.has_parent_table and schema_table.parent_table_field.relation:
                 run_configuration.update_parent_table_configuration = (
@@ -601,6 +679,7 @@ class EventsProcessor:
         with self.conn.begin():
             if run_configuration.update_table:
                 self.conn.execute(run_configuration.table.insert(), rows)
+                self._update_nested_tables_bulk(run_configuration, rows)
             self.lasteventids.update_eventid(self.conn, run_configuration.table_name, last_eventid)
 
     def load_events_from_file(self, events_path: str):

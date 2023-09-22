@@ -344,6 +344,12 @@ def verblijfsobjecten_schema(schema_loader, gebieden_schema) -> DatasetSchema:
 
 
 @pytest.fixture
+def bag_verblijfsobjecten_schema(schema_loader, gebieden_schema) -> DatasetSchema:
+    # gebieden_schema is listed as dependency to resolve relations
+    return schema_loader.get_dataset_from_file("bag_verblijfsobjecten.json")
+
+
+@pytest.fixture
 def kadastraleobjecten_schema(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("kadastraleobjecten.json")
 

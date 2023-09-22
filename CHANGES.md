@@ -1,3 +1,7 @@
+# 2023-09-23 (5.17.4)
+
+* Bugfix: update nested tables in EventProcessor.
+
 # 2023-09-21 (5.17.3)
 
 * Bugfix: check for required permissions was not taking the `OPENBAAR`

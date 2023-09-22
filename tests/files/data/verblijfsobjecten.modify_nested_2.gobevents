@@ -1,0 +1,1 @@
+VB.1|{"event_type": "MODIFY", "event_id": 4, "dataset_id": "bag", "table_id": "verblijfsobjecten"}|{"identificatie": "VB", "volgnummer": 1, "gebruiksdoel": [{"code": 3, "omschrijving": "doel 3"}, {"code": 2, "omschrijving": "doel 2"}], "ligt_in_buurt": {}, "begin_geldigheid": "2018-10-22T00:00:00.000000", "eind_geldigheid": null}
