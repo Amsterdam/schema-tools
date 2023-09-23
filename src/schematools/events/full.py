@@ -360,10 +360,22 @@ class EventsProcessor:
         update_parent_table_config = run_configuration.update_parent_table_configuration
         parent_table_ref_id = f"{run_configuration.schema_table.id.split('_')[0]}_id"
 
+        if len(update_parent_table_config.parent_fields) > 1:
+            # Adds parentheses
+            set_fields = (
+                f'({", ".join(update_parent_table_config.parent_fields)}) = '
+                f'(s.{", s.".join(update_parent_table_config.parent_fields)})'
+            )
+        else:
+            # No parentheses, because only one field and Postgres will fail on this
+            set_fields = (
+                f"{update_parent_table_config.parent_fields[0]} = "
+                f"s.{update_parent_table_config.parent_fields[0]}"
+            )
+
         query = f"""
         UPDATE {update_parent_table_config.parent_table.fullname} p
-        SET  ({", ".join(update_parent_table_config.parent_fields)}) =
-             (s.{", s.".join(update_parent_table_config.parent_fields)})
+        SET {set_fields}
         FROM {run_configuration.table.fullname} s
         WHERE p.{update_parent_table_config.parent_id_field.name} = s.{parent_table_ref_id}
         ;
