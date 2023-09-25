@@ -4,10 +4,32 @@ from datetime import date, datetime
 
 import orjson
 import pytest
+from more_itertools import peekable
 
 from schematools.events.full import EventsProcessor
 
 # pytestmark = pytest.mark.skip("all tests disabled")
+
+
+def _load_events_from_file_as_full_load_sequence(importer, events_path):
+    with open(events_path, "rb") as ef:
+        is_first = True
+        p = peekable(ef)
+
+        for line in p:
+            event_id, event_meta_str, data_str = line.split(b"|", maxsplit=2)
+            event_meta = orjson.loads(event_meta_str)
+            event_meta |= {
+                "full_load_sequence": True,
+                "first_of_sequence": is_first,
+                "last_of_sequence": p.peek(None) is None,
+            }
+            event_data = orjson.loads(data_str)
+            importer.process_event(
+                event_meta,
+                event_data,
+            )
+            is_first = False
 
 
 def test_event_process_insert(
@@ -223,6 +245,86 @@ def test_events_process_relation_without_table_update_parent_table(
     assert [(r["identificatie"], r["van_kadastraalsubject_id"]) for r in records] == [
         ("NL.IMKAD.Tenaamstelling.ajdkfl4j4", "NL.IMKAD.Persoon.20042004eeeeefjd"),
         ("NL.IMKAD.Tenaamstelling.adkfkadfkjld", None),
+    ]
+
+
+def test_events_process_relation_without_table_update_parent_table_full_load(
+    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations
+):
+    # First, verify that the relation table indeed does not exist
+    res = next(
+        tconn.execute(
+            "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' "
+            "AND tablename  = 'brk_tenaamstellingen_van_kadastraalsubject');"
+        )
+    )
+    assert res[0] is False
+
+    importer = EventsProcessor(
+        [brk_schema_without_bag_relations], tconn, local_metadata=local_metadata
+    )
+
+    # Import relation vanKadastraalsubject. Has no table, but we want to update the parent table
+    events_path = here / "files" / "data" / "tenaamstellingen.gobevents"
+    _load_events_from_file_as_full_load_sequence(importer, events_path)
+    records = [dict(r) for r in tconn.execute("SELECT * FROM brk_tenaamstellingen")]
+    assert len(records) == 2
+    assert [(r["identificatie"], r["van_kadastraalsubject_id"]) for r in records] == [
+        ("NL.IMKAD.Tenaamstelling.ajdkfl4j4", "NL.IMKAD.Persoon.1124ji44kd"),
+        ("NL.IMKAD.Tenaamstelling.adkfkadfkjld", "NL.IMKAD.Persoon.2f4802kkdd"),
+    ]
+
+    # Test that parent table is updated
+    events = [
+        (
+            {
+                "event_type": "ADD",
+                "event_id": 1,
+                "dataset_id": "brk",
+                "table_id": "tenaamstellingen_vanKadastraalsubject",
+                "full_load_sequence": True,
+                "first_of_sequence": True,
+                "last_of_sequence": False,
+            },
+            {
+                "id": 1,
+                "tenaamstellingen_id": "NL.IMKAD.Tenaamstelling.ajdkfl4j4.4",
+                "tenaamstellingen_identificatie": "NL.IMKAD.Tenaamstelling.ajdkfl4j4",
+                "tenaamstellingen_volgnummer": 4,
+                "van_kadastraalsubject_id": "NL.IMKAD.Persoon.20042004eeeeefjd",
+                "van_kadastraalsubject_identificatie": "NL.IMKAD.Persoon.20042004eeeeefjd",
+            },
+        ),
+        (
+            {
+                "event_type": "ADD",
+                "event_id": 2,
+                "dataset_id": "brk",
+                "table_id": "tenaamstellingen_vanKadastraalsubject",
+                "full_load_sequence": True,
+                "first_of_sequence": False,
+                "last_of_sequence": True,
+            },
+            {
+                "id": 3,
+                "tenaamstellingen_id": "NL.IMKAD.Tenaamstelling.ajdkeeeefad.4",
+                "tenaamstellingen_identificatie": "NL.IMKAD.Tenaamstelling.ajdkeeeefad",
+                "tenaamstellingen_volgnummer": 4,
+                "van_kadastraalsubject_id": "NL.IMKAD.Persoon.20042004eeeeefjd",
+                "van_kadastraalsubject_identificatie": "NL.IMKAD.Persoon.20042004eeeeefjd",
+            },
+        ),
+    ]
+
+    importer.process_events(events, recovery_mode=False)
+    records = [dict(r) for r in tconn.execute("SELECT * FROM brk_tenaamstellingen")]
+    assert len(records) == 2
+
+    # Full load does not update parent table, so result should be the same as above. This
+    # testcase is included though to make sure we don't get an error on the missing relation table.
+    assert [(r["identificatie"], r["van_kadastraalsubject_id"]) for r in records] == [
+        ("NL.IMKAD.Tenaamstelling.ajdkfl4j4", "NL.IMKAD.Persoon.1124ji44kd"),
+        ("NL.IMKAD.Tenaamstelling.adkfkadfkjld", "NL.IMKAD.Persoon.2f4802kkdd"),
     ]
 
 
@@ -1018,20 +1120,6 @@ def test_events_nested_table(here, db_schema, tconn, local_metadata, bag_verblij
     # Now test full load. Full load only works with ADD events, so we reuse the ADD event from
     # above and add the full load metadata.
     events_path = here / "files" / "data" / "verblijfsobjecten.gobevents"
-    with open(events_path, "rb") as ef:
-        for line in ef:
-            if line := line.strip():
-                event_id, event_meta_str, data_str = line.split(b"|", maxsplit=2)
-                event_meta = orjson.loads(event_meta_str)
-                event_meta |= {
-                    "full_load_sequence": True,
-                    "first_of_sequence": True,
-                    "last_of_sequence": True,
-                }
-                event_data = orjson.loads(data_str)
-                importer.process_event(
-                    event_meta,
-                    event_data,
-                )
+    _load_events_from_file_as_full_load_sequence(importer, events_path)
 
     assert_results(tconn, expected_results["initial_add"], "Load initial data using full load")
