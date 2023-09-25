@@ -1,3 +1,8 @@
+# 2023-09-25 (5.17.5)
+
+* Bugfix: Fix error when relation table is not present during a relation full load.
+* Bugfix: Fix error when trying to update relation from None value.
+
 # 2023-09-23 (5.17.4)
 
 * Bugfix: update nested tables in EventProcessor.
