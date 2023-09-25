@@ -466,7 +466,7 @@ class EventsProcessor:
                 rows = self._prepare_nested_rows(field, value, id_value)
                 self.conn.execute(table.insert(), rows)
 
-    def _prepare_nested_rows(self, field, value, parent_id_value: str):
+    def _prepare_nested_rows(self, field: DatasetFieldSchema, value: list, parent_id_value: str):
         rows = [
             {
                 "parent_id": parent_id_value,
@@ -486,7 +486,7 @@ class EventsProcessor:
 
             nested_rows = []
             for row in rows:
-                nested_rows += self._prepare_nested_rows(field, row[field.id], row["id"])
+                nested_rows += self._prepare_nested_rows(field, row.get(field.id, []), row["id"])
             self.conn.execute(table.insert(), nested_rows)
 
     def _row_exists_in_database(self, run_configuration: RunConfiguration, id_value: str):
