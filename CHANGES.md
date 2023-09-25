@@ -1,3 +1,7 @@
+# 2023-09-25 (5.17.6)
+
+* Bugfix: Fix error when nested object in event is null.
+
 # 2023-09-25 (5.17.5)
 
 * Bugfix: Fix error when relation table is not present during a relation full load.

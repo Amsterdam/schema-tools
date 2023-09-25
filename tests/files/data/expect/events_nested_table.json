@@ -22,7 +22,8 @@
         "code": "2",
         "omschrijving": "doel 2"
       }
-    ]
+    ],
+    "bag_verblijfsobjecten_toegang": []
   },
   "modify_nested": {
     "bag_verblijfsobjecten": [
@@ -47,7 +48,8 @@
         "code": "2",
         "omschrijving": "doel 2"
       }
-    ]
+    ],
+    "bag_verblijfsobjecten_toegang": []
   },
   "empty_nested": {
     "bag_verblijfsobjecten": [

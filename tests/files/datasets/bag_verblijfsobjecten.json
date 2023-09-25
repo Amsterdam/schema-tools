@@ -13,7 +13,12 @@
       "version": "1.0.0",
       "temporal": {
         "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
+        "dimensions": {
+          "geldigOp": [
+            "beginGeldigheid",
+            "eindGeldigheid"
+          ]
+        }
       },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/bag/verblijfsobjecten.json",
@@ -21,8 +26,15 @@
         "type": "object",
         "additionalProperties": false,
         "mainGeometry": "geometrie",
-        "identifier": ["identificatie", "volgnummer"],
-        "required": ["schema", "identificatie", "volgnummer"],
+        "identifier": [
+          "identificatie",
+          "volgnummer"
+        ],
+        "required": [
+          "schema",
+          "identificatie",
+          "volgnummer"
+        ],
         "display": "identificatie",
         "properties": {
           "schema": {
@@ -36,15 +48,31 @@
             "type": "integer",
             "description": "Uniek volgnummer van de toestand van het object."
           },
-          "beginGeldigheid": { "type": "string", "format": "date-time" },
-          "eindGeldigheid": { "type": "string", "format": "date-time" },
+          "beginGeldigheid": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "eindGeldigheid": {
+            "type": "string",
+            "format": "date-time"
+          },
           "ligtInBuurt": {
             "type": "object",
             "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" },
-              "beginGeldigheid": { "type": "string", "format": "date" },
-              "eindGeldigheid": { "type": "string", "format": "date" }
+              "identificatie": {
+                "type": "string"
+              },
+              "volgnummer": {
+                "type": "integer"
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date"
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date"
+              }
             },
             "relation": "gebieden:buurten",
             "description": "Buurt waarin het verblijfsobject ligt."
@@ -64,6 +92,21 @@
                 }
               }
             }
+          },
+          "toegang": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "omschrijving": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Plaats waar zich de toegang tot het verblijfsobject bevindt."
           }
         }
       }
