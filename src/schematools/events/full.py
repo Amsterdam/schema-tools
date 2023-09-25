@@ -242,7 +242,11 @@ class EventsProcessor:
                 table = importer.tables[this_table_id]
                 self.full_load_tables[dataset_id][this_table_id] = table, schema_table
 
-            table, schema_table = self.full_load_tables[dataset_id][table_id]
+            try:
+                table, schema_table = self.full_load_tables[dataset_id][table_id]
+            except KeyError:
+                # Happens when there is no relation table to update for a given relation, for ex.
+                raise DatasetTableNotFound()
 
         return table, schema_table
 
