@@ -85,6 +85,14 @@ def _clean_sql(sql) -> str:
     return sql
 
 
+def _create_role_if_not_exists(cursor, role_name):
+    # Create the role if it doesn't exist
+    cursor.execute(f"SELECT 1 FROM pg_roles WHERE rolname='{role_name}'")  # nosec
+    role_exists = cursor.fetchone()
+    if not role_exists:
+        cursor.execute(f"CREATE ROLE {role_name}")
+
+
 def create_views(
     command: BaseCommand,
     datasets: Iterable[Dataset],
@@ -119,18 +127,17 @@ def create_views(
                 if _check_required_permissions_exist(view_dataset_auth, required_permissions):
                     try:
                         with connection.cursor() as cursor:
+
+                            # We create one `view_owner` role that owns all views
+                            _create_role_if_not_exists(cursor, "view_owner")
                             write_role_name = f"write_{table._parent_schema.db_name}"
 
                             # Remove the view if it exists
                             cursor.execute(f"DROP VIEW IF EXISTS {table.db_name} CASCADE")
 
-                            # Create the role if it doesn't exist
-                            cursor.execute(
-                                f"SELECT 1 FROM pg_roles WHERE rolname='{write_role_name}'"  # nosec
-                            )
-                            role_exists = cursor.fetchone()
-                            if not role_exists:
-                                cursor.execute(f"CREATE ROLE {write_role_name}")
+                            _create_role_if_not_exists(cursor, write_role_name)
+                            cursor.execute(f"GRANT view_owner TO current_user")
+                            cursor.execute(f"GRANT {write_role_name} TO view_owner")
 
                             # Loop though all required permissions and and grant them to the write user
                             for scope in required_permissions:

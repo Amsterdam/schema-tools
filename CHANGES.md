@@ -1,3 +1,8 @@
+# 2023-09-26 (5.17.7)
+
+* Bugfix: Fix error in permissions script, introduced a `view_owner`
+  role that owns all views.
+
 # 2023-09-25 (5.17.6)
 
 * Bugfix: Fix error when nested object in event is null.
