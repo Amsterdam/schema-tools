@@ -1,4 +1,4 @@
-FROM amsterdam/python:3.9-buster
+FROM python:3.9-bookworm
 
 WORKDIR /app
 COPY . ./
