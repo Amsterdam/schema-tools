@@ -1,0 +1,10 @@
+name: 'Test schematools'
+description: 'Run schematools unit tests or DSO-API unittests against schematools'
+inputs:
+  testdir:
+    description: 'What to test. Schematools or DSO-API'
+runs:
+  using: 'docker'
+  image: '../../Dockerfile'
+  args:
+    - ${{ inputs.testdir }}

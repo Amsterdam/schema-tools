@@ -6,7 +6,8 @@ install:
 
 .PHONY: test
 test:
-	pytest -v
+	docker compose run tests
+	docker compose run tests /app/dso-api/src
 
 .PHONY: restest
 retest:

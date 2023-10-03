@@ -30,18 +30,25 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        sudo apt install -y libgdal30
-        python -m pip install --upgrade pip
-        python -m pip install .[django,tests]
-    - name: Test
-      run: |
-        pytest tests
-      env:
-        DATABASE_URL: postgresql://dataservices:insecure@localhost:5432/cicd
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          sudo apt install -y libgdal30
+          python -m pip install --upgrade pip
+          python -m pip install .[django,tests]
+      - name: Test schematools
+        run: |
+          pytest tests
+        env:
+          DATABASE_URL: postgresql://dataservices:insecure@localhost:5432/cicd
+      - name: Test schematools against latest DSO-API
+        if: ${{ github.ref_type == 'tag' && matrix.python-version == '3.11' }}
+        uses: ./.github/test
+        with:
+          testdir: /app/dso-api/src
+        id: test_schematools_against_dso_api

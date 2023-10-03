@@ -111,6 +111,19 @@ To exclude files or directories use `exclude` with pattern.
 Hence, we should not only bump version numbers on updates to this package,
 but also commit a tag with the version number; see below.
 
+## Testing the project
+
+Testing a schematools version x consists of 2 steps:
+
+1. running the unit-tests of the package at version x itself
+2. running the unit-tests of the latest version of DSO-API (the tip of master on Github) against x.
+
+For this purpose, there is a Dockerfile that can be run locally with:
+
+`make test`
+
+and is also used by a Github Action in CI.
+
 ## Doing a release
 
 (This is for schema-tools developers.)
