@@ -135,6 +135,17 @@ def create_views(
         for table in dataset.schema.tables:
             if table.is_view:
                 command.stdout.write(f"* Creating view {table.db_name}")
+
+                # Generate the write role name
+                write_role_name = f"write_{table._parent_schema.db_name}"
+
+                # Check if the view sql is valid
+                # If not skip this view and proceed with next view
+                view_sql = _clean_sql(dataset.schema.get_view_sql())
+                if not _is_valid_sql(view_sql, table.db_name, write_role_name):
+                    command.stderr.write(f"  Invalid SQL for view {table.db_name}")
+                    continue
+
                 required_permissions = _get_required_permissions(table)
                 view_dataset_auth = dataset.schema.auth
                 if _check_required_permissions_exist(view_dataset_auth, required_permissions):
@@ -142,7 +153,6 @@ def create_views(
                         with connection.cursor() as cursor:
 
                             # Check if write role exists and create if it does not
-                            write_role_name = f"write_{table._parent_schema.db_name}"
                             _create_role_if_not_exists(cursor, write_role_name)
 
                             # Grant usage and create on schema public to write role
@@ -151,12 +161,6 @@ def create_views(
                                     "GRANT usage,create on schema public TO {write_role_name}"
                                 ).format(write_role_name=sql.Identifier(write_role_name))
                             )
-
-                            # Check if the provides view_sql is correct
-                            view_sql = _clean_sql(dataset.schema.get_view_sql())
-                            if not _is_valid_sql(view_sql, table.db_name, write_role_name):
-                                command.stderr.write(f"  Invalid SQL for view {table.db_name}")
-                                continue
 
                             # We create one `view_owner` role that owns all views
                             _create_role_if_not_exists(cursor, "view_owner")
