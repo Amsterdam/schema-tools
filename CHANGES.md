@@ -1,3 +1,8 @@
+# 2023-10-04 (5.17.8)
+
+* Bugfix: Fixed bug in _is_valid_sql.
+* Bugfix: Assigned create and usage rights to write_user for creating views.
+
 # 2023-09-26 (5.17.7)
 
 * Bugfix: Fix error in permissions script, introduced a `view_owner`
