@@ -1,13 +1,9 @@
-import re
-from collections import abc, defaultdict
-from typing import Iterable, List, Optional
+from typing import Iterable, Optional
 
-import requests
-import sqlparse
 from django.core.management import BaseCommand, CommandError
-from django.db import DatabaseError, connection, router, transaction
+from django.db import DatabaseError, connection, transaction
+from psycopg2 import sql
 
-from schematools.contrib.django.factories import schema_models_factory
 from schematools.contrib.django.models import Dataset, DatasetTableSchema
 from schematools.naming import to_snake_case
 
@@ -22,15 +18,30 @@ class Command(BaseCommand):
         create_views(self, Dataset.objects.db_enabled())
 
 
-def _is_valid_sql(sql: str) -> bool:
+def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
     """Try and execute the SQL return true if it succeeds, rollback the transaction."""
     try:
         with transaction.atomic():
             sid = transaction.savepoint()
             with connection.cursor() as cursor:
-                cursor.execute(sql)
+
+                # Check if write role exists and create if it does not
+                _create_role_if_not_exists(cursor, write_role_name)
+
+                cursor.execute(
+                    sql.SQL("SET ROLE {write_role_name}").format(
+                        write_role_name=sql.Identifier(write_role_name)
+                    )
+                )
+
+                cursor.execute(
+                    sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
+                        view_name=sql.Identifier(view_name)
+                    )
+                )
+                cursor.execute(view_sql)
             transaction.savepoint_rollback(sid)
-    except Exception as e:
+    except Exception as e:  # noqa: F841
         return False
     return True
 
@@ -87,17 +98,24 @@ def _clean_sql(sql) -> str:
 
 def _create_role_if_not_exists(cursor, role_name):
     # Create the role if it doesn't exist
-    cursor.execute(f"SELECT 1 FROM pg_roles WHERE rolname='{role_name}'")  # nosec
+    cursor.execute(
+        sql.SQL("SELECT 1 FROM pg_roles WHERE rolname={role_name}").format(
+            role_name=sql.Literal(role_name)
+        )
+    )
+
     role_exists = cursor.fetchone()
     if not role_exists:
-        cursor.execute(f"CREATE ROLE {role_name}")
+        cursor.execute(
+            sql.SQL("CREATE ROLE {role_name}").format(role_name=sql.Identifier(role_name))
+        )
 
 
 def create_views(
     command: BaseCommand,
     datasets: Iterable[Dataset],
     base_app_name: Optional[str] = None,
-) -> None:  # noqa: C901
+) -> None:
     """Create views. This is a separate function to allow easy reuse."""
     errors = 0
     command.stdout.write("Creating views")
@@ -117,50 +135,97 @@ def create_views(
         for table in dataset.schema.tables:
             if table.is_view:
                 command.stdout.write(f"* Creating view {table.db_name}")
+
+                # Generate the write role name
+                write_role_name = f"write_{table._parent_schema.db_name}"
+
+                # Check if the view sql is valid
+                # If not skip this view and proceed with next view
                 view_sql = _clean_sql(dataset.schema.get_view_sql())
-                if not _is_valid_sql(view_sql):
+                if not _is_valid_sql(view_sql, table.db_name, write_role_name):
                     command.stderr.write(f"  Invalid SQL for view {table.db_name}")
-                    errors += 1
                     continue
+
                 required_permissions = _get_required_permissions(table)
                 view_dataset_auth = dataset.schema.auth
                 if _check_required_permissions_exist(view_dataset_auth, required_permissions):
                     try:
                         with connection.cursor() as cursor:
 
+                            # Check if write role exists and create if it does not
+                            _create_role_if_not_exists(cursor, write_role_name)
+
+                            # Grant usage and create on schema public to write role
+                            cursor.execute(
+                                sql.SQL(
+                                    "GRANT usage,create on schema public TO {write_role_name}"
+                                ).format(write_role_name=sql.Identifier(write_role_name))
+                            )
+
                             # We create one `view_owner` role that owns all views
                             _create_role_if_not_exists(cursor, "view_owner")
-                            write_role_name = f"write_{table._parent_schema.db_name}"
 
-                            # Remove the view if it exists
-                            cursor.execute(f"DROP VIEW IF EXISTS {table.db_name} CASCADE")
+                            cursor.execute("GRANT view_owner TO current_user")
 
-                            _create_role_if_not_exists(cursor, write_role_name)
-                            cursor.execute(f"GRANT view_owner TO current_user")
-                            cursor.execute(f"GRANT {write_role_name} TO view_owner")
+                            cursor.execute(
+                                sql.SQL("GRANT {write_role_name} TO view_owner").format(
+                                    write_role_name=sql.Identifier(write_role_name)
+                                )
+                            )
 
-                            # Loop though all required permissions and and grant them to the write user
+                            # Loop though all required permissions and and grant them to the
+                            # write user
                             for scope in required_permissions:
                                 scope = f'scope_{scope.replace("/", "_").lower()}'
                                 if scope:
-                                    cursor.execute(f"GRANT {scope} TO {write_role_name}")
-                            cursor.execute(f"GRANT scope_openbaar TO {write_role_name}")
+                                    cursor.execute(
+                                        sql.SQL("GRANT {scope} TO {write_role_name}").format(
+                                            scope=sql.Identifier(scope),
+                                            write_role_name=sql.Identifier(write_role_name),
+                                        )
+                                    )
 
-                            # Set the role before creating the view because the view is created with the permissions of the role
-                            cursor.execute(f"SET ROLE {write_role_name}")
+                            cursor.execute(
+                                sql.SQL("GRANT scope_openbaar TO {write_role_name}").format(
+                                    write_role_name=sql.Identifier(write_role_name)
+                                )
+                            )
+
+                            # Set the role before creating the view because the view is created
+                            # with the permissions of the role
+                            cursor.execute(
+                                sql.SQL("SET ROLE {write_role_name}").format(
+                                    write_role_name=sql.Identifier(write_role_name)
+                                )
+                            )
+
+                            # Remove the view if it exists
+                            cursor.execute(
+                                sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
+                                    view_name=sql.Identifier(table.db_name)
+                                )
+                            )
 
                             # Create the view
                             cursor.execute(view_sql)
 
                             # Reset the role to the default role
                             cursor.execute("RESET ROLE")
+
+                            # Remove create and usage from write role
+                            cursor.execute(
+                                sql.SQL(
+                                    "REVOKE usage,create on schema public FROM {write_role_name}"
+                                ).format(write_role_name=sql.Identifier(write_role_name))
+                            )
+
                             cursor.close()
                     except (DatabaseError, ValueError) as e:
                         command.stderr.write(f"  View not created: {e}")
                         errors += 1
                 else:
                     command.stderr.write(
-                        f"  Required permissions {required_permissions} not found in view dataset auth"
+                        f"  Required permissions {required_permissions} not found in view auth"
                     )
 
     if errors:
