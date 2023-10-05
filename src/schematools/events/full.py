@@ -240,8 +240,10 @@ class EventsProcessor:
                 )
 
                 table = importer.tables[this_table_id]
-                self.full_load_tables[dataset_id][this_table_id] = table, schema_table
-
+                self.full_load_tables[dataset_id][to_snake_case(this_table_id)] = (
+                    table,
+                    schema_table,
+                )
             try:
                 table, schema_table = self.full_load_tables[dataset_id][table_id]
             except KeyError:
@@ -279,7 +281,7 @@ class EventsProcessor:
                 for t_id in table_ids_to_replace:
                     table_to_replace = self.tables[dataset_id][to_snake_case(t_id)]
                     full_load_table, full_load_schema_table = self._get_full_load_tables(
-                        dataset_id, t_id
+                        dataset_id, to_snake_case(t_id)
                     )
                     full_load_tables.append(full_load_table)
 
@@ -304,7 +306,7 @@ class EventsProcessor:
                 )
                 self.lasteventids.update_eventid(self.conn, run_configuration.table_name, None)
 
-            self.full_load_tables[dataset_id].pop(table_id)
+            self.full_load_tables[dataset_id].pop(to_snake_case(table_id))
 
     def _prepare_row(
         self,
@@ -485,7 +487,9 @@ class EventsProcessor:
 
             nested_rows = []
             for row in rows:
-                nested_rows += self._prepare_nested_rows(field, row.get(field.id) or [], row["id"])
+                nested_rows += self._prepare_nested_rows(
+                    field, row.get(to_snake_case(field.id)) or [], row["id"]
+                )
             if nested_rows:
                 self.conn.execute(table.insert(), nested_rows)
 
@@ -524,7 +528,9 @@ class EventsProcessor:
 
         try:
             if first_event_meta.get("full_load_sequence", False):
-                table, schema_table = self._get_full_load_tables(dataset_id, table_id)
+                table, schema_table = self._get_full_load_tables(
+                    dataset_id, to_snake_case(table_id)
+                )
             else:
                 schema_table = self.datasets[dataset_id].get_table_by_id(table_id)
                 table = self.tables[dataset_id][to_snake_case(table_id)]

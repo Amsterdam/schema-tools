@@ -281,6 +281,11 @@ def hr_schema(schema_loader, verblijfsobjecten_schema) -> DatasetSchema:
 
 
 @pytest.fixture
+def hr_simple_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("hr_simple.json")
+
+
+@pytest.fixture
 def hr_schema_auth(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("hr_auth.json")
 
