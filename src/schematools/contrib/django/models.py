@@ -225,13 +225,22 @@ class Dataset(models.Model):
     def save_for_schema(self, schema: DatasetSchema):
         """Update this model with schema data"""
         self.schema_data = schema.json(inline_tables=True, inline_publishers=True)
+        self.view_data = schema.get_view_sql()
         self.auth = " ".join(schema.auth)
         self.enable_api = Dataset.has_api_enabled(schema)
         self._dataset_collection = schema.loader  # retain collection on saving
 
         changed = self.schema_data_changed()
         if changed:
-            self.save(update_fields=["schema_data", "auth", "is_default_version", "enable_api"])
+            self.save(
+                update_fields=[
+                    "schema_data",
+                    "view_data",
+                    "auth",
+                    "is_default_version",
+                    "enable_api",
+                ]
+            )
 
         self.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
         return changed

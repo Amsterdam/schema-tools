@@ -1,3 +1,7 @@
+# 2023-10-05 (5.17.10)
+
+* Bugfix: Fixed view_data insertion into datasets.dataset
+
 # 2023-10-05 (5.17.9)
 
 * Bugfix: Fixed case where nested table has a parent table that uses shortname.
