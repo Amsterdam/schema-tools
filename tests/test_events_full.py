@@ -1123,3 +1123,41 @@ def test_events_nested_table(here, db_schema, tconn, local_metadata, bag_verblij
     _load_events_from_file_as_full_load_sequence(importer, events_path)
 
     assert_results(tconn, expected_results["initial_add"], "Load initial data using full load")
+
+
+def test_events_nested_table_shortname(here, db_schema, tconn, local_metadata, hr_simple_schema):
+    importer = EventsProcessor([hr_simple_schema], tconn, local_metadata=local_metadata)
+
+    events = [
+        (
+            {
+                "event_type": "ADD",
+                "event_id": 1,
+                "dataset_id": "hr",
+                "table_id": "maatschappelijkeactiviteiten",
+                "full_load_sequence": True,
+                "first_of_sequence": True,
+                "last_of_sequence": True,
+            },
+            {
+                "kvknummer": 42,
+                "email_adressen": [
+                    {
+                        "email_adres": "address1@example.com",
+                    },
+                    {
+                        "email_adres": "address2@example.com",
+                    },
+                ],
+            },
+        )
+    ]
+
+    importer.process_events(events)
+
+    # Not testing contents here, but merely the fact that the right tables are used without errors
+    records = [dict(r) for r in tconn.execute("SELECT * FROM hr_mac")]
+    assert len(records) == 1
+
+    nested_records = [dict(r) for r in tconn.execute("SELECT * FROM hr_mac_email_adressen")]
+    assert len(nested_records) == 2

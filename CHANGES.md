@@ -1,3 +1,7 @@
+# 2023-10-05 (5.17.9)
+
+* Bugfix: Fixed case where nested table has a parent table that uses shortname.
+
 # 2023-10-04 (5.17.8)
 
 * Bugfix: Fixed bug in _is_valid_sql.

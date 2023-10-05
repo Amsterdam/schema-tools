@@ -1,0 +1,54 @@
+{
+  "type": "dataset",
+  "id": "hr",
+  "title": "handelsregister",
+  "status": "beschikbaar",
+  "version": "2.0.0",
+  "crs": "EPSG:28992",
+  "owner": "Gemeente Amsterdam",
+  "creator": "Kamer van Koophandel",
+  "publisher": "Datateam Basis- en Kernregistraties",
+  "auth": "HR/R",
+  "tables": [
+    {
+      "id": "maatschappelijkeactiviteiten",
+      "type": "table",
+      "version": "2.7.0",
+      "shortname": "Mac",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "identifier": [
+          "kvknummer"
+        ],
+        "required": [
+          "schema",
+          "kvknummer"
+        ],
+        "display": "kvknummer",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.3.0#/definitions/schema"
+          },
+          "kvknummer": {
+            "type": "string",
+            "description": "Betreft het identificerende gegeven voor de Maatschappelijke Activiteit"
+          },
+          "emailAdressen": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "emailAdres": {
+                  "type": "string",
+                  "description": "e-mailadres waarop de ondernemer gemaild kan worden"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
