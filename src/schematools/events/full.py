@@ -364,7 +364,7 @@ class EventsProcessor:
 
     def _update_parent_table_bulk(self, run_configuration: RunConfiguration):
         update_parent_table_config = run_configuration.update_parent_table_configuration
-        parent_table_ref_id = f"{run_configuration.schema_table.id.split('_')[0]}_id"
+        parent_table_ref_id = f"{run_configuration.schema_table.shortname.split('_')[0]}_id"
 
         if len(update_parent_table_config.parent_fields) > 1:
             # Adds parentheses
