@@ -259,6 +259,7 @@ class EventsProcessor:
 
             if event_meta.get("first_of_sequence", False):
                 self.conn.execute(f"TRUNCATE {run_configuration.table.fullname}")
+                self.lasteventids.update_eventid(self.conn, run_configuration.table_name, None)
 
     def _after_process(self, run_configuration: RunConfiguration, event_meta: dict):
         if not run_configuration.update_table:

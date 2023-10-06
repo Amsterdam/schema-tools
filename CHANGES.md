@@ -1,3 +1,7 @@
+# 2023-10-06 (5.17.12)
+
+* Bugfix: Reset last eventid after a manually aborted full load sequence.
+
 # 2023-10-05 (5.17.11)
 
 * Bugfix: Fix full event loads for relation tables referencing tables with shortname.

@@ -1201,3 +1201,38 @@ def test_full_load_shortnames(here, db_schema, tconn, local_metadata, hr_simple_
     records = [dict(r) for r in tconn.execute("SELECT * FROM hr_mac")]
     assert len(records) == 1
     assert records[0]["heeft_hoofdvestiging_id"] == "24902480"
+
+
+def test_reset_lasteventid_after_incomplete_full_load(
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+):
+    """This testcase tests whether the lasteventid is reset after an incomplete full load sequence.
+    This should not happen during normal usage, but can happen when the full load stream is
+    manually removed from the queue.
+    """
+    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    events = [
+        _create_peilmerken_event(
+            "1", 2018, event_id=3, full_load_sequence=True, first_of_sequence=True
+        ),
+        _create_peilmerken_event(
+            "2", 2018, event_id=4, full_load_sequence=True, first_of_sequence=False
+        ),
+    ]
+
+    importer.process_events(events)
+    lasteventrecord = tconn.execute(
+        "SELECT * FROM benk_lasteventids WHERE \"table\" = 'nap_peilmerken_full_load'"
+    ).fetchone()
+    assert lasteventrecord["last_event_id"] == 4
+
+    events = [
+        _create_peilmerken_event(
+            "1", 2018, event_id=1, full_load_sequence=True, first_of_sequence=True
+        ),
+    ]
+    importer.process_events(events)
+    lasteventrecord = tconn.execute(
+        "SELECT * FROM benk_lasteventids WHERE \"table\" = 'nap_peilmerken_full_load'"
+    ).fetchone()
+    assert lasteventrecord["last_event_id"] == 1
