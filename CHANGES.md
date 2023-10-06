@@ -1,3 +1,7 @@
+# 2023-10-05 (5.17.11)
+
+* Bugfix: Fix full event loads for relation tables referencing tables with shortname.
+
 # 2023-10-05 (5.17.10)
 
 * Bugfix: Fixed view_data insertion into datasets.dataset
