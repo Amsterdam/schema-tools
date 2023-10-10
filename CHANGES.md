@@ -1,3 +1,7 @@
+# 2023-10-06 (5.17.13)
+
+* Bugfix: Cache nested tables in EventProcessor.
+
 # 2023-10-06 (5.17.12)
 
 * Bugfix: Reset last eventid after a manually aborted full load sequence.
