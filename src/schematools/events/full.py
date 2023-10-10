@@ -228,6 +228,10 @@ class EventsProcessor:
             importer = BaseImporter(dataset_schema, self.conn.engine, logger)
             for schema_table in tables:
                 this_table_id = schema_table.id
+
+                if to_snake_case(this_table_id) in self.full_load_tables[dataset_id]:
+                    continue
+
                 db_table_name = schema_table.db_name_variant(postfix=FULL_LOAD_TABLE_POSTFIX)
 
                 importer.generate_db_objects(
