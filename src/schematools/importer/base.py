@@ -427,7 +427,7 @@ class BaseImporter:
             for index in index_objects:
                 if index.name not in existing_db_indexes:
                     _logger.log_warning(f"Index '{index.name}' not found...creating")
-                    index.create(bind=engine)
+                    index.create(bind=engine, checkfirst=True)
 
     @cached_property
     def is_versioned_dataset(self) -> bool:

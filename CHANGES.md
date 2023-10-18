@@ -1,3 +1,7 @@
+# 2023-10-18 (5.17.14)
+
+* Bugfix: Fixed issue where duplicate indexes were created
+
 # 2023-10-06 (5.17.13)
 
 * Bugfix: Cache nested tables in EventProcessor.
