@@ -11,7 +11,6 @@ from typing import Any, Final, Iterator, TypeVar
 import click
 import jsonpath_rw
 import psycopg2
-import requests
 from psycopg2 import sql
 from sqlalchemy import Boolean, exc, inspect, text
 from sqlalchemy.dialects.postgresql.base import PGInspector
@@ -184,6 +183,15 @@ class BaseImporter:
 
             self.pk_values_lookup[table_name] = pks
 
+    def _schema_exists(self, schema_name: str) -> bool:
+        """Check if a schema exists in the database."""
+        with self.engine.connect() as conn:
+            return bool(
+                conn.scalar(
+                    "SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = %s)", schema_name
+                )
+            )
+
     def generate_db_objects(
         self,
         table_id: str,
@@ -248,7 +256,7 @@ class BaseImporter:
                     "Is this really what you want?"
                 )
 
-        if db_schema_name is not None:
+        if db_schema_name is not None and not self._schema_exists(db_schema_name):
             self.create_schema(db_schema_name)
 
         if ind_tables or ind_extra_index:
