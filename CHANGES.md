@@ -1,3 +1,8 @@
+# 2023-10-18 (5.17.15)
+
+* Bugfix: Don't try to create schema if schema already exists. Fails on 'create schema'
+  permissions.
+
 # 2023-10-18 (5.17.14)
 
 * Bugfix: Fixed issue where duplicate indexes were created
