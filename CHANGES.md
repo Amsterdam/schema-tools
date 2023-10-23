@@ -1,3 +1,7 @@
+# 2023-10-18 (5.17.16)
+
+* Bugfix: Snake case temp table schema name in EventProcessor.
+
 # 2023-10-18 (5.17.15)
 
 * Bugfix: Don't try to create schema if schema already exists. Fails on 'create schema'

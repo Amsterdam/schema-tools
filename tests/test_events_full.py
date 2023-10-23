@@ -990,6 +990,51 @@ def test_event_process_last_event_id_full_load_sequence(
     assert get_last_event_id("nap_peilmerken_full_load") is None
 
 
+def test_events_process_full_load_sequence_snake_cased_schema(
+    here, db_schema, tconn, local_metadata, brk2_simple_schema
+):
+    """Tests whether the correct (snake_cased) schema for brk2 is used for the full load."""
+
+    event_meta = {
+        "event_type": "ADD",
+        "event_id": 1,
+        "dataset_id": "brk2",
+        "table_id": "gemeentes",
+        "full_load_sequence": True,
+        "first_of_sequence": True,
+    }
+    event_data = {"identificatie": "0363", "naam": "Amsterdam"}
+
+    importer = EventsProcessor([brk2_simple_schema], tconn, local_metadata=local_metadata)
+    importer.process_event(event_meta, event_data)
+
+    records = [dict(r) for r in tconn.execute("SELECT * FROM brk_2.brk_2_gemeentes_full_load")]
+    assert len(records) == 1
+    assert records[0]["identificatie"] == "0363"
+    assert records[0]["naam"] == "Amsterdam"
+
+    event_meta = {
+        "event_type": "ADD",
+        "event_id": 2,
+        "dataset_id": "brk2",
+        "table_id": "gemeentes",
+        "full_load_sequence": True,
+        "last_of_sequence": True,
+    }
+    event_data = {
+        "identificatie": "0457",
+        "naam": "Weesp",
+    }
+    importer.process_event(event_meta, event_data)
+
+    records = [dict(r) for r in tconn.execute("SELECT * FROM brk_2_gemeentes")]
+    assert len(records) == 2
+    assert records[0]["identificatie"] == "0363"
+    assert records[0]["naam"] == "Amsterdam"
+    assert records[1]["identificatie"] == "0457"
+    assert records[1]["naam"] == "Weesp"
+
+
 def test_events_process_full_load_relation_update_parent_table(
     here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
 ):

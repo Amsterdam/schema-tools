@@ -236,7 +236,7 @@ class EventsProcessor:
 
                 importer.generate_db_objects(
                     this_table_id,
-                    db_schema_name=dataset_id,
+                    db_schema_name=to_snake_case(dataset_id),
                     db_table_name=db_table_name,
                     is_versioned_dataset=importer.is_versioned_dataset,
                     ind_extra_index=False,
