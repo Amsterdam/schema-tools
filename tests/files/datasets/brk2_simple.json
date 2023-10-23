@@ -1,0 +1,55 @@
+{
+  "type": "dataset",
+  "id": "brk2",
+  "title": "brk2",
+  "status": "beschikbaar",
+  "version": "0.0.1",
+  "crs": "EPSG:28992",
+  "auth": "BRK/RSN",
+  "identifier": "identificatie",
+  "tables": [
+    {
+      "id": "gemeentes",
+      "type": "table",
+      "version": "1.0.0",
+      "schema": {
+        "$id": "https://github.com/Amsterdam/schemas/brk/gemeentes.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "identifier": "identificatie",
+        "required": ["schema", "identificatie"],
+        "display": "identificatie",
+        "properties": {
+          "schema": {
+            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+          },
+          "identificatie": {
+            "type": "string",
+            "description": "De unieke aanduiding van een gemeente."
+          },
+          "naam": {
+            "type": "string",
+            "description": "De officiële vastgestelde gemeentenaam."
+          },
+          "beginGeldigheid": {
+            "type": "string",
+            "format": "date-time",
+            "description": "De datum waarop de gemeente is ontstaan."
+          },
+          "eindGeldigheid": {
+            "type": "string",
+            "format": "date-time",
+            "description": "De datum waarop de gemeente is opgeheven."
+          },
+          "geometrie": {
+            "$ref": "https://geojson.org/schema/Geometry.json",
+            "description": "Vorm en ligging van de gemeentegrens in het stelsel van de Rijksdriehoekmeting (RD)."
+          }
+        },
+        "mainGeometry": "geometrie"
+      }
+    }
+  ],
+  "publisher": "unknown"
+}
