@@ -275,9 +275,12 @@ class EventsProcessor:
             dataset_id = event_meta["dataset_id"]
             table_id = event_meta["table_id"]
 
+            nested_tables = [
+                to_snake_case(f.nested_table.id) for f in run_configuration.nested_table_fields
+            ]
             table_ids_to_replace = [
                 table_id,
-            ] + [to_snake_case(f.nested_table.id) for f in run_configuration.nested_table_fields]
+            ] + nested_tables
 
             logger.info("End of full load sequence. Replacing active table.")
             with self.conn.begin():
@@ -288,11 +291,12 @@ class EventsProcessor:
                     full_load_table, full_load_schema_table = self._get_full_load_tables(
                         dataset_id, to_snake_case(t_id)
                     )
-                    full_load_tables.append(full_load_table)
+                    full_load_tables.append((full_load_table, full_load_schema_table))
 
-                    fieldnames = ", ".join(
-                        [field.db_name for field in full_load_schema_table.get_db_fields()]
-                    )
+                    fields = [field.db_name for field in full_load_schema_table.get_db_fields()]
+                    if t_id in nested_tables:
+                        fields.remove("id")  # Let PG generate the id field for nested tables.
+                    fieldnames = ", ".join(fields)
 
                     self.conn.execute(f"TRUNCATE {table_to_replace.fullname}")
                     self.conn.execute(
@@ -302,16 +306,15 @@ class EventsProcessor:
                 if run_configuration.update_parent_table_configuration:
                     self._update_parent_table_bulk(run_configuration)
 
-                for full_load_table in full_load_tables:
+                for full_load_table, full_load_schema_table in full_load_tables:
                     self.conn.execute(f"DROP TABLE {full_load_table.fullname} CASCADE")
+                    self.full_load_tables[dataset_id].pop(to_snake_case(full_load_schema_table.id))
 
                 # Copy full_load lasteventid to active table and set full_load lasteventid to None
                 self.lasteventids.copy_lasteventid(
                     self.conn, run_configuration.table_name, table_to_replace.name
                 )
                 self.lasteventids.update_eventid(self.conn, run_configuration.table_name, None)
-
-            self.full_load_tables[dataset_id].pop(to_snake_case(table_id))
 
     def _prepare_row(
         self,

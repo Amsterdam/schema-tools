@@ -1281,3 +1281,47 @@ def test_reset_lasteventid_after_incomplete_full_load(
         "SELECT * FROM benk_lasteventids WHERE \"table\" = 'nap_peilmerken_full_load'"
     ).fetchone()
     assert lasteventrecord["last_event_id"] == 1
+
+
+def test_avoid_duplicate_key_after_full_load(
+    here, db_schema, tconn, local_metadata, bag_verblijfsobjecten_schema
+):
+    """Make sure we don't get duplicate key errors after a full load sequence with a serial id
+    field in the table."""
+
+    def create_event(gebruiksdoel_cnt: int, event_id: int, identificatie: str, **extra_headers):
+        gebruiksdoelen = [
+            {"code": i, "omschrijving": f"doel {i}"} for i in range(1, gebruiksdoel_cnt + 1)
+        ]
+        return (
+            {
+                "event_type": "ADD",
+                "event_id": event_id,
+                "dataset_id": "bag",
+                "table_id": "verblijfsobjecten",
+                **extra_headers,
+            },
+            {
+                "identificatie": identificatie,
+                "volgnummer": 1,
+                "gebruiksdoel": gebruiksdoelen,
+                "toegang": None,
+                "ligt_in_buurt": {},
+                "begin_geldigheid": "2018-10-22T00:00:00.000000",
+                "eind_geldigheid": None,
+            },
+        )
+
+    importer = EventsProcessor(
+        [bag_verblijfsobjecten_schema], tconn, local_metadata=local_metadata
+    )
+
+    # Add objects with in total 4 nested objects
+    full_load_events = [
+        create_event(2, 1, "VB1", full_load_sequence=True, first_of_sequence=True),
+        create_event(2, 2, "VB2", full_load_sequence=True, last_of_sequence=True),
+    ]
+    importer.process_events(full_load_events)
+
+    update_event = [create_event(1, 3, "VB3")]
+    importer.process_events(update_event)
