@@ -1,3 +1,7 @@
+# 2023-10-18 (5.17.17)
+
+* Bugfix: Ignore id when copying data from temp table to main table for nested tables.
+
 # 2023-10-18 (5.17.16)
 
 * Bugfix: Snake case temp table schema name in EventProcessor.
