@@ -9,7 +9,7 @@ from sqlalchemy.engine import Connection
 
 from schematools.exports import BaseExporter, enable_datetime_cast
 from schematools.naming import toCamelCase
-from schematools.types import DatasetSchema
+from schematools.schema_tools_types import DatasetSchema
 
 metadata = MetaData()
 

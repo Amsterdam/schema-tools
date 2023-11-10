@@ -10,7 +10,7 @@ from django.db.models import Q
 from schematools.contrib.django.models import Dataset
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
 from schematools.naming import to_snake_case
-from schematools.types import DatasetSchema
+from schematools.schema_tools_types import DatasetSchema
 
 from .create_tables import create_tables
 from .create_views import create_views

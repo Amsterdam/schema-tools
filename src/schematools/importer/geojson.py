@@ -5,7 +5,7 @@ from typing import Any, Iterable, Tuple
 from shapely.geometry import shape
 
 from schematools.exceptions import ParserError
-from schematools.types import DatasetTableSchema
+from schematools.schema_tools_types import DatasetTableSchema
 
 from .base import BaseImporter, Record
 

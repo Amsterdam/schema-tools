@@ -5,7 +5,7 @@ from django.core.management import BaseCommand
 
 from schematools.contrib.django.models import Profile
 from schematools.loaders import get_profile_loader
-from schematools.types import ProfileSchema
+from schematools.schema_tools_types import ProfileSchema
 
 
 class Command(BaseCommand):

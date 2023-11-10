@@ -7,7 +7,7 @@ from schematools.contrib.django.models import Dataset
 from schematools.exceptions import DatasetNotFound
 from schematools.loaders import CachedSchemaLoader, SchemaLoader
 from schematools.naming import to_snake_case
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.schema_tools_types import DatasetSchema, DatasetTableSchema
 
 logger = logging.getLogger(__name__)
 

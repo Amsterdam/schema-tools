@@ -6,7 +6,7 @@ import pytest
 
 from schematools.contrib.django.factories import remove_dynamic_models
 from schematools.contrib.django.models import Dataset, Profile
-from schematools.types import DatasetSchema, ProfileSchema
+from schematools.schema_tools_types import DatasetSchema, ProfileSchema
 
 
 @pytest.fixture(autouse=True)

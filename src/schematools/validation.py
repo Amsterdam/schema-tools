@@ -31,7 +31,7 @@ from urllib.parse import urlparse
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
-from schematools.types import DatasetSchema
+from schematools.schema_tools_types import DatasetSchema
 
 
 @dataclass(frozen=True)

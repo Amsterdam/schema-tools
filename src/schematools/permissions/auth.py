@@ -9,7 +9,7 @@ from typing import Iterable, Iterator
 
 import methodtools
 
-from schematools.types import (
+from schematools.schema_tools_types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,

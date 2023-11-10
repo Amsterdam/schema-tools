@@ -18,7 +18,7 @@ from sqlalchemy.sql.ddl import DropTable
 
 from schematools.importer.base import metadata
 from schematools.loaders import FileSystemProfileLoader, FileSystemSchemaLoader
-from schematools.types import DatasetSchema, Json, ProfileSchema
+from schematools.schema_tools_types import DatasetSchema, Json, ProfileSchema
 
 HERE = Path(__file__).parent
 

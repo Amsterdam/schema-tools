@@ -10,9 +10,13 @@ from typing import DefaultDict, cast
 
 from geoalchemy2.types import Geometry
 from psycopg2 import sql
-from sqlalchemy import JSON, BigInteger, Boolean, Date, DateTime, Float, Numeric, String, Time
+import psycopg2.extensions
+from sqlalchemy import JSON, BigInteger, Boolean, Date, DateTime, Float, Numeric, String, Time, text, select, or_
 from sqlalchemy.sql.schema import Column, Index, MetaData, Table
 from sqlalchemy.types import ARRAY
+from sqlalchemy.sql.expression import text, case, or_
+
+import permissions.auth
 
 from schematools import (
     DATABASE_SCHEMA_NAME_DEFAULT,
@@ -22,7 +26,7 @@ from schematools import (
     TMP_TABLE_POSTFIX,
 )
 from schematools.naming import to_snake_case
-from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
+from schematools.schema_tools_types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 logger = logging.getLogger(__name__)
 
@@ -465,3 +469,37 @@ def _format_index_name(index_name: str) -> str:
         return (
             hashlib.blake2s(index_name.encode(), digest_size=20).hexdigest() + TABLE_INDEX_POSTFIX
         )
+
+
+def auth_view_column_factory(column: DatasetFieldSchema) -> Column:
+    if permissions.auth.PUBLIC_SCOPE in column.auth:
+        return _column_factory(column)
+    case_clause = [text(f"is_account_group_member('{a}')") for a in column.auth]
+    return case((or_(*case_clause), _column_factory(column)), else_=None).label(column.db_name)
+
+
+def auth_view_sql(engine, table, view_schema):
+    where_clause = [text(f"is_account_group_member('{a}')") for a in table.dataset_table.auth]
+    columns_transformed = [auth_view_column_factory(c) for c in table.dataset_table.get_db_fields()]
+    select_statement = select(*columns_transformed).select_from(table).where(or_(*where_clause))
+    view_name = table.name
+    view_sql = str(select_statement.compile(engine))
+    view_template = "CREATE OR REPLACE VIEW {view_schema}.{view_name} AS {view_sql}"
+    create_view_sql = sql.SQL(view_template).format(view_schema=sql.Identifier(view_schema),
+                                                    view_name=sql.Identifier(view_name),
+                                                    view_sql=sql.SQL(view_sql))
+    return _composable_as_string(create_view_sql)
+
+
+def _composable_as_string(composable, encoding="utf-8"):
+    if isinstance(composable, sql.Identifier):
+        return f'"{composable.string}"'
+    elif isinstance(composable, sql.SQL):
+        return composable.string
+    elif isinstance(composable, sql.Composed):
+        return ''.join([_composable_as_string(x, encoding) for x in composable])
+    else:
+        rv = sql.ext.adapt(composable._wrapped)
+        if isinstance(rv, psycopg2.extensions.QuotedString): rv.encoding = encoding
+        rv = rv.getquoted()
+        return rv.decode(encoding) if isinstance(rv, bytes) else rv

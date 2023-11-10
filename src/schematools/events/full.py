@@ -16,7 +16,7 @@ from schematools.factories import tables_factory
 from schematools.importer.base import BaseImporter
 from schematools.loaders import get_schema_loader
 from schematools.naming import to_snake_case
-from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
+from schematools.schema_tools_types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 # Enable the sqlalchemy logger by uncommenting the following 2 lines to debug SQL related issues
 # logging.basicConfig()

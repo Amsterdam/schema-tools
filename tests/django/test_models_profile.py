@@ -1,7 +1,7 @@
 import pytest
 
 from schematools.contrib.django.models import Profile
-from schematools.types import Permission, PermissionLevel
+from schematools.schema_tools_types import Permission, PermissionLevel
 
 
 @pytest.mark.django_db

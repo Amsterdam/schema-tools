@@ -22,7 +22,7 @@ from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.sql.schema import Index, MetaData, Table
 
 from schematools.factories import index_factory, tables_factory, views_factory
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.schema_tools_types import DatasetSchema, DatasetTableSchema
 
 metadata = MetaData()
 

@@ -2,7 +2,7 @@ import typing
 from collections import ChainMap
 from dataclasses import dataclass
 
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.schema_tools_types import DatasetSchema, DatasetTableSchema
 
 from ..interfaces.mapfile import serializers, types
 

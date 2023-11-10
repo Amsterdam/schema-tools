@@ -25,7 +25,7 @@ from django.utils.translation import gettext_lazy as _
 from schematools.exceptions import DatasetFieldNotFound
 from schematools.loaders import CachedSchemaLoader
 from schematools.naming import to_snake_case
-from schematools.types import (
+from schematools.schema_tools_types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,

@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 
-from schematools.types import SemVer
+from schematools.schema_tools_types import SemVer
 
 
 class Migration(migrations.Migration):

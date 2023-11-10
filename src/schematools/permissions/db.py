@@ -12,7 +12,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from schematools.permissions import PUBLIC_SCOPE  # type: ignore [attr-defined]
-from schematools.types import DatasetSchema
+from schematools.schema_tools_types import DatasetSchema
 
 # Create a module-level logger, so calling code can
 # configure the logger, if needed.

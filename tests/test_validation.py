@@ -8,7 +8,7 @@ import pytest
 
 from schematools import validation
 from schematools.permissions import PUBLIC_SCOPE
-from schematools.types import DatasetSchema
+from schematools.schema_tools_types import DatasetSchema
 from schematools.validation import (
     _active_versions,
     _check_display,

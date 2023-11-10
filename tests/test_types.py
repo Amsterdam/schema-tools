@@ -3,7 +3,7 @@ import operator
 import pytest
 
 from schematools.exceptions import SchemaObjectNotFound
-from schematools.types import (
+from schematools.schema_tools_types import (
     DatasetSchema,
     DatasetTableSchema,
     Permission,

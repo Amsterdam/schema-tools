@@ -2,7 +2,7 @@ from sqlalchemy import MetaData, create_engine, inspect
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.importer.base import BaseImporter
-from schematools.types import DatasetSchema, SchemaType
+from schematools.schema_tools_types import DatasetSchema, SchemaType
 
 
 def test_index_creation(engine, db_schema):

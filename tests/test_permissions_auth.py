@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from schematools.permissions import Permission, UserScopes
-from schematools.types import PermissionLevel
+from schematools.schema_tools_types import PermissionLevel
 
 
 def _active_profiles(

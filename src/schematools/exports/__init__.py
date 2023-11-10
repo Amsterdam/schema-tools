@@ -8,7 +8,7 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy.engine import Connection
 
 from schematools.factories import tables_factory
-from schematools.types import _PUBLIC_SCOPE, DatasetFieldSchema, DatasetSchema, DatasetTableSchema
+from schematools.schema_tools_types import _PUBLIC_SCOPE, DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 metadata = MetaData()
 

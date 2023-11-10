@@ -4,7 +4,7 @@ import re
 import pytest
 
 from schematools import ckan
-from schematools.types import DatasetSchema
+from schematools.schema_tools_types import DatasetSchema
 
 
 @pytest.mark.parametrize(

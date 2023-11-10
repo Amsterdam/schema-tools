@@ -15,7 +15,7 @@ from schematools import SRID_3D
 from schematools.contrib.django import app_config, signals
 from schematools.contrib.django.fields import UnlimitedCharField
 from schematools.naming import to_snake_case
-from schematools.types import DatasetFieldSchema, DatasetTableSchema
+from schematools.schema_tools_types import DatasetFieldSchema, DatasetTableSchema
 
 from .mockers import DynamicModelMocker
 from .models import (

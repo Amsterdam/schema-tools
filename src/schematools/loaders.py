@@ -23,7 +23,7 @@ from schematools.exceptions import (
     SchemaObjectNotFound,
     ViewObjectNotFound,
 )
-from schematools.types import DatasetSchema, DatasetTableSchema, Json, ProfileSchema, Publisher
+from schematools.schema_tools_types import DatasetSchema, DatasetTableSchema, Json, ProfileSchema, Publisher
 
 __all__ = (
     "get_schema_loader",

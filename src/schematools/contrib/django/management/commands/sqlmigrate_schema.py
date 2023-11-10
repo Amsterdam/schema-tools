@@ -18,7 +18,7 @@ from schematools.contrib.django.models import Dataset
 from schematools.exceptions import DatasetNotFound, DatasetTableNotFound
 from schematools.loaders import get_schema_loader
 from schematools.naming import to_snake_case
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.schema_tools_types import DatasetSchema, DatasetTableSchema
 
 
 class Command(BaseCommand):

@@ -1,4 +1,4 @@
-from schematools.types import DatasetSchema
+from schematools.schema_tools_types import DatasetSchema
 
 
 class ProvenanceIteration:

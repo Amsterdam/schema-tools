@@ -41,7 +41,7 @@ from schematools.exceptions import (
 from schematools.exports.csv import export_csvs
 from schematools.exports.geopackage import export_geopackages
 from schematools.exports.jsonlines import export_jsonls
-from schematools.factories import tables_factory
+from schematools.factories import tables_factory, auth_view_sql
 from schematools.importer.base import BaseImporter
 from schematools.importer.geojson import GeoJSONImporter
 from schematools.importer.ndjson import NDJSONImporter
@@ -56,13 +56,13 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema, DatasetTableSchema, Publisher, SemVer
+from schematools.schema_tools_types import DatasetSchema, Publisher, SemVer
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
-# Add simple formatting for cli useage
+# Add simple formatting for cli usage
 formatter = logging.Formatter("%(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -973,6 +973,22 @@ def create_sql(versioned: bool, db_url: str, schema_path: str) -> None:
     for table in tables.values():
         table_sql = CreateTable(table).compile(engine)
         click.echo(str(table_sql))
+
+
+@create.command("secured_views")
+@click.option("--versioned/--no-versioned", default=True)
+@option_db_url
+@click.option("--view-schema", required=True)
+@click.argument("schema_path")
+def create_secured_views(versioned: bool, db_url: str, view_schema: str, schema_path: str) -> None:
+    """Generate SQL for creating secured views from amsterdam schema definition."""
+    engine = _get_engine(db_url)
+    loader = FileSystemSchemaLoader.from_file(schema_path)
+    dataset_schema = loader.get_dataset_from_file(schema_path)
+    tables = tables_factory(dataset_schema, is_versioned_dataset=versioned)
+    for table in tables.values():
+        create_view_sql = auth_view_sql(engine, table, view_schema)
+        click.echo(str(create_view_sql))
 
 
 @create.command("all")

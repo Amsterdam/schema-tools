@@ -20,7 +20,7 @@ from schematools.contrib.django.faker.providers import (  # noqa: F401, this is 
     nuller,
     pyfloat,
 )
-from schematools.types import DatasetFieldSchema
+from schematools.schema_tools_types import DatasetFieldSchema
 
 LOCALE = "nl_NL"
 

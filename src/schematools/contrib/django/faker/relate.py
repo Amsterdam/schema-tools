@@ -5,7 +5,7 @@ from typing import Any
 
 from schematools.contrib.django.factories import schema_models_factory
 from schematools.contrib.django.models import Dataset
-from schematools.types import DatasetTableSchema
+from schematools.schema_tools_types import DatasetTableSchema
 
 logger = logging.getLogger(__name__)
 

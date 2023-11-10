@@ -6,7 +6,7 @@ from pathlib import Path
 from psycopg2 import sql
 
 from schematools.exports import _get_fields
-from schematools.types import DatasetSchema
+from schematools.schema_tools_types import DatasetSchema
 
 
 def export_geopackages(

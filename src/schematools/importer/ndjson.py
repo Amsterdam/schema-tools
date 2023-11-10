@@ -7,7 +7,7 @@ from typing import Any, Iterator
 import orjson
 from shapely.geometry import shape
 
-from schematools.types import DatasetFieldSchema, DatasetTableSchema
+from schematools.schema_tools_types import DatasetFieldSchema, DatasetTableSchema
 
 from .base import BaseImporter, Provenance, Record
 
