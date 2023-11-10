@@ -6,4 +6,6 @@ RUN pip install -e ".[django,tests]"
 # So we can use local schemas
 RUN git clone https://github.com/Amsterdam/amsterdam-schema.git /tmp/ams-schema
 
+RUN adduser datapunt
+
 USER datapunt

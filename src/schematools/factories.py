@@ -479,8 +479,8 @@ def auth_view_column_factory(column: DatasetFieldSchema) -> Column:
 
 
 def auth_view_sql(engine, table, view_schema):
-    where_clause = [text(f"is_account_group_member('{a}')") for a in table.dataset_table.auth]
     columns_transformed = [auth_view_column_factory(c) for c in table.dataset_table.get_db_fields()]
+    where_clause = [text(f"is_account_group_member('{a}')") for a in table.dataset_table.auth]
     select_statement = select(*columns_transformed).select_from(table).where(or_(*where_clause))
     view_name = table.name
     view_sql = str(select_statement.compile(engine))
@@ -500,6 +500,7 @@ def _composable_as_string(composable, encoding="utf-8"):
         return ''.join([_composable_as_string(x, encoding) for x in composable])
     else:
         rv = sql.ext.adapt(composable._wrapped)
-        if isinstance(rv, psycopg2.extensions.QuotedString): rv.encoding = encoding
+        if isinstance(rv, psycopg2.extensions.QuotedString):
+            rv.encoding = encoding
         rv = rv.getquoted()
         return rv.decode(encoding) if isinstance(rv, bytes) else rv
