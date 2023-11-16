@@ -1,3 +1,7 @@
+# 2023-11-16 (5.17.18)
+
+* Allow newer versions of Django > 3.0
+
 # 2023-10-18 (5.17.17)
 
 * Bugfix: Ignore id when copying data from temp table to main table for nested tables.
