@@ -40,7 +40,7 @@ def pytest_configure(config):
         SCHEMA_DEFS_URL=env.str("SCHEMA_DEFS_URL", "https://schemas.data.amsterdam.nl/schema"),
         AMSTERDAM_SCHEMA={"geosearch_disabled_datasets": []},
     )
-    _setup_django()
+    _setup_django(config)
 
     import tests.django.fixtures
 
