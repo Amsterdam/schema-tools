@@ -294,15 +294,23 @@ class EventsProcessor:
                     full_load_tables.append((full_load_table, full_load_schema_table))
 
                     fields = [field.db_name for field in full_load_schema_table.get_db_fields()]
+
+                    # use select * for nested tables
+                    # otherwise a seperate permission is required for the sequence column (id)
+                    src, dst = full_load_table.fullname, table_to_replace.fullname
                     if t_id in nested_tables:
-                        fields.remove("id")  # Let PG generate the id field for nested tables.
-                    fieldnames = ", ".join(fields)
+                        insert_stmt = (
+                            f"INSERT INTO {dst} SELECT * FROM {src}"  # nosec: B608  # noqa: S608
+                        )
+                    else:
+                        columns = ", ".join(fields)
+                        insert_stmt = (
+                            f"INSERT INTO {dst} ({columns}) "  # nosec: B608  # noqa: S608
+                            f"SELECT {columns} FROM {src}"  # nosec: B608  # noqa: S608
+                        )
 
                     self.conn.execute(f"TRUNCATE {table_to_replace.fullname}")
-                    self.conn.execute(
-                        f"INSERT INTO {table_to_replace.fullname} ({fieldnames}) "  # noqa: S608
-                        f"SELECT {fieldnames} FROM {full_load_table.fullname}"  # noqa: S608
-                    )
+                    self.conn.execute(insert_stmt)
                 if run_configuration.update_parent_table_configuration:
                     self._update_parent_table_bulk(run_configuration)
 
