@@ -1,3 +1,9 @@
+# 2023-11-24 (5.17.18)
+
+* Bugfix: Update nested table when nested field name has underscore.
+* Bugfix: Update parent table when parent table has shortname for update events.
+* Bugfix: Only check for row existence when table exists.
+
 # 2023-10-18 (5.17.17)
 
 * Bugfix: Ignore id when copying data from temp table to main table for nested tables.
