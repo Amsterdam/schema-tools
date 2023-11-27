@@ -1248,6 +1248,78 @@ def test_full_load_shortnames(here, db_schema, tconn, local_metadata, hr_simple_
     assert records[0]["heeft_hoofdvestiging_id"] == "24902480"
 
 
+def test_full_load_shortnames_update(here, db_schema, tconn, local_metadata, hr_simple_schema):
+    importer = EventsProcessor([hr_simple_schema], tconn, local_metadata=local_metadata)
+
+    # First import an object with nested objects
+    events = [
+        (
+            {
+                "event_type": "ADD",
+                "event_id": 1,
+                "dataset_id": "hr",
+                "table_id": "maatschappelijkeactiviteiten",
+            },
+            {
+                "kvknummer": 42,
+                "email_adressen": [
+                    {
+                        "email_adres": "address1@example.com",
+                    },
+                    {
+                        "email_adres": "address2@example.com",
+                    },
+                ],
+            },
+        )
+    ]
+    importer.process_events(events)
+
+    # Not testing contents here, but merely the fact that the right tables are used without errors
+    records = [dict(r) for r in tconn.execute("SELECT * FROM hr_mac")]
+    assert len(records) == 1
+    assert records[0]["heeft_hoofdvestiging_id"] is None
+
+    nested_records = [dict(r) for r in tconn.execute("SELECT * FROM hr_mac_email_adressen")]
+    assert len(nested_records) == 2
+    assert nested_records[0]["parent_id"] == "42"
+    assert nested_records[0]["email_adres"] == "address1@example.com"
+
+    # Now test adding a relation object that references a parent table with short name
+    events = [
+        (
+            {
+                "dataset_id": "hr",
+                "table_id": "maatschappelijkeactiviteiten_heeftHoofdvestiging",
+                "event_type": "ADD",
+                "event_id": 1658565091,
+                "tid": "42.AMSBI.24902480",
+                "generated_timestamp": "2023-10-05T09:59:05.314873",
+            },
+            {
+                "mac_kvknummer": "42",
+                "mac_id": "42",
+                "heeft_hoofdvestiging_vestigingsnummer": "24902480",
+                "heeft_hoofdvestiging_id": "24902480",
+                "begin_geldigheid": None,
+                "eind_geldigheid": None,
+                "id": 457172,
+            },
+        )
+    ]
+
+    importer.process_events(events)
+    rel_records = [dict(r) for r in tconn.execute("SELECT * FROM hr_mac_heeft_hoofdvestiging")]
+    assert len(rel_records) == 1
+    assert rel_records[0]["id"] == 457172
+    assert rel_records[0]["mac_id"] == "42"
+    assert rel_records[0]["heeft_hoofdvestiging_id"] == "24902480"
+
+    records = [dict(r) for r in tconn.execute("SELECT * FROM hr_mac")]
+    assert len(records) == 1
+    assert records[0]["heeft_hoofdvestiging_id"] == "24902480"
+
+
 def test_reset_lasteventid_after_incomplete_full_load(
     here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
 ):

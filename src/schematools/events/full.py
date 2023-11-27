@@ -55,7 +55,7 @@ class UpdateParentTableConfiguration:
     def parent_id_value(self, prepared_row: dict) -> str:
         return ".".join(
             [
-                str(prepared_row[to_snake_case(f"{self.parent_schema_table.id}_{fn}")])
+                str(prepared_row[to_snake_case(f"{self.parent_schema_table.shortname}_{fn}")])
                 for fn in self.parent_schema_table.identifier
             ]
         )
@@ -421,16 +421,16 @@ class EventsProcessor:
 
         event_type = event_meta["event_type"]
 
-        if (
-            run_configuration.check_existence_on_add
-            and event_type == "ADD"
-            and self._row_exists_in_database(run_configuration, id_value)
-        ):
-            logger.info("Row with id %s already exists in database. Skipping.", row["id"])
-            return
-
         db_operation = None
         if run_configuration.update_table:
+            if (
+                run_configuration.check_existence_on_add
+                and event_type == "ADD"
+                and self._row_exists_in_database(run_configuration, id_value)
+            ):
+                logger.info("Row with id %s already exists in database. Skipping.", row["id"])
+                return
+
             db_operation_name, needs_select = EVENT_TYPE_MAPPINGS[event_type]
             db_operation = getattr(table, db_operation_name)()
 
@@ -472,7 +472,7 @@ class EventsProcessor:
             if is_delete:
                 continue
 
-            if value := prepared_row.get(field.id, []):
+            if value := prepared_row.get(to_snake_case(field.id), []):
                 if rows := self._prepare_nested_rows(field, value, id_value):
                     self.conn.execute(table.insert(), rows)
 
