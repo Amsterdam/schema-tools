@@ -365,7 +365,9 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         except StopIteration:
             raise ValueError(f"No 'datasets' root found for file '{dataset_file}'.")
 
-    def get_dataset_from_file(self, dataset_file: Path | str, prefetch_related: bool = False):
+    def get_dataset_from_file(
+        self, dataset_file: Path | str, prefetch_related: bool = False, allow_external_files=False
+    ):
         """Extra method, to read a dataset directly from a JSON file.
         This is mainly a helper function for testing.
 
@@ -394,7 +396,7 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
             dataset_file = self.root.joinpath(dataset_file)
         dataset_file = dataset_file.resolve()  # removes ../../ entries, so is_relative_to() works
 
-        if not dataset_file.is_relative_to(self.root):
+        if not allow_external_files and not dataset_file.is_relative_to(self.root):
             raise ValueError(
                 f"Dataset file '{dataset_file}' does not exist in the schema repository"
             )

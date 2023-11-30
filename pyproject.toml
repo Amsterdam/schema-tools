@@ -25,5 +25,7 @@ exclude = '''
   | dist
 )/
 '''
+[tool.bandit]
+skips = ["B101", "B404"]
 
 github_url = "https://github.com/Amsterdam/schema-tools"
