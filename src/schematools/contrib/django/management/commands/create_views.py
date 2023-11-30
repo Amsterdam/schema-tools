@@ -29,6 +29,12 @@ def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
                 _create_role_if_not_exists(cursor, write_role_name)
 
                 cursor.execute(
+                    sql.SQL("GRANT create,usage on schema public TO {write_role_name}").format(
+                        write_role_name=sql.Identifier(write_role_name)
+                    )
+                )
+
+                cursor.execute(
                     sql.SQL("SET ROLE {write_role_name}").format(
                         write_role_name=sql.Identifier(write_role_name)
                     )
@@ -39,6 +45,14 @@ def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
                         view_name=sql.Identifier(view_name)
                     )
                 )
+
+                # Remove create and usage from write role
+                cursor.execute(
+                    sql.SQL("REVOKE create,usage on schema public FROM {write_role_name}").format(
+                        write_role_name=sql.Identifier(write_role_name)
+                    )
+                )
+
                 cursor.execute(view_sql)
             transaction.savepoint_rollback(sid)
     except Exception as e:  # noqa: F841

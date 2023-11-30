@@ -1,3 +1,9 @@
+# 2023-11-30 (5.17.19)
+
+* Added support for Django versions > 3.2
+* Added GRANT create, usage in _is_valid_sql function
+* Use django.db.models.JSONField instead of django.contrib.postgres.fields.jsonb.JSONField
+
 # 2023-11-24 (5.17.18)
 
 * Bugfix: Update nested table when nested field name has underscore.
