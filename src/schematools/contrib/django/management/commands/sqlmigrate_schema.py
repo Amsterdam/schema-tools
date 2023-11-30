@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import tempfile
 from collections import deque
+from pathlib import Path
 
 from django.apps import apps
 from django.conf import settings
@@ -27,7 +31,14 @@ class Command(BaseCommand):
 
         ./manage.py sqlmigrate_schema -v3 meetbouten meetbouten v1.0.0 v1.1.0
 
-    The command is speed up by pointing ``SCHEMA_URL`` or ``--schema-url``
+        or, using the schemas from local filesystem and getting the
+        older version of a schema from a git commit hash:
+
+        ./manage.py sqlmigrate_schema -v3 meetbouten meetbouten \
+                7d986c96:../amsterdam-schema/datasets/meetbouten/dataset.json \
+                ../amsterdam-schema/datasets/meetbouten/dataset.json \
+                ---from-files
+    The command is sped up by pointing ``SCHEMA_URL`` or ``--schema-url``
     to a local filesystem repository of the schema files. Otherwise it downloads
     the current schemas from the default remote repository.
     """
@@ -46,15 +57,24 @@ class Command(BaseCommand):
             default=DEFAULT_DB_ALIAS,
             help='Nominates a database to create SQL for. Defaults to the "default" database.',
         )
+        parser.add_argument(
+            "--from-files",
+            action="store_true",
+            help="Get the tables from a file. NB. the SCHEMA_URL also needs to be file-based!",
+        )
         parser.add_argument("schema", help="Schema name")
         parser.add_argument("table", help="Table name")
         # Currently, the old and new version needs to be given.
         # There is no way yet to retrieve a listing of available table versions
         parser.add_argument(
-            "version1", metavar="OLDVERSION", help="Old table version, e.g. v1.0.0"
+            "version1",
+            metavar="OLDVERSION",
+            help="Old table version, e.g. v1.0.0, or `path-to-dataset-json` with --from-files",
         )
         parser.add_argument(
-            "version2", metavar="NEWVERSION", help="New table version, e.g. v1.1.0"
+            "version2",
+            metavar="NEWVERSION",
+            help="New table version, e.g. v1.1.0, , or `path-to-dataset-json` with --from-files",
         )
 
     def handle(self, *args, **options) -> None:
@@ -67,8 +87,19 @@ class Command(BaseCommand):
 
         # Load the data from the schema repository
         dataset = self._load_dataset(options["schema"])
-        table1 = self._load_table_version(dataset, options["table"], options["version1"])
-        table2 = self._load_table_version(dataset, options["table"], options["version2"])
+        if options["from_files"]:
+            assert not options["schema_url"].startswith(
+                "http"
+            ), "The --from-files can only work with a SCHEMA_URL on the local filesystem."
+            table1 = self._load_table_version_from_file(
+                dataset.id, options["table"], self._checkout_file_if_needed(options["version1"])
+            )
+            table2 = self._load_table_version_from_file(
+                dataset.id, options["table"], self._checkout_file_if_needed(options["version2"])
+            )
+        else:
+            table1 = self._load_table_version(dataset, options["table"], options["version1"])
+            table2 = self._load_table_version(dataset, options["table"], options["version2"])
         real_apps = self._load_dependencies(dataset)
         dummy_dataset = self._get_dummy_dataset_model(dataset)
 
@@ -128,6 +159,37 @@ class Command(BaseCommand):
                 ) from None
 
             raise CommandError(f"Table version '{table_id}/{version}' does not exist.") from e
+
+    def _checkout_file_if_needed(self, file_path):
+        """Git check out the file if needed.
+
+        If the file_path points to a git hash,
+        get the content of the file and put this in a temp file.
+        So e.g. file_path can be `7d986c96:../amsterdam-schema/datasets/bag/dataset.json`
+        Assumption is that the `git` binary is available on the system.
+        """
+        if ":" in file_path:
+            git_hash, bare_file_path = file_path.split(":")
+            pl_path = Path(bare_file_path)
+            result = subprocess.run(  # nosec
+                ["git", "show", f"{git_hash}:./{pl_path.name}"],
+                cwd=pl_path.parent,
+                capture_output=True,
+            )
+            handle, tmp_path = tempfile.mkstemp()
+            with os.fdopen(handle, "wb") as fp:
+                fp.write(result.stdout)
+                fp.close()
+            return tmp_path
+
+        return file_path
+
+    def _load_table_version_from_file(
+        self, dataset_id: str, table_id: str, file_path: str
+    ) -> DatasetTableSchema:
+        dataset = self.loader.get_dataset_from_file(file_path, allow_external_files=True)
+        assert dataset.id == dataset_id, f"The id in '{file_path}' does not match '{dataset_id}'"
+        return dataset.get_table_by_id(table_id)
 
     def _load_dependencies(self, dataset: DatasetSchema) -> list[str]:
         """Make sure any dependencies are loaded.

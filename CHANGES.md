@@ -1,3 +1,8 @@
+# 2023-12-01 (5.18.0)
+
+* Add possibility to use git commit hashes when creating SQL migrations
+  from amsterdam schema table definitions.
+
 # 2023-11-24 (5.17.18)
 
 * Bugfix: Update nested table when nested field name has underscore.
