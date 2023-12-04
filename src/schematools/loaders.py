@@ -219,7 +219,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
         """Gets a dataset from the filesystem for dataset_id."""
         schema_json = self._read_dataset(dataset_id)
         view_sql = self._read_view(dataset_id)
-        return self._as_dataset(schema_json, view_sql)
+        return self._as_dataset(schema_json, view_sql, prefetch_related=prefetch_related)
 
     def _as_dataset(
         self, schema_json: dict, view_sql: str = None, prefetch_related: bool = False
