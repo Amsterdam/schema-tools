@@ -20,7 +20,7 @@ from django.db.migrations.state import ModelState, ProjectState
 from schematools.contrib.django.factories import model_factory, schema_models_factory
 from schematools.contrib.django.models import Dataset
 from schematools.exceptions import DatasetNotFound, DatasetTableNotFound
-from schematools.loaders import get_schema_loader
+from schematools.loaders import SchemaLoader, get_schema_loader
 from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema, DatasetTableSchema
 
@@ -32,11 +32,11 @@ class Command(BaseCommand):
         ./manage.py sqlmigrate_schema -v3 meetbouten meetbouten v1.0.0 v1.1.0
 
         or, using the schemas from local filesystem and getting the
-        older version of a schema from a git commit hash:
+        older version of a schema from a git reference (can be a branch/tag/hash):
 
         ./manage.py sqlmigrate_schema -v3 meetbouten meetbouten \
-                7d986c96:../amsterdam-schema/datasets/meetbouten/dataset.json \
-                ../amsterdam-schema/datasets/meetbouten/dataset.json \
+                7d986c96 \
+                master \
                 ---from-files
     The command is sped up by pointing ``SCHEMA_URL`` or ``--schema-url``
     to a local filesystem repository of the schema files. Otherwise it downloads
@@ -60,7 +60,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--from-files",
             action="store_true",
-            help="Get the tables from a file. NB. the SCHEMA_URL also needs to be file-based!",
+            help="Get the tables from the filesystem. NB. the SCHEMA_URL also needs to be file-based!",
         )
         parser.add_argument("schema", help="Schema name")
         parser.add_argument("table", help="Table name")
@@ -69,12 +69,12 @@ class Command(BaseCommand):
         parser.add_argument(
             "version1",
             metavar="OLDVERSION",
-            help="Old table version, e.g. v1.0.0, or `path-to-dataset-json` with --from-files",
+            help="Old table version, e.g. v1.0.0, or a git ref like `master`, `tag`, `branch` or `hash` with --from-files",
         )
         parser.add_argument(
             "version2",
             metavar="NEWVERSION",
-            help="New table version, e.g. v1.1.0, , or `path-to-dataset-json` with --from-files",
+            help="New table version, e.g. v1.1.0, , or a git ref like `master`, `tag`, `branch` or `hash` with --from-files",
         )
 
     def handle(self, *args, **options) -> None:
@@ -87,16 +87,27 @@ class Command(BaseCommand):
 
         # Load the data from the schema repository
         dataset = self._load_dataset(options["schema"])
+
+        # For the from_files option, we check out the schemas repo
+        # in a temporary directory.
+        # By checking out 2 different git references, we can
+        # obtain the tables for these specific references
+        # for comparison and sql generation.
         if options["from_files"]:
             assert not options["schema_url"].startswith(
                 "http"
             ), "The --from-files can only work with a SCHEMA_URL on the local filesystem."
-            table1 = self._load_table_version_from_file(
-                dataset.id, options["table"], self._checkout_file_if_needed(options["version1"])
-            )
-            table2 = self._load_table_version_from_file(
-                dataset.id, options["table"], self._checkout_file_if_needed(options["version2"])
-            )
+            with tempfile.TemporaryDirectory() as tmpdir:
+                schemas_root = Path(options["schema_url"]).parent
+                subprocess.run(  # nosec
+                    ["git", "clone", schemas_root, tmpdir],
+                )
+                table1 = self._load_table_from_checkout(
+                    dataset.id, options["table"], tmpdir, options["version1"]
+                )
+                table2 = self._load_table_from_checkout(
+                    dataset.id, options["table"], tmpdir, options["version2"]
+                )
         else:
             table1 = self._load_table_version(dataset, options["table"], options["version1"])
             table2 = self._load_table_version(dataset, options["table"], options["version2"])
@@ -128,6 +139,17 @@ class Command(BaseCommand):
             for migration in app_migrations:
                 start_state = self._print_sql(connection, start_state, migration)
 
+    def _load_table_from_checkout(
+        self, dataset_id: str, table_id: str, tmpdir: str, version_ref: str
+    ) -> DatasetTableSchema:
+        """Load a DatasetTableSchema for the specified git reference."""
+        subprocess.run(["git", "checkout", version_ref], cwd=tmpdir, stdout=subprocess.DEVNULL)
+        tmp_schema_path = Path(tmpdir) / "datasets"
+        # We create a specific schema loader, because it has to read in the data
+        # associated with a specific git checkout.
+        loader = get_schema_loader(str(tmp_schema_path), loaded_callback=self._loaded_callback)
+        return self._load_table_version_from_file(loader, dataset_id, table_id)
+
     def _loaded_callback(self, schema: DatasetSchema):
         """Track which schema's get loaded. This is also used for dependency tracking."""
         if self.verbosity >= 1:
@@ -138,7 +160,7 @@ class Command(BaseCommand):
     def _load_dataset(self, dataset_id: str) -> DatasetSchema:
         """Load a dataset, bail out with a proper CLI message."""
         try:
-            return self.loader.get_dataset(dataset_id)
+            return self.loader.get_dataset(dataset_id, prefetch_related=True)
         except DatasetNotFound as e:
             raise CommandError(str(e)) from e
 
@@ -160,35 +182,10 @@ class Command(BaseCommand):
 
             raise CommandError(f"Table version '{table_id}/{version}' does not exist.") from e
 
-    def _checkout_file_if_needed(self, file_path):
-        """Git check out the file if needed.
-
-        If the file_path points to a git hash,
-        get the content of the file and put this in a temp file.
-        So e.g. file_path can be `7d986c96:../amsterdam-schema/datasets/bag/dataset.json`
-        Assumption is that the `git` binary is available on the system.
-        """
-        if ":" in file_path:
-            git_hash, bare_file_path = file_path.split(":")
-            pl_path = Path(bare_file_path)
-            result = subprocess.run(  # nosec
-                ["git", "show", f"{git_hash}:./{pl_path.name}"],
-                cwd=pl_path.parent,
-                capture_output=True,
-            )
-            handle, tmp_path = tempfile.mkstemp()
-            with os.fdopen(handle, "wb") as fp:
-                fp.write(result.stdout)
-                fp.close()
-            return tmp_path
-
-        return file_path
-
     def _load_table_version_from_file(
-        self, dataset_id: str, table_id: str, file_path: str
+        self, loader: SchemaLoader, dataset_id: str, table_id: str
     ) -> DatasetTableSchema:
-        dataset = self.loader.get_dataset_from_file(file_path, allow_external_files=True)
-        assert dataset.id == dataset_id, f"The id in '{file_path}' does not match '{dataset_id}'"
+        dataset = loader.get_dataset(dataset_id, prefetch_related=True)
         return dataset.get_table_by_id(table_id)
 
     def _load_dependencies(self, dataset: DatasetSchema) -> list[str]:
@@ -202,7 +199,7 @@ class Command(BaseCommand):
 
         # Load first, and this fills the cache.
         for dataset_id in related_ids - {dataset.id}:
-            self.loader.get_dataset(dataset_id)
+            self.loader.get_dataset(dataset_id, prefetch_related=True)
 
         # Turn any loaded schema into a model.
         # And when a call to model_factory() triggers loading of more schemas,

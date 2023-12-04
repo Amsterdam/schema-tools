@@ -1,3 +1,9 @@
+# 2023-12-01 (5.19.0)
+
+* Improve possibility to use git commit hashes when creating SQL migrations
+  from amsterdam schema table definitions. Now also supports schemas
+  with table definitions in separate files.
+
 # 2023-12-01 (5.18.0)
 
 * Add possibility to use git commit hashes when creating SQL migrations
