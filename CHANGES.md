@@ -1,3 +1,8 @@
+# 2023-12-05 (5.19.1)
+
+* Updated Django version > 4.2
+* Updated the github workflow to use postgres14 image
+
 # 2023-12-01 (5.19.0)
 
 * Improve possibility to use git commit hashes when creating SQL migrations
