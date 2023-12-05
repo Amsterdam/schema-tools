@@ -1,3 +1,9 @@
+# 2023-12-01 (5.19.1)
+
+* Added support for Django version > 4.2
+* Upgraded django-giserver to 1.2.7
+
+
 # 2023-12-01 (5.19.0)
 
 * Improve possibility to use git commit hashes when creating SQL migrations
