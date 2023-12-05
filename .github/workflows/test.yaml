@@ -16,8 +16,7 @@ jobs:
 
     services:
       db:
-        image: amsterdam/postgres11
-        env:
+        image: barrydanielsnl/postgres14
           POSTGRES_DB: cicd
           POSTGRES_USER: dataservices
           POSTGRES_PASSWORD: insecure
