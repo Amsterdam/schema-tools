@@ -1,3 +1,7 @@
+# 2023-12-08 (5.19.2)
+
+* Bugfix: Used pyscopg.sql instead of psycopg2.sql for compatability
+
 # 2023-12-05 (5.19.1)
 
 * Updated Django version > 4.2
