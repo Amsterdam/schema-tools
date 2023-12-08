@@ -2,7 +2,7 @@ from typing import Iterable, Optional
 
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, transaction
-from psycopg2 import sql
+from psycopg import sql
 
 from schematools.contrib.django.models import Dataset, DatasetTableSchema
 from schematools.naming import to_snake_case
@@ -96,18 +96,21 @@ def _clean_sql(sql) -> str:
     return sql
 
 
-def _create_role_if_not_exists(cursor, role_name):
+def _create_role_if_not_exists(cursor, user_role_name):
     # Create the role if it doesn't exist
+    import pdb
+
+    pdb.set_trace()
     cursor.execute(
         sql.SQL("SELECT 1 FROM pg_roles WHERE rolname={role_name}").format(
-            role_name=sql.Literal(role_name)
+            role_name=sql.Literal(user_role_name)
         )
     )
 
     role_exists = cursor.fetchone()
     if not role_exists:
         cursor.execute(
-            sql.SQL("CREATE ROLE {role_name}").format(role_name=sql.Identifier(role_name))
+            sql.SQL("CREATE ROLE {role_name}").format(role_name=sql.Identifier(user_role_name))
         )
 
 
