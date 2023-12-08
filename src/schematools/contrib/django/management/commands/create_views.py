@@ -97,10 +97,7 @@ def _clean_sql(sql) -> str:
 
 
 def _create_role_if_not_exists(cursor, user_role_name):
-    # Create the role if it doesn't exist
-    import pdb
-
-    pdb.set_trace()
+    """ Create the role if it doesn't exist """
     cursor.execute(
         sql.SQL("SELECT 1 FROM pg_roles WHERE rolname={role_name}").format(
             role_name=sql.Literal(user_role_name)
