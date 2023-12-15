@@ -18,19 +18,16 @@ metadata = MetaData()
 class CsvExporter(BaseExporter):  # noqa: D101
     extension = "csv"
 
-    @staticmethod
     def geo_modifier(field: DatasetFieldSchema, column):
         if not field.is_geo:
             return column
         return gfunc.ST_AsEWKT(column).label(field.db_name)
 
-    @staticmethod
     def id_modifier(field: DatasetFieldSchema, column):
         if field.table.is_temporal and field.is_composite_key:
             return func.split_part(column, ".", 1).label(field.db_name)
         return column
 
-    @staticmethod
     def datetime_modifier(field: DatasetFieldSchema, column):
         if field.type == "string" and field.format == "date-time":
             return func.to_char(column, 'YYYY-MM-DD"T"HH24:MI:SS').label(field.db_name)
