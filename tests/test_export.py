@@ -37,7 +37,7 @@ def test_csv_export_only_actual(here, engine, ggwgebieden_schema, dbsession, tmp
     with open(tmp_path / "ggwgebieden_ggwgebieden.csv") as out_file:
         lines = out_file.readlines()
         assert len(lines) == 2  # includes the headerline
-        assert lines[1].split(",")[1] == "2"  # volgnummer == 2
+        assert lines[1].split(",")[0] == "2"  # volgnummer == 2
 
 
 def test_jsonlines_export(here, engine, meetbouten_schema, dbsession, tmp_path):
