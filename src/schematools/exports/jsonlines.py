@@ -35,13 +35,11 @@ def _dumps(obj: Any) -> str:
 class JsonLinesExporter(BaseExporter):  # noqa: D101
     extension = "jsonl"
 
-    @staticmethod
     def geo_modifier(field: DatasetFieldSchema, column):
         if not field.is_geo:
             return column
         return func.ST_AsGeoJSON(func.ST_Transform(column, 4326)).label(field.db_name)
 
-    @staticmethod
     def id_modifier(field: DatasetFieldSchema, column):
         if field.table.is_temporal and field.is_composite_key:
             return func.split_part(column, ".", 1).label(field.db_name)
