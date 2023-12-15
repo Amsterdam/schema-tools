@@ -10,7 +10,7 @@ from sqlalchemy import MetaData, Table, select
 from sqlalchemy.engine import Connection
 
 from schematools.exports import BaseExporter
-from schematools.exports.csv import enable_datetime_cast
+from schematools.exports.csv import DatasetFieldSchema, enable_datetime_cast
 from schematools.naming import toCamelCase
 from schematools.types import DatasetSchema, DatasetTableSchema
 
@@ -34,9 +34,22 @@ def _dumps(obj: Any) -> str:
 
 class JsonLinesExporter(BaseExporter):  # noqa: D101
     extension = "jsonl"
-    geo_modifier = staticmethod(
-        lambda col, fn: func.ST_AsGeoJSON(func.ST_Transform(col, 4326)).label(fn)
-    )
+
+    @staticmethod
+    def geo_modifier(field: DatasetFieldSchema, column):
+        if not field.is_geo:
+            return column
+        return func.ST_AsGeoJSON(func.ST_Transform(column, 4326)).label(field.db_name)
+
+    @staticmethod
+    def id_modifier(field: DatasetFieldSchema, column):
+        if field.table.is_temporal and field.is_composite_key:
+            return func.split_part(column, ".", 1).label(field.db_name)
+        return column
+
+    # We do not use the iso for datetime here, because json notation handles this.
+
+    processors = (geo_modifier, id_modifier)
 
     def _get_row_modifier(self, table: DatasetTableSchema):
         lookup = {}

@@ -22,9 +22,22 @@ def test_csv_export(here, engine, meetbouten_schema, dbsession, tmp_path):
     export_csvs(engine, meetbouten_schema, str(tmp_path), [], [], 1)
     with open(tmp_path / "meetbouten_meetbouten.csv") as out_file:
         assert out_file.read() == (
-            "identificatie,ligtInBuurtId,merkCode,merkOmschrijving,geometrie\n"
+            "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie\n"
             "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6)\n"
         )
+
+
+def test_csv_export_only_actual(here, engine, ggwgebieden_schema, dbsession, tmp_path):
+    """Prove that csv export contains only the actual records, not the history."""
+    ndjson_path = here / "files" / "data" / "ggwgebieden-history.ndjson"
+    importer = NDJSONImporter(ggwgebieden_schema, engine)
+    importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
+    importer.load_file(ndjson_path)
+    export_csvs(engine, ggwgebieden_schema, str(tmp_path), [], [], 1)
+    with open(tmp_path / "ggwgebieden_ggwgebieden.csv") as out_file:
+        lines = out_file.readlines()
+        assert len(lines) == 2  # includes the headerline
+        assert lines[1].split(",")[1] == "2"  # volgnummer == 2
 
 
 def test_jsonlines_export(here, engine, meetbouten_schema, dbsession, tmp_path):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import IO
 
@@ -48,6 +49,7 @@ class BaseExporter:
         table_ids: list[str] | None = None,
         scopes: list[str] | None = None,
         size: int | None = None,
+        temporal_date: date = date.today(),
     ):
         """Constructor.
 
@@ -66,6 +68,7 @@ class BaseExporter:
         self.table_ids = table_ids
         self.scopes = set(scopes)
         self.size = size
+        self.temporal_date = temporal_date
 
         self.base_dir = Path(output)
         self.tables = (
@@ -77,8 +80,14 @@ class BaseExporter:
 
     def _get_column(self, sa_table: Table, field: DatasetFieldSchema):
         column = getattr(sa_table.c, field.db_name)
-        processor = self.geo_modifier if field.is_geo else lambda col, _fn: col
-        return processor(column, field.db_name)
+        # apply all processors
+        for processor in self.processors:
+            column = processor(field, column)
+
+        return column
+
+        # processor = self.geo_modifier if field.is_geo else lambda col, _fn: col
+        # return processor(column, field.db_name)
 
     def _get_columns(self, sa_table: Table, table: DatasetTableSchema):
         for field in _get_fields(self.dataset_schema, table, self.scopes):
@@ -87,13 +96,25 @@ class BaseExporter:
             except AttributeError:
                 pass  # skip unavailable columns
 
+    def _get_temporal_clause(self, sa_table: Table, table: DatasetTableSchema):
+        if not table.is_temporal:
+            return None
+        temporal = table.temporal
+        for dimension in temporal.dimensions.values():
+            start = getattr(sa_table.c, dimension.start.db_name)
+            end = getattr(sa_table.c, dimension.end.db_name)
+            return (start <= self.temporal_date) & ((end > self.temporal_date) | (end == None))
+        return None
+
     def export_tables(self):
         for table in self.tables:
             srid = table.crs.split(":")[1] if table.crs else None
             if table.has_geometry_fields and srid is None:
                 raise ValueError("Table has geo fields, but srid is None.")
             sa_table = self.sa_tables[table.id]
-            with open(self.base_dir / f"{table.db_name}.{self.extension}", "w") as file_handle:
+            with open(
+                self.base_dir / f"{table.db_name}.{self.extension}", "w", encoding="utf8"
+            ) as file_handle:
                 self.write_rows(file_handle, table, sa_table, srid)
 
     def write_rows(
