@@ -128,5 +128,7 @@ def _get_fields(dataset_schema: DatasetSchema, table: DatasetTableSchema, scopes
     for field in table.fields:
         if field.is_array:
             continue
+        if field.is_internal:
+            continue
         if parent_scopes | set(field.auth) - {_PUBLIC_SCOPE} <= set(scopes):
             yield field

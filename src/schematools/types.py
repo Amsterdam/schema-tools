@@ -1435,6 +1435,11 @@ class DatasetFieldSchema(DatasetType):
         ) and self._parent_field is None
 
     @cached_property
+    def is_internal(self) -> bool:
+        """Id fields for table with composite key is only for internal (Django) use."""
+        return self.is_primary and self._parent_table.has_composite_key
+
+    @cached_property
     def relation(self) -> str | None:
         """Give the 1:N relation, if it exists."""
         if self.type == "array":
