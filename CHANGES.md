@@ -1,3 +1,9 @@
+# 2023-12-15 (5.20.1)
+
+* Some old definitions (gebieden.stadsdelen) are using temporal relations
+  defined as a plain string instead of an objects. The exporter
+  need to take this into account.
+
 # 2023-12-15 (5.20.0)
 
 * Change export to only use active records for csv and jsonlines,

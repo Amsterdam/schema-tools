@@ -24,7 +24,14 @@ class CsvExporter(BaseExporter):  # noqa: D101
         return gfunc.ST_AsEWKT(column).label(field.db_name)
 
     def id_modifier(field: DatasetFieldSchema, column):
-        if field.table.is_temporal and field.is_composite_key:
+        # We need an extra check for old relation definitions
+        # that are defined as plain strings in the amsterdam schema
+        # and not as objects.
+        if field.table.is_temporal and (
+            field.is_composite_key
+            or field.related_table is not None
+            and field.related_table.is_temporal
+        ):
             return func.split_part(column, ".", 1).label(field.db_name)
         return column
 
