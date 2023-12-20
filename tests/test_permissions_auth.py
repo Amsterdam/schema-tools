@@ -154,3 +154,13 @@ class TestFieldAccess:
         assert user_scopes.has_field_access(table.get_field_by_id("volgnummer")) == expect
         assert user_scopes.has_field_access(table.get_field_by_id("identificatie")) == expect
         assert user_scopes.has_field_access(table.get_field_by_id("registratiedatum")) == expect
+
+    def test_table_fields_access(self, id_auth_schema):
+        """Prove that a table with one protected field cannot be accessed with OPENBAAR scope."""
+
+        user_scopes = UserScopes(
+            {},
+            request_scopes=["OPENBAAR"],
+        )
+        table = id_auth_schema.get_table_by_id("base")
+        assert not user_scopes.has_table_fields_access(table)
