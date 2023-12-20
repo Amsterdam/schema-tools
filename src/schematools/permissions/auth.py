@@ -104,6 +104,10 @@ class UserScopes:
         # which includes mandatory filtersets.
         return self._has_table_auth_access(table) or self._has_table_profile_access(table)
 
+    def has_table_fields_access(self, table: DatasetTableSchema) -> bool:
+        """Tell whether all fields of a table can be accessed."""
+        return all(self.has_field_access(field) for field in table.fields)
+
     def has_field_access(self, field: DatasetFieldSchema) -> Permission:
         """Tell whether a field may be read."""
         # Again, when a field "auth" scope is satisfied, no further checks are done.

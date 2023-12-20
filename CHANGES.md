@@ -1,3 +1,8 @@
+# 2023-12-20 (5.21.0)
+
+* Added an extra helper method to user-scopes to determine
+  if one of the fields has a scope that is blocking access.
+
 # 2023-12-15 (5.20.1)
 
 * Some old definitions (gebieden.stadsdelen) are using temporal relations
