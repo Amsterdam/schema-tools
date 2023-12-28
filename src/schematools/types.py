@@ -1734,7 +1734,13 @@ class DatasetFieldSchema(DatasetType):
 
     @property
     def auth(self) -> frozenset[str]:
-        """Auth of the field, or OPENBAAR."""
+        """Auth of the field, or OPENBAAR.
+
+        When the field is a subfield, the auth has been defined on
+        the parent field, so we need to return the auth of the parent field.
+        """
+        if self.is_subfield:
+            return self.parent_field.auth
         return _normalize_scopes(self.get("auth"))
 
     @cached_property

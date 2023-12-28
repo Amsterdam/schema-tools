@@ -317,6 +317,11 @@ def id_auth_schema(schema_loader) -> DatasetSchema:
 
 
 @pytest.fixture
+def subfield_auth_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("subfield_auth.json")
+
+
+@pytest.fixture
 def nap_schema(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("nap.json")
 

@@ -164,3 +164,14 @@ class TestFieldAccess:
         )
         table = id_auth_schema.get_table_by_id("base")
         assert not user_scopes.has_table_fields_access(table)
+
+    def test_subfields_have_protection(self, subfield_auth_schema):
+        """Prove that the subfields of a protected field are also protected."""
+
+        user_scopes = UserScopes(
+            {},
+            request_scopes=["OPENBAAR"],
+        )
+        table = subfield_auth_schema.get_table_by_id("base")
+        subfield = table.get_field_by_id("soortCultuurOnbebouwd").subfields[0]
+        assert not user_scopes.has_field_access(subfield)
