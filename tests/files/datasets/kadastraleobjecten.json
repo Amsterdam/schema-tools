@@ -46,6 +46,7 @@
               "format": "json"
           },
           "soortCultuurOnbebouwd": {
+              "auth": ["BRK/RO"],
               "type": "object",
               "properties": {
                   "code": {

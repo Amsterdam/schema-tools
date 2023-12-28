@@ -1,3 +1,8 @@
+# 2023-12-28 (5.21.1)
+
+* Fix auth property for subfields. The subfields do not have
+  scopes, however, a scope can be defined on the parent field.
+
 # 2023-12-20 (5.21.0)
 
 * Added an extra helper method to user-scopes to determine
