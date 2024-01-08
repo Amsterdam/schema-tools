@@ -1,3 +1,8 @@
+# 2024-01-08 (5.21.2)
+
+* Remove the Django >= 4.2 pinning, because DSO is still on Django 3.x.
+  Later on, we can migrate both schematools and DSO simultaneous to >= 4.2
+
 # 2023-12-28 (5.21.1)
 
 * Fix auth property for subfields. The subfields do not have
