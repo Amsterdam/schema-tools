@@ -1,3 +1,8 @@
+# 2024-01-10 (5.22.0)
+
+* Add `enable_export` column to the `dataset` model to be able
+  to configure the exports per dataset.
+
 # 2024-01-08 (5.21.2)
 
 * Remove the Django >= 4.2 pinning, because DSO is still on Django 3.x.
