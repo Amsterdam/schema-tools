@@ -1,3 +1,7 @@
+# 2024-01-12 (5.23.0)
+
+* Modified create_views functions to support materialized views
+
 # 2024-01-10 (5.22.0)
 
 * Add `enable_export` column to the `dataset` model to be able
