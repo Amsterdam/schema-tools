@@ -34,11 +34,6 @@ def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
                     )
                 )
 
-                cursor.execute(
-                    sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
-                        view_name=sql.Identifier(view_name)
-                    )
-                )
                 cursor.execute(view_sql)
             transaction.savepoint_rollback(sid)
     except Exception as e:  # noqa: F841
@@ -135,7 +130,6 @@ def create_views(
         for table in dataset.schema.tables:
             if table.is_view:
                 command.stdout.write(f"* Creating view {table.db_name}")
-
                 # Generate the write role name
                 write_role_name = f"write_{table._parent_schema.db_name}"
 
@@ -200,11 +194,15 @@ def create_views(
                             )
 
                             # Remove the view if it exists
-                            cursor.execute(
-                                sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
-                                    view_name=sql.Identifier(table.db_name)
+                            # Due to the large costs of recreating materialized views, we only create
+                            # and not drop them. When changes are made to the materialized view the view
+                            # must be droped manually.
+                            if "materialized" not in view_sql.lower():
+                                cursor.execute(
+                                    sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
+                                        view_name=sql.Identifier(table.db_name)
+                                    )
                                 )
-                            )
 
                             # Create the view
                             cursor.execute(view_sql)
