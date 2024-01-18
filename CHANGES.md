@@ -1,3 +1,7 @@
+# 2024-01-12 (5.23.1)
+
+* Some fixes to handle field based authentication for materialized views
+
 # 2024-01-12 (5.23.0)
 
 * Modified create_views functions to support materialized views

@@ -60,6 +60,8 @@ def _get_required_permissions(
     for relation in derived_from:
         datasetname, tablename = relation.split(":")
         all_scopes |= _get_scopes(datasetname, tablename)
+    if len(all_scopes) > 1:
+        frozenset(set(all_scopes) - {"OPENBAAR"})
     return all_scopes
 
 
@@ -136,95 +138,99 @@ def create_views(
                 # Check if the view sql is valid
                 # If not skip this view and proceed with next view
                 view_sql = _clean_sql(dataset.schema.get_view_sql())
+                view_type = "materialized" if "materialized" in view_sql.lower() else "view"
                 if not _is_valid_sql(view_sql, table.db_name, write_role_name):
                     command.stderr.write(f"  Invalid SQL for view {table.db_name}")
                     continue
 
                 required_permissions = _get_required_permissions(table)
                 view_dataset_auth = dataset.schema.auth
-                if _check_required_permissions_exist(view_dataset_auth, required_permissions):
-                    try:
-                        with connection.cursor() as cursor:
+                if view_type != "materialized":
+                    if not _check_required_permissions_exist(
+                        view_dataset_auth, required_permissions
+                    ):
+                        command.stderr.write(
+                            f"  Required permissions for view {table.db_name} are not in the view dataset auth"
+                        )
 
-                            # Check if write role exists and create if it does not
-                            _create_role_if_not_exists(cursor, write_role_name)
+                try:
+                    with connection.cursor() as cursor:
 
-                            # Grant usage and create on schema public to write role
-                            cursor.execute(
-                                sql.SQL(
-                                    "GRANT usage,create on schema public TO {write_role_name}"
-                                ).format(write_role_name=sql.Identifier(write_role_name))
+                        # Check if write role exists and create if it does not
+                        _create_role_if_not_exists(cursor, write_role_name)
+
+                        # Grant usage and create on schema public to write role
+                        cursor.execute(
+                            sql.SQL(
+                                "GRANT usage,create on schema public TO {write_role_name}"
+                            ).format(write_role_name=sql.Identifier(write_role_name))
+                        )
+
+                        # We create one `view_owner` role that owns all views
+                        _create_role_if_not_exists(cursor, "view_owner")
+
+                        cursor.execute("GRANT view_owner TO current_user")
+
+                        cursor.execute(
+                            sql.SQL("GRANT {write_role_name} TO view_owner").format(
+                                write_role_name=sql.Identifier(write_role_name)
                             )
+                        )
 
-                            # We create one `view_owner` role that owns all views
-                            _create_role_if_not_exists(cursor, "view_owner")
-
-                            cursor.execute("GRANT view_owner TO current_user")
-
-                            cursor.execute(
-                                sql.SQL("GRANT {write_role_name} TO view_owner").format(
-                                    write_role_name=sql.Identifier(write_role_name)
-                                )
-                            )
-
-                            # Loop though all required permissions and and grant them to the
-                            # write user
-                            for scope in required_permissions:
-                                scope = f'scope_{scope.replace("/", "_").lower()}'
-                                if scope:
-                                    cursor.execute(
-                                        sql.SQL("GRANT {scope} TO {write_role_name}").format(
-                                            scope=sql.Identifier(scope),
-                                            write_role_name=sql.Identifier(write_role_name),
-                                        )
-                                    )
-
-                            cursor.execute(
-                                sql.SQL("GRANT scope_openbaar TO {write_role_name}").format(
-                                    write_role_name=sql.Identifier(write_role_name)
-                                )
-                            )
-
-                            # Set the role before creating the view because the view is created
-                            # with the permissions of the role
-                            cursor.execute(
-                                sql.SQL("SET ROLE {write_role_name}").format(
-                                    write_role_name=sql.Identifier(write_role_name)
-                                )
-                            )
-
-                            # Remove the view if it exists
-                            # Due to the large costs of recreating materialized views, we only create
-                            # and not drop them. When changes are made to the materialized view the view
-                            # must be droped manually.
-                            if "materialized" not in view_sql.lower():
+                        # Loop though all required permissions and and grant them to the
+                        # write user
+                        for scope in required_permissions:
+                            scope = f'scope_{scope.replace("/", "_").lower()}'
+                            if scope:
                                 cursor.execute(
-                                    sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
-                                        view_name=sql.Identifier(table.db_name)
+                                    sql.SQL("GRANT {scope} TO {write_role_name}").format(
+                                        scope=sql.Identifier(scope),
+                                        write_role_name=sql.Identifier(write_role_name),
                                     )
                                 )
 
-                            # Create the view
-                            cursor.execute(view_sql)
+                        cursor.execute(
+                            sql.SQL("GRANT scope_openbaar TO {write_role_name}").format(
+                                write_role_name=sql.Identifier(write_role_name)
+                            )
+                        )
 
-                            # Reset the role to the default role
-                            cursor.execute("RESET ROLE")
+                        # Set the role before creating the view because the view is created
+                        # with the permissions of the role
+                        cursor.execute(
+                            sql.SQL("SET ROLE {write_role_name}").format(
+                                write_role_name=sql.Identifier(write_role_name)
+                            )
+                        )
 
-                            # Remove create and usage from write role
+                        # Remove the view if it exists
+                        # Due to the large costs of recreating materialized views, we only create
+                        # and not drop them. When changes are made to the materialized view the view
+                        # must be droped manually.
+                        if view_type != "materialized":
                             cursor.execute(
-                                sql.SQL(
-                                    "REVOKE usage,create on schema public FROM {write_role_name}"
-                                ).format(write_role_name=sql.Identifier(write_role_name))
+                                sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
+                                    view_name=sql.Identifier(table.db_name)
+                                )
                             )
 
-                            cursor.close()
-                    except (DatabaseError, ValueError) as e:
-                        command.stderr.write(f"  View not created: {e}")
-                        errors += 1
-                else:
-                    command.stderr.write(
-                        f"  Required permissions {required_permissions} not found in view auth"
-                    )
+                        # Create the view
+                        cursor.execute(view_sql)
+
+                        # Reset the role to the default role
+                        cursor.execute("RESET ROLE")
+
+                        # Remove create and usage from write role
+                        cursor.execute(
+                            sql.SQL(
+                                "REVOKE usage,create on schema public FROM {write_role_name}"
+                            ).format(write_role_name=sql.Identifier(write_role_name))
+                        )
+
+                        cursor.close()
+                except (DatabaseError, ValueError) as e:
+                    command.stderr.write(f"  View not created: {e}")
+                    errors += 1
 
     if errors:
         raise CommandError("Not all views could be created")
