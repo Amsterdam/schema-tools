@@ -1,3 +1,8 @@
+# 2024-01-23 (5.23.2)
+
+* Fix to the _get_scopes to return the correct scopes for both dataset, table
+  and table fields. 
+
 # 2024-01-22 (5.23.1)
 
 * Fix the storage of datasettables.display_field

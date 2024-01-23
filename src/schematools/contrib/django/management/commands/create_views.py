@@ -48,7 +48,7 @@ def _get_scopes(datasetname: str, tablename: str) -> frozenset[str]:
     dataset = DATASETS.get(name=to_snake_case(datasetname)).schema
     if tablename in [table.id for table in dataset.tables]:
         table = dataset.get_table_by_id(tablename)
-        return table.auth | reduce(__or__, [f.auth for f in table.fields])
+        return dataset.auth | table.auth | reduce(__or__, [f.auth for f in table.fields])
     return frozenset()
 
 
@@ -60,6 +60,8 @@ def _get_required_permissions(
     for relation in derived_from:
         datasetname, tablename = relation.split(":")
         all_scopes |= _get_scopes(datasetname, tablename)
+    if len(all_scopes) > 1:
+        all_scopes = frozenset(set(all_scopes) - {"OPENBAAR"})
     return all_scopes
 
 
@@ -136,12 +138,18 @@ def create_views(
                 # Check if the view sql is valid
                 # If not skip this view and proceed with next view
                 view_sql = _clean_sql(dataset.schema.get_view_sql())
+                view_type = "materialized" if "materialized" in view_sql.lower() else "view"
                 if not _is_valid_sql(view_sql, table.db_name, write_role_name):
                     command.stderr.write(f"  Invalid SQL for view {table.db_name}")
                     continue
 
                 required_permissions = _get_required_permissions(table)
-                view_dataset_auth = dataset.schema.auth
+                view_dataset_auth = (
+                    dataset.schema.auth
+                    if view_type == "view"
+                    else _get_scopes(dataset.name, table.id)
+                )
+
                 if _check_required_permissions_exist(view_dataset_auth, required_permissions):
                     try:
                         with connection.cursor() as cursor:
@@ -197,7 +205,7 @@ def create_views(
                             # Due to the large costs of recreating materialized views, we only create
                             # and not drop them. When changes are made to the materialized view the view
                             # must be droped manually.
-                            if "materialized" not in view_sql.lower():
+                            if view_type != "materialized":
                                 cursor.execute(
                                     sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
                                         view_name=sql.Identifier(table.db_name)
@@ -223,7 +231,7 @@ def create_views(
                         errors += 1
                 else:
                     command.stderr.write(
-                        f"  Required permissions {required_permissions} not found in view auth"
+                        f"  Required permissions for view {table.db_name} are not in the view dataset auth"
                     )
 
     if errors:
