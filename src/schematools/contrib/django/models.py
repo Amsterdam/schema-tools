@@ -406,7 +406,6 @@ class DatasetTable(models.Model):
         self.db_table = table_schema.db_name
         self.auth = " ".join(table_schema.auth)
         self.display_field = display_field.db_name if display_field is not None else None
-        self.display_field = ((display_field.db_name if display_field is not None else None),)
         self.geometry_field, self.geometry_field_type = self._get_geometry_field(table_schema)
         self.is_temporal = table_schema.is_temporal
         self.enable_geosearch = (

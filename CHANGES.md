@@ -1,3 +1,8 @@
+# 2024-01-22 (5.23.1)
+
+* Fix the storage of datasettables.display_field
+  (an old copy/paste error in the codebase)
+
 # 2024-01-12 (5.23.0)
 
 * Modified create_views functions to support materialized views
