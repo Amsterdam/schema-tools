@@ -1,4 +1,4 @@
-# 2024-01-23 (5.23.2)
+# 2024-01-25 (5.23.3)
 
 * Fix in _is_valid_sql to fix materialized view problem.
 
