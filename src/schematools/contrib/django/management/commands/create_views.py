@@ -24,16 +24,7 @@ def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
         with transaction.atomic():
             sid = transaction.savepoint()
             with connection.cursor() as cursor:
-
-                # Check if write role exists and create if it does not
-                _create_role_if_not_exists(cursor, write_role_name)
-
-                cursor.execute(
-                    sql.SQL("SET ROLE {write_role_name}").format(
-                        write_role_name=sql.Identifier(write_role_name)
-                    )
-                )
-
+                cursor.execute('SET statement_timeout = 5000;')
                 cursor.execute(view_sql)
             transaction.savepoint_rollback(sid)
     except Exception as e:  # noqa: F841
@@ -44,7 +35,6 @@ def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
 def _get_scopes(datasetname: str, tablename: str) -> frozenset[str]:
     from functools import reduce
     from operator import __or__
-
     dataset = DATASETS.get(name=to_snake_case(datasetname)).schema
     if tablename in [table.id for table in dataset.tables]:
         table = dataset.get_table_by_id(tablename)
