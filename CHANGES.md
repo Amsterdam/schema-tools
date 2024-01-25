@@ -1,3 +1,7 @@
+# 2024-01-25 (5.23.3)
+
+* Fix in _is_valid_sql to fix materialized view problem.
+
 # 2024-01-23 (5.23.2)
 
 * Fix to the _get_scopes to return the correct scopes for both dataset, table
