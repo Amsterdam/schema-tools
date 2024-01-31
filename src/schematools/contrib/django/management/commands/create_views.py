@@ -25,7 +25,7 @@ def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
             sid = transaction.savepoint()
             with connection.cursor() as cursor:
                 cursor.execute('SET statement_timeout = 5000;')
-                cursor.execute(view_sql)
+                cursor.execute(sql.SQL(view_sql))
             transaction.savepoint_rollback(sid)
     except Exception as e:  # noqa: F841
         return False
@@ -75,11 +75,7 @@ def _check_required_permissions_exist(
 def _clean_sql(sql) -> str:
     """Clean the SQL to make it easier to parse."""
 
-    sql = sql.replace("\n", " ").lower().strip()
-
-    if sql[-1] != ";":
-        sql += ";"
-
+    sql = sql.replace("\n", " ").strip()
     return sql
 
 
@@ -203,7 +199,7 @@ def create_views(
                                 )
 
                             # Create the view
-                            cursor.execute(view_sql)
+                            cursor.execute(sql.SQL(view_sql))
 
                             # Reset the role to the default role
                             cursor.execute("RESET ROLE")
