@@ -1,3 +1,7 @@
+# 2024-01-31 (5.23.4)
+
+* Bugfix in _is_valid_sql
+
 # 2024-01-25 (5.23.3)
 
 * Fix in _is_valid_sql to fix materialized view problem.
