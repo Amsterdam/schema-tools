@@ -47,7 +47,7 @@ def export_geopackages(
             if field.db_name != "schema"
         )
         if not field_names.seq:
-            return
+            continue
         table_name = sql.Identifier(table.db_name)
         query = sql.SQL("SELECT {field_names} from {table_name}").format(
             field_names=field_names, table_name=table_name

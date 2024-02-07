@@ -114,7 +114,7 @@ class BaseExporter:
             sa_table = self.sa_tables[table.id]
             columns = list(self._get_columns(sa_table, table))
             if not columns:
-                return
+                continue
             with open(
                 self.base_dir / f"{table.db_name}.{self.extension}", "w", encoding="utf8"
             ) as file_handle:
