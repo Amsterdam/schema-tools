@@ -1,3 +1,7 @@
+# 2024-01-07 (5.25.0)
+
+* Added temporal indexes
+
 # 2024-01-06 (5.24.1)
 
 * Fix bug in exporter where a loop through dataset tables was prematurely
