@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from typing import IO
+from typing import IO, Iterable
 
 import psycopg2
-from sqlalchemy import MetaData, Table
+from sqlalchemy import Column, MetaData, Table
 from sqlalchemy.engine import Connection
+from sqlalchemy.sql.elements import ClauseElement
 
 from schematools.factories import tables_factory
 from schematools.types import _PUBLIC_SCOPE, DatasetFieldSchema, DatasetSchema, DatasetTableSchema
@@ -78,7 +79,7 @@ class BaseExporter:
         )
         self.sa_tables = tables_factory(dataset_schema, metadata)
 
-    def _get_column(self, sa_table: Table, field: DatasetFieldSchema):
+    def _get_column(self, sa_table: Table, field: DatasetFieldSchema) -> Column:
         column = getattr(sa_table.c, field.db_name)
         # apply all processors
         for processor in self.processors:
@@ -86,17 +87,16 @@ class BaseExporter:
 
         return column
 
-        # processor = self.geo_modifier if field.is_geo else lambda col, _fn: col
-        # return processor(column, field.db_name)
-
-    def _get_columns(self, sa_table: Table, table: DatasetTableSchema):
+    def _get_columns(self, sa_table: Table, table: DatasetTableSchema) -> Iterable[Column]:
         for field in _get_fields(self.dataset_schema, table, self.scopes):
             try:
                 yield self._get_column(sa_table, field)
             except AttributeError:
                 pass  # skip unavailable columns
 
-    def _get_temporal_clause(self, sa_table: Table, table: DatasetTableSchema):
+    def _get_temporal_clause(
+        self, sa_table: Table, table: DatasetTableSchema
+    ) -> ClauseElement | None:
         if not table.is_temporal:
             return None
         temporal = table.temporal
@@ -112,13 +112,27 @@ class BaseExporter:
             if table.has_geometry_fields and srid is None:
                 raise ValueError("Table has geo fields, but srid is None.")
             sa_table = self.sa_tables[table.id]
+            columns = list(self._get_columns(sa_table, table))
+            if not columns:
+                continue
             with open(
                 self.base_dir / f"{table.db_name}.{self.extension}", "w", encoding="utf8"
             ) as file_handle:
-                self.write_rows(file_handle, table, sa_table, srid)
+                self.write_rows(
+                    file_handle,
+                    table,
+                    columns,
+                    self._get_temporal_clause(sa_table, table),
+                    srid,
+                )
 
-    def write_rows(
-        self, file_handle: IO[str], table: DatasetTableSchema, sa_table: Table, srid: str
+    def write_rows(  # noqa: D102
+        self,
+        file_handle: IO[str],
+        table: DatasetTableSchema,
+        columns: Iterable[Column],
+        temporal_clause: ClauseElement | None,
+        srid: str,
     ):
         raise NotImplementedError
 

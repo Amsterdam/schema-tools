@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import IO, Any
+from typing import IO, Any, Iterable
 
 import jsonlines
 import orjson
 from geoalchemy2 import functions as func
-from sqlalchemy import MetaData, Table, select
+from sqlalchemy import Column, MetaData, Table, select
 from sqlalchemy.engine import Connection
+from sqlalchemy.sql.elements import ClauseElement
 
 from schematools.exports import BaseExporter
 from schematools.exports.csv import DatasetFieldSchema, enable_datetime_cast
@@ -60,11 +61,18 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
         return lookup
 
     def write_rows(  # noqa: D102
-        self, file_handle: IO[str], table: DatasetTableSchema, sa_table: Table, srid: str
+        self,
+        file_handle: IO[str],
+        table: DatasetTableSchema,
+        columns: Iterable[Column],
+        temporal_clause: ClauseElement | None,
+        srid: str,
     ):
         writer = jsonlines.Writer(file_handle, dumps=_dumps)
         row_modifier = self._get_row_modifier(table)
-        query = select(self._get_columns(sa_table, table))
+        query = select(columns)
+        if temporal_clause is not None:
+            query = query.where(temporal_clause)
         if self.size is not None:
             query = query.limit(self.size)
         result = self.connection.execution_options(yield_per=1000).execute(query)
