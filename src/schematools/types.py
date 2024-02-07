@@ -2171,6 +2171,11 @@ class Temporal:
     identifier_field: DatasetFieldSchema
     dimensions: dict[str, TemporalDimensionFields] = dataclasses.field(default_factory=dict)
 
+    @cached_property
+    def temporal_fields(self) -> list[DatasetFieldSchema]:
+        """Return the fields that are required for this temporal property."""
+        return [field for fields in self.dimensions.values() for field in fields]
+
 
 def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
     """Make sure the auth field has a consistent type."""

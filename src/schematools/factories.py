@@ -350,6 +350,7 @@ def index_factory(
             _build_identifier_index(table, dataset_table, db_table_name),
             *_build_fk_indexes(table, dataset_table, db_table_name),
             *_build_geo_indexes(table, dataset_table, db_table_name),
+            *_build_temporal_indexes(table, dataset_table, db_table_name),
         ]
 
     through_indexes = _build_m2m_indexes(
@@ -405,6 +406,36 @@ def _build_geo_indexes(
         for field in dataset_table.fields
         if field.is_geo
     ]
+
+
+def _build_temporal_indexes(
+    table_object: Table, dataset_table: DatasetTableSchema, db_table_name: str
+) -> list[Index]:
+    """Creates an index on temporal fields."""
+    if dataset_table._temporal_range_field_ids:
+        fields = []
+        if dataset_table._temporal_range_field_ids:
+            for field in dataset_table._temporal_range_field_ids:
+                try:
+                    fields.append(table_object.c[to_snake_case(field)])
+                except KeyError:
+                    logger.warning(
+                        "Field '%s' not found...skipping temporal index creation", field
+                    )
+                    return []
+
+            combined_index = Index(
+                _format_index_name(f"{db_table_name}_temporal{TABLE_INDEX_POSTFIX}"), *fields
+            )
+            fields_index = [
+                Index(
+                    _format_index_name(f"{db_table_name}_{field.db_name}{TABLE_INDEX_POSTFIX}"),
+                    table_object.c[field.db_name],
+                )
+                for field in dataset_table.temporal.temporal_fields
+            ]
+            return [combined_index, *fields_index]
+    return []
 
 
 def _build_m2m_indexes(
