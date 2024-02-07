@@ -1,3 +1,8 @@
+# 2024-01-06 (5.24.1)
+
+* Fix bug in exporter where a loop through dataset tables was prematurely
+  left when a tables has not export data.
+
 # 2024-01-06 (5.24.0)
 
 * Do not write an empty export file if no columns are selected.
