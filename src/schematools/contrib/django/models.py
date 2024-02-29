@@ -363,6 +363,7 @@ class DatasetTable(models.Model):
     geometry_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
     is_temporal = models.BooleanField(null=False, blank=False, default=False)
+    id_field = models.CharField(max_length=50, blank=False, default="id")
 
     class Meta:
         ordering = ("name",)
@@ -390,6 +391,15 @@ class DatasetTable(models.Model):
         return field.db_name, geo_type
 
     @classmethod
+    def _get_id_field(cls, table_schema):
+        """Gets the id_field, this is the PK that is needed by Django and geosearch.
+
+        An `id` field will be added to the schema for tables with a compound key.
+        """
+        identifier = table_schema.identifier
+        return identifier[0] if len(identifier) == 1 else "id"
+
+    @classmethod
     def create_for_schema(cls, dataset: Dataset, table_schema: DatasetTableSchema) -> DatasetTable:
         """Create a DatasetTable object based on the Amsterdam Schema table spec.
 
@@ -411,6 +421,7 @@ class DatasetTable(models.Model):
         self.enable_geosearch = (
             table_schema.dataset.id not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
         )
+        self.id_field = self._get_id_field(table_schema)
 
         is_creation = not self._state.adding
         self.save()
