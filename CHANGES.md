@@ -1,3 +1,7 @@
+# 2024-02-29 (5.26.0)
+
+* Added extra `id_field` to Datasettable. Needs to be configurable for geosearch.
+
 # 2024-01-07 (5.25.0)
 
 * Added temporal indexes

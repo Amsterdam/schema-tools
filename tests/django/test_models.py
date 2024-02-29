@@ -9,6 +9,7 @@ from schematools.contrib.django.factories import model_factory, schema_models_fa
 from schematools.contrib.django.fields import UnlimitedCharField
 from schematools.contrib.django.models import (
     Dataset,
+    DatasetTable,
     LooseRelationField,
     LooseRelationManyToManyField,
 )
@@ -424,3 +425,17 @@ def test_model_factory_sub_object_is_json(kadastraleobjecten_dataset):
     }
     model_fields = {f.name: f for f in model_dict["kadastraleobjecten"]._meta.fields}
     assert isinstance(model_fields["soort_grootte"], models.JSONField)
+
+
+@pytest.mark.django_db
+def test_dataset_with_singular_pk_has_correct_id_field(meetbouten_dataset):
+    """Prove that Datasettable has correct id_field for table with single PK."""
+    meetbouten_dst = DatasetTable.objects.get(name="meetbouten")
+    assert meetbouten_dst.id_field == "identificatie"
+
+
+@pytest.mark.django_db
+def test_dataset_with_compound_pk_has_correct_id_field(gebieden_dataset):
+    """Prove that Datasettable has correct id_field for table with compound PK."""
+    gebieden_dst = DatasetTable.objects.get(name="bouwblokken")
+    assert gebieden_dst.id_field == "id"
