@@ -397,7 +397,7 @@ class DatasetTable(models.Model):
         An `id` field will be added to the schema for tables with a compound key.
         """
         identifier = table_schema.identifier
-        return identifier[0] if len(identifier) == 1 else "id"
+        return to_snake_case(identifier[0]) if len(identifier) == 1 else "id"
 
     @classmethod
     def create_for_schema(cls, dataset: Dataset, table_schema: DatasetTableSchema) -> DatasetTable:
