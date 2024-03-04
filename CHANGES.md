@@ -1,3 +1,7 @@
+# 2024-03-04 (5.26.1)
+
+* Change `id_field` to snake_case. It is directly used in sql queries.
+
 # 2024-02-29 (5.26.0)
 
 * Added extra `id_field` to Datasettable. Needs to be configurable for geosearch.
