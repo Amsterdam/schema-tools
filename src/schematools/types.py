@@ -1378,6 +1378,20 @@ class DatasetFieldSchema(DatasetType):
         return self.get("description")
 
     @property
+    def unit(self) -> str | None:
+        """Description of the dataset (if set)."""
+        unit = self.get("unit")
+        return unit.get("value", unit)
+
+    @property
+    def discription_with_unit(self) -> str | None:
+        """Description of the dataset (if set), with unit (if set)."""
+        if self.unit:
+            return f"{self.description} [{self.unit}]"
+        else:
+            return self.description
+
+    @property
     def faker(self) -> Faker | None:
         """Return faker name and properties used for mocking data."""
         faker = self.get("faker")
