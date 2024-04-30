@@ -1,3 +1,7 @@
+# 2024-03-04 (5.27.0)
+
+* Add `unit` and `description_with_unit` properties to fields.
+
 # 2024-03-04 (5.26.1)
 
 * Change `id_field` to snake_case. It is directly used in sql queries.
