@@ -29,7 +29,7 @@ from typing import (
 
 from methodtools import lru_cache
 
-from schematools import DEFAULT_SCHEMA_URL, MAX_TABLE_NAME_LENGTH
+from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import (
     DatasetFieldNotFound,
     DatasetTableNotFound,
@@ -653,7 +653,6 @@ class DatasetSchema(SchemaType):
         # For both types of through tables (M2M and FK), we add extra fields
         # to the table (see docstring).
         if field.is_through_table:
-            dim_fields = {}
 
             if field.is_object:
                 properties = field.get("properties", {})
