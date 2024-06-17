@@ -199,6 +199,12 @@ class JsonDict(UserDict):
     def json_data(self) -> Json:
         return json.loads(self.json())
 
+    def __deepcopy__(self, memo):
+        # This took a massive performance hit, as DRF was copying all attached objects.
+        raise NotImplementedError(
+            "Deepcopy of schema objects is not supported due to performance issues."
+        )
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
