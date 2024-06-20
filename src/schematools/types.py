@@ -29,9 +29,8 @@ from typing import (
     cast,
 )
 
-from methodtools import lru_cache
-
 from schematools import MAX_TABLE_NAME_LENGTH
+from schematools._utils import cached_method
 from schematools.exceptions import (
     DatasetFieldNotFound,
     DatasetTableNotFound,
@@ -492,7 +491,7 @@ class DatasetSchema(SchemaType):
         if include_through:
             yield from self.through_tables
 
-    @lru_cache()  # type: ignore[misc]
+    @cached_method()  # type: ignore[misc]
     def get_table_by_id(
         self, table_id: str, include_nested: bool = True, include_through: bool = True
     ) -> DatasetTableSchema:
@@ -931,7 +930,7 @@ class DatasetTableSchema(SchemaType):
                 continue
             yield field
 
-    @lru_cache()  # type: ignore[misc]
+    @cached_method()  # type: ignore[misc]
     def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
         """Get a fields based on the ids of the field."""
         for field_schema in self.fields:
@@ -940,7 +939,7 @@ class DatasetTableSchema(SchemaType):
 
         raise DatasetFieldNotFound(f"Field '{field_id}' does not exist in table '{self.id}'.")
 
-    @lru_cache()  # type: ignore[misc]
+    @cached_method()  # type: ignore[misc]
     def get_additional_relation_by_id(self, relation_id: str) -> AdditionalRelationSchema:
         """Get the reverse relation based on the ids of the relation."""
         for additional_relation in self.additional_relations:
@@ -1631,7 +1630,7 @@ class DatasetFieldSchema(JsonDict):
         """Return the item definition for an array type."""
         return self.get("items", {}) if self.is_array else None
 
-    @lru_cache()  # type: ignore[misc]
+    @cached_method()  # type: ignore[misc]
     def get_field_by_id(self, field_id: str) -> DatasetFieldSchema:
         """Finds and returns the subfield with the given id.
 
