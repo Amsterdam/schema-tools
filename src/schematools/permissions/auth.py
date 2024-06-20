@@ -3,12 +3,12 @@
 The :class:`UserScopes` class handles whether a dataset, table or field can be accessed.
 The other classes in this module ease to retrieval of permission objects.
 """
+
 from __future__ import annotations
 
 from typing import Iterable, Iterator
 
-import methodtools
-
+from schematools._utils import cached_method
 from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
@@ -74,7 +74,7 @@ class UserScopes:
         """
         self._query_param_names.extend(params)
 
-    @methodtools.lru_cache()  # type: ignore[misc]
+    @cached_method()  # type: ignore[misc]
     def has_all_scopes(self, needed_scopes: frozenset[str]) -> bool:
         """Check whether the request has all scopes.
 
@@ -82,7 +82,7 @@ class UserScopes:
         """
         return self._scopes.issuperset(needed_scopes)
 
-    @methodtools.lru_cache()  # type: ignore[misc]
+    @cached_method()  # type: ignore[misc]
     def has_any_scope(self, needed_scopes: frozenset[str]) -> bool:
         """Check whether the request grants one of the given scopes.
 
@@ -151,7 +151,7 @@ class UserScopes:
         else:
             return Permission.none
 
-    @methodtools.lru_cache()
+    @cached_method()
     def _has_dataset_profile_access(self, dataset_id: str) -> Permission:
         """Give the permission access level for a dataset, as defined by the profile."""
         return max(
@@ -162,7 +162,7 @@ class UserScopes:
             default=Permission.none,
         )
 
-    @methodtools.lru_cache()
+    @cached_method()
     def _has_table_profile_access(self, table: DatasetTableSchema) -> Permission:
         """Give the permission level for a table.
 
@@ -239,7 +239,7 @@ class UserScopes:
 
         return max_permission
 
-    @methodtools.lru_cache()
+    @cached_method()
     def get_active_profile_datasets(self, dataset_id: str) -> list[ProfileDatasetSchema]:
         """Find all profiles that mention a dataset and match the scopes.
 
@@ -260,7 +260,7 @@ class UserScopes:
             and (profile_dataset := profile.datasets.get(dataset_id)) is not None
         ]
 
-    @methodtools.lru_cache()
+    @cached_method()
     def get_active_profile_tables(
         self, dataset_id: str, table_id: str
     ) -> list[ProfileTableSchema]:
