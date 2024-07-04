@@ -215,6 +215,12 @@ class JsonDict(UserDict):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
+    def __setitem__(self, key, value):
+        if key in self and key in self.__dict__:
+            # Clear the @cached_property cache value
+            del self.__dict__[key]
+        super().__setitem__(key, value)
+
     if IS_DEBUGGER:
 
         def __missing__(self, key: str) -> NoReturn:
@@ -373,7 +379,7 @@ class DatasetSchema(SchemaType):
         Defaults to True, in order to stay backwards compatible."""
         return self.default_version == self.version
 
-    @property
+    @cached_property
     def auth(self) -> frozenset[str]:
         """Auth of the dataset, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
@@ -759,7 +765,7 @@ class DatasetTableSchema(SchemaType):
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.qualified_id}>"
 
-    @property
+    @cached_property
     def qualified_id(self) -> str:
         """The fully qualified ID (for debugging)"""
         prefix = ""
@@ -1084,7 +1090,7 @@ class DatasetTableSchema(SchemaType):
 
         return None
 
-    @property
+    @cached_property
     def auth(self) -> frozenset[str]:
         """Auth of the table, or OPENBAAR."""
         return _normalize_scopes(self.get("auth"))
@@ -1298,7 +1304,7 @@ class DatasetFieldSchema(JsonDict):
         """Provide access to the top-level field where it is a property for."""
         return self._parent_field
 
-    @property
+    @cached_property
     def qualified_id(self) -> str:
         """The fully qualified ID (for debugging)"""
         prefix = ""
@@ -1759,13 +1765,15 @@ class DatasetFieldSchema(JsonDict):
             self.is_composite_key or self.related_table.is_temporal
         )
 
-    @property
+    @cached_property
     def auth(self) -> frozenset[str]:
         """Auth of the field, or OPENBAAR.
 
         When the field is a subfield, the auth has been defined on
         the parent field, so we need to return the auth of the parent field.
         """
+        # As this call is made so many times, this is a cached_property
+        # to avoid hitting __missing__() too many times.
         if self.is_subfield:
             return self.parent_field.auth
         return _normalize_scopes(self.get("auth"))
@@ -2016,7 +2024,7 @@ class ProfileSchema(SchemaType):
         """Name of Profile (if set)"""
         return self.get("name")
 
-    @property
+    @cached_property
     def scopes(self) -> frozenset[str]:
         """All these scopes should match in order to activate the profile."""
         return _normalize_scopes(self.get("scopes"))
