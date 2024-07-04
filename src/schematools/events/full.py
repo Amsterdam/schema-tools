@@ -1,4 +1,5 @@
 """Module implementing an event processor, that processes full events."""
+
 from __future__ import annotations
 
 import logging
@@ -96,10 +97,11 @@ class LastEventIds:
     BENK_DATASET = "benk"
     LASTEVENTIDS_TABLE = "lasteventids"
 
-    def __init__(self):
-        loader = get_schema_loader()
-        self.dataset = loader.get_dataset(self.BENK_DATASET)
-        self.lasteventids_table = self.dataset.get_table_by_id(self.LASTEVENTIDS_TABLE)
+    def __init__(self, benk_dataset=None):
+        if benk_dataset is None:
+            loader = get_schema_loader()
+            benk_dataset = loader.get_dataset(self.BENK_DATASET)
+        self.lasteventids_table = benk_dataset.get_table_by_id(self.LASTEVENTIDS_TABLE)
         self.lasteventid_column = self.lasteventids_table.get_field_by_id("lastEventId")
 
         self.cache = defaultdict(int)
@@ -157,6 +159,7 @@ class EventsProcessor:
         connection: Connection,
         local_metadata=None,
         truncate=False,
+        benk_dataset=None,
     ) -> None:
         """Construct the event processor.
 
@@ -170,7 +173,7 @@ class EventsProcessor:
                 in unit tests.
             truncate: indicates if the relational tables need to be truncated
         """
-        self.lasteventids = LastEventIds()
+        self.lasteventids = LastEventIds(benk_dataset=benk_dataset)
         benk_dataset = self.lasteventids.lasteventids_table.dataset
         self.datasets = {benk_dataset.id: benk_dataset} | {ds.id: ds for ds in datasets}
         self.conn = connection

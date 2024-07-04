@@ -1,4 +1,5 @@
 """Event tests."""
+
 import json
 from datetime import date, datetime
 
@@ -38,7 +39,11 @@ def test_event_process_insert(
     """Prove that event gets inserted."""
     events_path = here / "files" / "data" / "bouwblokken.gobevents"
     importer = EventsProcessor(
-        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        truncate=True,
+        benk_dataset=benk_schema,
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * FROM gebieden_bouwblokken")]
@@ -50,12 +55,16 @@ def test_event_process_insert(
 
 
 def test_event_process_insert_object(
-    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     """Prove that event gets inserted correctly with object split in columns."""
     events_path = here / "files" / "data" / "peilmerken.gobevents"
     importer = EventsProcessor(
-        [nap_schema, gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
+        [nap_schema, gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        truncate=True,
+        benk_dataset=benk_schema,
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
@@ -63,11 +72,15 @@ def test_event_process_insert_object(
     assert records[0]["status_omschrijving"] == "Vervallen"
 
 
-def test_event_process_update(here, tconn, local_metadata, gebieden_schema):
+def test_event_process_update(here, tconn, local_metadata, gebieden_schema, benk_schema):
     """Prove that event gets updated."""
     events_path = here / "files" / "data" / "bouwblokken_update.gobevents"
     importer = EventsProcessor(
-        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        truncate=True,
+        benk_dataset=benk_schema,
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * FROM gebieden_bouwblokken")]
@@ -77,11 +90,15 @@ def test_event_process_update(here, tconn, local_metadata, gebieden_schema):
     assert records[0]["registratiedatum"] == datetime(2020, 2, 5, 15, 6, 43)
 
 
-def test_event_process_delete(here, tconn, local_metadata, gebieden_schema):
+def test_event_process_delete(here, tconn, local_metadata, gebieden_schema, benk_schema):
     """Prove that event gets deleted."""
     events_path = here / "files" / "data" / "bouwblokken_delete.gobevents"
     importer = EventsProcessor(
-        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        truncate=True,
+        benk_dataset=benk_schema,
     )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * FROM gebieden_bouwblokken")]
@@ -89,13 +106,19 @@ def test_event_process_delete(here, tconn, local_metadata, gebieden_schema):
     assert records[0]["code"] == "AA01"
 
 
-def test_event_process_nm_relation_delete(here, tconn, local_metadata, gebieden_schema, salogger):
+def test_event_process_nm_relation_delete(
+    here, tconn, local_metadata, gebieden_schema, salogger, benk_schema
+):
     """Prove that NM relations of an event get deleted."""
     events_path = (
         here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten_delete.gobevents"
     )
     importer = EventsProcessor(
-        [gebieden_schema], tconn, local_metadata=local_metadata, truncate=True
+        [gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        truncate=True,
+        benk_dataset=benk_schema,
     )
     importer.load_events_from_file(events_path)
     records = [
@@ -105,10 +128,15 @@ def test_event_process_nm_relation_delete(here, tconn, local_metadata, gebieden_
 
 
 def test_event_process_relation_update_parent_table(
-    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     events_path = here / "files" / "data" / "peilmerken.gobevents"
-    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer = EventsProcessor(
+        [nap_schema, gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
+    )
     importer.load_events_from_file_using_bulk(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
 
@@ -119,7 +147,12 @@ def test_event_process_relation_update_parent_table(
     assert records[0]["ligt_in_bouwblok_volgnummer"] is None
 
     events_path = here / "files" / "data" / "peilmerken_ligt_in_bouwblok.gobevents"
-    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer = EventsProcessor(
+        [nap_schema, gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
+    )
     importer.load_events_from_file_using_bulk(events_path)
     rel_records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_ligt_in_bouwblok")]
     parent_records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
@@ -133,7 +166,12 @@ def test_event_process_relation_update_parent_table(
     assert parent_records[0]["ligt_in_bouwblok_volgnummer"] == 1
 
     events_path = here / "files" / "data" / "peilmerken_ligt_in_bouwblok.delete.gobevents"
-    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer = EventsProcessor(
+        [nap_schema, gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
+    )
     importer.load_events_from_file_using_bulk(events_path)
     rel_records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken_ligt_in_bouwblok")]
     parent_records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
@@ -147,10 +185,12 @@ def test_event_process_relation_update_parent_table(
 
 
 def test_event_process_relation_skip_update_parent_table_nm_relations(
-    here, db_schema, tconn, local_metadata, gebieden_schema
+    here, db_schema, tconn, local_metadata, gebieden_schema, benk_schema
 ):
     events_path = here / "files" / "data" / "gebieden_ggwgebieden_bestaat_uit_buurten.gobevents"
-    importer = EventsProcessor([gebieden_schema], tconn, local_metadata=local_metadata)
+    importer = EventsProcessor(
+        [gebieden_schema], tconn, local_metadata=local_metadata, benk_dataset=benk_schema
+    )
 
     # First import row in parent table
     importer.load_events_from_file(events_path)
@@ -188,13 +228,15 @@ def test_event_process_relation_skip_update_parent_table_nm_relations(
 
 
 def test_event_process_relation_update_parent_table_shortname(
-    here, db_schema, tconn, local_metadata, gebieden_schema
+    here, db_schema, tconn, local_metadata, gebieden_schema, benk_schema
 ):
     """Tests updating of the parent table with a relation attribute with a shortname."""
 
     # Import bouwblokken in object table
     events_path = here / "files" / "data" / "bouwblokken.gobevents"
-    importer = EventsProcessor([gebieden_schema], tconn, local_metadata=local_metadata)
+    importer = EventsProcessor(
+        [gebieden_schema], tconn, local_metadata=local_metadata, benk_dataset=benk_schema
+    )
     importer.load_events_from_file(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * FROM gebieden_bouwblokken")]
     assert len(records) == 2
@@ -212,7 +254,7 @@ def test_event_process_relation_update_parent_table_shortname(
 
 
 def test_events_process_relation_without_table_update_parent_table(
-    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations
+    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations, benk_schema
 ):
     # First, verify that the relation table indeed does not exist
     res = next(
@@ -224,7 +266,10 @@ def test_events_process_relation_without_table_update_parent_table(
     assert res[0] is False
 
     importer = EventsProcessor(
-        [brk_schema_without_bag_relations], tconn, local_metadata=local_metadata
+        [brk_schema_without_bag_relations],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
     )
 
     # Import relation vanKadastraalsubject. Has no table, but we want to update the parent table
@@ -249,7 +294,7 @@ def test_events_process_relation_without_table_update_parent_table(
 
 
 def test_events_process_relation_without_table_update_parent_table_full_load(
-    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations
+    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations, benk_schema
 ):
     # First, verify that the relation table indeed does not exist
     res = next(
@@ -261,7 +306,10 @@ def test_events_process_relation_without_table_update_parent_table_full_load(
     assert res[0] is False
 
     importer = EventsProcessor(
-        [brk_schema_without_bag_relations], tconn, local_metadata=local_metadata
+        [brk_schema_without_bag_relations],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
     )
 
     # Import relation vanKadastraalsubject. Has no table, but we want to update the parent table
@@ -329,7 +377,7 @@ def test_events_process_relation_without_table_update_parent_table_full_load(
 
 
 def test_event_process_full_load_sequence(
-    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     """Test consists of three parts:
 
@@ -347,7 +395,10 @@ def test_event_process_full_load_sequence(
     def load_events(events_file):
         events_path = here / "files" / "data" / events_file
         importer = EventsProcessor(
-            [nap_schema, gebieden_schema], tconn, local_metadata=local_metadata
+            [nap_schema, gebieden_schema],
+            tconn,
+            local_metadata=local_metadata,
+            benk_dataset=benk_schema,
         )
         importer.load_events_from_file_using_bulk(events_path)
 
@@ -388,12 +439,15 @@ def test_event_process_full_load_sequence(
 
 
 def test_event_process_geometry_attrs(
-    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations
+    here, db_schema, tconn, local_metadata, brk_schema_without_bag_relations, benk_schema
 ):
     events_path = here / "files" / "data" / "kadastraleobjecten_geometry.gobevents"
 
     importer = EventsProcessor(
-        [brk_schema_without_bag_relations], tconn, local_metadata=local_metadata
+        [brk_schema_without_bag_relations],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
     )
     importer.load_events_from_file_using_bulk(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * FROM brk_kadastraleobjecten")]
@@ -467,7 +521,7 @@ def _import_assert_result(
 
 
 def test_event_process_recovery_regular(
-    db_schema, engine, local_metadata, nap_schema, gebieden_schema
+    db_schema, engine, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     """Tests adding of regular events (that are not part of a full load sequence) with
     and without recovery mode enabled.
@@ -482,7 +536,10 @@ def test_event_process_recovery_regular(
     """
     with engine.connect() as conn:
         importer = EventsProcessor(
-            [nap_schema, gebieden_schema], conn, local_metadata=local_metadata
+            [nap_schema, gebieden_schema],
+            conn,
+            local_metadata=local_metadata,
+            benk_dataset=benk_schema,
         )
 
         # Init
@@ -526,7 +583,7 @@ def test_event_process_recovery_regular(
 
 
 def test_event_process_recovery_full_load_first(
-    db_schema, engine, local_metadata, nap_schema, gebieden_schema
+    db_schema, engine, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     """Tests adding of events that are part of a full load sequence and where the first
     event is the first in the sequence.
@@ -546,7 +603,10 @@ def test_event_process_recovery_full_load_first(
     """
     with engine.connect() as conn:
         importer = EventsProcessor(
-            [nap_schema, gebieden_schema], conn, local_metadata=local_metadata
+            [nap_schema, gebieden_schema],
+            conn,
+            local_metadata=local_metadata,
+            benk_dataset=benk_schema,
         )
 
         # Init
@@ -618,7 +678,7 @@ def test_event_process_recovery_full_load_first(
 
 
 def test_event_process_recovery_full_load_no_first_no_last(
-    db_schema, engine, local_metadata, nap_schema, gebieden_schema
+    db_schema, engine, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     """Tests adding of events that are part of a full load sequence and where events to
     be added are neither the first nor the last in the sequence.
@@ -634,7 +694,10 @@ def test_event_process_recovery_full_load_no_first_no_last(
     """
     with engine.connect() as conn:
         importer = EventsProcessor(
-            [nap_schema, gebieden_schema], conn, local_metadata=local_metadata
+            [nap_schema, gebieden_schema],
+            conn,
+            local_metadata=local_metadata,
+            benk_dataset=benk_schema,
         )
 
         # Init
@@ -698,7 +761,7 @@ def test_event_process_recovery_full_load_no_first_no_last(
 
 
 def test_event_process_recovery_full_load_last_table_empty(
-    db_schema, engine, local_metadata, nap_schema, gebieden_schema
+    db_schema, engine, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     """Tests adding of events that are part of a full load sequence and where the last
     event is the last in the sequence and the _full_load table is empty.
@@ -713,7 +776,10 @@ def test_event_process_recovery_full_load_last_table_empty(
     """
     with engine.connect() as conn:
         importer = EventsProcessor(
-            [nap_schema, gebieden_schema], conn, local_metadata=local_metadata
+            [nap_schema, gebieden_schema],
+            conn,
+            local_metadata=local_metadata,
+            benk_dataset=benk_schema,
         )
 
         def _init_empty_full_load_table(importer):
@@ -768,7 +834,7 @@ def test_event_process_recovery_full_load_last_table_empty(
 
 
 def test_event_process_recovery_full_load_last_table_not_empty(
-    db_schema, engine, local_metadata, nap_schema, gebieden_schema
+    db_schema, engine, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     """Tests adding of events that are part of a full load sequence and where the last event is
     the last in the sequence and the _full_load table is not empty.
@@ -785,7 +851,10 @@ def test_event_process_recovery_full_load_last_table_not_empty(
     """
     with engine.connect() as conn:
         importer = EventsProcessor(
-            [nap_schema, gebieden_schema], conn, local_metadata=local_metadata
+            [nap_schema, gebieden_schema],
+            conn,
+            local_metadata=local_metadata,
+            benk_dataset=benk_schema,
         )
 
         def _init_full_load_table(importer):
@@ -879,7 +948,10 @@ def test_event_process_last_event_id(
         return res[0] if res is not None else None
 
     importer = EventsProcessor(
-        [nap_schema, gebieden_schema, benk_schema], tconn, local_metadata=local_metadata
+        [nap_schema, gebieden_schema, benk_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
     )
 
     # 1. Assert start state
@@ -930,7 +1002,10 @@ def test_event_process_last_event_id_full_load_sequence(
         return res[0] if res is not None else None
 
     importer = EventsProcessor(
-        [nap_schema, gebieden_schema, benk_schema], tconn, local_metadata=local_metadata
+        [nap_schema, gebieden_schema, benk_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
     )
 
     # 1. Assert start state
@@ -991,7 +1066,7 @@ def test_event_process_last_event_id_full_load_sequence(
 
 
 def test_events_process_full_load_sequence_snake_cased_schema(
-    here, db_schema, tconn, local_metadata, brk2_simple_schema
+    here, db_schema, tconn, local_metadata, brk2_simple_schema, benk_schema
 ):
     """Tests whether the correct (snake_cased) schema for brk2 is used for the full load."""
 
@@ -1005,7 +1080,9 @@ def test_events_process_full_load_sequence_snake_cased_schema(
     }
     event_data = {"identificatie": "0363", "naam": "Amsterdam"}
 
-    importer = EventsProcessor([brk2_simple_schema], tconn, local_metadata=local_metadata)
+    importer = EventsProcessor(
+        [brk2_simple_schema], tconn, local_metadata=local_metadata, benk_dataset=benk_schema
+    )
     importer.process_event(event_meta, event_data)
 
     records = [dict(r) for r in tconn.execute("SELECT * FROM brk_2.brk_2_gemeentes_full_load")]
@@ -1036,10 +1113,15 @@ def test_events_process_full_load_sequence_snake_cased_schema(
 
 
 def test_events_process_full_load_relation_update_parent_table(
-    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     events_path = here / "files" / "data" / "peilmerken.gobevents"
-    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer = EventsProcessor(
+        [nap_schema, gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
+    )
     importer.load_events_from_file_using_bulk(events_path)
     records = [dict(r) for r in tconn.execute("SELECT * FROM nap_peilmerken")]
 
@@ -1128,13 +1210,18 @@ def assert_results(tconn, expected_results: dict, testname: str):
             ), f"Unexpected record {rec} found in {table_name} for test {testname}"
 
 
-def test_events_nested_table(here, db_schema, tconn, local_metadata, bag_verblijfsobjecten_schema):
+def test_events_nested_table(
+    here, db_schema, tconn, local_metadata, bag_verblijfsobjecten_schema, benk_schema
+):
     expected_results = load_json_results_file(
         here / "files" / "data" / "expect" / "events_nested_table.json"
     )
 
     importer = EventsProcessor(
-        [bag_verblijfsobjecten_schema], tconn, local_metadata=local_metadata
+        [bag_verblijfsobjecten_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
     )
 
     # Load initial data with nested objects
@@ -1170,8 +1257,12 @@ def test_events_nested_table(here, db_schema, tconn, local_metadata, bag_verblij
     assert_results(tconn, expected_results["initial_add"], "Load initial data using full load")
 
 
-def test_full_load_shortnames(here, db_schema, tconn, local_metadata, hr_simple_schema):
-    importer = EventsProcessor([hr_simple_schema], tconn, local_metadata=local_metadata)
+def test_full_load_shortnames(
+    here, db_schema, tconn, local_metadata, hr_simple_schema, benk_schema
+):
+    importer = EventsProcessor(
+        [hr_simple_schema], tconn, local_metadata=local_metadata, benk_dataset=benk_schema
+    )
 
     # First import an object with nested objects
     events = [
@@ -1248,8 +1339,12 @@ def test_full_load_shortnames(here, db_schema, tconn, local_metadata, hr_simple_
     assert records[0]["heeft_hoofdvestiging_id"] == "24902480"
 
 
-def test_full_load_shortnames_update(here, db_schema, tconn, local_metadata, hr_simple_schema):
-    importer = EventsProcessor([hr_simple_schema], tconn, local_metadata=local_metadata)
+def test_full_load_shortnames_update(
+    here, db_schema, tconn, local_metadata, hr_simple_schema, benk_schema
+):
+    importer = EventsProcessor(
+        [hr_simple_schema], tconn, local_metadata=local_metadata, benk_dataset=benk_schema
+    )
 
     # First import an object with nested objects
     events = [
@@ -1321,13 +1416,18 @@ def test_full_load_shortnames_update(here, db_schema, tconn, local_metadata, hr_
 
 
 def test_reset_lasteventid_after_incomplete_full_load(
-    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema
+    here, db_schema, tconn, local_metadata, nap_schema, gebieden_schema, benk_schema
 ):
     """This testcase tests whether the lasteventid is reset after an incomplete full load sequence.
     This should not happen during normal usage, but can happen when the full load stream is
     manually removed from the queue.
     """
-    importer = EventsProcessor([nap_schema, gebieden_schema], tconn, local_metadata=local_metadata)
+    importer = EventsProcessor(
+        [nap_schema, gebieden_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
+    )
     events = [
         _create_peilmerken_event(
             "1", 2018, event_id=3, full_load_sequence=True, first_of_sequence=True
@@ -1356,7 +1456,7 @@ def test_reset_lasteventid_after_incomplete_full_load(
 
 
 def test_avoid_duplicate_key_after_full_load(
-    here, db_schema, tconn, local_metadata, bag_verblijfsobjecten_schema
+    here, db_schema, tconn, local_metadata, bag_verblijfsobjecten_schema, benk_schema
 ):
     """Make sure we don't get duplicate key errors after a full load sequence with a serial id
     field in the table."""
@@ -1385,7 +1485,10 @@ def test_avoid_duplicate_key_after_full_load(
         )
 
     importer = EventsProcessor(
-        [bag_verblijfsobjecten_schema], tconn, local_metadata=local_metadata
+        [bag_verblijfsobjecten_schema],
+        tconn,
+        local_metadata=local_metadata,
+        benk_dataset=benk_schema,
     )
 
     # Add objects with in total 4 nested objects

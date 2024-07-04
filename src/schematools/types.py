@@ -1,4 +1,5 @@
 """Python types for the Amsterdam Schema JSON file contents."""
+
 from __future__ import annotations
 
 import copy
