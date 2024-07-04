@@ -75,7 +75,7 @@ class UserScopes:
         self._query_param_names.extend(params)
 
     @methodtools.lru_cache()  # type: ignore[misc]
-    def has_all_scopes(self, *needed_scopes: str) -> bool:
+    def has_all_scopes(self, needed_scopes: frozenset[str]) -> bool:
         """Check whether the request has all scopes.
 
         This performs an AND check: all scopes should be present.
@@ -83,13 +83,12 @@ class UserScopes:
         return self._scopes.issuperset(needed_scopes)
 
     @methodtools.lru_cache()  # type: ignore[misc]
-    def has_any_scope(self, *needed_scopes: str) -> bool:
+    def has_any_scope(self, needed_scopes: frozenset[str]) -> bool:
         """Check whether the request grants one of the given scopes.
 
         This performs an OR check: having one of the scopes gives access.
         """
-        needed_scopes = set(needed_scopes)
-        return any(scope in needed_scopes for scope in self._scopes)
+        return not self._scopes.isdisjoint(needed_scopes)
 
     def has_dataset_access(self, dataset: DatasetSchema) -> Permission:
         """Tell whether a dataset can be accessed."""
@@ -106,7 +105,11 @@ class UserScopes:
 
     def has_table_fields_access(self, table: DatasetTableSchema) -> bool:
         """Tell whether all fields of a table can be accessed."""
-        return all(self.has_field_access(field) for field in table.fields)
+        for field in table.fields:
+            if not self.has_field_access(field):
+                return False
+
+        return True
 
     def has_field_access(self, field: DatasetFieldSchema) -> Permission:
         """Tell whether a field may be read."""
@@ -116,14 +119,14 @@ class UserScopes:
 
     def _has_dataset_auth_access(self, dataset: DatasetSchema) -> Permission:
         """Tell whether the 'auth' rules give access to the dataset."""
-        if self.has_any_scope(*dataset.auth):
+        if self.has_any_scope(dataset.auth):
             return Permission(PermissionLevel.highest, source="dataset.auth")
         else:
             return Permission.none
 
     def _has_table_auth_access(self, table: DatasetTableSchema) -> Permission:
         """Tell whether the 'auth' rules give access to the table."""
-        if self.has_any_scope(*table.auth) and self.has_any_scope(*table.dataset.auth):
+        if self.has_any_scope(table.auth) and self.has_any_scope(table.dataset.auth):
             return Permission(
                 PermissionLevel.highest, source="table.auth" if table.auth else "dataset.auth"
             )
@@ -133,9 +136,9 @@ class UserScopes:
     def _has_field_auth_access(self, field: DatasetFieldSchema) -> Permission:
         """Tell whether the 'auth' rules give access to the table."""
         if (
-            self.has_any_scope(*field.auth)
-            and self.has_any_scope(*field.table.auth)
-            and self.has_any_scope(*field.table.dataset.auth)
+            self.has_any_scope(field.auth)
+            and self.has_any_scope(field.table.auth)
+            and self.has_any_scope(field.table.dataset.auth)
         ):
             return Permission(
                 PermissionLevel.highest,
@@ -253,7 +256,7 @@ class UserScopes:
             # Profiles are only activated when:
             # - ALL scopes are matched
             # - dataset is mentioned in the profile
-            if self.has_all_scopes(*profile.scopes)
+            if self.has_all_scopes(profile.scopes)
             and (profile_dataset := profile.datasets.get(dataset_id)) is not None
         ]
 
