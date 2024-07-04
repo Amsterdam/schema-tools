@@ -7,6 +7,7 @@ import dataclasses
 import json
 import logging
 import re
+import sys
 import typing
 import warnings
 from collections import UserDict
@@ -50,6 +51,12 @@ Ref = str
 _PUBLIC_SCOPE = "OPENBAAR"
 
 logger = logging.getLogger(__name__)
+
+IS_DEBUGGER = (
+    "pytest" in sys.modules
+    or (sys.stdin and sys.stdin.isatty())
+    or (hasattr(sys, "gettrace") and sys.gettrace() is not None)
+)
 
 
 class SemVer(str):
@@ -208,8 +215,15 @@ class JsonDict(UserDict):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
-    def __missing__(self, key: str) -> NoReturn:
-        raise KeyError(f"No field named '{key}' exists in {self!r}")
+    if IS_DEBUGGER:
+
+        def __missing__(self, key: str) -> NoReturn:
+            # This method would also be called by self.get("auth") for example,
+            # which makes such fail cases a bit slower than they have to be.
+            raise KeyError(
+                f"No field named '{key}' exists in {self.__class__.__name__},"
+                f" available are: {', '.join(self.keys())}"
+            )
 
 
 class SchemaType(JsonDict):
