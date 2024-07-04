@@ -2,7 +2,7 @@ from sqlalchemy import MetaData, create_engine, inspect
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.importer.base import BaseImporter
-from schematools.types import DatasetSchema, SchemaType
+from schematools.types import DatasetSchema
 
 
 def test_index_creation(engine, db_schema):
@@ -333,8 +333,7 @@ def test_size_of_index_name(engine, db_schema):
     }
 
     data = test_data
-    parent_schema = SchemaType(data)
-    dataset_schema = DatasetSchema(parent_schema)
+    dataset_schema = DatasetSchema(data)
     table = dataset_schema.get_table_by_id("child_test_size")
 
     importer = BaseImporter(dataset_schema, engine)
@@ -345,7 +344,7 @@ def test_size_of_index_name(engine, db_schema):
     meta_data = MetaData(bind=conn)
     meta_data.reflect()
     metadata_inspector = inspect(meta_data.bind)
-    indexes = metadata_inspector.get_indexes(f"{parent_schema['id']}_{table['id']}", schema=None)
+    indexes = metadata_inspector.get_indexes(f"{data['id']}_{table['id']}", schema=None)
     indexes_name = []
 
     for index in indexes:
@@ -365,9 +364,8 @@ def test_index_creation_db_schema2(engine, stadsdelen_schema):
     meta_data = MetaData(bind=engine)
     meta_data.reflect()
     metadata_inspector = inspect(meta_data.bind)
-    parent_schema = SchemaType(stadsdelen_schema)
     indexes = metadata_inspector.get_indexes(
-        f"{parent_schema['id']}_stadsdelen", schema="schema_foo_bar"
+        f"{stadsdelen_schema['id']}_stadsdelen", schema="schema_foo_bar"
     )
     index_names = {index["name"] for index in indexes}
     assert index_names == {"stadsdelen_stadsdelen_identifier_idx"}
