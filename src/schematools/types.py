@@ -199,15 +199,18 @@ class JsonDict(UserDict):
     def json_data(self) -> Json:
         return json.loads(self.json())
 
-
-class SchemaType(JsonDict):
-    """Base class for top-level schema objects (dataset, table, profile, publisher)."""
-
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
     def __missing__(self, key: str) -> NoReturn:
-        raise KeyError(f"No field named '{key}' exists in {self.__class__.__name__}")
+        raise KeyError(f"No field named '{key}' exists in {self!r}")
+
+
+class SchemaType(JsonDict):
+    """Base class for top-level schema objects (dataset, table, profile, publisher).
+
+    Each object should have an "id" and "type" property.
+    """
 
     def __hash__(self) -> int:
         return id(self)  # allow usage in lru_cache()
@@ -235,16 +238,6 @@ class SchemaType(JsonDict):
     @classmethod
     def from_dict(cls: type[ST], obj: Json) -> ST:
         return cls(copy.deepcopy(obj))
-
-
-class DatasetType(JsonDict):
-    """Base class for child elements of the schema."""
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.data!r})"
-
-    def __missing__(self, key: str) -> NoReturn:
-        raise KeyError(f"No field named '{key}' exists in {self!r}")
 
 
 class DatasetSchema(SchemaType):
@@ -1253,7 +1246,7 @@ class TableVersions(Mapping[str, DatasetTableSchema]):
         return len(self._version_paths)
 
 
-class DatasetFieldSchema(DatasetType):
+class DatasetFieldSchema(JsonDict):
     """A single field (column) in a table."""
 
     def __init__(
@@ -1815,7 +1808,7 @@ class DatasetFieldSchema(DatasetType):
         return not destination_type_set <= source_type_set
 
 
-class AdditionalRelationSchema(DatasetType):
+class AdditionalRelationSchema(JsonDict):
     """Data class describing the additional relation block."""
 
     def __init__(self, _id: str, _parent_table: DatasetTableSchema | None = None, **kwargs):
@@ -2017,7 +2010,7 @@ class ProfileSchema(SchemaType):
         }
 
 
-class ProfileDatasetSchema(DatasetType):
+class ProfileDatasetSchema(JsonDict):
     """A schema inside the profile dataset.
 
     It grants :attr:`permissions` to a dataset on a global level,
@@ -2058,7 +2051,7 @@ class ProfileDatasetSchema(DatasetType):
         }
 
 
-class ProfileTableSchema(DatasetType):
+class ProfileTableSchema(JsonDict):
     """A single table in the profile.
 
     This grants :attr:`permissions` to a specific table,
