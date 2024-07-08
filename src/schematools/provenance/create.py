@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from schematools.types import DatasetSchema
 
 

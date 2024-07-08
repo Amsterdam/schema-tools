@@ -1,4 +1,7 @@
-from typing import Collection, Optional
+from __future__ import annotations
+
+from collections.abc import Collection
+from typing import Optional
 
 from django.db import connection
 

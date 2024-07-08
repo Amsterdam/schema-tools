@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 
 from django.core.management import BaseCommand, CommandError

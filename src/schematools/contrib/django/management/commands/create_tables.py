@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import re
 from collections import defaultdict
-from typing import Iterable, List, Optional
+from collections.abc import Iterable
+from typing import Optional
 
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, router, transaction
@@ -31,7 +34,7 @@ def create_tables(
     datasets: Iterable[Dataset],
     allow_unmanaged: bool = False,
     base_app_name: Optional[str] = None,
-    skip: Optional[List[str]] = None,
+    skip: Optional[list[str]] = None,
 ) -> None:  # noqa: C901
     """Create tables for all updated datasets.
     This is a separate function to allow easy reuse.

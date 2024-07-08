@@ -1,10 +1,13 @@
 """Converting a GeoJSON input file to Amsterdam Schema"""
 
+from __future__ import annotations
+
 import re
+from collections.abc import Iterable
 from copy import deepcopy
 from decimal import Decimal as D
 from os.path import basename, splitext
-from typing import Iterable, List, Optional, Tuple
+from typing import Optional
 
 from schematools.importer.geojson import read_geojson, split_id
 from schematools.introspect.utils import DATASET_TMPL, TABLE_TMPL
@@ -12,7 +15,7 @@ from schematools.introspect.utils import DATASET_TMPL, TABLE_TMPL
 ID_FORMAT = re.compile(r"^([a-z0-9_]+)[/.](\d+)$", re.I)
 
 
-def introspect_geojson_files(dataset_id: str, files: List[str]) -> dict:
+def introspect_geojson_files(dataset_id: str, files: list[str]) -> dict:
     """Generate Amsterdam Schema from GeoJSON files."""
     tables = []
     for file in files:
@@ -24,13 +27,13 @@ def introspect_geojson_files(dataset_id: str, files: List[str]) -> dict:
     return aschema
 
 
-def introspect_geojson_file(file_name) -> List[dict]:
+def introspect_geojson_file(file_name) -> list[dict]:
     """Convert a single GeoJSON file into a JSON Schema"""
     features = read_geojson(file_name)
     return geojson_to_table(features, file_name=file_name)
 
 
-def geojson_to_table(geojson_features: Iterable[dict], file_name: str) -> List[dict]:
+def geojson_to_table(geojson_features: Iterable[dict], file_name: str) -> list[dict]:
     """Read the GeoJSON contents, return the table with JSON Schema.
 
     :param filename: This is provided for error messages.
@@ -73,7 +76,7 @@ def geojson_to_table(geojson_features: Iterable[dict], file_name: str) -> List[d
     return result
 
 
-def _parse_id(feature, default_name) -> Tuple[str, Optional[str]]:
+def _parse_id(feature, default_name) -> tuple[str, Optional[str]]:
     """Support datatype/PKVALUE as id value"""
     # Support optional "id" field at feature level
     try:

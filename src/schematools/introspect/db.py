@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 
 from sqlalchemy import inspect
@@ -87,9 +89,7 @@ def introspect_db_schema(engine, dataset_id, tablenames, db_schema=None, prefix=
         # Generate table section
         table = copy.deepcopy(TABLE_TMPL)
         table["id"] = table_name
-        table["schema"]["required"] = [
-            fix_name(n, columns.get(n, None)) for n in required_field_names
-        ]
+        table["schema"]["required"] = [fix_name(n, columns.get(n)) for n in required_field_names]
         table["schema"]["properties"].update({fix_name(fn, fv): fv for fn, fv in columns.items()})
         tables.append(table)
 

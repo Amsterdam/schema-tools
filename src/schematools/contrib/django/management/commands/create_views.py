@@ -1,4 +1,7 @@
-from typing import Iterable, Optional
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import Optional
 
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, transaction

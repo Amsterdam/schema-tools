@@ -6,7 +6,7 @@ The other classes in this module ease to retrieval of permission objects.
 
 from __future__ import annotations
 
-from typing import Iterable, Iterator
+from collections.abc import Iterable, Iterator
 
 from schematools._utils import cached_method
 from schematools.types import (

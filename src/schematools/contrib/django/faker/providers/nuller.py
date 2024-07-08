@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from factory import Faker
 from faker.providers import BaseProvider
 

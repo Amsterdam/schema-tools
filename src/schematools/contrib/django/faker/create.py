@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 from django.db import connection
 from django.db.models import sql
@@ -17,8 +16,8 @@ def create_data_for(
     start_at: int = 1,
     size: int = 50,
     sql: bool = False,
-    tables: List[str] | None = None,
-) -> List[str]:
+    tables: list[str] | None = None,
+) -> list[str]:
     """Create mock data for the indicated datasets."""
     limit_tables_to = set(tables) if tables is not None else set()
     for dataset in datasets:
@@ -41,7 +40,7 @@ def create_data_for(
                 mock_model.create_batch(size)
 
 
-def _get_sql_for(objects: List[DynamicModel]):
+def _get_sql_for(objects: list[DynamicModel]):
     """Get the SQL insert statements for the provided model objects."""
     # We need a real cursor here, so that `cursor.mogrify`
     # knows exactly how to render the query.

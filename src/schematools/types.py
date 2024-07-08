@@ -11,19 +11,16 @@ import sys
 import typing
 import warnings
 from collections import UserDict
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from enum import Enum
 from functools import cached_property, total_ordering
+from re import Pattern
 from typing import (
     Any,
     Callable,
     ClassVar,
-    Dict,
-    Iterator,
-    List,
     NamedTuple,
     NoReturn,
-    Pattern,
     TypeVar,
     Union,
     cast,
@@ -44,7 +41,7 @@ if typing.TYPE_CHECKING:
 
 ST = TypeVar("ST", bound="SchemaType")
 DTS = TypeVar("DTS", bound="DatasetTableSchema")
-Json = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
+Json = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
 Ref = str
 
 _PUBLIC_SCOPE = "OPENBAAR"
@@ -179,7 +176,7 @@ class SemVer(str):
 
     def __repr__(self) -> str:
         """Return Python parseable representation of a SemVer instance."""
-        return f'SemVer("{str(self)}")'
+        return f'SemVer("{self!s}")'
 
     def __hash__(self) -> int:
         return hash(str(self))
@@ -1525,7 +1522,7 @@ class DatasetFieldSchema(JsonDict):
             return [
                 subfield_id
                 for subfield_id, subfield in self["properties"].items()
-                if not subfield.get("format") in ("date", "date-time")
+                if subfield.get("format") not in ("date", "date-time")
             ]
         elif self.is_loose_relation:
             return self.related_table.identifier[:1]

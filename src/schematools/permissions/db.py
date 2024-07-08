@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, cast
+from typing import Any, DefaultDict, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
@@ -111,7 +111,7 @@ def apply_schema_and_profile_permissions(
                 verbose,
             )
         if profiles:
-            profile_list = cast(List[Dict[str, Any]], profiles.values())
+            profile_list = cast(list[dict[str, Any]], profiles.values())
             create_acl_from_profiles(engine, pg_schema, profile_list, role, scope, verbose)
 
         if additional_grants:

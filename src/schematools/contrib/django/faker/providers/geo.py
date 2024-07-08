@@ -1,5 +1,7 @@
 """Very rudimentary implementation of fake geo data for now."""
 
+from __future__ import annotations
+
 import logging
 import random
 

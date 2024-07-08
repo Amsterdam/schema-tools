@@ -1,5 +1,7 @@
 """Extra fixtures for ``schematools.contrib.django``"""
 
+from __future__ import annotations
+
 from django.conf import settings
 from pytest_django.plugin import _setup_django
 

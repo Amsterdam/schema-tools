@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy import MetaData, create_engine, inspect
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX

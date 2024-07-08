@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from schematools.factories import tables_factory
 
 

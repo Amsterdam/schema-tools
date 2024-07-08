@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
-from typing import IO, Iterable
+from typing import IO
 
 import psycopg2
 from sqlalchemy import Column, MetaData, Table

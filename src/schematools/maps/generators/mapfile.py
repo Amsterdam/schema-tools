@@ -1,4 +1,5 @@
-import typing
+from __future__ import annotations
+
 from collections import ChainMap
 from dataclasses import dataclass
 
@@ -22,7 +23,7 @@ class MapserviceLayerContext:
         return self.datatable.id
 
     @property
-    def projections(self) -> typing.List[str]:
+    def projections(self) -> list[str]:
         return [self.dataset["crs"]]
 
     @property
@@ -45,7 +46,7 @@ class MapServiceContext:
         return self.dataset.id
 
     @property
-    def layers(self) -> typing.List[MapserviceLayerContext]:
+    def layers(self) -> list[MapserviceLayerContext]:
         return [MapserviceLayerContext(self.dataset, dt) for dt in self.dataset.tables]
 
 

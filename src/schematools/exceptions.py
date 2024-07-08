@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class ParserError(ValueError):
     """Exception to indicate the parsing failed."""
 

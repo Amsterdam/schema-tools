@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from schematools.introspect.geojson import geojson_to_table
 
 

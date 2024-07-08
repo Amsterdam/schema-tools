@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import re
-from typing import Any, Iterable, Tuple
+from collections.abc import Iterable
+from typing import Any
 
 from shapely.geometry import shape
 
@@ -33,7 +36,7 @@ def read_geojson(file_name) -> Iterable[dict]:
         yield feature
 
 
-def split_id(id_value) -> Tuple[str, str]:
+def split_id(id_value) -> tuple[str, str]:
     # When the ID format is name/identifier,
     # this detects that different feature types are part of the same file.
     match = ID_FORMAT.match(id_value)
@@ -66,7 +69,7 @@ class GeoJSONImporter(BaseImporter):
 
             yield {dataset_table.id: [record]}
 
-    def _clean_value(self, name: str, value: Any) -> Tuple[str, Any]:
+    def _clean_value(self, name: str, value: Any) -> tuple[str, Any]:
         if name[0] in "@$":
             name = name[1:]
 
