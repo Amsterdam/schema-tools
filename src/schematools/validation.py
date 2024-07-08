@@ -18,6 +18,7 @@ Semantic validation can and should.
 
 Semantic validations are created decorating a function with `_validator`.
 """
+
 from __future__ import annotations
 
 import operator

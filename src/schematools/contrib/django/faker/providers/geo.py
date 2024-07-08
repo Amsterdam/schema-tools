@@ -1,4 +1,5 @@
 """Very rudimentary implementation of fake geo data for now."""
+
 import logging
 import random
 

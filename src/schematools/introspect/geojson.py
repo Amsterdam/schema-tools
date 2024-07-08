@@ -1,4 +1,5 @@
 """Converting a GeoJSON input file to Amsterdam Schema"""
+
 import re
 from copy import deepcopy
 from decimal import Decimal as D
