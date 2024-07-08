@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 from argparse import ArgumentTypeError
 from distutils.util import strtobool

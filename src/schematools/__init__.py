@@ -1,5 +1,7 @@
 """Schematools, a library to work with amsterdam schema files."""
 
+from __future__ import annotations
+
 from typing import Final, List
 
 # Internal conventions
@@ -24,7 +26,7 @@ CRS_RD_NEW: Final[str] = "EPSG:28992"  # Amersfoort / RD New
 SRID_RD_NEW: Final[int] = 28992
 
 # Some likely used 3D coordinate reference systems:
-SRID_3D: Final[List[int]] = [
+SRID_3D: Final[list[int]] = [
     7415,  # Amersfoort / RD New + NAP height
     7423,  # ETRS89 + EVRF2007 height
     9286,  # ETRS89 + NAP height

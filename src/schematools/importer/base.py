@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from collections.abc import Iterator
 from contextlib import closing
 from functools import cached_property
 from itertools import islice
 from pathlib import Path
-from typing import Any, Final, Iterator, TypeVar
+from typing import Any, Final, TypeVar
 
 import click
 import jsonpath_rw
@@ -64,8 +65,6 @@ def chunked(stream: Iterator[T], size: int) -> Iterator[list[T]]:
 
 class JsonPathException(Exception):
     """Exception used to signal a jsonpath provenance."""
-
-    pass
 
 
 class Provenance:

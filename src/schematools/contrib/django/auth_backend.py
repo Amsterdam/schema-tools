@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.apps import apps
 from django.contrib.auth.backends import BaseBackend
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 
 import pytest
@@ -119,14 +121,14 @@ def test_schema_model_mockers_factory(afval_dataset):
         cls._meta.get_model_class()._meta.model_name: cls
         for cls in schema_model_mockers_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
     }
-    assert "containers" in model_mockers.keys()
+    assert "containers" in model_mockers
     ContainersMocker = model_mockers["containers"]
     assert type(ContainersMocker) == FactoryMetaClass
     assert str(ContainersMocker) == (
         "<containers_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.containers'>>"
     )
 
-    assert "clusters" in model_mockers.keys()
+    assert "clusters" in model_mockers
     ClustersMocker = model_mockers["clusters"]
     assert type(ClustersMocker) == FactoryMetaClass
     assert str(ClustersMocker) == (

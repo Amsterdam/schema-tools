@@ -1,4 +1,6 @@
-from typing import Any, Dict, List
+from __future__ import annotations
+
+from typing import Any
 
 from django.core.management import CommandParser
 
@@ -27,7 +29,7 @@ class Command(BaseDatasetCommand):  # noqa: D101
         )
         parser.add_argument("--table", "-t", nargs="*", help="Names of tables.")
 
-    def handle(self, *args: List[Any], **options: Dict[str, Any]) -> None:  # noqa: D102
+    def handle(self, *args: list[Any], **options: dict[str, Any]) -> None:  # noqa: D102
         datasets = self.get_datasets(options, enable_db=True, default_all=False)
         if len(datasets) > 1 and options["table"]:
             self.stdout.write("The `tables` options can only be used with one dataset.")
@@ -37,7 +39,7 @@ class Command(BaseDatasetCommand):  # noqa: D101
             start_at=options["start_at"],
             size=options["size"],
             sql=options["sql"],
-            tables=options["table"]
+            tables=options["table"],
         )
         if sql_lines:
             self.stdout.write("\n".join(sql_lines))

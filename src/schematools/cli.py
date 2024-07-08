@@ -9,10 +9,11 @@ import operator
 import os
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from functools import reduce
 from importlib.metadata import version
 from pathlib import Path, PosixPath
-from typing import Any, DefaultDict, Iterable, List
+from typing import Any, DefaultDict
 
 import click
 import jsonschema
@@ -56,7 +57,7 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema, DatasetTableSchema, Publisher, SemVer
+from schematools.types import DatasetSchema, Publisher, SemVer
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
@@ -137,43 +138,36 @@ def main() -> None:
 @click.group()
 def schema() -> None:
     """Command line utility to work with Amsterdam Schema files."""
-    pass
 
 
 @schema.group("import")
 def import_() -> None:
     """Subcommand to import data."""
-    pass
 
 
 @schema.group("export")
 def export() -> None:
     """Subcommand to export data."""
-    pass
 
 
 @schema.group("tocase")
 def tocase() -> None:
     """Subcommand to make case-changes."""
-    pass
 
 
 @schema.group()
 def show() -> None:
     """Show existing metadata."""
-    pass
 
 
 @schema.group()
 def permissions() -> None:
     """Subcommand for permissions."""
-    pass
 
 
 @schema.group()
 def kafka() -> None:
     """Subcommand to consume or produce kafka events."""
-    pass
 
 
 @permissions.command("introspect")
@@ -356,19 +350,16 @@ def _schema_fetch_url_file(schema_url_file: str) -> dict[str, Any]:
 @schema.group()
 def introspect() -> None:
     """Subcommand to generate a schema."""
-    pass
 
 
 @schema.group()
 def create() -> None:
     """Subcommand to create a DB object."""
-    pass
 
 
 @schema.group()
 def diff() -> None:
     """Subcommand to show schema diffs."""
-    pass
 
 
 def _fetch_json(location: str) -> dict[str, Any]:
@@ -809,7 +800,7 @@ def introspect_db(
 @introspect.command("geojson")
 @click.argument("dataset_id")
 @click.argument("files", nargs=-1, required=True)
-def introspect_geojson(dataset_id: str, files: List[str]) -> None:
+def introspect_geojson(dataset_id: str, files: list[str]) -> None:
     """Generate a schema from a GeoJSON file."""
     aschema = introspect_geojson_files(dataset_id, files)
     click.echo(json.dumps(aschema, indent=2))

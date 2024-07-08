@@ -1,5 +1,7 @@
 """Internal utils, not meant to be used outside schematools."""
 
+from __future__ import annotations
+
 import functools
 import weakref
 

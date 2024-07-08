@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 from django.contrib.gis.db import models
 from django.core.management import call_command
@@ -78,8 +80,8 @@ def test_model_factory_table_name_default_version(afval_schema):
         cls._meta.model_name: cls
         for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
     }
-    assert "containers" in models.keys()
-    assert "containers_1_0_1" not in models.keys()
+    assert "containers" in models
+    assert "containers_1_0_1" not in models
     Containers = models["containers"]
     assert Containers._meta.db_table == "afvalwegingen_containers"
 

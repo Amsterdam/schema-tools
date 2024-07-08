@@ -1,4 +1,6 @@
-from typing import List, Optional
+from __future__ import annotations
+
+from typing import Optional
 
 from django.conf import settings
 from django.core.management import BaseCommand
@@ -31,7 +33,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write("No new profiles imported.")
 
-    def import_from_files(self, profile_files: List[str]) -> List[Profile]:
+    def import_from_files(self, profile_files: list[str]) -> list[Profile]:
         profiles = []
         for filename in profile_files:
             schema = ProfileSchema.from_file(filename)
@@ -41,7 +43,7 @@ class Command(BaseCommand):
 
         return profiles
 
-    def import_from_url(self, schema_url: str) -> List[Profile]:
+    def import_from_url(self, schema_url: str) -> list[Profile]:
         """Import all schema definitions from an URL"""
         self.stdout.write(f"Loading profiles from {schema_url}")
         loader = get_profile_loader(schema_url)

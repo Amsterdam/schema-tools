@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-from typing import Final, Match, Pattern
+from re import Match, Pattern
+from typing import Final
 
 from string_utils import slugify
 

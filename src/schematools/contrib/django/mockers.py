@@ -13,6 +13,8 @@ as the primary aim of the ModelFactory is to generate Mock data for development
 and testing purposes.
 """
 
+from __future__ import annotations
+
 from factory.django import DjangoModelFactory
 
 

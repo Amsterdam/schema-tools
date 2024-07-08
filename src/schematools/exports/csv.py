@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import csv
+from collections.abc import Iterable
 from datetime import date
-from typing import IO, Iterable
+from typing import IO
 
 from geoalchemy2 import functions as gfunc  # ST_AsEWKT
-from sqlalchemy import Column, MetaData, Table, func, select
+from sqlalchemy import Column, MetaData, func, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.sql.elements import ClauseElement
 

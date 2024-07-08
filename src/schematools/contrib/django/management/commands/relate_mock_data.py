@@ -1,4 +1,6 @@
-from typing import Any, Dict, List
+from __future__ import annotations
+
+from typing import Any
 
 from schematools.contrib.django.faker.relate import relate_datasets
 
@@ -13,6 +15,6 @@ class Command(BaseDatasetCommand):  # noqa: D101
     """  # noqa: A003
     requires_system_checks = []
 
-    def handle(self, *args: List[Any], **options: Dict[str, Any]) -> None:  # noqa: D102
+    def handle(self, *args: list[Any], **options: dict[str, Any]) -> None:  # noqa: D102
         datasets = self.get_datasets(options, enable_db=True)
         relate_datasets(*datasets)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from schematools.naming import to_snake_case, toCamelCase

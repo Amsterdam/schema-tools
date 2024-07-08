@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 DATASET_TMPL = {
     "type": "dataset",
     "id": None,

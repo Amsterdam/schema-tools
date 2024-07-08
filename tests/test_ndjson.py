@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 
 from schematools.importer.ndjson import NDJSONImporter

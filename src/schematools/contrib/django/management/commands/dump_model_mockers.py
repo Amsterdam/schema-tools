@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from argparse import ArgumentParser
-from typing import Any, List, Tuple, Type
+from typing import Any
 
 from django.apps import AppConfig, apps
 from django.core.management import BaseCommand
@@ -12,7 +14,7 @@ class Command(BaseCommand):
 
     help = "Dump the (dynamic) ModelMocker definitions that Django holds in-memory."  # noqa: A003
 
-    model_meta_args: List[Tuple[str, Any]] = [
+    model_meta_args: list[tuple[str, Any]] = [
         # All possible options in Meta, with their defaults.
         # https://docs.djangoproject.com/en/3.2/ref/models/options/
         # The original model.Meta or Options.meta is not available after construction,
@@ -64,7 +66,7 @@ class Command(BaseCommand):
         """Write app start header."""
         self.stdout.write(f"# ---- App: {app.verbose_name or app.label}\n\n\n")
 
-    def write_model_mocker(self, model: Type[DynamicModel]) -> None:
+    def write_model_mocker(self, model: type[DynamicModel]) -> None:
         """Write the representation of a complete DjangoModelFactory
         (ModelMocker in our terminology) to the output.
         """

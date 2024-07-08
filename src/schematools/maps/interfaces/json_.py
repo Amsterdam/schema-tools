@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import pprint
@@ -8,7 +10,7 @@ import jsonref
 
 
 class JsonStrategicLoader(jsonref.JsonLoader):
-    def __init__(self, strategies: typing.List[typing.Callable], *args, **kwargs):
+    def __init__(self, strategies: list[typing.Callable], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.strategies = strategies
 

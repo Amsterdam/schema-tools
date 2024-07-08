@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from decimal import Decimal
-from typing import IO, Any, Iterable
+from typing import IO, Any
 
 import jsonlines
 import orjson
 from geoalchemy2 import functions as func
-from sqlalchemy import Column, MetaData, Table, select
+from sqlalchemy import Column, MetaData, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.sql.elements import ClauseElement
 

@@ -21,7 +21,6 @@ from schematools.exceptions import (
     DatasetNotFound,
     DatasetTableNotFound,
     SchemaObjectNotFound,
-    ViewObjectNotFound,
 )
 from schematools.types import DatasetSchema, DatasetTableSchema, Json, ProfileSchema, Publisher
 
@@ -456,7 +455,7 @@ def _read_sql_path(dataset_file: Path) -> str:
     try:
         with dataset_file.open() as stream:
             return stream.read()
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         return None
 
 
@@ -469,7 +468,7 @@ def _read_sql_url(url: URL) -> str:
             return None
         response.raise_for_status()  # All extend from OSError
         return response.text
-    except requests.exceptions.ConnectionError as e:
+    except requests.exceptions.ConnectionError:
         return None
 
 

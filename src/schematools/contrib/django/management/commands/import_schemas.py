@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from django.conf import settings
 from django.core.management import BaseCommand
@@ -55,7 +55,7 @@ class Command(BaseCommand):
         if options["create_views"]:
             create_views(self, datasets)
 
-    def import_from_files(self, schema_files) -> List[Dataset]:
+    def import_from_files(self, schema_files) -> list[Dataset]:
         """Import all schema definitions from the given files."""
         datasets = []
         shared_loaders = {}
@@ -95,7 +95,7 @@ class Command(BaseCommand):
 
         return datasets
 
-    def import_from_url(self, schema_url) -> List[Dataset]:
+    def import_from_url(self, schema_url) -> list[Dataset]:
         """Import all schema definitions from a URL"""
         self.stdout.write(f"Loading schema from {schema_url}")
         loader = get_schema_loader(schema_url, loaded_callback=self._loaded_callback)

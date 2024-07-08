@@ -23,10 +23,11 @@ from __future__ import annotations
 
 import operator
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import partial, wraps
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Set, cast
+from typing import Callable, Optional, cast
 from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
@@ -248,7 +249,7 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
 
     for table in dataset.get_tables(include_nested=True):
         identifiers = set(table.identifier)
-        table_fields = cast(Set[str], set(map(operator.attrgetter("id"), table.fields)))
+        table_fields = cast(set[str], set(map(operator.attrgetter("id"), table.fields)))
         if not identifiers.issubset(table_fields):
             missing_fields = identifiers - table_fields
             # The 'identifier' property is weird in that it is not exclusively defined in

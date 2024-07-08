@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Collection, Dict, List, Optional, Tuple, Type, TypeVar
+from collections.abc import Collection
+from typing import Any, Optional, TypeVar
 from urllib.parse import urlparse
 
 from django.apps import apps
@@ -26,7 +27,7 @@ from .models import (
     LooseRelationManyToManyField,
 )
 
-TypeAndSignature = Tuple[Type[models.Field], tuple, Dict[str, Any]]
+TypeAndSignature = tuple[type[models.Field], tuple, dict[str, Any]]
 M = TypeVar("M", bound=DynamicModel)
 MODEL_CREATION_COUNTER = 1
 MODEL_MOCKER_CREATION_COUNTER = 1
@@ -128,7 +129,7 @@ def schema_model_mockers_factory(
     dataset: Dataset,
     tables: Optional[Collection[str]] = None,
     base_app_name: Optional[str] = None,
-) -> List[Type[DynamicModelMocker]]:
+) -> list[type[DynamicModelMocker]]:
     """Generate Django model mockers from the data of the schema."""
     return [
         model_mocker_factory(dataset=dataset, table_schema=table, base_app_name=base_app_name)
@@ -488,7 +489,7 @@ def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
 
 def model_mocker_factory(
     dataset: Dataset, table_schema: DatasetTableSchema, base_app_name: Optional[str] = None
-) -> Type[DynamicModelMocker]:
+) -> type[DynamicModelMocker]:
     """Generate a Django model mocker class from a JSON Schema definition."""
     # delayed import so Faker/shapely etc are not loaded for every application,
     # but only when mocker functionality is used.
