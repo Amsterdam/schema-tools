@@ -12,7 +12,7 @@ The following rules are applied to determine which role has read (`SELECT`) acce
   the default role `scope_openbaar`. This scope means the data is publicly readable.
 - If a dataset has an `auth` scope specified, the associated role is given read access to
   all columns in all tables within the dataset, unless it is overridden by an `auth` scope
-  on table or column level.  
+  on table or column level.
 - If a table has an `auth` scope specified, the associated role is given read access to
   the whole table, except for those columns that have their own `auth` scope.
   Any scope defined at the dataset level is in this case being overruled, and read access to this

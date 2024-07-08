@@ -169,7 +169,7 @@ so foreign key fields will be filled with NULL values.
 
 There is a second management command `relate_mock_data` that can be used to
 add the relations. This command support positional arguments for datasets
-in the same way as `create_mock_data`.  
+in the same way as `create_mock_data`.
 Furthermore, the command also has the `--exclude` option to reverse the meaning
 of the positional dataset arguments.
 
