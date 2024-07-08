@@ -77,9 +77,10 @@
 * Change export to only use active records for csv and jsonlines,
   so, no historical records. Also brought the export more in line
   with the csv export of the DSO-API:
-  - headers using capitalize()  
+  - headers using capitalize()
   - date-time in iso notation
   - foreign keys only with an `identificatie` (no `volgnummer`)
+
 # 2023-12-05 (5.19.1)
 
 * Updated Django version > 4.2
