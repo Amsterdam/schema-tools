@@ -234,7 +234,8 @@ def test_rel_auth_dataset_public(schema_loader) -> None:
 
 
 def test_rel_auth_table(here: Path) -> None:
-    dataset_json = json.load(open(here / "files/datasets/rel_auth.json"))
+    with (here / "files/datasets/rel_auth.json").open() as f:
+        dataset_json = json.load(f)
     table = next(t for t in dataset_json["tables"] if t["id"] == "base")
     table["auth"] = ["HAMMERTIME"]
     table["reasonsNonPublic"] = ["U can't touch this"]
@@ -246,7 +247,8 @@ def test_rel_auth_table(here: Path) -> None:
 
 
 def test_rel_auth_field(here: Path) -> None:
-    dataset_json = json.load(open(here / "files/datasets/rel_auth.json"))
+    with (here / "files/datasets/rel_auth.json").open() as f:
+        dataset_json = json.load(f)
     table = next(t for t in dataset_json["tables"] if t["id"] == "base")
     field = table["schema"]["properties"]["stop"]
     field["auth"] = ["HAMMERTIME"]

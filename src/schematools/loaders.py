@@ -124,7 +124,7 @@ class CachedSchemaLoader(SchemaLoader):
             return self._cache[dataset_id]
         except KeyError:
             if self._loader is None:
-                raise RuntimeError("This dataset collection can't retrieve new datasets")
+                raise RuntimeError("This dataset collection can't retrieve new datasets") from None
             dataset = self._loader.get_dataset(dataset_id, prefetch_related=prefetch_related)
             self.add_dataset(dataset)
             return dataset
@@ -235,7 +235,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
             self._loaded_callback(dataset_schema)
 
         if prefetch_related:
-            dataset_schema.tables  # noqa: ensure versioned tables are prefetched
+            dataset_schema.tables  # noqa: B018, ensure versioned tables are prefetched
 
             # Make sure the related datasets are read.
             for dataset_id in dataset_schema.related_dataset_schema_ids:
@@ -278,7 +278,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
         datasets = {}
         for dataset_id, dataset_path in sorted(self._dataset_paths.items()):
             dataset = self.get_dataset(dataset_id, prefetch_related=False)
-            dataset.tables  # noqa: ensure versioned tables are still prefetched
+            dataset.tables  # noqa: B018, ensure versioned tables are still prefetched
             datasets[dataset_path] = dataset
         return datasets
 
@@ -365,7 +365,7 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         try:
             return next(dir for dir in dataset_file.parents if dir.name == "datasets")
         except StopIteration:
-            raise ValueError(f"No 'datasets' root found for file '{dataset_file}'.")
+            raise ValueError(f"No 'datasets' root found for file '{dataset_file}'.") from None
 
     def get_dataset_from_file(
         self, dataset_file: Path | str, prefetch_related: bool = False, allow_external_files=False

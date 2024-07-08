@@ -386,7 +386,7 @@ class DatasetSchema(SchemaType):
         try:
             return DatasetSchema.Status[value]
         except KeyError:
-            raise ParserError(f"Status field contains an unknown value: {value}")
+            raise ParserError(f"Status field contains an unknown value: {value}") from None
 
     def _get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
         """Internal function to retrieve a (related) dataset from the shared cache."""
@@ -401,7 +401,7 @@ class DatasetSchema(SchemaType):
             raise RuntimeError(
                 f"{self!r} has no dataset collection defined,"
                 f" can't resolve relation to '{dataset_id}'."
-            )
+            ) from None
 
         # It's assumed here that the loader is a CachedSchemaLoader,
         # do data can be fetched multiple times.
@@ -444,7 +444,7 @@ class DatasetSchema(SchemaType):
     def publisher(self) -> Publisher | None:
         """Access the publisher within the file."""
         raw_publisher = self["publisher"]
-        if type(raw_publisher) == str:
+        if isinstance(raw_publisher, str):
             # Compatibility with meta-schemas prior to 2.0
             if self.loader is None:
                 return None

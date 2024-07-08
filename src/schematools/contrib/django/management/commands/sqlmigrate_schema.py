@@ -59,7 +59,10 @@ class Command(BaseCommand):
         parser.add_argument(
             "--from-files",
             action="store_true",
-            help="Get the tables from the filesystem. NB. the SCHEMA_URL also needs to be file-based!",
+            help=(
+                "Get the tables from the filesystem. "
+                "Note the SCHEMA_URL also needs to be file-based!"
+            ),
         )
         parser.add_argument("schema", help="Schema name")
         parser.add_argument("table", help="Table name")
@@ -68,12 +71,18 @@ class Command(BaseCommand):
         parser.add_argument(
             "version1",
             metavar="OLDVERSION",
-            help="Old table version, e.g. v1.0.0, or a git ref like `master`, `tag`, `branch` or `hash` with --from-files",
+            help=(
+                "Old table version, e.g. v1.0.0, or a git ref like"
+                " `master`, `tag`, `branch` or `hash` with --from-files"
+            ),
         )
         parser.add_argument(
             "version2",
             metavar="NEWVERSION",
-            help="New table version, e.g. v1.1.0, , or a git ref like `master`, `tag`, `branch` or `hash` with --from-files",
+            help=(
+                "New table version, e.g. v1.1.0, , or a git ref like"
+                " `master`, `tag`, `branch` or `hash` with --from-files"
+            ),
         )
 
     def handle(self, *args, **options) -> None:
@@ -93,13 +102,15 @@ class Command(BaseCommand):
         # obtain the tables for these specific references
         # for comparison and sql generation.
         if options["from_files"]:
-            assert not options["schema_url"].startswith(
-                "http"
-            ), "The --from-files can only work with a SCHEMA_URL on the local filesystem."
+            if options["schema_url"].startswith("http"):
+                raise CommandError(
+                    "The --from-files can only work with a SCHEMA_URL on the local filesystem."
+                )
+
             with tempfile.TemporaryDirectory() as tmpdir:
                 schemas_root = Path(options["schema_url"]).parent
-                subprocess.run(  # nosec
-                    ["git", "clone", schemas_root, tmpdir],
+                subprocess.run(
+                    ["git", "clone", schemas_root, tmpdir],  # noqa: S603
                 )
                 table1 = self._load_table_from_checkout(
                     dataset.id, options["table"], tmpdir, options["version1"]
@@ -142,7 +153,9 @@ class Command(BaseCommand):
         self, dataset_id: str, table_id: str, tmpdir: str, version_ref: str
     ) -> DatasetTableSchema:
         """Load a DatasetTableSchema for the specified git reference."""
-        subprocess.run(["git", "checkout", version_ref], cwd=tmpdir, stdout=subprocess.DEVNULL)
+        subprocess.run(
+            ["git", "checkout", version_ref], cwd=tmpdir, stdout=subprocess.DEVNULL  # noqa: S603
+        )
         tmp_schema_path = Path(tmpdir) / "datasets"
         # We create a specific schema loader, because it has to read in the data
         # associated with a specific git checkout.

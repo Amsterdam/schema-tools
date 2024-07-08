@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 from collections.abc import Iterable
-from datetime import date
+from datetime import datetime
 from typing import IO
 
 from geoalchemy2 import functions as gfunc  # ST_AsEWKT
@@ -75,7 +75,7 @@ def export_csvs(
     table_ids: list[str],
     scopes: list[str],
     size: int,
-    temporal_date: date = date.today(),
+    temporal_date: datetime | None = None,
 ):
     """Utility function to wrap the Exporter."""
     enable_datetime_cast()

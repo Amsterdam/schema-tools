@@ -40,7 +40,7 @@ class Geometry:
         try:
             shape_cls = getattr(geos, class_name)
         except AttributeError:
-            raise UnsupportedGEOTypeException(f"Class {class_name} is not allowed.")
+            raise UnsupportedGEOTypeException(f"Class {class_name} is not allowed.") from None
         self.has_z = has_z
         self.shape = shape_cls(*self.get_coordinates(), srid=SRID_RD_NEW)
 

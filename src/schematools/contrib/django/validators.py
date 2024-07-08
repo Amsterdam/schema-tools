@@ -23,4 +23,4 @@ def validate_json(value: str) -> None:
             _("Value must be valid JSON text."),
             code="invalid",
             params={"value": value},
-        )
+        ) from None

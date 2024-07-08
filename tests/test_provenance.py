@@ -63,10 +63,9 @@ def test_provenance_result():
 
         else:
 
-            if type(data) is dict:
+            if isinstance(data, dict):
                 return 1 + max(count_num_of_levels(data[item]) for item in data)
-
-            if type(data) is list:
+            elif isinstance(data, list):
                 return 0 + max(count_num_of_levels(item) for item in data)
             else:
                 return 0

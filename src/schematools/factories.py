@@ -354,10 +354,8 @@ def index_factory(
             *build_temporal_indexes(table, dataset_table, db_table_name),
         ]
 
-    through_indexes = _build_m2m_indexes(
-        metadata, dataset_table, is_versioned_dataset, db_schema_name
-    )
-    for table_db_name, through_indexes in through_indexes.items():
+    m2m_indexes = _build_m2m_indexes(metadata, dataset_table, is_versioned_dataset, db_schema_name)
+    for table_db_name, through_indexes in m2m_indexes.items():
         indexes[table_db_name].extend(through_indexes)
 
     return dict(indexes)

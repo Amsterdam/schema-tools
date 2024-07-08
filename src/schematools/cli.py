@@ -340,7 +340,7 @@ def _schema_fetch_url_file(schema_url_file: str) -> dict[str, Any]:
         with open(schema_url_file) as f:
             schema_data = json.load(f)
     else:
-        response = requests.get(schema_url_file)
+        response = requests.get(schema_url_file, timeout=60)
         response.raise_for_status()
         schema_data = response.json()
 
@@ -375,7 +375,7 @@ def _fetch_json(location: str) -> dict[str, Any]:
         with open(location) as f:
             json_obj = json.load(f)
     else:
-        response = requests.get(location)
+        response = requests.get(location, timeout=60)
         response.raise_for_status()
         json_obj = response.json()
     return json_obj
@@ -562,7 +562,7 @@ def batch_validate(
     try:
         datasets_idx = path_parts.index("datasets")
     except ValueError:
-        raise ValueError("dataset files do not live in a common 'datasets' dir")
+        raise ValueError("dataset files do not live in a common 'datasets' dir") from None
 
     # Find out if we need to go up the directory tree to get at `datasets` dir
     # This could be needed if we are only checking one dataset,
@@ -671,7 +671,7 @@ def to_ckan(schema_url: str, upload_url: str):
             continue
         try:
             data.append(ckan.from_dataset(ds, path))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("in dataset %s: %s", ds.identifier, str(e))  # noqa: G200
             status = 1
 
@@ -684,13 +684,13 @@ def to_ckan(schema_url: str, upload_url: str):
     for ds in data:
         ident = ds["identifier"]
         url = f"{upload_url}/api/3/action/package_update?id={ident}"
-        response = requests.post(url, headers=headers, json=ds)
+        response = requests.post(url, headers=headers, json=ds, timeout=60)
         logger.debug("%s: %d, %s", url, response.status_code, response.json())
 
         if response.status_code == 404:
             # 404 *can* mean no such dataset. Try again with package_create.
             url = upload_url + "/api/3/action/package_create"
-            response = requests.post(url, headers=headers, json=ds)
+            response = requests.post(url, headers=headers, json=ds, timeout=60)
             logger.debug("%s: %d, %s", url, response.status_code, response.json())
 
         if not (200 <= response.status_code < 300):

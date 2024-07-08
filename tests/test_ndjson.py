@@ -151,7 +151,7 @@ def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbse
 
 def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "ggwgebieden.ndjson"
-    importer = NDJSONImporter(ggwgebieden_schema, engine)
+    importer = NDJSONImporter(ggwgebieden_schema, engine)  # TODO: fix datetime tzinfo
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden")]
@@ -164,7 +164,7 @@ def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbses
             "volgnummer": 1,
             "naam": "Centrum-West",
             "code": "DX01",
-            "registratiedatum": datetime.datetime(2020, 7, 21, 13, 39, 23, 856580),
+            "registratiedatum": datetime.datetime(2020, 7, 21, 13, 39, 23, 856580),  # noqa: DTZ001
             "begingeldigheid": datetime.date(2014, 2, 20),
             "eindgeldigheid": datetime.date(2019, 10, 3),
             "documentdatum": datetime.date(2017, 10, 10),
@@ -205,7 +205,7 @@ def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbses
 
 def test_ndjson_import_nm_composite_keys_with_geldigheid(here, engine, gebieden_schema, dbsession):
     ndjson_path = here / "files" / "data" / "ggwgebieden-with-geldigheid.ndjson"
-    importer = NDJSONImporter(gebieden_schema, engine)
+    importer = NDJSONImporter(gebieden_schema, engine)  # TODO: fix datetime tzinfo
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
     records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden")]
@@ -215,7 +215,7 @@ def test_ndjson_import_nm_composite_keys_with_geldigheid(here, engine, gebieden_
             "id": "03630950000000.1",
             "identificatie": "03630950000000",
             "volgnummer": 1,
-            "registratiedatum": datetime.datetime(2020, 7, 21, 13, 39, 23, 856580),
+            "registratiedatum": datetime.datetime(2020, 7, 21, 13, 39, 23, 856580),  # noqa: DTZ001
             "naam": "Centrum-West",
             "code": "DX01",
             "begin_geldigheid": None,
