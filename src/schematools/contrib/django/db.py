@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from typing import Optional
 
 from django.db import connection
 
@@ -11,8 +10,8 @@ from .models import Dataset
 
 def create_tables(
     dataset: Dataset,
-    tables: Optional[Collection[str]] = None,
-    base_app_name: Optional[str] = None,
+    tables: Collection[str] | None = None,
+    base_app_name: str | None = None,
 ):
     """Create the database tables for a given schema."""
     with connection.schema_editor() as schema_editor:

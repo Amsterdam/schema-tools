@@ -28,9 +28,8 @@ class NullableFloatProvider(BaseProvider):
         nullable=False,
     ) -> float | None:
 
-        if nullable:
-            if self.generator.random.randint(0, 1):
-                return None
+        if nullable and self.generator.random.randint(0, 1):
+            return None
 
         return self.python.pyfloat(
             left_digits=left_digits,

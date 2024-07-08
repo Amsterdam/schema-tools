@@ -21,13 +21,12 @@ class NullableDateProvider(BaseProvider):
 
     def nullable_date_object(  # noqa: D102
         self,
-        end_datetime: datetime = None,
+        end_datetime: datetime | None = None,
         nullable=False,
     ) -> date | None:
 
-        if nullable:
-            if self.generator.random.randint(0, 1):
-                return None
+        if nullable and self.generator.random.randint(0, 1):
+            return None
         return self.date_time.date_object(
             end_datetime=end_datetime,
         )

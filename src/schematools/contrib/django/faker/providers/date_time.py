@@ -26,9 +26,8 @@ class NullableDateTimeProvider(BaseProvider):
         nullable=False,
     ) -> datetime | None:
 
-        if nullable:
-            if self.generator.random.randint(0, 1):
-                return None
+        if nullable and self.generator.random.randint(0, 1):
+            return None
         return self.date_time.date_time(
             tzinfo=tzinfo,
             end_datetime=end_datetime,

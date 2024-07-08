@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from django.conf import settings
 from django.core.management import BaseCommand
 
@@ -56,7 +54,7 @@ class Command(BaseCommand):
 
         return profiles
 
-    def _import(self, schema: ProfileSchema) -> Optional[Profile]:
+    def _import(self, schema: ProfileSchema) -> Profile | None:
         self.stdout.write(f"* Processing {schema.name}")
         name = schema.name
         try:

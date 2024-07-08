@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from django.conf import settings
 from django.core.management import BaseCommand
@@ -114,7 +113,7 @@ class Command(BaseCommand):
 
         return datasets
 
-    def _import(self, schema: DatasetSchema, path: str) -> Optional[Dataset]:
+    def _import(self, schema: DatasetSchema, path: str) -> Dataset | None:
         """Import a single dataset schema."""
         try:
             dataset = Dataset.objects.get(name=Dataset.name_from_schema(schema))

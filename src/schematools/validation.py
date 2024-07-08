@@ -27,7 +27,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import partial, wraps
 from pathlib import Path
-from typing import Callable, Optional, cast
+from typing import Callable, cast
 from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
@@ -71,7 +71,7 @@ def _register_validator(name: str) -> Callable:
     if not name:
         raise ValueError("validator must have a name")
 
-    def decorator(func: Callable[[DatasetSchema, Optional[str]], Iterator[str]]) -> Callable:
+    def decorator(func: Callable[[DatasetSchema, str | None], Iterator[str]]) -> Callable:
         @wraps(func)
         def decorated(dataset: DatasetSchema, location: str | None = None) -> Iterator[str]:
             if func.__code__.co_argcount == 1:
@@ -306,7 +306,7 @@ def _active_versions(dataset: DatasetSchema) -> Iterator[str]:
     # etc) more definitely. And as a result can rely on those abstractions for our
     # validation instead of some internal representation.
     for table_versions in dataset.table_versions.values():
-        for version in table_versions.keys():
+        for version in table_versions:
             try:
                 # Runtime checking already happens on retrieval of the tables,
                 # so this validation check only tests whether that would happen.

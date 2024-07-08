@@ -52,7 +52,7 @@ class DatabaseSchemaLoader(SchemaLoader):
         # The dataset is connected to this collection so it can resolve relations:
         return self._as_dataset(schema_data, view_sql)
 
-    def _as_dataset(self, schema_data: str, view_sql: str = None) -> DatasetSchema:
+    def _as_dataset(self, schema_data: str, view_sql: str | None = None) -> DatasetSchema:
         """Convert the retrieved schema into a real object that can resolve its relations."""
         return DatasetSchema(
             json.loads(schema_data), view_sql, dataset_collection=self.dataset_collection

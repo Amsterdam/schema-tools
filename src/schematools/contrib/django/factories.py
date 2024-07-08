@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 from urllib.parse import urlparse
 
 from django.apps import apps
@@ -127,8 +127,8 @@ def schema_models_factory(
 
 def schema_model_mockers_factory(
     dataset: Dataset,
-    tables: Optional[Collection[str]] = None,
-    base_app_name: Optional[str] = None,
+    tables: Collection[str] | None = None,
+    base_app_name: str | None = None,
 ) -> list[type[DynamicModelMocker]]:
     """Generate Django model mockers from the data of the schema."""
     return [
@@ -488,7 +488,7 @@ def _simplify_table_schema_relations(table_schema: DatasetTableSchema):
 
 
 def model_mocker_factory(
-    dataset: Dataset, table_schema: DatasetTableSchema, base_app_name: Optional[str] = None
+    dataset: Dataset, table_schema: DatasetTableSchema, base_app_name: str | None = None
 ) -> type[DynamicModelMocker]:
     """Generate a Django model mocker class from a JSON Schema definition."""
     # delayed import so Faker/shapely etc are not loaded for every application,
@@ -541,7 +541,7 @@ def model_mocker_factory(
     # during the mocking process.
     params_cls = type("Params", (), {"table_schema": table_schema})
 
-    model_mocker_class = type(
+    return type(
         f"{_get_model_name(stripped_table_schema)}_factory",
         (DynamicModelMocker,),
         {
@@ -551,5 +551,3 @@ def model_mocker_factory(
             "__module__": "schematools.contrib.django.factories",
         },
     )
-
-    return model_mocker_class
