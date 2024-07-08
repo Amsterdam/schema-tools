@@ -1,4 +1,5 @@
 """Cli tools."""
+
 from __future__ import annotations
 
 import io
@@ -31,7 +32,6 @@ from schematools import (
     ckan,
     validation,
 )
-from schematools.events.full import EventsProcessor
 from schematools.exceptions import (
     DatasetNotFound,
     IncompatibleMetaschema,
@@ -865,32 +865,6 @@ def import_geojson(
     importer.load_file(geojson_path, batch_size=batch_size, truncate=truncate_table)
 
 
-@import_.command("events")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.option("--additional-schemas", "-a", multiple=True)
-@click.argument("events_path")
-@click.option("-t", "--truncate-table", default=False, is_flag=True)
-def import_events(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    additional_schemas: str,
-    events_path: str,
-    truncate_table: bool,
-) -> None:
-    """Import an events file into a table."""
-    engine = _get_engine(db_url)
-    dataset_schemas = [_get_dataset_schema(dataset_id, schema_url)]
-    for schema in additional_schemas:
-        dataset_schemas.append(_get_dataset_schema(schema, schema_url))
-    # Create connection, do not start a transaction.
-    with engine.connect() as connection:
-        importer = EventsProcessor(dataset_schemas, connection, truncate=truncate_table)
-        importer.load_events_from_file(events_path)
-
-
 def _get_dataset_schema(
     dataset_id: str, schema_url: str, prefetch_related: bool = False
 ) -> DatasetSchema:
@@ -959,6 +933,7 @@ def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
             ind_tables=True,
             is_versioned_dataset=importer.is_versioned_dataset,
         )
+
 
 @create.command("sql")
 @click.option("--versioned/--no-versioned", default=True)
