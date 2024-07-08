@@ -1,4 +1,5 @@
 """Module for SQLAlchemy-based database table creation."""
+
 from __future__ import annotations
 
 import hashlib
@@ -418,9 +419,7 @@ def build_temporal_indexes(
             try:
                 fields.add(table_object.c[to_snake_case(field)])
             except KeyError:
-                logger.warning(
-                    "Field '%s' not found...skipping temporal index creation", field
-                )
+                logger.warning("Field '%s' not found...skipping temporal index creation", field)
                 return []
 
         combined_index = Index(
@@ -438,6 +437,7 @@ def build_temporal_indexes(
         return [combined_index, *fields_index]
     else:
         return []
+
 
 def _build_m2m_indexes(
     metadata: MetaData,

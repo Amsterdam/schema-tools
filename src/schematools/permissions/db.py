@@ -1,4 +1,5 @@
 """Create GRANT statements to give roles very specific access to the database."""
+
 from __future__ import annotations
 
 import logging

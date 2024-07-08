@@ -10,6 +10,7 @@ When the schema data is imported, the models
 :class:`~schematools.contrib.django.models.DatasetField` and
 :class:`~schematools.contrib.django.models.Profile` are all filled.
 """
+
 from __future__ import annotations
 
 import json
