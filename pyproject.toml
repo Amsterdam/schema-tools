@@ -86,8 +86,8 @@ known-first-party = ["schematools"]
 required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+max-complexity = 20  # TODO: lower this
 
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/*.py" = ["E501"]  # line too long
-"tests/**/*.py" = ["S101", "S105", "S106", "S314"]  # allow asserts, hardcoded passwords
+"tests/**/*.py" = ["S101", "S105", "S106", "S314", "S608"]  # allow asserts, hardcoded passwords, SQL injection

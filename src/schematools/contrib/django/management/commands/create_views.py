@@ -29,7 +29,7 @@ def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
                 cursor.execute("SET statement_timeout = 5000;")
                 cursor.execute(sql.SQL(view_sql))
             transaction.savepoint_rollback(sid)
-    except Exception as e:  # noqa: F841
+    except Exception as e:  # noqa: F841, BLE001
         return False
     return True
 
@@ -109,7 +109,7 @@ def create_views(
     # the datasets cache (the DatasetSchema.dataset_collection)
     # by accessing the `Dataset.schema` attribute.
     for dataset in datasets:
-        dataset.schema
+        dataset.schema  # noqa: B018
 
     for dataset in datasets:
         if not dataset.enable_db:
@@ -190,9 +190,9 @@ def create_views(
                             )
 
                             # Remove the view if it exists
-                            # Due to the large costs of recreating materialized views, we only create
-                            # and not drop them. When changes are made to the materialized view the view
-                            # must be droped manually.
+                            # Due to the large costs of recreating materialized views,
+                            # we only create and not drop them. When changes are made
+                            # to the materialized view the view must be dropped manually.
                             if view_type != "materialized":
                                 cursor.execute(
                                     sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
@@ -219,7 +219,8 @@ def create_views(
                         errors += 1
                 else:
                     command.stderr.write(
-                        f"  Required permissions for view {table.db_name} are not in the view dataset auth"
+                        f"  Required permissions for view {table.db_name}"
+                        " are not in the view dataset auth"
                     )
 
     if errors:

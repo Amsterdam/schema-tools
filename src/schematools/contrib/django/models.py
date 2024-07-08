@@ -178,6 +178,20 @@ class Dataset(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        """Perform a final data validation check, and additional updates."""
+        if self.schema_data_changed() and (self.schema_data or not self._state.adding):
+            self.__dict__.pop("schema", None)  # clear cached property
+            # The extra "and" above avoids the transaction savepoint for an empty dataset.
+            # Ensure both changes are saved together
+            with transaction.atomic():
+                super().save(*args, **kwargs)
+                self.save_schema_tables()
+        else:
+            super().save(*args, **kwargs)
+
+    save.alters_data = True
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._dataset_collection = None
@@ -246,20 +260,6 @@ class Dataset(models.Model):
 
         self.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
         return changed
-
-    def save(self, *args, **kwargs):
-        """Perform a final data validation check, and additional updates."""
-        if self.schema_data_changed() and (self.schema_data or not self._state.adding):
-            self.__dict__.pop("schema", None)  # clear cached property
-            # The extra "and" above avoids the transaction savepoint for an empty dataset.
-            # Ensure both changes are saved together
-            with transaction.atomic():
-                super().save(*args, **kwargs)
-                self.save_schema_tables()
-        else:
-            super().save(*args, **kwargs)
-
-    save.alters_data = True
 
     def save_schema_tables(self):
         """Expose the schema data to the DatasetTable.
@@ -486,6 +486,9 @@ class Profile(models.Model):
     scopes = models.CharField(max_length=255)
     schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
 
+    def __str__(self):
+        return self.name
+
     @cached_property
     def schema(self) -> ProfileSchema:
         """Provide access to the schema data"""
@@ -511,9 +514,6 @@ class Profile(models.Model):
         self.schema_data = profile_schema.json()
         self.save()
         return self
-
-    def __str__(self):
-        return self.name
 
 
 class LooseRelationField(models.ForeignKey):

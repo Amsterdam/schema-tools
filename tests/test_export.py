@@ -66,7 +66,6 @@ def test_geopackage_export(here, engine, meetbouten_schema, dbsession, tmp_path)
     """Prove that geopackage export contains the correct content."""
     _load_meetbouten_content(here, engine, meetbouten_schema)
     with engine.begin() as connection:
-        export_geopackages(connection, meetbouten_schema, "/tmp", [], [])
         export_geopackages(connection, meetbouten_schema, str(tmp_path), [], [])
     sqlite3_conn = sqlite3.connect(tmp_path / "meetbouten_meetbouten.gpkg")
     cursor = sqlite3_conn.cursor()

@@ -30,7 +30,7 @@ class ProvenanceIteration:
     def set_dataset_for_final_listing(self, dataschema: DatasetSchema):
         """Setting dataset level to add later als wrapper"""
 
-        if type(dataschema) is dict:
+        if isinstance(dataschema, dict):
 
             # At first make root branch dataset
             # and take id field as value for dataschema attribute

@@ -9,7 +9,8 @@ import weakref
 def cached_method(*lru_args, **lru_kwargs):
     """A simple lru-cache per object.
     This removed the need for methodtools.lru_cache(), which uses wirerope for purity.
-    The usage of wirerope started showing up as 5% of the request time, hence it's significant to remove.
+    The usage of wirerope started showing up as 5% of the request time,
+    hence it's significant to remove.
     """
 
     def decorator(func):

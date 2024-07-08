@@ -49,7 +49,7 @@ def create_tables(
     # the datasets cache (the DatasetSchema.dataset_collection)
     # by accessing the `Dataset.schema` attribute.
     for dataset in datasets:
-        dataset.schema
+        dataset.schema  # noqa: B018
 
     for dataset in datasets:
         if not dataset.enable_db or dataset.name in to_be_skipped:

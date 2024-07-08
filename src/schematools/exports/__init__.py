@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import IO
 
@@ -51,7 +51,7 @@ class BaseExporter:
         table_ids: list[str] | None = None,
         scopes: list[str] | None = None,
         size: int | None = None,
-        temporal_date: date = date.today(),
+        temporal_date: datetime | None = None,
     ):
         """Constructor.
 
@@ -70,7 +70,7 @@ class BaseExporter:
         self.table_ids = table_ids
         self.scopes = set(scopes)
         self.size = size
-        self.temporal_date = temporal_date
+        self.temporal_date = temporal_date or datetime.now().astimezone()
 
         self.base_dir = Path(output)
         self.tables = (

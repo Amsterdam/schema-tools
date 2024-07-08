@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Final, List
+from typing import Final
 
 # Internal conventions
 RELATION_INDICATOR: Final[str] = "_"

@@ -56,5 +56,5 @@ def export_geopackages(
             query = f"{query} LIMIT {size}"
         sql_stmt = query.as_string(connection.connection.cursor())
         os.system(  # noqa: S605  # nosec: B605
-            command.format(output_path=output_path, db_url=db_url, sql=sql_stmt)
+            command.format(output_path=output_path, db_url=db_url, sql=sql_stmt)  # noqa: S605
         )

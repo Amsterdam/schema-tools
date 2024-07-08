@@ -15,6 +15,7 @@ _shared_fs_loader = None
 warnings.warn(
     "Using schematools.utils is deprecated, use the `schematools.loaders` module instead.",
     DeprecationWarning,
+    stacklevel=1,
 )
 
 
@@ -27,6 +28,7 @@ def dataset_schemas_from_url(
         "Using dataset_schema_from_url() is deprecated, "
         "use `schematools.loaders.URLSchemaLoader` or `get_schema_loader()` instead.",
         DeprecationWarning,
+        stacklevel=1,
     )
 
     loader = URLSchemaLoader(URL(schemas_url))
@@ -50,6 +52,7 @@ def dataset_schema_from_url(
         "Using dataset_schema_from_url() is deprecated, "
         "use `schematools.loaders.URLSchemaLoader` or `get_schema_loader()` instead.",
         DeprecationWarning,
+        stacklevel=1,
     )
 
     loader = URLSchemaLoader(schemas_url)
@@ -65,6 +68,7 @@ def schemas_from_url(base_url: URL | str, data_type: type) -> dict[str, types.Da
         "Using schemas_from_url() is deprecated, "
         "use `schematools.loaders.URLSchemaLoader().get_all_datasets()` instead.",
         DeprecationWarning,
+        stacklevel=1,
     )
     if data_type is not types.DatasetSchema:
         raise TypeError("schemas_from_url() only worked with DatasetSchema")
@@ -87,6 +91,7 @@ def schema_from_url(
         "Using schema_from_url() is deprecated, "
         "use `schematools.loaders.URLSchemaLoader().get_dataset()` instead.",
         DeprecationWarning,
+        stacklevel=1,
     )
     if data_type is not types.DatasetSchema:
         raise TypeError("schema_from_url() only worked with DatasetSchema")
@@ -105,6 +110,7 @@ def dataset_schema_from_path(dataset_path: Path | str) -> types.DatasetSchema:
         "Using dataset_schema_from_path() is deprecated, "
         "use `schematools.loaders.FileSystemSchemaLoader` instead.",
         DeprecationWarning,
+        stacklevel=1,
     )
 
     # The filesystem loader is stored in a global instance,
@@ -130,6 +136,7 @@ def dataset_schemas_from_schemas_path(root: Path | str) -> dict[str, types.Datas
         "Using dataset_schema_from_path() is deprecated, "
         "use `schematools.loaders.FileSystemSchemaLoader.get_all_datasets()` instead.",
         DeprecationWarning,
+        stacklevel=1,
     )
 
     loader = FileSystemSchemaLoader(root)

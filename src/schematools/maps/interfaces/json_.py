@@ -31,7 +31,8 @@ class JsonStrategicLoader(jsonref.JsonLoader):
 
 def local_strategy(uri: str) -> str:
     if uri.startswith("./"):
-        return open(uri).read()
+        with open(uri) as f:
+            return f.read()
     raise ValueError
 
 
