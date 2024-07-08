@@ -134,7 +134,7 @@ class Command(BaseCommand):
         # Generate SQL per migration file, just like `manage.py sqlmigrate` does:
         start_state = state1
         connection = connections[options["database"]]
-        for app, app_migrations in migrations.items():
+        for _app, app_migrations in migrations.items():
             for migration in app_migrations:
                 start_state = self._print_sql(connection, start_state, migration)
 
@@ -222,8 +222,7 @@ class Command(BaseCommand):
         # needs to be applied that get_table_by_id() also does.
         snaked_table_id = to_snake_case(table_id)
         return any(
-            to_snake_case(table_id) == snaked_table_id
-            for table_id in dataset.table_versions.keys()
+            to_snake_case(table_id) == snaked_table_id for table_id in dataset.table_versions
         )
 
     def _get_dummy_dataset_model(self, dataset_schema: DatasetSchema) -> Dataset:

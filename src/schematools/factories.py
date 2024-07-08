@@ -7,7 +7,7 @@ import logging
 import numbers
 from collections import defaultdict
 from decimal import Decimal
-from typing import DefaultDict, cast
+from typing import cast
 
 from geoalchemy2.types import Geometry
 from psycopg2 import sql
@@ -319,7 +319,7 @@ def index_factory(
 
     The returned Index objects are grouped by table names.
     """
-    indexes: DefaultDict[str, list[Index]] = defaultdict(list)
+    indexes: defaultdict[str, list[Index]] = defaultdict(list)
     _metadata = cast(MetaData, metadata or MetaData())
 
     if is_versioned_dataset:

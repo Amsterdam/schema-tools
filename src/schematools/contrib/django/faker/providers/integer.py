@@ -21,9 +21,8 @@ class NullableIntegerProvider(BaseProvider):
         self, min_: int = 0, max_: int = 9999, step: int = 1, nullable=False
     ) -> int | None:
 
-        if nullable:
-            if self.generator.random.randint(0, 1):
-                return None
+        if nullable and self.generator.random.randint(0, 1):
+            return None
         return self.random_int(min_, max_, step)
 
 

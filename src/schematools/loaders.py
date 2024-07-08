@@ -180,7 +180,10 @@ class _FileBasedSchemaLoader(SchemaLoader):
     """Common logic for any schema loader that works with files (URLs or paths)"""
 
     def __init__(
-        self, schema_url: URL | Path, *, loaded_callback: Callable[[DatasetSchema], None] = None
+        self,
+        schema_url: URL | Path,
+        *,
+        loaded_callback: Callable[[DatasetSchema], None] | None = None,
     ):
         # All the datasets loaded by this instance should be collected
         # into this single cached instance, so no duplicate instances are loaded.
@@ -221,7 +224,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
         return self._as_dataset(schema_json, view_sql, prefetch_related=prefetch_related)
 
     def _as_dataset(
-        self, schema_json: dict, view_sql: str = None, prefetch_related: bool = False
+        self, schema_json: dict, view_sql: str | None = None, prefetch_related: bool = False
     ) -> DatasetSchema:
         """Convert the read JSON into a real object that can resolve its relations."""
         dataset_schema = DatasetSchema(
@@ -561,7 +564,10 @@ class FileSystemProfileLoader(ProfileLoader):
     """Loading profiles from the file system."""
 
     def __init__(
-        self, profiles_url: Path | str, *, loaded_callback: Callable[[ProfileSchema], None] = None
+        self,
+        profiles_url: Path | str,
+        *,
+        loaded_callback: Callable[[ProfileSchema], None] | None = None,
     ):
         self.profiles_url = Path(profiles_url) if isinstance(profiles_url, str) else profiles_url
         self._loaded_callback = loaded_callback
@@ -590,7 +596,7 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
         self,
         profiles_url: URL | str | None = None,
         *,
-        loaded_callback: Callable[[ProfileSchema], None] = None,
+        loaded_callback: Callable[[ProfileSchema], None] | None = None,
     ):
         super().__init__()
         self.profiles_url = URL(

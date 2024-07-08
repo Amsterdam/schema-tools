@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from functools import reduce
 from importlib.metadata import version
 from pathlib import Path, PosixPath
-from typing import Any, DefaultDict
+from typing import Any
 
 import click
 import jsonschema
@@ -552,7 +552,7 @@ def batch_validate(
         META_SCHEMA_URL: the URL to the Amsterdam meta schema
         SCHEMA_FILES: one or more schema files to be validated
     """  # noqa: D301,D412,D417
-    errors: DefaultDict[str, defaultdict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+    errors: defaultdict[str, defaultdict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
 
     # Find the root "datasets" directory.
     datasets_dir = Path(os.path.commonpath(schema_files)).absolute().resolve()

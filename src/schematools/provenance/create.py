@@ -25,6 +25,7 @@ class ProvenanceIteration:
             if item == "tables":
                 self.number_of_tables = len(dataschema[item])
                 return self.number_of_tables
+        return None
 
     def set_dataset_for_final_listing(self, dataschema: DatasetSchema):
         """Setting dataset level to add later als wrapper"""

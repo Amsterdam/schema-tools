@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import enum
-import typing
 from dataclasses import InitVar, dataclass, field
 
 
@@ -49,8 +48,8 @@ class Data(str):
 class FeatureClass:
     """Used for rendering a feature"""
 
-    name: typing.Optional[str] = None
-    expression: typing.Optional[str] = None
+    name: str | None = None
+    expression: str | None = None
     # https://mapserver.org/mapfile/style.html#style
     styles: list[dict] = field(default_factory=list)
     # https://mapserver.org/mapfile/label.html#label
@@ -73,16 +72,16 @@ class Layer:
     name: str
     type: str  # TODO: get this type from schema
     with_connection: InitVar[Connection] = None
-    projection: typing.Optional[list[str]] = None
+    projection: list[str] | None = None
 
-    connection: typing.Optional[str] = field(init=False, default=None)
-    connectiontype: typing.Optional[str] = field(init=False, default=None)
+    connection: str | None = field(init=False, default=None)
+    connectiontype: str | None = field(init=False, default=None)
 
     data: list[Data] = field(default_factory=list)
     classes: list[FeatureClass] = field(default_factory=list)
 
     include: list[Filename] = field(default_factory=list)
-    labelitem: typing.Optional[str] = None
+    labelitem: str | None = None
     metadata: Metadata = field(default_factory=Metadata)
 
     __type__: str = field(init=False, default="layer")
@@ -103,6 +102,6 @@ class Web:
 class Mapfile:
     name: str
     layers: list[Layer]
-    projection: typing.Optional[list[str]] = None
+    projection: list[str] | None = None
     include: list[Filename] = field(default_factory=list)
-    web: typing.Optional[Web] = None
+    web: Web | None = None

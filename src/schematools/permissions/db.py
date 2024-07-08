@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import Any, DefaultDict, cast
+from typing import Any, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
@@ -197,7 +197,7 @@ def get_all_dataset_scopes(
     ams_schema: DatasetSchema,
     role: str,
     scope: str,
-) -> DefaultDict[str, list]:
+) -> defaultdict[str, list]:
     """Returns all scopes that should be applied to the tables of a dataset.
 
     Args:

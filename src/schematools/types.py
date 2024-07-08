@@ -277,7 +277,7 @@ class DatasetSchema(SchemaType):
     def __init__(
         self,
         data: dict,
-        view_sql: str = None,
+        view_sql: str | None = None,
         dataset_collection: CachedSchemaLoader | None = None,
     ) -> None:
         """When initializing a datasets, a cache of related datasets
@@ -779,13 +779,11 @@ class DatasetTableSchema(SchemaType):
     @property
     def is_view(self) -> bool:
         """Whether this table is a view."""
-        if self.get("derivedFrom", False):
-            return True
+        return bool(self.get("derivedFrom", False))
 
     @property
     def derived_from(self) -> list:
-        if self.get("derivedFrom", False):
-            return self.get("derivedFrom")
+        return self.get("derivedFrom", [])
 
     @property
     def shortname(self) -> str:
@@ -1013,7 +1011,7 @@ class DatasetTableSchema(SchemaType):
             return set()
 
         date_fields = set()
-        for dimension, range_ids in dimensions.items():
+        for _dimension, range_ids in dimensions.items():
             date_fields.update(range_ids)
         return date_fields
 

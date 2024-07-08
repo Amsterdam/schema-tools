@@ -3,9 +3,8 @@ from __future__ import annotations
 from collections import ChainMap
 from dataclasses import dataclass
 
+from schematools.maps.interfaces.mapfile import serializers, types
 from schematools.types import DatasetSchema, DatasetTableSchema
-
-from ..interfaces.mapfile import serializers, types
 
 MapfileStr = str
 
@@ -114,7 +113,7 @@ class LegacyMapfileGenerator(Generator):
         ds_dict = dataset.__dict__
 
         # get layers
-        ds_dict["layers"] = map(lambda x: x.__dict__, dataset.maplayer_set.all())
+        ds_dict["layers"] = (x.__dict__ for x in dataset.maplayer_set.all())
         ds_dict["id_field"] = dataset.pk_field
 
         template_file = "default.map.template"

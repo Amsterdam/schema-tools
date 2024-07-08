@@ -7,7 +7,6 @@ from collections.abc import Iterable
 from copy import deepcopy
 from decimal import Decimal as D
 from os.path import basename, splitext
-from typing import Optional
 
 from schematools.importer.geojson import read_geojson, split_id
 from schematools.introspect.utils import DATASET_TMPL, TABLE_TMPL
@@ -76,7 +75,7 @@ def geojson_to_table(geojson_features: Iterable[dict], file_name: str) -> list[d
     return result
 
 
-def _parse_id(feature, default_name) -> tuple[str, Optional[str]]:
+def _parse_id(feature, default_name) -> tuple[str, str | None]:
     """Support datatype/PKVALUE as id value"""
     # Support optional "id" field at feature level
     try:
@@ -108,7 +107,7 @@ def _fill_properties(feature: dict, properties: dict, id_value=None):
         properties[name] = column
 
 
-def _get_display(feature: dict) -> Optional[str]:
+def _get_display(feature: dict) -> str | None:
     """Auto-detect some fields as possible 'display' field"""
     properties = feature.get("properties", {})
     for name in ("name", "title"):

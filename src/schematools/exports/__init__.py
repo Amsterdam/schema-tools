@@ -104,7 +104,7 @@ class BaseExporter:
         for dimension in temporal.dimensions.values():
             start = getattr(sa_table.c, dimension.start.db_name)
             end = getattr(sa_table.c, dimension.end.db_name)
-            return (start <= self.temporal_date) & ((end > self.temporal_date) | (end == None))
+            return (start <= self.temporal_date) & ((end > self.temporal_date) | (end is None))
         return None
 
     def export_tables(self):

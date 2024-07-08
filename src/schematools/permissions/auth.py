@@ -105,7 +105,7 @@ class UserScopes:
 
     def has_table_fields_access(self, table: DatasetTableSchema) -> bool:
         """Tell whether all fields of a table can be accessed."""
-        for field in table.fields:
+        for field in table.fields:  # noqa: SIM110 (needs optimized for statement instead of all())
             if not self.has_field_access(field):
                 return False
 

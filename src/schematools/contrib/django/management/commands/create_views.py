@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Optional
 
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, transaction
@@ -79,8 +78,7 @@ def _check_required_permissions_exist(
 def _clean_sql(sql) -> str:
     """Clean the SQL to make it easier to parse."""
 
-    sql = sql.replace("\n", " ").strip()
-    return sql
+    return sql.replace("\n", " ").strip()
 
 
 def _create_role_if_not_exists(cursor, role_name):
@@ -101,7 +99,7 @@ def _create_role_if_not_exists(cursor, role_name):
 def create_views(
     command: BaseCommand,
     datasets: Iterable[Dataset],
-    base_app_name: Optional[str] = None,
+    base_app_name: str | None = None,
 ) -> None:
     """Create views. This is a separate function to allow easy reuse."""
     errors = 0

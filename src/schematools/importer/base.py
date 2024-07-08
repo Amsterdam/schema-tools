@@ -57,9 +57,12 @@ T = TypeVar("T")
 
 def chunked(stream: Iterator[T], size: int) -> Iterator[list[T]]:
     """Read parts of the generator, pause each time after a chunk."""
+
     # Based on more-itertools. islice returns results until 'size',
     # iter() repeatedly calls make_chunk until the '[]' sentinel is returned.
-    make_chunk = lambda: list(islice(stream, size))
+    def make_chunk():
+        return list(islice(stream, size))
+
     return iter(make_chunk, [])
 
 
@@ -303,6 +306,8 @@ class BaseImporter:
                 metadata.bind,
                 db_schema_name,
             )
+            return None
+        return None
 
     def table_exists(self, table_name: str) -> bool:
         """Check if a table exists in the database."""

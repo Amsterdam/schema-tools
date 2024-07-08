@@ -4,7 +4,7 @@ import re
 from time import strftime
 from typing import Any
 
-from ..types import DatasetSchema
+from schematools.types import DatasetSchema
 
 
 def from_dataset(ds: DatasetSchema, path: str) -> dict[str, Any]:

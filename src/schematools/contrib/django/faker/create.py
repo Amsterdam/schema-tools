@@ -38,6 +38,7 @@ def create_data_for(
                 return list(_get_sql_for(mock_model.build_batch(size)))
             else:
                 mock_model.create_batch(size)
+    return None
 
 
 def _get_sql_for(objects: list[DynamicModel]):
