@@ -102,9 +102,13 @@ class BaseExporter:
             return None
         temporal = table.temporal
         for dimension in temporal.dimensions.values():
-            start = getattr(sa_table.c, dimension.start.db_name)
-            end = getattr(sa_table.c, dimension.end.db_name)
-            return (start <= self.temporal_date) & ((end > self.temporal_date) | (end is None))
+            start: Column = getattr(sa_table.c, dimension.start.db_name)
+            end: Column = getattr(sa_table.c, dimension.end.db_name)
+            return (
+                # This is an SQLAlchemy statement, hence the &, | and == operators:
+                (start <= self.temporal_date)
+                & ((end > self.temporal_date) | (end == None))  # noqa: E711
+            )
         return None
 
     def export_tables(self):
