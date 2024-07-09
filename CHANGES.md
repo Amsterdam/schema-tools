@@ -1,3 +1,14 @@
+# 2024-07-09 (6.0)
+
+* Improved performance of auth checks (especially `has_field_access()`).
+* Changed method signature of `UserScopes.has_all_scopes()` and `UserScopes.has_any_scopes()`
+  (most callers should use `has_field_access()` anyway.)
+* Block `deepcopy()` of schema fields, as it's very slow.
+* Removed `DatasetType` base class.
+* Removed `schema import events` code, as its no longer used.
+* Removed wirerope dependency.
+* Removed Python 3.8 style annotations.
+
 # 2024-03-04 (5.27.0)
 
 * Add `unit` and `description_with_unit` properties to fields.
