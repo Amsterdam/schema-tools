@@ -1,4 +1,4 @@
-# 2024-07-09 (6.0)
+# 2024-07-11 (6.0)
 
 * Improved performance of auth checks (especially `has_field_access()`).
 * Changed method signature of `UserScopes.has_all_scopes()` and `UserScopes.has_any_scopes()`
