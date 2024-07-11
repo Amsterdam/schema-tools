@@ -9,7 +9,6 @@ import logging
 import re
 import sys
 import typing
-import warnings
 from collections import UserDict
 from collections.abc import Iterator, Mapping
 from enum import Enum
@@ -1720,7 +1719,18 @@ class DatasetFieldSchema(JsonDict):
         or if the relation is temporal.
         """
         return (
-            self.nm_relation is not None or self.relation_attributes or self.is_relation_temporal
+            self.nm_relation is not None
+            or self.relation_attributes
+            or (
+                # Uses a temporal relationship:
+                self.relation is not None
+                and (
+                    # The "is_composite_key" check is a performance win,
+                    # as that avoids having to fetch the related table object.
+                    self.is_composite_key
+                    or self.related_table.is_temporal
+                )
+            )
         )
 
     @cached_property
@@ -1741,23 +1751,6 @@ class DatasetFieldSchema(JsonDict):
         if not self.is_through_table:
             return None
         return self._parent_table.dataset.build_through_table(field=self)
-
-    @cached_property
-    def is_relation_temporal(self):
-        """Tell whether the 1-N relationship is modeled by an intermediate table.
-        This allows tracking multiple versions of the relationship.
-        """
-        warnings.warn(
-            "Using `is_relation_temporal()` is deprecated, "
-            "use `self.related_table.is_temporal` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # The "is_composite_key" check is a performance win,
-        # as that avoids having to fetch the related table object.
-        return self.relation is not None and (
-            self.is_composite_key or self.related_table.is_temporal
-        )
 
     @cached_property
     def auth(self) -> frozenset[str]:
