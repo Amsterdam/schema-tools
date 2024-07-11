@@ -6,6 +6,7 @@
 * Block `deepcopy()` of schema fields, as it's very slow.
 * Removed `DatasetType` base class.
 * Removed `schema import events` code, as its no longer used.
+* Removed deprecated API's (`schematools.utils` and `is_relation_temporal`).
 * Removed wirerope dependency.
 * Removed Python 3.8 style annotations.
 
