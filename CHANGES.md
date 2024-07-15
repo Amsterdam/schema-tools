@@ -1,3 +1,7 @@
+# 2024-07-15 (6.0.1)
+
+* Fix Django<4.2 pinning.
+
 # 2024-07-11 (6.0)
 
 * Improved performance of auth checks (especially `has_field_access()`).
