@@ -117,6 +117,30 @@ class UserScopes:
         # Otherwise, the field + table rules are checked from the profile.
         return self._has_field_auth_access(field) or self._has_field_profile_access(field)
 
+    def has_field_filter_access(self, field: DatasetFieldSchema) -> Permission:
+        """Tell whether a field may be used in searching.
+
+        Some fields do not allow filtering the data for privacy reasons.
+        An example is filtering all buildings by owner (hence knowing their portfolio),
+        while the user is still allowed to see the owner of each individual building.
+
+        This also checks whether the field has read access (:meth:`has_field_access`).
+        """
+        # There is no profile option yet for profile checking here.
+        # Tell whether the 'filterAuth' gives extra permission to filter.
+        # As this logic is an extension of the existing read-access check,
+        # there is no dataset/table-level variant of the 'filterAuth'.
+        if self.has_any_scope(field.filter_auth) and (field_auth := self.has_field_access(field)):
+            # The if-statement checks filterAuth first. When it's defined, it likely denies access.
+            # That way the other more complex checks are not needed.
+            return (
+                Permission(PermissionLevel.highest, source="field.filter_auth")
+                if field.filter_auth
+                else field_auth  # Return original permission if there is no filterAuth
+            )
+        else:
+            return Permission.none
+
     def _has_dataset_auth_access(self, dataset: DatasetSchema) -> Permission:
         """Tell whether the 'auth' rules give access to the dataset."""
         if self.has_any_scope(dataset.auth):

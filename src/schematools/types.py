@@ -1781,6 +1781,16 @@ class DatasetFieldSchema(JsonDict):
         return _normalize_scopes(self.get("auth"))
 
     @cached_property
+    def filter_auth(self) -> frozenset[str]:
+        """Auth of the field, or OPENBAAR.
+        This setting allows denying access to query/search on fields,
+        e.g. to block searching all buildings from a certain owner.
+        """
+        if self.is_subfield:
+            return self.parent_field.filter_auth
+        return _normalize_scopes(self.get("filterAuth"))
+
+    @cached_property
     def is_composite_key(self):
         """Tell whether the relation uses a composite key"""
         return self.get("relation") and self.is_object and len(self.related_table.identifier) > 1
