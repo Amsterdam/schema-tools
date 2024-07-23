@@ -1082,7 +1082,7 @@ class DatasetTableSchema(SchemaType):
 
     def get_reverse_relation(self, field: DatasetFieldSchema) -> AdditionalRelationSchema | None:
         """Find the description of a reverse relation for a field."""
-        if not field.relation and not field.nm_relation:
+        if not field.is_relation:
             raise ValueError("Field is not a relation")
 
         for relation in self.additional_relations:
@@ -1472,6 +1472,13 @@ class DatasetFieldSchema(JsonDict):
     def is_internal(self) -> bool:
         """Id fields for table with composite key is only for internal (Django) use."""
         return self.is_primary and self._parent_table.has_composite_key
+
+    @cached_property
+    def is_relation(self) -> bool:
+        """Tell whether the field is a relation.
+        This is a convenience for ``bool(field.relation or field.nm_relation)``.
+        """
+        return bool(self.get("relation"))
 
     @cached_property
     def relation(self) -> str | None:
