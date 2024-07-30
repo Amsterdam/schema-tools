@@ -210,18 +210,24 @@ class JsonDict(UserDict):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.data!r})"
 
+    def __init__(self, *args, **kwargs):
+        self.__initialized = False
+        super().__init__(*args, **kwargs)
+        self.__initialized = True
+
     def __setitem__(self, key, value):
         """Check for changes to the dictionary data. Note this is also called on __init__()."""
-        if key == "auth" and key in self.data:
-            logger.warning("auth field is patched by tests")
+        if self.__initialized:
+            logger.info("patching '%s' on %r id %d", key, self, id(self))
+            property_name = to_snake_case(key)  # filterAuth / filter_auth
+            if (
+                property_name in self.__dict__
+                and (prop := getattr(self.__class__, property_name, None)) is not None
+                and isinstance(prop, cached_property)
+            ):
+                # Clear the @cached_property cache value
+                del self.__dict__[property_name]
 
-        if (
-            key in self.__dict__
-            and (prop := getattr(self.__class__, key, None)) is not None
-            and isinstance(prop, cached_property)
-        ):
-            # Clear the @cached_property cache value
-            del self.__dict__[key]
         super().__setitem__(key, value)
 
     if IS_DEBUGGER:
