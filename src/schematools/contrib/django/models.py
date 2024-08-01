@@ -211,7 +211,9 @@ class Dataset(models.Model):
         return name
 
     @classmethod
-    def create_for_schema(cls, schema: DatasetSchema, path: str | None = None) -> Dataset:
+    def create_for_schema(
+        cls, schema: DatasetSchema, path: str | None = None, enable_db: bool = True
+    ) -> Dataset:
         """Create the schema based on the Amsterdam Schema JSON input"""
         name = cls.name_from_schema(schema)
         if path is None:
@@ -225,6 +227,7 @@ class Dataset(models.Model):
             version=schema.version,
             is_default_version=schema.is_default_version,
             enable_api=cls.has_api_enabled(schema),
+            enable_db=enable_db,
         )
         obj._dataset_collection = schema.loader  # retain collection on saving
         obj.save()

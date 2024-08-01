@@ -275,6 +275,12 @@ def brk2_simple_schema(schema_loader) -> DatasetSchema:
 
 
 @pytest.fixture
+def brp_schema(schema_loader) -> DatasetSchema:
+    """Fixture for the BRP dataset."""
+    return schema_loader.get_dataset_from_file("brp.json")
+
+
+@pytest.fixture
 def composite_key_schema(schema_loader) -> ProfileSchema:
     return schema_loader.get_dataset_from_file("composite_key.json")
 
@@ -391,9 +397,9 @@ def profile_loader(here) -> FileSystemProfileLoader:
 
 
 @pytest.fixture
-def brp_r_profile_schema(profile_loader) -> ProfileSchema:
+def brp_rname_profile_schema(profile_loader) -> ProfileSchema:
     """A downloaded profile schema definition"""
-    return profile_loader.get_profile("BRP_R")
+    return profile_loader.get_profile("BRP_RNAME")
 
 
 @pytest.fixture
