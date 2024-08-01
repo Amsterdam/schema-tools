@@ -1,6 +1,6 @@
 {
     "name": "brp_medewerker",
-    "scopes": ["BRP/R"],
+    "scopes": ["BRP/RNAME"],
     "datasets": {
         "brp": {
             "tables": {

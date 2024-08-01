@@ -67,13 +67,13 @@ def test_datasetschema_from_file_not_a_dataset(schema_loader) -> None:
         schema_loader.get_dataset_from_file("not_a_json_file.txt")
 
 
-def test_profile_schema(brp_r_profile_schema: ProfileSchema) -> None:
+def test_profile_schema(brp_rname_profile_schema: ProfileSchema) -> None:
     """Prove that the profile files are properly read,
     and have their fields access the JSON data.
     """
-    assert brp_r_profile_schema.scopes == {"BRP/R"}
+    assert brp_rname_profile_schema.scopes == {"BRP/RNAME"}
 
-    brp = brp_r_profile_schema.datasets["brp"]
+    brp = brp_rname_profile_schema.datasets["brp"]
     table = brp.tables["ingeschrevenpersonen"]
 
     assert table.permissions.level is PermissionLevel.READ

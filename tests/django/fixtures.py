@@ -1,8 +1,6 @@
-from __future__ import annotations
+"""Extra fixtures for Django-based tests."""
 
-import json
-from pathlib import Path
-from typing import Any
+from __future__ import annotations
 
 import pytest
 
@@ -45,24 +43,15 @@ def kadastraleobjecten_dataset(kadastraleobjecten_schema: DatasetSchema) -> Data
 
 
 @pytest.fixture
-def brp_r_profile(brp_r_profile_schema: ProfileSchema) -> Profile:
+def brp_rname_profile(brp_rname_profile_schema: ProfileSchema) -> Profile:
     """The persistent database profile object based on a downlaoded schema definition."""
-    return Profile.create_for_schema(brp_r_profile_schema)
+    return Profile.create_for_schema(brp_rname_profile_schema)
 
 
 @pytest.fixture
-def brp_schema_json(here: Path) -> Any:
-    """Fixture for the BRP dataset."""
-    path = here / "files/brp.json"
-    return json.loads(path.read_text())
-
-
-@pytest.fixture
-def brp_dataset(brp_schema_json: dict) -> Dataset:
+def brp_dataset(brp_schema: DatasetSchema) -> Dataset:
     """Create a remote dataset."""
-    return Dataset.objects.create(
-        name="brp", schema_data=brp_schema_json, enable_db=False, path="brp"
-    )
+    return Dataset.create_for_schema(brp_schema, path="brp", enable_db=False)
 
 
 @pytest.fixture
