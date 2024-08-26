@@ -109,8 +109,8 @@ class Command(BaseCommand):
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 schemas_root = Path(options["schema_url"]).parent
-                subprocess.run(
-                    ["git", "clone", schemas_root, tmpdir],  # noqa: S603
+                subprocess.run(  # noqa: S603
+                    ["git", "clone", schemas_root, tmpdir],
                 )
                 table1 = self._load_table_from_checkout(
                     dataset.id, options["table"], tmpdir, options["version1"]
@@ -153,8 +153,8 @@ class Command(BaseCommand):
         self, dataset_id: str, table_id: str, tmpdir: str, version_ref: str
     ) -> DatasetTableSchema:
         """Load a DatasetTableSchema for the specified git reference."""
-        subprocess.run(
-            ["git", "checkout", version_ref], cwd=tmpdir, stdout=subprocess.DEVNULL  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ["git", "checkout", version_ref], cwd=tmpdir, stdout=subprocess.DEVNULL
         )
         tmp_schema_path = Path(tmpdir) / "datasets"
         # We create a specific schema loader, because it has to read in the data

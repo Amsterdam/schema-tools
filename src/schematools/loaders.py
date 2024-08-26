@@ -3,9 +3,9 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlparse
 
 import requests

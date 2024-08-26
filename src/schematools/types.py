@@ -10,13 +10,12 @@ import re
 import sys
 import typing
 from collections import UserDict
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from enum import Enum
 from functools import cached_property, total_ordering
 from re import Pattern
 from typing import (
     Any,
-    Callable,
     ClassVar,
     NamedTuple,
     NoReturn,
