@@ -1406,13 +1406,15 @@ class DatasetFieldSchema(JsonDict):
 
     @property
     def unit(self) -> str | None:
-        """Description of the dataset (if set)."""
+        """Unit of the field (if set)."""
         unit = self.get("unit")
-        return unit.get("value", unit)
+        if isinstance(unit, dict):
+            return unit.get("value", unit)
+        return unit
 
     @property
-    def discription_with_unit(self) -> str | None:
-        """Description of the dataset (if set), with unit (if set)."""
+    def description_with_unit(self) -> str | None:
+        """Description of the field (if set), with unit (if set)."""
         if self.unit:
             return f"{self.description} [{self.unit}]"
         else:
