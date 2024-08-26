@@ -1,8 +1,9 @@
 from __future__ import annotations  # noqa: D104
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
 from urllib.parse import urlparse
 
 from django.conf import settings

@@ -83,7 +83,7 @@ def test_model_mocker_factory_sets_model_mocker_dataset_and_table_schema_through
         == "<class 'dso_api.dynamic_api.afvalwegingen.models.containers'>"
     )
 
-    assert type(AfvalwegingenContainersModel.get_dataset()) == Dataset
+    assert isinstance(AfvalwegingenContainersModel.get_dataset(), Dataset)
     assert AfvalwegingenContainersModel.get_dataset() == afval_dataset
     assert str(AfvalwegingenContainersModel.get_dataset()) == "afvalwegingen"
 
@@ -123,14 +123,14 @@ def test_schema_model_mockers_factory(afval_dataset):
     }
     assert "containers" in model_mockers
     ContainersMocker = model_mockers["containers"]
-    assert type(ContainersMocker) == FactoryMetaClass
+    assert isinstance(ContainersMocker, FactoryMetaClass)
     assert str(ContainersMocker) == (
         "<containers_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.containers'>>"
     )
 
     assert "clusters" in model_mockers
     ClustersMocker = model_mockers["clusters"]
-    assert type(ClustersMocker) == FactoryMetaClass
+    assert isinstance(ClustersMocker, FactoryMetaClass)
     assert str(ClustersMocker) == (
         "<clusters_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.clusters'>>"
     )

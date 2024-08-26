@@ -23,11 +23,11 @@ from __future__ import annotations
 
 import operator
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from functools import partial, wraps
 from pathlib import Path
-from typing import Callable, cast
+from typing import cast
 from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
