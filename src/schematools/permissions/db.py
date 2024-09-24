@@ -247,7 +247,7 @@ def get_all_dataset_scopes(
 
     def _fetch_grantees(scopes: frozenset[str]) -> list[str]:
         if role == "AUTO":
-            grantees = [scope_to_role(scope) for scope in scopes]
+            grantees = [scope_to_role(_scope) for _scope in scopes]
         elif scope in scopes:
             grantees = [role]
         else:
