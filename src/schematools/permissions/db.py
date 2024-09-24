@@ -463,57 +463,37 @@ def create_acl_from_schemas(
     Revoke old privileges before assigning new in case new privileges are more restrictive.
     """
     if revoke:
+        # For a single dataset, or all tables?
+        revoke_dataset = schemas if isinstance(schemas, DatasetSchema) else None
         if role == "AUTO":
-            if isinstance(schemas, DatasetSchema):
-                # for a single dataset
-                _revoke_all_privileges_from_read_and_write_roles(
-                    session, pg_schema, schemas, dry_run=dry_run, echo=bool(verbose)
-                )
-            else:
-                _revoke_all_privileges_from_read_and_write_roles(
-                    session, pg_schema, dry_run=dry_run, echo=bool(verbose)
-                )
+            # All roles
+            _revoke_all_privileges_from_read_and_write_roles(
+                session, pg_schema, revoke_dataset, dry_run=dry_run, echo=bool(verbose)
+            )
         else:
-            if isinstance(schemas, DatasetSchema):
-                # for a single dataset
-                _revoke_all_privileges_from_role(
-                    session, pg_schema, role, schemas, dry_run=dry_run, echo=bool(verbose)
-                )
-            else:
-                _revoke_all_privileges_from_role(
-                    session, pg_schema, role, dry_run=dry_run, echo=bool(verbose)
-                )
+            # Only for a single role
+            _revoke_all_privileges_from_role(
+                session, pg_schema, role, revoke_dataset, dry_run=dry_run, echo=bool(verbose)
+            )
 
-    if set_read_permissions:
-        if isinstance(schemas, DatasetSchema):
-            # for a single dataset
+    datasets = [schemas] if isinstance(schemas, DatasetSchema) else schemas.values()
+    for dataset in datasets:
+        if set_read_permissions:
             set_dataset_read_permissions(
-                session, pg_schema, schemas, role, scope, dry_run, create_roles, echo=bool(verbose)
+                session,
+                pg_schema,
+                dataset,
+                role,
+                scope,
+                dry_run,
+                create_roles,
+                echo=bool(verbose),
             )
-        else:
-            for dataset_schema in schemas.values():
-                set_dataset_read_permissions(
-                    session,
-                    pg_schema,
-                    dataset_schema,
-                    role,
-                    scope,
-                    dry_run,
-                    create_roles,
-                    echo=bool(verbose),
-                )
 
-    if set_write_permissions:
-        if isinstance(schemas, DatasetSchema):
-            # for a single dataset
+        if set_write_permissions:
             set_dataset_write_permissions(
-                session, pg_schema, schemas, dry_run, create_roles, echo=bool(verbose)
+                session, pg_schema, dataset, dry_run, create_roles, echo=bool(verbose)
             )
-        else:
-            for dataset_schema in schemas.values():
-                set_dataset_write_permissions(
-                    session, pg_schema, dataset_schema, dry_run, create_roles, echo=bool(verbose)
-                )
 
 
 def _revoke_all_privileges_from_role(
