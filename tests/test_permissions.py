@@ -704,11 +704,12 @@ def _check_select_permission_denied(engine, role, table, column="*"):
     """Check if role has no SELECT permission on table.
     Fail if role, table or column does not exist.
     """
-    with pytest.raises(Exception) as e_info, engine.begin() as connection:
+    with pytest.raises(
+        Exception, match=f"permission denied for table {table}"
+    ), engine.begin() as connection:
         connection.execute(f"SET ROLE {role}")
         connection.execute(f"SELECT {column} FROM {table}")
         connection.execute("RESET ROLE")
-    assert f"permission denied for table {table}" in str(e_info)
 
 
 def _check_select_permission_granted(engine, role, table, column="*"):
