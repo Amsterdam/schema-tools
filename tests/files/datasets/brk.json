@@ -173,6 +173,7 @@
             "description": "Als dit veld is gevuld geeft dit de omschrijving waarom dit gegeven in onderzoek staat (art. 7n en 7r Kadasterwet)."
           },
           "heeftEenRelatieMetVerblijfsobject": {
+            "shortname": "hftRelMtVot",
             "type": "array",
             "items": {
               "type": "object",
@@ -880,6 +881,7 @@
             "description": "Identificatie van het betrokken subject"
           },
           "heeftBetrekkingOpKadastraalObject": {
+            "shortname": "hftBtrkOpKot",
             "type": "object",
             "properties": {
               "identificatie": {
