@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
+from dataclasses import dataclass
 from typing import Any, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
@@ -173,15 +173,16 @@ def set_dataset_write_permissions(
     grantee = f"write_{ams_schema.db_name}"
     if create_roles:
         _create_role_if_not_exists(session, grantee, dry_run=dry_run)
+
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = table.db_name
         if is_remote(table_name):
             continue
-        table_privileges = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"]
+
         _execute_grant(
             session,
             grant(
-                table_privileges,
+                ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"],
                 PgObjectType.TABLE,
                 table_name,
                 grantee,
@@ -193,11 +194,20 @@ def set_dataset_write_permissions(
         )
 
 
-def get_all_dataset_scopes(
-    ams_schema: DatasetSchema,
-    role: str,
-    scope: str,
-) -> defaultdict[str, list]:
+@dataclass
+class GrantParam:
+    """Which object to give which permission.
+    This intermediate object is used to collect results before making
+    statements like ``GRANT SELECT ON <type> target TO <role>``.
+    """
+
+    privileges: list[str]
+    target_type: PgObjectType  # often PgObjectType.TABLE
+    target: str
+    grantees: list[str]
+
+
+def get_all_dataset_scopes(ams_schema: DatasetSchema, role: str, scope: str) -> list[GrantParam]:
     """Returns all scopes that should be applied to the tables of a dataset.
 
     Args:
@@ -222,39 +232,24 @@ def get_all_dataset_scopes(
         the associated sub-table gets the grant `scope_bar`.
 
     Returns:
-        all_scopes (defaultdict): Contains for each table in the dataset a list of scopes with
-            priviliges and grants:
+        all_scopes (list): Contains a list of scopes with priviliges and grants:
 
-            '"table1":[
-                        {
-                            "privileges": ["SELECT"],
-                            "grantees": ["scope_openbaar"]),
-                        }
-                    ],
-            "table2":
-                    [
-                        {
-                            "privileges": ["SELECT columnA"],
-                            "grantees": ["scope_openbaar"]),
-                        },
-                        {
-                            "privileges": ["SELECT columnB"],
-                            "grantees": ["scope_A", "scope_B"]),
-                        }
-                    ]
-                    '
+        [
+            GrantScope(["SELECT"],           PgObjectType.TABLE, "table1", ["scope_openbaar"]),
+            GrantScope(["SELECT (columnA)"], PgObjectType.TABLE, "table2", ["scope_openbaar"]),
+            GrantScope(["SELECT (columnB)"], PgObjectType.TABLE, "table2", ["scope_A", "scope_B"]),
+        ]
     """
 
     def _fetch_grantees(scopes: frozenset[str]) -> list[str]:
         if role == "AUTO":
-            grantees = [scope_to_role(_scope) for _scope in scopes]
+            return [scope_to_role(_scope) for _scope in scopes]
         elif scope in scopes:
-            grantees = [role]
+            return [role]
         else:
-            grantees = []
-        return grantees
+            return []
 
-    all_scopes = defaultdict(list)
+    all_scopes = []
     dataset_scopes = ams_schema.auth
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
@@ -262,44 +257,24 @@ def get_all_dataset_scopes(
         if is_remote(table_name):
             continue
 
-        table_scopes = table.auth
-        fallback_scope = (table_scopes - {PUBLIC_SCOPE}) or dataset_scopes
+        table_scopes = (table.auth - {PUBLIC_SCOPE}) or dataset_scopes
         fields = [
-            field for field in table.get_fields(include_subfields=True) if field.name != "schema"
+            field
+            for field in table.get_fields(include_subfields=True)
+            if not field.type.endswith("#/definitions/schema")
         ]
 
-        column_scopes = {}
-
         # First process all fields, to know if any fields has a non-public scope
+        column_scopes = {}
         for field in fields:
-            column_name = field.db_name
             # Object type relations have subfields, in that case
             # the auth scope on the relation is leading.
-            parent_field_scopes: frozenset[str] = frozenset()
-            if field.is_subfield:
-                parent_field_scopes = field.parent_field.auth - {PUBLIC_SCOPE}
-
             field_scopes = field.auth - {PUBLIC_SCOPE}
-            final_scopes: frozenset[str] = parent_field_scopes or field_scopes
+            if field.is_subfield:
+                field_scopes = (field.parent_field.auth - {PUBLIC_SCOPE}) or field_scopes
 
-            if final_scopes:
-                column_scopes[column_name] = final_scopes
-
-            if field.is_nested_table:
-                all_scopes[field.nested_table.db_name].append(
-                    {
-                        "privileges": ["SELECT"],
-                        "grantees": _fetch_grantees(final_scopes or fallback_scope),
-                    }
-                )
-
-            if field.nm_relation is not None:
-                all_scopes[field.through_table.db_name].append(
-                    {
-                        "privileges": ["SELECT"],
-                        "grantees": _fetch_grantees(final_scopes or fallback_scope),
-                    }
-                )
+            if field_scopes:
+                column_scopes[field.db_name] = field_scopes
 
         if column_scopes:
             for field in fields:
@@ -308,22 +283,24 @@ def get_all_dataset_scopes(
                     continue
 
                 column_name = field.db_name
-                all_scopes[table_name].append(
-                    # NB. space after SELECT is significant!
-                    {
-                        "privileges": [f"SELECT ({column_name})"],
-                        "grantees": _fetch_grantees(
-                            column_scopes.get(column_name, fallback_scope)
-                        ),
-                    }
+                all_scopes.append(
+                    GrantParam(
+                        # NB. space after SELECT is significant!
+                        privileges=[f"SELECT ({column_name})"],
+                        target_type=PgObjectType.TABLE,
+                        target=table_name,
+                        grantees=_fetch_grantees(column_scopes.get(column_name, table_scopes)),
+                    )
                 )
         else:
             if table_name not in all_scopes:
-                all_scopes[table_name].append(
-                    {
-                        "privileges": ["SELECT"],
-                        "grantees": _fetch_grantees(fallback_scope),
-                    }
+                all_scopes.append(
+                    GrantParam(
+                        privileges=["SELECT"],
+                        target_type=PgObjectType.TABLE,
+                        target=table_name,
+                        grantees=_fetch_grantees(table_scopes),
+                    )
                 )
     return all_scopes
 
@@ -366,32 +343,29 @@ def set_dataset_read_permissions(
         If NM and nested relation fields (type `array` in the schema) have a scope `bar`
         the associated sub-table gets the grant `scope_bar`.
     """
-    grantee: str | None = f"write_{ams_schema.db_name}"
-
     grantee = None if role == "AUTO" else role
     if create_roles and grantee:
-        _create_role_if_not_exists(session, grantee)
+        _create_role_if_not_exists(session, grantee, dry_run=dry_run)
 
-    all_scopes = get_all_dataset_scopes(ams_schema, role, scope)
-
-    for table_name, grant_params in all_scopes.items():
-        for grant_param in grant_params:
-            for _grantee in grant_param["grantees"]:
-                if create_roles:
-                    _create_role_if_not_exists(session, _grantee, dry_run=dry_run)
-                _execute_grant(
-                    session,
-                    grant(
-                        grant_param["privileges"],
-                        PgObjectType.TABLE,
-                        table_name,
-                        _grantee,
-                        grant_option=False,
-                        schema=pg_schema,
-                    ),
-                    echo=echo,
-                    dry_run=dry_run,
-                )
+    all_grants = get_all_dataset_scopes(ams_schema, role, scope)
+    for grant_param in all_grants:
+        # For global and specific columns:
+        for _grantee in grant_param.grantees:
+            if create_roles:
+                _create_role_if_not_exists(session, _grantee, dry_run=dry_run)
+            _execute_grant(
+                session,
+                grant(
+                    grant_param.privileges,
+                    type=grant_param.target_type,
+                    target=grant_param.target,
+                    grantee=_grantee,
+                    grant_option=False,
+                    schema=pg_schema,
+                ),
+                echo=echo,
+                dry_run=dry_run,
+            )
 
 
 def set_additional_grants(

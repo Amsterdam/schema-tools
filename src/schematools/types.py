@@ -548,7 +548,7 @@ class DatasetSchema(SchemaType):
             "originalID": field.id,
             "type": "table",
             "version": str(table.version),
-            "auth": list(table.auth),
+            "auth": list((field.auth - {_PUBLIC_SCOPE}) or (table.auth - {_PUBLIC_SCOPE})) or None,
             "description": f"Auto-generated table for nested field: {table.id}.{field.id}",
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
@@ -561,7 +561,6 @@ class DatasetSchema(SchemaType):
                     "parent": {
                         "type": parent_fk_type,
                         "relation": f"{self.id}:{table.id}",
-                        "auth": list(field.auth),
                     },
                     **field["items"]["properties"],
                 },
@@ -638,6 +637,8 @@ class DatasetSchema(SchemaType):
             "id": f"{table.id}_{target_field_id}",
             "type": "table",
             "version": str(table.version),
+            "auth": list((field.auth - {_PUBLIC_SCOPE}) or (field.table.auth - {_PUBLIC_SCOPE}))
+            or None,
             "originalID": field.id,
             "throughFields": [left_table_id, target_field_id],
             "description": f"Auto-generated M2M table for {table.id}.{field.id}",
