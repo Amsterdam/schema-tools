@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 import pytest
 from psycopg2.errors import DuplicateObject
@@ -43,7 +44,9 @@ class TestReadPermissions:
             engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
         )
 
-    def test_nm_relations_permissions(self, here, engine, kadastraleobjecten_schema, dbsession):
+    def test_nm_relations_permissions(
+        self, here, engine, kadastraleobjecten_schema, dbsession, caplog
+    ):
         importer = NDJSONImporter(kadastraleobjecten_schema, engine)
         importer.generate_db_objects("kadastraleobjecten", truncate=True, ind_extra_index=False)
 
@@ -63,13 +66,45 @@ class TestReadPermissions:
 
         # make sure role 'write_brk' exists with create_roles=True
         # The role exists now for all test following this statement
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, {}, "openbaar", "OPENBAAR", create_roles=True
-        )
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, {}, "brk_rsn", "BRK/RSN"
-        )
-        apply_schema_and_profile_permissions(engine, "public", ams_schema, {}, "brk_ro", "BRK/RO")
+        with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
+            apply_schema_and_profile_permissions(
+                engine,
+                "public",
+                ams_schema,
+                {},
+                "openbaar",
+                "OPENBAAR",
+                create_roles=True,
+                verbose=1,
+            )
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, {}, "brk_rsn", "BRK/RSN", verbose=1
+            )
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, {}, "brk_ro", "BRK/RO", verbose=1
+            )
+
+        grants = _filter_grant_statements(caplog)
+        assert grants == [
+            "GRANT SELECT (begin_geldigheid) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
+            "GRANT SELECT (eind_geldigheid) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
+            "GRANT SELECT (id) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
+            "GRANT SELECT (identificatie) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
+            "GRANT SELECT (koopsom) ON TABLE public.brk_kadastraleobjecten TO brk_ro",
+            "GRANT SELECT (neuron_id) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
+            "GRANT SELECT (registratiedatum) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
+            "GRANT SELECT (soort_cultuur_onbebouwd_code) ON TABLE public.brk_kadastraleobjecten TO brk_ro",
+            "GRANT SELECT (soort_cultuur_onbebouwd_omschrijving) ON TABLE public.brk_kadastraleobjecten TO brk_ro",
+            "GRANT SELECT (soort_grootte) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
+            "GRANT SELECT (volgnummer) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject TO brk_rsn",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject TO write_brk",
+        ]
 
         # table denied
         _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten")
@@ -97,7 +132,79 @@ class TestReadPermissions:
             engine, "brk_rsn", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject"
         )
 
-    def test_openbaar_permissions(self, here, engine, afval_schema, dbsession):
+    def test_brk_permissions(
+        self, here, engine, brk_schema_without_bag_relations, dbsession, caplog
+    ):
+        """Prove that a dataset with many nested tables get the proper permissions."""
+        importer = NDJSONImporter(brk_schema_without_bag_relations, engine)
+        for table in brk_schema_without_bag_relations.get_tables():
+            importer.generate_db_objects(table.id, truncate=True, ind_extra_index=False)
+
+        # Setup schema and profile
+        # This schema has auth on dataset level, not on table
+        ams_schema = {brk_schema_without_bag_relations.id: brk_schema_without_bag_relations}
+
+        # make sure role 'write_brk' exists with create_roles=True
+        # The role exists now for all test following this statement
+        with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
+            apply_schema_and_profile_permissions(
+                engine,
+                "public",
+                ams_schema,
+                {},
+                "AUTO",
+                "ALL",
+                create_roles=True,
+                verbose=1,
+            )
+
+        grants = _filter_grant_statements(caplog)
+        assert grants == [
+            "GRANT SELECT ON TABLE public.brk_aantekeningenkadastraleobjecten TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_persoon TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten_heeft_betrokken_persoon TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten_is_gbsd_op_sdl TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aardzakelijkerechten TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_gemeentes TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastralegemeentecodes TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastralegemeentes TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_hft_rel_mt_vot TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_soort_cultuur_bebouwd TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastralesecties TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastralesubjecten TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_meta TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_stukdelen TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_kadastraal_object TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_recht TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_zakelijk_recht TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_tenaamstellingen TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_zakelijkerechten TO scope_brk_rsn",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenkadastraleobjecten TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_persoon TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten_heeft_betrokken_persoon TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten_is_gbsd_op_sdl TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aardzakelijkerechten TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_gemeentes TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralegemeentecodes TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralegemeentes TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_hft_rel_mt_vot TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_soort_cultuur_bebouwd TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralesecties TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralesubjecten TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_meta TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_kadastraal_object TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_recht TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_zakelijk_recht TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_tenaamstellingen TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_zakelijkerechten TO write_brk",
+        ]
+
+    def test_openbaar_permissions(self, here, engine, afval_schema, dbsession, caplog):
         """
         Prove that the default auth scope is "OPENBAAR".
         """
@@ -121,24 +228,33 @@ class TestReadPermissions:
         _check_select_permission_denied(engine, "openbaar", "afvalwegingen_containers")
         _check_select_permission_denied(engine, "bag_r", "afvalwegingen_clusters")
 
-        apply_schema_and_profile_permissions(
-            engine=engine,
-            pg_schema="public",
-            ams_schema=ams_schema,
-            profiles=profiles,
-            role="openbaar",
-            scope="OPENBAAR",
-            create_roles=True,
-        )
-        apply_schema_and_profile_permissions(
-            engine=engine,
-            pg_schema="public",
-            ams_schema=ams_schema,
-            profiles=profiles,
-            role="bag_r",
-            scope="BAG/R",
-            create_roles=True,
-        )
+        with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
+            apply_schema_and_profile_permissions(
+                engine=engine,
+                pg_schema="public",
+                ams_schema=ams_schema,
+                profiles=profiles,
+                role="openbaar",
+                scope="OPENBAAR",
+                create_roles=True,
+            )
+            apply_schema_and_profile_permissions(
+                engine=engine,
+                pg_schema="public",
+                ams_schema=ams_schema,
+                profiles=profiles,
+                role="bag_r",
+                scope="BAG/R",
+                create_roles=True,
+                verbose=1,
+            )
+
+        grants = _filter_grant_statements(caplog)
+        assert grants == [
+            "GRANT SELECT ON TABLE public.afvalwegingen_clusters TO bag_r",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_clusters TO write_afvalwegingen",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_containers TO write_afvalwegingen",
+        ]
 
         _check_select_permission_granted(engine, "openbaar", "afvalwegingen_containers")
         _check_select_permission_denied(engine, "openbaar", "afvalwegingen_clusters")
@@ -212,7 +328,9 @@ class TestReadPermissions:
         )
         _check_select_permission_denied(engine, "level_c", "gebieden_buurten")
 
-    def test_auth_list_permissions(self, here, engine, gebieden_schema_auth_list, dbsession):
+    def test_auth_list_permissions(
+        self, here, engine, gebieden_schema_auth_list, dbsession, caplog
+    ):
         """
         Prove that dataset, table, and field permissions are set,
         according to the "OF-OF" Exclusief principle.
@@ -257,24 +375,86 @@ class TestReadPermissions:
                 _check_select_permission_denied(engine, test_role, table)
 
         # Apply the permissions from Schema and Profiles.
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_a1", "LEVEL/A1"
-        )
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_b1", "LEVEL/B1"
-        )
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_c1", "LEVEL/C1"
-        )
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_a2", "LEVEL/A2"
-        )
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_b2", "LEVEL/B2"
-        )
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_c2", "LEVEL/C2"
-        )
+        with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, profiles, "level_a1", "LEVEL/A1", verbose=1
+            )
+            grants = _filter_grant_statements(caplog)
+            assert grants == [
+                "GRANT SELECT ON TABLE public.gebieden_buurten TO level_a1",
+                "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk TO level_a1",
+                "GRANT SELECT ON TABLE public.gebieden_wijken TO level_a1",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
+            ]
+
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, profiles, "level_b1", "LEVEL/B1", verbose=1
+            )
+            grants = _filter_grant_statements(caplog)
+            assert grants == [
+                "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken TO level_b1",
+                "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken TO level_b1",
+                "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken TO level_b1",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
+            ]
+
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, profiles, "level_c1", "LEVEL/C1", verbose=1
+            )
+            grants = _filter_grant_statements(caplog)
+            assert grants == [
+                "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken TO level_c1",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
+            ]
+
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, profiles, "level_a2", "LEVEL/A2", verbose=1
+            )
+            grants = _filter_grant_statements(caplog)
+            assert grants == [
+                "GRANT SELECT ON TABLE public.gebieden_buurten TO level_a2",
+                "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk TO level_a2",
+                "GRANT SELECT ON TABLE public.gebieden_wijken TO level_a2",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
+            ]
+
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, profiles, "level_b2", "LEVEL/B2", verbose=1
+            )
+            grants = _filter_grant_statements(caplog)
+            assert grants == [
+                "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken TO level_b2",
+                "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken TO level_b2",
+                "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken TO level_b2",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
+            ]
+
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, profiles, "level_c2", "LEVEL/C2", verbose=1
+            )
+            grants = _filter_grant_statements(caplog)
+            assert grants == [
+                "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken TO level_c2",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
+            ]
 
         # Check if the read priviliges are correct
         _check_select_permission_denied(engine, "level_a1", "gebieden_bouwblokken")
@@ -321,7 +501,7 @@ class TestReadPermissions:
         _check_delete_permission_denied(engine, "level_b1", "gebieden_bouwblokken", "id = 'abc'")
         _check_truncate_permission_denied(engine, "level_b1", "gebieden_bouwblokken")
 
-    def test_auto_create_roles(self, here, engine, gebieden_schema_auth, dbsession):
+    def test_auto_create_roles(self, here, engine, gebieden_schema_auth, dbsession, caplog):
         """
         Prove that dataset, table, and field permissions are set according,
         to the "OF-OF" Exclusief principle:
@@ -356,9 +536,45 @@ class TestReadPermissions:
         # _check_role_does_not_exist(engine, "scope_level_c")
 
         # Apply the permissions from Schema and Profiles.
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True
-        )
+        with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
+            apply_schema_and_profile_permissions(
+                engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True, verbose=1
+            )
+
+        grants = _filter_grant_statements(caplog)
+        assert grants == [
+            "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken TO scope_level_c",
+            "GRANT SELECT (begingeldigheid) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
+            "GRANT SELECT (diemen) ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen TO scope_level_a",
+            "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken TO scope_level_b",
+            "GRANT SELECT (eindgeldigheid) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
+            "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken TO scope_level_b",
+            "GRANT SELECT (id) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
+            "GRANT SELECT (id) ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen TO scope_level_a",
+            "GRANT SELECT (identificatie) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
+            "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken TO scope_level_d",
+            "GRANT SELECT (ligt_in_buurt_identificatie) ON TABLE public.gebieden_bouwblokken TO scope_level_d",
+            "GRANT SELECT (ligt_in_buurt_loose_id) ON TABLE public.gebieden_bouwblokken TO scope_level_d",
+            "GRANT SELECT (ligt_in_buurt_volgnummer) ON TABLE public.gebieden_bouwblokken TO scope_level_d",
+            "GRANT SELECT (parent_id) ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen TO scope_level_f",
+            "GRANT SELECT (volgnummer) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
+            "GRANT SELECT (zaanstad) ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen TO scope_level_a",
+            "GRANT SELECT ON TABLE public.gebieden_bouwblokken_ligt_in_buurt TO scope_level_a",
+            "GRANT SELECT ON TABLE public.gebieden_buurten TO scope_level_a",
+            "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk TO scope_level_a",
+            "GRANT SELECT ON TABLE public.gebieden_ggwgebieden_bestaat_uit_buurten TO scope_level_e",
+            "GRANT SELECT ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen TO scope_level_f",
+            "GRANT SELECT ON TABLE public.gebieden_wijken TO scope_level_a",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_ligt_in_buurt TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden_bestaat_uit_buurten TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
+        ]
+
         # Check if roles exist and the read priviliges are correct
         _check_select_permission_denied(engine, "scope_level_a", "gebieden_bouwblokken")
         _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten")
@@ -425,7 +641,6 @@ class TestReadPermissions:
         importer.generate_db_objects("wijken", truncate=True, ind_extra_index=False)
 
         # dataset 2: meetbouten
-        ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
         importer = NDJSONImporter(meetbouten_schema, engine)
         importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
         importer.generate_db_objects("metingen", truncate=True, ind_extra_index=False)
@@ -465,7 +680,7 @@ class TestReadPermissions:
         # Check perms again on meetbouten
         _check_select_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten")
 
-    def test_permissions_support_shortnames(self, here, engine, hr_schema_auth, dbsession):
+    def test_permissions_support_shortnames(self, here, engine, hr_schema_auth, dbsession, caplog):
         """
         Prove that table, and field permissions are set on the shortnamed field.
         """
@@ -479,12 +694,36 @@ class TestReadPermissions:
         ams_schema = {hr_schema_auth.id: hr_schema_auth}
 
         # Apply the permissions from Schema and Profiles.
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, None, "level_b", "LEVEL/B", create_roles=True
-        )
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, None, "level_c", "LEVEL/C", create_roles=True
-        )
+        with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
+            apply_schema_and_profile_permissions(
+                engine,
+                "public",
+                ams_schema,
+                None,
+                "level_b",
+                "LEVEL/B",
+                create_roles=True,
+                verbose=1,
+            )
+            apply_schema_and_profile_permissions(
+                engine,
+                "public",
+                ams_schema,
+                None,
+                "level_c",
+                "LEVEL/C",
+                create_roles=True,
+                verbose=1,
+            )
+
+        grants = _filter_grant_statements(caplog)
+        assert grants == [
+            "GRANT SELECT (identifier) ON TABLE public.hr_sbi_ac TO level_b",
+            "GRANT SELECT (sbi_ac_naam) ON TABLE public.hr_sbi_ac TO level_b",
+            "GRANT SELECT (sbi_ac_no) ON TABLE public.hr_sbi_ac TO level_c",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.hr_sbi_ac TO write_hr",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.hr_sbi_ac TO write_hr",
+        ]
 
         # Check if the read priviliges are correct
         _check_select_permission_granted(engine, "level_b", "hr_sbi_ac", "sbi_ac_naam")
@@ -652,7 +891,7 @@ class TestWritePermissions:
             "'berry','14641','15101051'",
         )
 
-    def test_setting_additional_grants(self, here, engine, meetbouten_schema, dbsession):
+    def test_setting_additional_grants(self, here, engine, meetbouten_schema, dbsession, caplog):
         """
         Prove that additional grants can be set using the extra argument.
         """
@@ -667,16 +906,34 @@ class TestWritePermissions:
             connection.execute("CREATE TABLE datasets_dataset (id integer)")
 
         # Apply the permissions to meetbouten and add the extra grants to datasets_dataset
-        apply_schema_and_profile_permissions(
-            engine,
-            "public",
-            meetbouten_schema,
-            None,
-            "AUTO",
-            "ALL",
-            create_roles=True,
-            additional_grants=("datasets_dataset:SELECT;scope_openbaar",),
-        )
+        with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
+            apply_schema_and_profile_permissions(
+                engine,
+                "public",
+                meetbouten_schema,
+                None,
+                "AUTO",
+                "ALL",
+                create_roles=True,
+                verbose=1,
+                additional_grants=("datasets_dataset:SELECT;scope_openbaar",),
+            )
+
+        grants = _filter_grant_statements(caplog)
+        assert grants == [
+            "GRANT SELECT ON TABLE public.datasets_dataset TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_meetbouten TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_meetbouten_ligt_in_buurt TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_metingen TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_metingen_refereertaanreferentiepunten TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_referentiepunten TO scope_openbaar",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_meetbouten TO write_meetbouten",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_meetbouten_ligt_in_buurt TO write_meetbouten",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_metingen TO write_meetbouten",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_metingen_refereertaanreferentiepunten TO write_meetbouten",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_referentiepunten TO write_meetbouten",
+        ]
+
         # Check perms on the datasets_dataset table
         _check_select_permission_granted(engine, "scope_openbaar", "datasets_dataset")
 
@@ -807,3 +1064,21 @@ def _check_truncate_permission_denied(engine, role, table):
         connection.execute(f"TRUNCATE {table}")
         connection.execute("RESET ROLE")
     assert f"permission denied for table {table}" in str(e_info)
+
+
+def _filter_grant_statements(caplog):
+    grants = sorted(
+        m.replace("Executed --> ", "")
+        for m in caplog.messages
+        # Be specific in what is excluded, so unexpected notices can be detected.
+        if not m.endswith('" already exists, skipping') and ("CREATE ROLE" not in m)
+    )
+
+    # Writes are seen multple times, because they use a single role.
+    seen = set()
+    seen_twice = {m for m in grants if (" TO write_" not in m) and (m in seen or seen.add(m))}
+    newline = "\n"  # Python 3.10 f-string syntax doesn't support \
+    assert not seen_twice, f"Duplicate grants: {newline.join(seen_twice)}"
+
+    caplog.clear()
+    return grants

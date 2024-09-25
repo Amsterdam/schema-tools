@@ -90,4 +90,4 @@ max-complexity = 20  # TODO: lower this
 
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/*.py" = ["E501"]  # line too long
-"tests/**/*.py" = ["S101", "S105", "S106", "S314", "S608"]  # allow asserts, hardcoded passwords, SQL injection
+"tests/**/*.py" = ["E501", "S101", "S105", "S106", "S314", "S608"]  # allow long lines, asserts, hardcoded passwords, SQL injection
