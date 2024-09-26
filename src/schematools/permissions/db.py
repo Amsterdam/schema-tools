@@ -19,7 +19,8 @@ from schematools.types import DatasetSchema
 # configure the logger, if needed.
 logger = logging.getLogger(__name__)
 
-existing_roles = set()
+existing_roles = set()  # note: used as global cache!
+existing_sequences = {}  #
 
 
 def is_remote(table_name: str) -> bool:
@@ -192,6 +193,22 @@ def set_dataset_write_permissions(
             echo=echo,
             dry_run=dry_run,
         )
+        if table.is_autoincrement:
+            # Get PostgreSQL generated sequence for 'id' column that Django added.
+            sequence_name = _get_sequence_name(session, table_name, "id")
+            _execute_grant(
+                session,
+                grant(
+                    ["USAGE"],
+                    PgObjectType.SEQUENCE,
+                    sequence_name,
+                    grantee,
+                    grant_option=False,
+                    schema=pg_schema,
+                ),
+                echo=echo,
+                dry_run=dry_run,
+            )
 
 
 @dataclass
@@ -207,7 +224,9 @@ class GrantParam:
     grantees: list[str]
 
 
-def get_all_dataset_scopes(ams_schema: DatasetSchema, role: str, scope: str) -> list[GrantParam]:
+def get_all_dataset_scopes(
+    session, ams_schema: DatasetSchema, role: str, scope: str
+) -> list[GrantParam]:
     """Returns all scopes that should be applied to the tables of a dataset.
 
     Args:
@@ -283,25 +302,49 @@ def get_all_dataset_scopes(ams_schema: DatasetSchema, role: str, scope: str) -> 
                     continue
 
                 column_name = field.db_name
+                grantees = _fetch_grantees(column_scopes.get(column_name, table_scopes))
                 all_scopes.append(
                     GrantParam(
                         # NB. space after SELECT is significant!
                         privileges=[f"SELECT ({column_name})"],
                         target_type=PgObjectType.TABLE,
                         target=table_name,
-                        grantees=_fetch_grantees(column_scopes.get(column_name, table_scopes)),
+                        grantees=grantees,
                     )
                 )
+                if field.is_primary and table.is_autoincrement:
+                    # Get PostgreSQL generated sequence for 'id' column that Django added.
+                    sequence_name = _get_sequence_name(session, table_name, "id")
+                    all_scopes.append(
+                        GrantParam(
+                            privileges=["SELECT"],
+                            target_type=PgObjectType.SEQUENCE,
+                            target=sequence_name,
+                            grantees=grantees,
+                        )
+                    )
         else:
             if table_name not in all_scopes:
+                grantees = _fetch_grantees(table_scopes)
                 all_scopes.append(
                     GrantParam(
                         privileges=["SELECT"],
                         target_type=PgObjectType.TABLE,
                         target=table_name,
-                        grantees=_fetch_grantees(table_scopes),
+                        grantees=grantees,
                     )
                 )
+                if table.is_autoincrement:
+                    sequence_name = _get_sequence_name(session, table_name, "id")
+                    all_scopes.append(
+                        GrantParam(
+                            privileges=["SELECT"],
+                            target_type=PgObjectType.SEQUENCE,
+                            target=sequence_name,
+                            grantees=grantees,
+                        )
+                    )
+
     return all_scopes
 
 
@@ -347,7 +390,7 @@ def set_dataset_read_permissions(
     if create_roles and grantee:
         _create_role_if_not_exists(session, grantee, dry_run=dry_run)
 
-    all_grants = get_all_dataset_scopes(ams_schema, role, scope)
+    all_grants = get_all_dataset_scopes(session, ams_schema, role, scope)
     for grant_param in all_grants:
         # For global and specific columns:
         for _grantee in grant_param.grantees:
@@ -538,11 +581,19 @@ def _revoke_all_privileges_from_read_and_write_roles(
                 revoke_statements.append(
                     f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {rolname[0]}"
                 )
-            revoke_statement = ";".join(revoke_statements)
+                if table.is_autoincrement:
+                    sequence_name = _get_sequence_name(session, table.db_name, "id")
+                    revoke_statements.append(
+                        f"REVOKE ALL PRIVILEGES ON SEQUENCE {pg_schema}.{sequence_name}"
+                        f" FROM {rolname[0]}"
+                    )
         else:
-            revoke_statement = (
-                f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]}"
-            )
+            revoke_statements = [
+                f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]}",
+                f"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {pg_schema} FROM {rolname[0]}",
+            ]
+
+        revoke_statement = ";".join(revoke_statements)
         revoke_block_statement = f"""
             DO
             $$
@@ -610,6 +661,21 @@ def _create_role_if_not_exists(
         if not dry_run:
             session.execute(text(sql_statement))
         existing_roles.add(role)
+
+
+def _get_sequence_name(session: Session, table_name: str, column: str) -> str | None:
+    key = (table_name, column)
+    try:
+        # Can't use lru_cache() as it caches 'session' too.
+        return existing_sequences[key]
+    except KeyError:
+        row = session.execute(
+            text("SELECT pg_get_serial_sequence(:table, :column)"),
+            {"table": table_name, "column": column},
+        ).first()
+        value = row[0].replace("public.", "").replace('"', "") if row is not None else None
+        existing_sequences[key] = value
+        return value
 
 
 def scope_to_role(scope: str) -> str:
