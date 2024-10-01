@@ -1,3 +1,13 @@
+# 2024-10-01 (6.1)
+
+* Added SQL SEQUENCE permissions in `schema permissions apply` to make `pg_dump` access easier.
+* Added `has_field_filter_access()` and `filter_auth` (`filterAuth` in schema) to add permissions for list filtering.
+* Added `DatasetFieldSchema.is_relation` for convenience.
+* Fixed `schema permissions apply` to set the correct database grants for nested/through tables (only affects `brk.kadastraleobjecten.soortCultuurBebouwd` for now).
+* Fixed accessing `DatasetFieldSchema.unit` if the unit is missing.
+* Fixed typo in unused property `discription_with_unit` -> `description_with_unit`.
+* Fixed clearing cached properties when `auth` or `filterAuth` are updated.
+
 # 2024-07-15 (6.0.1)
 
 * Fix Django<4.2 pinning.
