@@ -193,9 +193,10 @@ def set_dataset_write_permissions(
             echo=echo,
             dry_run=dry_run,
         )
-        if table.is_autoincrement:
+        if table.is_autoincrement and (
+            sequence_name := _get_sequence_name(session, table_name, "id")
+        ):
             # Get PostgreSQL generated sequence for 'id' column that Django added.
-            sequence_name = _get_sequence_name(session, table_name, "id")
             _execute_grant(
                 session,
                 grant(
@@ -312,9 +313,12 @@ def get_all_dataset_scopes(
                         grantees=grantees,
                     )
                 )
-                if field.is_primary and table.is_autoincrement:
-                    # Get PostgreSQL generated sequence for 'id' column that Django added.
-                    sequence_name = _get_sequence_name(session, table_name, "id")
+                # Get PostgreSQL generated sequence for 'id' column that Django added.
+                if (
+                    field.is_primary
+                    and table.is_autoincrement
+                    and (sequence_name := _get_sequence_name(session, table_name, "id"))
+                ):
                     all_scopes.append(
                         GrantParam(
                             privileges=["SELECT"],
@@ -334,8 +338,9 @@ def get_all_dataset_scopes(
                         grantees=grantees,
                     )
                 )
-                if table.is_autoincrement:
-                    sequence_name = _get_sequence_name(session, table_name, "id")
+                if table.is_autoincrement and (
+                    sequence_name := _get_sequence_name(session, table_name, "id")
+                ):
                     all_scopes.append(
                         GrantParam(
                             privileges=["SELECT"],
@@ -581,8 +586,9 @@ def _revoke_all_privileges_from_read_and_write_roles(
                 revoke_statements.append(
                     f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {rolname[0]}"
                 )
-                if table.is_autoincrement:
-                    sequence_name = _get_sequence_name(session, table.db_name, "id")
+                if table.is_autoincrement and (
+                    sequence_name := _get_sequence_name(session, table.db_name, "id")
+                ):
                     revoke_statements.append(
                         f"REVOKE ALL PRIVILEGES ON SEQUENCE {pg_schema}.{sequence_name}"
                         f" FROM {rolname[0]}"
@@ -673,7 +679,13 @@ def _get_sequence_name(session: Session, table_name: str, column: str) -> str | 
             text("SELECT pg_get_serial_sequence(:table, :column)"),
             {"table": table_name, "column": column},
         ).first()
-        value = row[0].replace("public.", "").replace('"', "") if row is not None else None
+        value = (
+            row[0].replace("public.", "").replace('"', "")
+            if row is not None and row[0] is not None
+            else None
+        )
+        if not value:
+            logger.debug("No sequence found for %s.%s", table_name, column)
         existing_sequences[key] = value
         return value
 
