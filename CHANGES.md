@@ -1,3 +1,7 @@
+# 2024-10-01 (6.1.1)
+
+* Fixed crash in `schema permissions apply` for tables that don't have a sequence in the database.
+
 # 2024-10-01 (6.1)
 
 * Added SQL SEQUENCE permissions in `schema permissions apply` to make `pg_dump` access easier.
