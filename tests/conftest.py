@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from pathlib import Path
-from typing import Any, ContextManager
+from typing import Any
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -182,9 +182,9 @@ class DummySessionMaker:
     def fetch_content_for(self, url: URL) -> Json:
         return self.routes[url]
 
-    def __call__(self) -> ContextManager[None]:
+    def __call__(self) -> AbstractContextManager[None]:
         @contextmanager
-        def dummy_session() -> ContextManager[None]:
+        def dummy_session() -> AbstractContextManager[None]:
             yield DummySession(self)
 
         return dummy_session()
