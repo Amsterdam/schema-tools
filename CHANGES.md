@@ -1,6 +1,6 @@
 # 2024-10-12 (6.1.2)
 
-* Added pool_pre_ping=True to the database connection.
+* Added pool_pre_ping=True to fix connection pool issues.
 
 # 2024-10-01 (6.1.1)
 
