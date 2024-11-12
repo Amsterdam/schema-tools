@@ -112,7 +112,7 @@ argument_role = click.argument(
 
 def _get_engine(db_url: str, pg_schemas: list[str] | None = None) -> sqlalchemy.engine.Engine:
     """Initialize the SQLAlchemy engine, and report click errors."""
-    kwargs = {}
+    kwargs = {"pool_pre_ping": True}
     if pg_schemas is not None:
         csearch_path = ",".join(pg_schemas + ["public"])
         kwargs["connect_args"] = {"options": f"-csearch_path={csearch_path}"}
