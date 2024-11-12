@@ -1,3 +1,7 @@
+# 2024-10-12 (6.1.2)
+
+* Added pool_pre_ping=True to fix connection pool issues.
+
 # 2024-10-01 (6.1.1)
 
 * Fixed crash in `schema permissions apply` for tables that don't have a sequence in the database.
