@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     services:
       db:
@@ -38,7 +38,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update -y
-        sudo apt install -y libgdal30
+        sudo apt install -y libgdal34t64
         python -m pip install --upgrade pip
         python -m pip install .[django,tests]
     - name: Test
