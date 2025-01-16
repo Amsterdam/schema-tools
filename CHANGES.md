@@ -1,3 +1,13 @@
+# 2025-01-16 (6.1.3)
+
+* Fixed `create_mock_data` to accept valid Amsterdam Schema
+* Updated the arguments for the `create_mock_data`, `relate_mock_data` and `truncate_tables` to accept the
+  DATASETS_LIST and DATASETS_EXCLUDE env vars.
+
+# 2024-10-12 (6.1.2)
+
+* Added pool_pre_ping=True to fix connection pool issues.
+
 # 2024-10-12 (6.1.2)
 
 * Added pool_pre_ping=True to fix connection pool issues.
