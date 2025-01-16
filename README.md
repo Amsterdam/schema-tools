@@ -132,15 +132,16 @@ schema-tools, make sure one of the commit increments the version number in
 The schematools library contains two Django management commands to generate
 mock data. The first one is `create_mock_data` which generates mock data for all
 the datasets that are found at the configured schema location `SCHEMA_URL`
-(where `SCHEMA_URL` can be configure to point to a path at the local filesystem).
+(where `SCHEMA_URL` can be configured to point to a path at the local filesystem).
 
-The `create_mock_data` command processes all datasets. However, it is possible
-to limit this by adding positional arguments. These positional arguments can be
-dataset ids or paths to the location of the `dataset.json` on the local filesystem.
+The `create_mock_data` command expects either a list of dataset ids to include or a
+list of dataset ids to exclude. The datasets to include can be provided as positional arguments
+or using the --datasets-list argument, which defaults to the environment variable
+`DATASETS_LIST`. To exclude datasets the `--datasets-exclude` argument or the
+environment variables `DATASET_EXCLUDE` can be used.
 
-Furthermore, the command has some options, e.g. to change
-the default number of generated records (`--size`) or to reverse meaning of the positional
-arguments using `--exclude`.
+Furthermore, the command has the options to change the default number of
+generated records (`--size`).
 
 To avoid duplicate primary keys on subsequent runs the `--start-at` options can be used
 to start autonumbering of primary keys at an offset.
@@ -152,10 +153,17 @@ autonumbering of primary keys at 50.
     django create_mock_data bag gebieden --size 5 --start-at 50
 ```
 
+or by using the environment variable
+
+```
+    export DATASETS_LIST=bag,gebieden
+    django create_mock_data --size 5 --start-at 50
+```
+
 To generate records for all datasets, except for the `fietspaaltjes` dataset:
 
 ```
-    django create_mock_data fietspaaltjes --exclude  # or -x
+    django create_mock_data --datasets-exclude fietspaaltjes  # or --exclude
 ```
 
 To generate records for the `bbga` dataset, by loading the schema from the local filesystem:
@@ -188,7 +196,7 @@ To add relations for `bag` and `gebieden` only:
 To add relations for all datasets except `meetbouten`:
 
 ```
-    django relate_mock_data meetbouten --exclude  # or -x
+    django relate_mock_data --datasets-exclude meetbouten # or --exclude
 ```
 
 NB. When only a subset of the datasets is being mocked, the command can fail when datasets that

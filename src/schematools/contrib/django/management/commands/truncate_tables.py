@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.db import connection
+from django.db import ProgrammingError, connection
 
 from . import BaseDatasetCommand
 
@@ -20,4 +20,8 @@ class Command(BaseDatasetCommand):  # noqa: D101
         with connection.cursor() as cursor:
             for db_table in sorted(db_tables):
                 self.stdout.write(f"Truncating {db_table}")
-                cursor.execute(f"TRUNCATE {db_table}")
+                try:
+                    cursor.execute(f"TRUNCATE {db_table}")
+                except ProgrammingError:
+                    # Catch missing tables, happens when views aren't generated on import_schemas
+                    self.stdout.write(f"Failed to truncate {db_table}")
