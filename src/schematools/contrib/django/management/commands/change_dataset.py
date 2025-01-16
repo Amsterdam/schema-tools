@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 from argparse import ArgumentTypeError
-from distutils.util import strtobool
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -12,9 +11,20 @@ from schematools.contrib.django.models import Dataset
 
 
 def _strtobool(value: str) -> bool:
-    try:
-        return bool(strtobool(value))
-    except ValueError:
+    """Convert a string representation of truth to True or False.
+
+    Reimplement strtobool per PEP 632 and python 3.12 deprecation
+
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
+    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
+    'val' is anything else.
+    """
+    value = value.lower()
+    if value in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    elif value in ("n", "no", "f", "false", "off", "0"):
+        return False
+    else:
         raise ArgumentTypeError("expected boolean value") from None
 
 
