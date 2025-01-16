@@ -146,13 +146,13 @@ def test_model_mocker_factory_fields(afval_dataset) -> None:
 
     fields = {
         "id",
-        "cluster_id",
+        "cluster",
         "serienummer",
         "eigenaar_naam",
         "datum_creatie",
         "datum_leegmaken",
         "geometry",
-        "afval_c_l_id",
+        "kortenaam",
     }
 
     ContainersMocker = model_mockers["containers"]

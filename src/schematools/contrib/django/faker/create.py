@@ -20,24 +20,30 @@ def create_data_for(
 ) -> list[str]:
     """Create mock data for the indicated datasets."""
     limit_tables_to = set(tables) if tables is not None else set()
+    model_mockers = {}
     for dataset in datasets:
         if not dataset.enable_db:
             logger.warning("Skipping `%s`, `enable_db` is False", dataset.name)
             continue
-        model_mockers = {
-            cls._meta.get_model_class()._meta.model_name: cls
-            for cls in schema_model_mockers_factory(dataset, base_app_name="dso_api.dynamic_api")
-        }
+        model_mockers.update(
+            {
+                cls._meta.get_model_class()._meta.model_name: cls
+                for cls in schema_model_mockers_factory(
+                    dataset, base_app_name="dso_api.dynamic_api"
+                )
+            }
+        )
 
-        for mock_model in model_mockers.values():
-            if limit_tables_to and mock_model._meta.model.__name__ not in limit_tables_to:
-                continue
-            if start_at > 1:
-                mock_model._setup_next_sequence = lambda: start_at
-            if sql:
-                return list(_get_sql_for(mock_model.build_batch(size)))
-            else:
-                mock_model.create_batch(size)
+    # After all model mocks are created, start creating data to make sure relations are available
+    for mock_model in model_mockers.values():
+        if limit_tables_to and mock_model._meta.model.__name__ not in limit_tables_to:
+            continue
+        if start_at > 1:
+            mock_model._setup_next_sequence = lambda: start_at
+        if sql:
+            return list(_get_sql_for(mock_model.build_batch(size)))
+        else:
+            mock_model.create_batch(size)
     return None
 
 
