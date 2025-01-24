@@ -2245,7 +2245,7 @@ def _normalize_scopes(auth: None | str | list | tuple | dict) -> frozenset[str]:
         return frozenset({auth["id"]})
     else:
         # Normalize single scope to set return type too.
-        return frozenset({auth})
+        return frozenset({str(auth)})
 
 
 @dataclasses.dataclass
