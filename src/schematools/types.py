@@ -2239,10 +2239,10 @@ def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
         return frozenset({_PUBLIC_SCOPE})
     elif isinstance(auth, (list, tuple, set)):
         # Multiple scopes act choices (OR match).
-        return frozenset(auth)
+        return frozenset([str(a) for a in auth])
     else:
         # Normalize single scope to set return type too.
-        return frozenset({auth})
+        return frozenset({str(auth)})
 
 
 @dataclasses.dataclass
@@ -2268,6 +2268,9 @@ class Scope(SchemaType):
     id: str
     name: str
     owner: dict[str, str]
+
+    def __str__(self) -> str:
+        return self.id
 
     @classmethod
     def from_file(cls, filename: str) -> Scope:
