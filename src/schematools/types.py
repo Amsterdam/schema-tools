@@ -241,7 +241,7 @@ class JsonDict(UserDict):
 
 
 class SchemaType(JsonDict):
-    """Base class for top-level schema objects (dataset, table, profile, publisher).
+    """Base class for top-level schema objects (dataset, table, profile, publisher, scope).
 
     Each object should have an "id" and "type" property.
     """
@@ -2261,4 +2261,19 @@ class Publisher(SchemaType):
 
     @classmethod
     def from_dict(cls, obj: Json) -> Publisher:
+        return cls(copy.deepcopy(obj))
+
+
+class Scope(SchemaType):
+    id: str
+    name: str
+    owner: dict[str, str]
+
+    @classmethod
+    def from_file(cls, filename: str) -> Scope:
+        with open(filename) as fh:
+            return cls.from_dict(json.load(fh))
+
+    @classmethod
+    def from_dict(cls, obj: Json) -> Scope:
         return cls(copy.deepcopy(obj))
