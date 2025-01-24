@@ -241,7 +241,7 @@ class JsonDict(UserDict):
 
 
 class SchemaType(JsonDict):
-    """Base class for top-level schema objects (dataset, table, profile, publisher).
+    """Base class for top-level schema objects (dataset, table, profile, publisher, scope).
 
     Each object should have an "id" and "type" property.
     """
@@ -2239,10 +2239,10 @@ def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
         return frozenset({_PUBLIC_SCOPE})
     elif isinstance(auth, (list, tuple, set)):
         # Multiple scopes act choices (OR match).
-        return frozenset(auth)
+        return frozenset([str(a) for a in auth])
     else:
         # Normalize single scope to set return type too.
-        return frozenset({auth})
+        return frozenset({str(auth)})
 
 
 @dataclasses.dataclass
@@ -2261,4 +2261,22 @@ class Publisher(SchemaType):
 
     @classmethod
     def from_dict(cls, obj: Json) -> Publisher:
+        return cls(copy.deepcopy(obj))
+
+
+class Scope(SchemaType):
+    id: str
+    name: str
+    owner: dict[str, str]
+
+    def __str__(self) -> str:
+        return self.id
+
+    @classmethod
+    def from_file(cls, filename: str) -> Scope:
+        with open(filename) as fh:
+            return cls.from_dict(json.load(fh))
+
+    @classmethod
+    def from_dict(cls, obj: Json) -> Scope:
         return cls(copy.deepcopy(obj))

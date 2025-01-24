@@ -18,7 +18,9 @@ DEFAULT_PROFILE_URL: Final[str] = "https://schemas.data.amsterdam.nl/profiles/"
 PUBLISHER_DIR: Final[str] = "publishers"
 # Files that can exist in publishers directory but should be ignored by
 # the FileLoaders
-PUBLISHER_EXCLUDE_FILES: Final[str] = ["publishers.json", "index.json"]
+PUBLISHER_EXCLUDE_FILES: Final[list[str]] = ["publishers.json", "index.json"]
+# The directory where all scope objects are defined for amsterdam-schema
+SCOPE_DIR: Final[str] = "scopes"
 
 # Common coordinate reference systems
 CRS_WGS84: Final[str] = "EPSG:4326"  # World Geodetic System 1984, used in GPS
