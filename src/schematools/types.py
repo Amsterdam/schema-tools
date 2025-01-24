@@ -2295,7 +2295,3 @@ class Scope(SchemaType):
     @classmethod
     def from_dict(cls, obj: Json) -> Scope:
         return cls(copy.deepcopy(obj))
-
-    @classmethod
-    def from_string(cls, id: str) -> Scope:
-        return cls({"id": id, "name": id, "owner": {}})
