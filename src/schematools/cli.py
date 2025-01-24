@@ -372,7 +372,10 @@ def _fetch_json(location: str) -> dict[str, Any]:
         JSON data as a dictionary.
     """
     if not location.startswith("http"):
-        with open(location) as f:
+        schema_file = Path(location)
+        if schema_file.is_dir():
+            schema_file = schema_file / "schema.json"
+        with open(schema_file) as f:
             json_obj = json.load(f)
     else:
         response = requests.get(location, timeout=60)
