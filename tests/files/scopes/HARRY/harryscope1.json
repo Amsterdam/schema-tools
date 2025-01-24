@@ -1,0 +1,7 @@
+{
+    "name": "HARRYscope1",
+    "id": "HARRY/ONE",
+    "owner": {
+        "$ref": "publishers/HARRY"
+    }
+}
