@@ -11,3 +11,10 @@
   language: python
   exclude: ^.*$ # prevent passing any files
   always_run: true
+- id: validate-scopes
+  name: Validate Schema publishers
+  description: Validate Amsterdam Schema scope files
+  entry: schema validate-scopes
+  language: python
+  exclude: ^.*$ # prevent passing any files
+  always_run: true
