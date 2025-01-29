@@ -582,6 +582,9 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
     def _get_publisher_url(self) -> URL:
         return URL(self.schema_url.rpartition("/datasets")[0]) / "publishers"
 
+    def _get_scopes_url(self) -> URL:
+        return URL(self.schema_url.rpartition("/datasets")[0]) / SCOPE_DIR
+
     def get_publisher(self, publisher_id: str) -> Publisher:
         url = self._get_publisher_url()
         return Publisher.from_dict(self._read_json_url(url / publisher_id))
@@ -593,6 +596,15 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
         for id_ in index:
             result[id_] = Publisher.from_dict(self._read_json_url(url / id_))
 
+        return result
+
+    def get_all_scopes(self) -> dict[str, Scope]:
+        url = self._get_scopes_url()
+        index: dict[str, list[str]] = self._read_json_url(url / "index")
+        result = {}
+        for key, value in index.items():
+            for id_ in value:
+                result[id_] = Scope.from_dict(self._read_json_url(url / key / id_))
         return result
 
 

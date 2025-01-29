@@ -561,7 +561,6 @@ def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
 
         click.echo(f"Validating against metaschema {meta_schema_version}")
         scopes = _get_scopes(schema_url)
-        print(scopes)
         structural_errors = False
         for id_, scope in scopes.items():
             try:
