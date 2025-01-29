@@ -1,3 +1,8 @@
+# 2025-01-29 (6.1.4)
+
+* Added `enable_export` column to the `datasetTable` model to be able
+  to configure the exports per table.
+
 # 2025-01-16 (6.1.3)
 
 * Fixed `create_mock_data` to accept valid Amsterdam Schema
