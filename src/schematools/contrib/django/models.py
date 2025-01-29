@@ -178,6 +178,16 @@ class Dataset(models.Model):
     def __str__(self):
         return self.name
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._dataset_collection = None
+
+        # The check makes sure that deferred fields are not checked for changes,
+        # nor that creating the model
+        self._old_schema_data = (
+            self.schema_data if "schema_data" in self.__dict__ and not self._state.adding else None
+        )
+
     def save(self, *args, **kwargs):
         """Perform a final data validation check, and additional updates."""
         if self.schema_data_changed() and (self.schema_data or not self._state.adding):
@@ -191,16 +201,6 @@ class Dataset(models.Model):
             super().save(*args, **kwargs)
 
     save.alters_data = True
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._dataset_collection = None
-
-        # The check makes sure that deferred fields are not checked for changes,
-        # nor that creating the model
-        self._old_schema_data = (
-            self.schema_data if "schema_data" in self.__dict__ and not self._state.adding else None
-        )
 
     @classmethod
     def name_from_schema(cls, schema: DatasetSchema) -> str:
@@ -361,6 +361,7 @@ class DatasetTable(models.Model):
 
     # Exposed metadata from the jsonschema, so other apps (e.g. geosearch) can query these
     auth = models.CharField(max_length=250, blank=True, null=True)
+    enable_export = models.BooleanField(default=False)
     enable_geosearch = models.BooleanField(default=True)
     db_table = models.CharField(max_length=100)
     display_field = models.CharField(max_length=50, null=True, blank=True)
