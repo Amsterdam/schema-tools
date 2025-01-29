@@ -35,6 +35,7 @@ from schematools import (
 )
 from schematools.exceptions import (
     DatasetNotFound,
+    DuplicateScopeId,
     IncompatibleMetaschema,
     ParserError,
     SchemaObjectNotFound,
@@ -958,7 +959,7 @@ def _get_scopes(schema_url: str) -> dict[str, Scope]:
     loader = get_schema_loader(schema_url)
     try:
         return loader.get_all_scopes()
-    except SchemaObjectNotFound as e:
+    except (SchemaObjectNotFound, DuplicateScopeId) as e:
         raise click.ClickException(str(e)) from None
 
 

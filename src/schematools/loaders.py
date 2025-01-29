@@ -21,6 +21,7 @@ from schematools import (
 from schematools.exceptions import (
     DatasetNotFound,
     DatasetTableNotFound,
+    DuplicateScopeId,
     SchemaObjectNotFound,
 )
 from schematools.types import (
@@ -331,6 +332,10 @@ class _FileBasedSchemaLoader(SchemaLoader):
         for subdir in (self.root.parent / SCOPE_DIR).iterdir():
             for file in subdir.glob("*.json"):
                 scope = Scope.from_dict(_read_json_path(file))
+                if scope.id in result:
+                    raise DuplicateScopeId(
+                        f'Scope ID "{scope.id}" is already used in another scope'
+                    )
                 result[scope.id] = scope
         return result
 
@@ -602,8 +607,10 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
         url = self._get_scopes_url()
         index: dict[str, list[str]] = self._read_json_url(url / "index")
         result = {}
-        for key, value in index.items():
-            for id_ in value:
+        for key, scope_list in index.items():
+            for id_ in scope_list:
+                if id_ in result:
+                    raise DuplicateScopeId(f'Scope ID "{id_}" is already used in another scope')
                 result[id_] = Scope.from_dict(self._read_json_url(url / key / id_))
         return result
 

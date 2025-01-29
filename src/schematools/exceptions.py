@@ -33,3 +33,7 @@ class IncompatibleMetaschema(Exception):
 
 class PendingMetaschemaDeprecation(PendingDeprecationWarning):
     """The used metaschema is marked for deprecation."""
+
+
+class DuplicateScopeId(ValueError):
+    """The ID is already used in another scope."""

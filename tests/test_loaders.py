@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+from schematools.exceptions import DuplicateScopeId
 from schematools.loaders import URLSchemaLoader
 from schematools.types import Scope
 
@@ -60,3 +63,8 @@ def test_load_all_scopes(schema_loader):
             }
         ),
     }
+
+
+@pytest.mark.xfail(raises=DuplicateScopeId, strict=True)
+def test_load_all_scopes_fails_on_duplicates(schema_loader_duplicate_scope):
+    schema_loader_duplicate_scope.get_all_scopes()
