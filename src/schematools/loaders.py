@@ -607,11 +607,11 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
         url = self._get_scopes_url()
         index: dict[str, list[str]] = self._read_json_url(url / "index")
         result = {}
-        for key, scope_list in index.items():
+        for datateam, scope_list in index.items():
             for id_ in scope_list:
                 if id_ in result:
                     raise DuplicateScopeId(f'Scope ID "{id_}" is already used in another scope')
-                result[id_] = Scope.from_dict(self._read_json_url(url / key / id_))
+                result[id_] = Scope.from_dict(self._read_json_url(url / datateam / id_))
         return result
 
 

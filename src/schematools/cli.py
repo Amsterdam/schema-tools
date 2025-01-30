@@ -937,9 +937,7 @@ def _get_publishers(schema_url: str) -> dict[str, Publisher]:
     """Find the publishers from the given schema_url.
 
     Args:
-        dataset_id: id of the dataset.
         schema_url: url of the location where the collection of amsterdam schemas is found.
-        prefetch_related: related schemas should be prefetched.
     """
     loader = get_schema_loader(schema_url)
     try:
@@ -952,9 +950,7 @@ def _get_scopes(schema_url: str) -> dict[str, Scope]:
     """Find the scopes from the given schema_url.
 
     Args:
-        dataset_id: id of the dataset.
         schema_url: url of the location where the collection of amsterdam schemas is found.
-        prefetch_related: related schemas should be prefetched.
     """
     loader = get_schema_loader(schema_url)
     try:
