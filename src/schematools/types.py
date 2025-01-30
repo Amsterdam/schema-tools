@@ -2232,17 +2232,20 @@ class Temporal:
         return [field for fields in self.dimensions.values() for field in fields]
 
 
-def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
+def _normalize_scopes(auth: None | str | list | tuple | dict) -> frozenset[str]:
     """Make sure the auth field has a consistent type."""
     if not auth:
         # No auth implies OPENBAAR.
         return frozenset({_PUBLIC_SCOPE})
     elif isinstance(auth, (list, tuple, set)):
         # Multiple scopes act choices (OR match).
-        return frozenset([str(a) for a in auth])
+        return frozenset(auth)
+    elif isinstance(auth, dict):
+        # Auth can be a scope object, with an id, name, and owner.
+        return frozenset({auth["id"]})
     else:
         # Normalize single scope to set return type too.
-        return frozenset({str(auth)})
+        return frozenset({auth})
 
 
 @dataclasses.dataclass
