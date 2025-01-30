@@ -2268,12 +2268,16 @@ class Publisher(SchemaType):
 
 
 class Scope(SchemaType):
-    id: str
-    name: str
-    owner: dict[str, str]
-
     def __str__(self) -> str:
         return self.id
+
+    @property
+    def name(self) -> str:
+        return self.get("name", "")
+
+    @property
+    def owner(self) -> dict:
+        return self.get("owner", {})
 
     @classmethod
     def from_file(cls, filename: str) -> Scope:
@@ -2283,3 +2287,7 @@ class Scope(SchemaType):
     @classmethod
     def from_dict(cls, obj: Json) -> Scope:
         return cls(copy.deepcopy(obj))
+
+    @classmethod
+    def from_string(cls, id: str) -> Scope:
+        return cls({"id": id, "name": id, "owner": {}})
