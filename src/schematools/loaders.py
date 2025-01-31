@@ -85,6 +85,9 @@ class SchemaLoader:
     def get_publisher(self, publisher_id: str) -> dict[str, Publisher]:
         raise NotImplementedError
 
+    def get_scope(self, ref: str) -> Scope:
+        raise NotImplementedError
+
 
 class ProfileLoader:
     """Interface for loading profile objects"""
@@ -192,6 +195,15 @@ class CachedSchemaLoader(SchemaLoader):
             self._has_all_publishers = True
 
         return self._publisher_cache
+
+    def get_scope(self, ref: str) -> Scope:
+        id = ref.split("/")[-1]
+        if (scope := self._scopes_cache.get(id)) is not None:
+            return scope
+
+        scope = self._loader.get_scope(ref)
+        self._scopes_cache[scope.id] = scope
+        return scope
 
     def get_all_scopes(self) -> dict[str, Scope]:
         """Load all publishers, and fill the cache"""
@@ -326,6 +338,9 @@ class _FileBasedSchemaLoader(SchemaLoader):
             result[publisher.id] = publisher
 
         return result
+
+    def get_scope(self, ref: str) -> Scope:
+        return Scope.from_dict(_read_json_path(self.root.parent / (ref + ".json")))
 
     def get_all_scopes(self) -> dict[str, Scope]:
         result = {}
@@ -602,6 +617,10 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
             result[id_] = Publisher.from_dict(self._read_json_url(url / id_))
 
         return result
+
+    def get_scope(self, ref: str) -> Scope:
+        base_url = URL(self.schema_url.rpartition("/datasets")[0])
+        return Scope.from_dict(self._read_json_url(base_url / ref))
 
     def get_all_scopes(self) -> dict[str, Scope]:
         url = self._get_scopes_url()
