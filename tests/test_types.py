@@ -303,6 +303,40 @@ def test_load_publisher_object_from_dataset(schema_loader):
     }
 
 
+def test_load_scope_object_from_dataset(schema_loader):
+    """Test that we can retrieve a scope object from a DatasetSchema
+    as defined by metaschema 2.0"""
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+
+    assert schema.auth == frozenset({"HARRY/ONE"})
+
+
+def test_load_scope_object_from_table(schema_loader):
+    """Test that we can retrieve a scope object from a DatasetSchema
+    as defined by metaschema 2.0"""
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+
+    assert schema.tables[0].auth == frozenset({"HARRY/TWO"})
+
+
+def test_load_scope_object_from_field(schema_loader):
+    """Test that we can retrieve a scope object from a DatasetSchema
+    as defined by metaschema 2.0"""
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+    field = schema.tables[0].get_field_by_id("identificatie")
+
+    assert field.auth == frozenset({"HARRY/THREE"})
+
+
+def test_load_multiple_scope_objects(schema_loader):
+    """Test that we can retrieve a scope object from a DatasetSchema
+    as defined by metaschema 2.0"""
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+    field = schema.tables[0].get_field_by_id("id")
+
+    assert field.auth == frozenset({"HARRY/ONE", "HARRY/TWO"})
+
+
 def test_repr_broken_schema():
     """Regression test: __repr__ and __missing__ performed infinite mutual recursion
     when dealing with broken schemas.
