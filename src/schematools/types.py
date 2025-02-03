@@ -2268,6 +2268,14 @@ class Publisher(SchemaType):
 
 
 class Scope(SchemaType):
+    """
+    A Scope is a simple object that describes a scope in the Amsterdam Schema.
+
+    Scopes determine the access level of a user to a specific dataset, table, or field.
+
+    It has an ID, a name, and an owner (which refers to a Publisher).
+    """
+
     def __str__(self) -> str:
         return self.id
 
