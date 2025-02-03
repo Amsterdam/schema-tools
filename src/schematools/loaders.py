@@ -16,13 +16,22 @@ from schematools import (
     DEFAULT_SCHEMA_URL,
     PUBLISHER_DIR,
     PUBLISHER_EXCLUDE_FILES,
+    SCOPE_DIR,
 )
 from schematools.exceptions import (
     DatasetNotFound,
     DatasetTableNotFound,
+    DuplicateScopeId,
     SchemaObjectNotFound,
 )
-from schematools.types import DatasetSchema, DatasetTableSchema, Json, ProfileSchema, Publisher
+from schematools.types import (
+    DatasetSchema,
+    DatasetTableSchema,
+    Json,
+    ProfileSchema,
+    Publisher,
+    Scope,
+)
 
 __all__ = (
     "get_schema_loader",
@@ -66,6 +75,13 @@ class SchemaLoader:
         """
         raise NotImplementedError
 
+    def get_all_scopes(self) -> dict[str, Scope]:
+        """Get all scopes from the schema location
+
+        The return value maps scope ids to Scope objects.
+        """
+        raise NotImplementedError
+
     def get_publisher(self, publisher_id: str) -> dict[str, Publisher]:
         raise NotImplementedError
 
@@ -90,8 +106,10 @@ class CachedSchemaLoader(SchemaLoader):
         self._loader = loader
         self._cache: dict[str, DatasetSchema] = {}
         self._publisher_cache: dict[str, Publisher] = {}
+        self._scopes_cache: dict[str, Scope] = {}
         self._table_cache: dict[tuple[str, str], DatasetTableSchema] = {}
         self._has_all_publishers = False
+        self._has_all_scopes = False
         self._has_all = False
 
     def __repr__(self):
@@ -174,6 +192,17 @@ class CachedSchemaLoader(SchemaLoader):
             self._has_all_publishers = True
 
         return self._publisher_cache
+
+    def get_all_scopes(self) -> dict[str, Scope]:
+        """Load all publishers, and fill the cache"""
+        if not self._has_all_scopes:
+            if self._loader is None:
+                raise RuntimeError("This dataset collection can't retrieve new scopes")
+
+            self._scopes_cache = self._loader.get_all_scopes()
+            self._has_all_scopes = True
+
+        return self._scopes_cache
 
 
 class _FileBasedSchemaLoader(SchemaLoader):
@@ -296,6 +325,18 @@ class _FileBasedSchemaLoader(SchemaLoader):
             publisher = Publisher.from_dict(_read_json_path(path))
             result[publisher.id] = publisher
 
+        return result
+
+    def get_all_scopes(self) -> dict[str, Scope]:
+        result = {}
+        for subdir in (self.root.parent / SCOPE_DIR).iterdir():
+            for file in subdir.glob("*.json"):
+                scope = Scope.from_dict(_read_json_path(file))
+                if scope.id in result:
+                    raise DuplicateScopeId(
+                        f'Scope ID "{scope.id}" is already used in another scope'
+                    )
+                result[scope.id] = scope
         return result
 
 
@@ -546,6 +587,9 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
     def _get_publisher_url(self) -> URL:
         return URL(self.schema_url.rpartition("/datasets")[0]) / "publishers"
 
+    def _get_scopes_url(self) -> URL:
+        return URL(self.schema_url.rpartition("/datasets")[0]) / SCOPE_DIR
+
     def get_publisher(self, publisher_id: str) -> Publisher:
         url = self._get_publisher_url()
         return Publisher.from_dict(self._read_json_url(url / publisher_id))
@@ -557,6 +601,17 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
         for id_ in index:
             result[id_] = Publisher.from_dict(self._read_json_url(url / id_))
 
+        return result
+
+    def get_all_scopes(self) -> dict[str, Scope]:
+        url = self._get_scopes_url()
+        index: dict[str, list[str]] = self._read_json_url(url / "index")
+        result = {}
+        for datateam, scope_list in index.items():
+            for id_ in scope_list:
+                if id_ in result:
+                    raise DuplicateScopeId(f'Scope ID "{id_}" is already used in another scope')
+                result[id_] = Scope.from_dict(self._read_json_url(url / datateam / id_))
         return result
 
 

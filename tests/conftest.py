@@ -243,6 +243,12 @@ def schema_loader(here) -> FileSystemSchemaLoader:
     return FileSystemSchemaLoader(here / "files/datasets")
 
 
+@pytest.fixture()
+def schema_loader_duplicate_scope(here) -> FileSystemSchemaLoader:
+    """Some jsonfiles to test that duplicates are caught."""
+    return FileSystemSchemaLoader(here / "files/duplicate_tests/scopes")
+
+
 @pytest.fixture
 def aardgasverbruik_schema(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("aardgasverbruik.json")

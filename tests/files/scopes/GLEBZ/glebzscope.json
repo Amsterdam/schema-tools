@@ -1,0 +1,7 @@
+{
+    "name": "GLEBZscope",
+    "id": "GLEBZ",
+    "owner": {
+        "$ref": "publishers/GLEBZ"
+    }
+}

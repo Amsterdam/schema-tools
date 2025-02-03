@@ -1,3 +1,8 @@
+# 2025-01-29 (6.2)
+
+* Added a `validate_scopes` command to use in the Amsterdam Schema
+  pre-commit.
+
 # 2025-01-29 (6.1.4)
 
 * Added `enable_export` column to the `datasetTable` model to be able
@@ -8,10 +13,6 @@
 * Fixed `create_mock_data` to accept valid Amsterdam Schema
 * Updated the arguments for the `create_mock_data`, `relate_mock_data` and `truncate_tables` to accept the
   DATASETS_LIST and DATASETS_EXCLUDE env vars.
-
-# 2024-10-12 (6.1.2)
-
-* Added pool_pre_ping=True to fix connection pool issues.
 
 # 2024-10-12 (6.1.2)
 

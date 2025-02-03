@@ -35,6 +35,7 @@ from schematools import (
 )
 from schematools.exceptions import (
     DatasetNotFound,
+    DuplicateScopeId,
     IncompatibleMetaschema,
     ParserError,
     SchemaObjectNotFound,
@@ -57,7 +58,7 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema, Publisher, SemVer
+from schematools.types import DatasetSchema, Publisher, Scope, SemVer
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
@@ -372,7 +373,10 @@ def _fetch_json(location: str) -> dict[str, Any]:
         JSON data as a dictionary.
     """
     if not location.startswith("http"):
-        with open(location) as f:
+        schema_file = Path(location)
+        if schema_file.is_dir():
+            schema_file = schema_file / "schema.json"
+        with open(schema_file) as f:
             json_obj = json.load(f)
     else:
         response = requests.get(location, timeout=60)
@@ -521,6 +525,62 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
         click.echo(f"All publishers are structurally valid against {meta_schema_version}")
         sys.exit(0)
     click.echo("Publishers are structurally invalid against all supplied metaschema versions")
+    sys.exit(1)
+
+
+@schema.command()
+@option_schema_url
+@click.argument("meta_schema_url", nargs=-1)
+def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
+    """Validate all scopes against the Amsterdam Schema meta schema.
+
+    Args:
+
+    \b
+        META_SCHEMA_URL: URL where the meta schema for Amsterdam Schema definitions can be found.
+        If multiple are given, schematools will try to validate against the largest version,
+        working backwards and stopping at the first version that the objects are valid against.
+
+    Options:
+
+    \b
+        SCHEMA_URL: URL where the datasets for Amsterdam Schema definitions can be found. The path
+        component of this uri is dropped to find the scopes in the root. For example, if
+        SCHEMA_URL=https://example.com/datasets, the scopes are extracted from
+        https://example.com/scopes.
+    """  # noqa: D301,D412,D417
+    for meta_schema_version, url in sorted(
+        [(version_from_metaschema_url(u), u) for u in set(meta_schema_url)],
+        reverse=True,
+    ):
+        meta_schema = _fetch_json(url)
+        if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
+            raise IncompatibleMetaschema(
+                f"Schematools {pkg_version} is not"
+                f"compatible with metaschema {meta_schema_version}"
+            )
+
+        click.echo(f"Validating against metaschema {meta_schema_version}")
+        scopes = _get_scopes(schema_url)
+        structural_errors = False
+        for id_, scope in scopes.items():
+            try:
+                click.echo(f"Validating scope with id {id_}")
+                jsonschema.validate(
+                    instance=scope.json_data(),
+                    schema=meta_schema,
+                    format_checker=draft7_format_checker,
+                )
+            except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+                click.echo("Structural validation: ", nl=False)
+                structural_errors = True
+                click.echo(format_schema_error(e), err=True)
+
+        if structural_errors:
+            continue
+        click.echo(f"All scopes are structurally valid against {meta_schema_version}.")
+        sys.exit(0)
+    click.echo("Scopes are structurally invalid against all supplied metaschema versions")
     sys.exit(1)
 
 
@@ -877,14 +937,25 @@ def _get_publishers(schema_url: str) -> dict[str, Publisher]:
     """Find the publishers from the given schema_url.
 
     Args:
-        dataset_id: id of the dataset.
         schema_url: url of the location where the collection of amsterdam schemas is found.
-        prefetch_related: related schemas should be prefetched.
     """
     loader = get_schema_loader(schema_url)
     try:
         return loader.get_all_publishers()
     except SchemaObjectNotFound as e:
+        raise click.ClickException(str(e)) from None
+
+
+def _get_scopes(schema_url: str) -> dict[str, Scope]:
+    """Find the scopes from the given schema_url.
+
+    Args:
+        schema_url: url of the location where the collection of amsterdam schemas is found.
+    """
+    loader = get_schema_loader(schema_url)
+    try:
+        return loader.get_all_scopes()
+    except (SchemaObjectNotFound, DuplicateScopeId) as e:
         raise click.ClickException(str(e)) from None
 
 

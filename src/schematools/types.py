@@ -241,7 +241,7 @@ class JsonDict(UserDict):
 
 
 class SchemaType(JsonDict):
-    """Base class for top-level schema objects (dataset, table, profile, publisher).
+    """Base class for top-level schema objects (dataset, table, profile, publisher, scope).
 
     Each object should have an "id" and "type" property.
     """
@@ -2232,7 +2232,7 @@ class Temporal:
         return [field for fields in self.dimensions.values() for field in fields]
 
 
-def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
+def _normalize_scopes(auth: None | str | list | tuple | dict) -> frozenset[str]:
     """Make sure the auth field has a consistent type."""
     if not auth:
         # No auth implies OPENBAAR.
@@ -2240,6 +2240,9 @@ def _normalize_scopes(auth: None | str | list | tuple) -> frozenset[str]:
     elif isinstance(auth, (list, tuple, set)):
         # Multiple scopes act choices (OR match).
         return frozenset(auth)
+    elif isinstance(auth, dict):
+        # Auth can be a scope object, with an id, name, and owner.
+        return frozenset({auth["id"]})
     else:
         # Normalize single scope to set return type too.
         return frozenset({auth})
@@ -2262,3 +2265,37 @@ class Publisher(SchemaType):
     @classmethod
     def from_dict(cls, obj: Json) -> Publisher:
         return cls(copy.deepcopy(obj))
+
+
+class Scope(SchemaType):
+    """
+    A Scope is a simple object that describes a scope in the Amsterdam Schema.
+
+    Scopes determine the access level of a user to a specific dataset, table, or field.
+
+    It has an ID, a name, and an owner (which refers to a Publisher).
+    """
+
+    def __str__(self) -> str:
+        return self.id
+
+    @property
+    def name(self) -> str:
+        return self.get("name", "")
+
+    @property
+    def owner(self) -> dict:
+        return self.get("owner", {})
+
+    @classmethod
+    def from_file(cls, filename: str) -> Scope:
+        with open(filename) as fh:
+            return cls.from_dict(json.load(fh))
+
+    @classmethod
+    def from_dict(cls, obj: Json) -> Scope:
+        return cls(copy.deepcopy(obj))
+
+    @classmethod
+    def from_string(cls, id: str) -> Scope:
+        return cls({"id": id, "name": id, "owner": {}})
