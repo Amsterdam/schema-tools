@@ -1,4 +1,4 @@
-# 2025-01-29 (6.1.5)
+# 2025-01-29 (6.2)
 
 * Added a `validate_scopes` command to use in the Amsterdam Schema
   pre-commit.
