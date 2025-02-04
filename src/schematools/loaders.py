@@ -340,7 +340,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
         return result
 
     def get_scope(self, ref: str) -> Scope:
-        return Scope.from_dict(_read_json_path(self.root.parent / (ref + ".json")))
+        return Scope.from_dict(_read_json_path(self.root.parent / f"{ref}.json"))
 
     def get_all_scopes(self) -> dict[str, Scope]:
         result = {}
