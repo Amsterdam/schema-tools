@@ -396,9 +396,10 @@ class DatasetSchema(SchemaType):
             if self.loader is None:
                 raise RuntimeError(f"{self!r} has no loader defined, can't resolve auth.")
             return self.loader.get_scope(auth["$ref"])
-        if isinstance(auth, list):
+        elif isinstance(auth, list):
             return [self._resolve_auth(a) for a in auth]
-        return auth
+        else:
+            return auth
 
     @cached_property
     def auth(self) -> frozenset[str]:
