@@ -387,10 +387,26 @@ class DatasetSchema(SchemaType):
         Defaults to True, in order to stay backwards compatible."""
         return self.default_version == self.version
 
+    def _resolve_auth(self, auth):
+        """Auth may contain a reference to a scope, or a list of such references.
+
+        It may also be a string or list of strings.
+        """
+        if isinstance(auth, dict) and "$ref" in auth:
+            if self.loader is None:
+                raise RuntimeError(f"{self!r} has no loader defined, can't resolve auth.")
+            return self.loader.get_scope(auth["$ref"])
+        elif isinstance(auth, list):
+            return [self._resolve_auth(a) for a in auth]
+        else:
+            return auth
+
     @cached_property
     def auth(self) -> frozenset[str]:
         """Auth of the dataset, or OPENBAAR."""
-        return _normalize_scopes(self.get("auth"))
+        auth = self._resolve_auth(self.get("auth"))
+
+        return _normalize_scopes(auth)
 
     @property
     def status(self) -> DatasetSchema.Status:
@@ -416,7 +432,7 @@ class DatasetSchema(SchemaType):
             ) from None
 
         # It's assumed here that the loader is a CachedSchemaLoader,
-        # do data can be fetched multiple times.
+        # so data can be fetched multiple times.
         return self.loader.get_dataset(dataset_id)
 
     @cached_property
@@ -1100,7 +1116,19 @@ class DatasetTableSchema(SchemaType):
     @cached_property
     def auth(self) -> frozenset[str]:
         """Auth of the table, or OPENBAAR."""
-        return _normalize_scopes(self.get("auth"))
+        auth = self.get("auth")
+        if (isinstance(auth, dict) and "$ref" in auth) or (
+            isinstance(auth, list) and any("$ref" in a for a in auth)
+        ):
+            # Resolution of $ref is needed.
+            if self._parent_schema is None:
+                raise RuntimeError(
+                    f"{self!r} doesn't have a parent schema defined, can't resolve auth."
+                )
+            resolved_auth = self._parent_schema._resolve_auth(auth)
+            return _normalize_scopes(resolved_auth)
+
+        return _normalize_scopes(auth)
 
     @property
     def is_through_table(self) -> bool:
@@ -1310,6 +1338,10 @@ class DatasetFieldSchema(JsonDict):
     def parent_field(self) -> DatasetFieldSchema | None:
         """Provide access to the top-level field where it is a property for."""
         return self._parent_field
+
+    @property
+    def schema(self) -> DatasetSchema | None:
+        return self.table._parent_schema if self.table else None
 
     @cached_property
     def qualified_id(self) -> str:
@@ -1786,7 +1818,19 @@ class DatasetFieldSchema(JsonDict):
         # to avoid hitting __missing__() too many times.
         if self.is_subfield:
             return self.parent_field.auth
-        return _normalize_scopes(self.get("auth"))
+        auth = self.get("auth")
+        if (isinstance(auth, dict) and "$ref" in auth) or (
+            isinstance(auth, list) and any("$ref" in a for a in auth)
+        ):
+            # Resolution of $ref is needed.
+            if self.schema is None:
+                raise RuntimeError(
+                    f"{self!r} doesn't have a parent schema defined, can't resolve auth."
+                )
+            resolved_auth = self.schema._resolve_auth(auth)
+            return _normalize_scopes(resolved_auth)
+
+        return _normalize_scopes(auth)
 
     @cached_property
     def filter_auth(self) -> frozenset[str]:
@@ -2239,10 +2283,11 @@ def _normalize_scopes(auth: None | str | list | tuple | dict) -> frozenset[str]:
         return frozenset({_PUBLIC_SCOPE})
     elif isinstance(auth, (list, tuple, set)):
         # Multiple scopes act choices (OR match).
-        return frozenset(auth)
-    elif isinstance(auth, dict):
+        auths = [a.id if isinstance(a, Scope) else a for a in auth]
+        return frozenset(auths)
+    elif isinstance(auth, Scope):
         # Auth can be a scope object, with an id, name, and owner.
-        return frozenset({auth["id"]})
+        return frozenset({auth.id})
     else:
         # Normalize single scope to set return type too.
         return frozenset({auth})

@@ -1,3 +1,8 @@
+# 2025-01-31 (6.2.1)
+
+* Auth fields can now accomodate references to separately defined scope
+  objects.
+
 # 2025-01-29 (6.2)
 
 * Added a `validate_scopes` command to use in the Amsterdam Schema

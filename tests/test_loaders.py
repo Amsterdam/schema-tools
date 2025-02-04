@@ -62,6 +62,13 @@ def test_load_all_scopes(schema_loader):
                 "owner": {"$ref": "publishers/HARRY"},
             }
         ),
+        "HARRY/THREE": Scope(
+            {
+                "name": "HARRYscope3",
+                "id": "HARRY/THREE",
+                "owner": {"$ref": "publishers/HARRY"},
+            }
+        ),
     }
 
 

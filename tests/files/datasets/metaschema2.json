@@ -8,11 +8,17 @@
   "publisher": {
     "$ref": "/publishers/HARRY"
   },
+  "auth": {
+    "$ref": "scopes/HARRY/harryscope1"
+  },
   "tables": [
     {
       "id": "tabelleke",
       "type": "table",
       "version": "1.0.0",
+      "auth": {
+        "$ref": "scopes/HARRY/harryscope2"
+      },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/tabelleke/referentiepunten.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -26,10 +32,18 @@
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
           "id": {
+            "auth": [{
+              "$ref": "scopes/HARRY/harryscope1"
+            }, {
+              "$ref": "scopes/HARRY/harryscope2"
+            }],
             "type": "string",
             "description": "Unieke identificatie voor dit object"
           },
           "identificatie": {
+            "auth": {
+              "$ref": "scopes/HARRY/harryscope3"
+            },
             "type": "string",
             "description": "Unieke identificatie van de meting"
           }
