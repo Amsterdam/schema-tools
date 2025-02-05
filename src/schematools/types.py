@@ -2324,6 +2324,14 @@ class Scope(SchemaType):
     def __str__(self) -> str:
         return self.id
 
+    def __eq__(self, other):
+        if not isinstance(other, Scope):
+            return False
+        return self.id == other.id
+
+    def __hash__(self):
+        return hash(self.id)
+
     @property
     def name(self) -> str:
         return self.get("name", "")
