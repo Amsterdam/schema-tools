@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from schematools.exceptions import DuplicateScopeId
@@ -36,7 +38,7 @@ def test_publisher_url():
     assert loader._get_publisher_url() == "https://foo.bar/baz/publishers"
 
 
-def test_load_all_scopes(schema_loader):
+def test_load_all_scopes_file_loader(schema_loader):
     scopes = schema_loader.get_all_scopes()
     # Unclear why this needs the Scope() objects, while the test_load_all_publishers
     # test does not need the Publisher() objects.
@@ -45,6 +47,8 @@ def test_load_all_scopes(schema_loader):
             {
                 "name": "GLEBZscope",
                 "id": "GLEBZ",
+                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_glebz",
+                "productiePackage": "EM4W-DATA-schemascope-p-scope_glebz",
                 "owner": {"$ref": "publishers/GLEBZ"},
             }
         ),
@@ -52,6 +56,8 @@ def test_load_all_scopes(schema_loader):
             {
                 "name": "HARRYscope1",
                 "id": "HARRY/ONE",
+                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_one",
+                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_one",
                 "owner": {"$ref": "publishers/HARRY"},
             }
         ),
@@ -59,6 +65,8 @@ def test_load_all_scopes(schema_loader):
             {
                 "name": "HARRYscope2",
                 "id": "HARRY/TWO",
+                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_two",
+                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_two",
                 "owner": {"$ref": "publishers/HARRY"},
             }
         ),
@@ -66,6 +74,8 @@ def test_load_all_scopes(schema_loader):
             {
                 "name": "HARRYscope3",
                 "id": "HARRY/THREE",
+                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_three",
+                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_three",
                 "owner": {"$ref": "publishers/HARRY"},
             }
         ),
@@ -75,3 +85,23 @@ def test_load_all_scopes(schema_loader):
 @pytest.mark.xfail(raises=DuplicateScopeId, strict=True)
 def test_load_all_scopes_fails_on_duplicates(schema_loader_duplicate_scope):
     schema_loader_duplicate_scope.get_all_scopes()
+
+
+# Skipping the following test by default, because it can be sloooow
+# run this by adding `export ONLY_LOCAL=0;` before the pytest command
+@pytest.mark.skipif(
+    os.environ.get("ONLY_LOCAL", True),
+    reason="Not running because it depends on external service.",
+)
+def test_load_all_scopes_url_loader():
+    SCHEMA_URL = "http://schemas.data.amsterdam.nl/datasets/"
+    loader = URLSchemaLoader(SCHEMA_URL)
+    scopes = loader.get_all_scopes()
+
+    assert "openbaar" in scopes
+
+    openbaar = scopes["openbaar"]
+    assert isinstance(openbaar, Scope)
+    assert openbaar.id == "OPENBAAR"
+    assert openbaar.productiePackage != ""
+    assert openbaar.nonProductiePackage != ""

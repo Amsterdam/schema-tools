@@ -1,3 +1,7 @@
+# 2025-02-05 (6.2.2)
+
+* Scope objects have fields for productiePackage en nonProductiePackage.
+
 # 2025-01-31 (6.2.1)
 
 * Auth fields can now accomodate references to separately defined scope
