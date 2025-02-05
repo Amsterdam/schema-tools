@@ -45,6 +45,8 @@ def test_load_all_scopes(schema_loader):
             {
                 "name": "GLEBZscope",
                 "id": "GLEBZ",
+                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_glebz",
+                "productiePackage": "EM4W-DATA-schemascope-p-scope_glebz",
                 "owner": {"$ref": "publishers/GLEBZ"},
             }
         ),
@@ -52,6 +54,8 @@ def test_load_all_scopes(schema_loader):
             {
                 "name": "HARRYscope1",
                 "id": "HARRY/ONE",
+                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_one",
+                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_one",
                 "owner": {"$ref": "publishers/HARRY"},
             }
         ),
@@ -59,6 +63,8 @@ def test_load_all_scopes(schema_loader):
             {
                 "name": "HARRYscope2",
                 "id": "HARRY/TWO",
+                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_two",
+                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_two",
                 "owner": {"$ref": "publishers/HARRY"},
             }
         ),
@@ -66,6 +72,8 @@ def test_load_all_scopes(schema_loader):
             {
                 "name": "HARRYscope3",
                 "id": "HARRY/THREE",
+                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_three",
+                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_three",
                 "owner": {"$ref": "publishers/HARRY"},
             }
         ),

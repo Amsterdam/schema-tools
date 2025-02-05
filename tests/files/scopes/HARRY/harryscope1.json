@@ -1,6 +1,8 @@
 {
     "name": "HARRYscope1",
     "id": "HARRY/ONE",
+    "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_one",
+    "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_one",
     "owner": {
         "$ref": "publishers/HARRY"
     }
