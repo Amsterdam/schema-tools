@@ -2332,6 +2332,14 @@ class Scope(SchemaType):
     def owner(self) -> dict:
         return self.get("owner", {})
 
+    @property
+    def productiePackage(self) -> str:
+        return self.get("productiePackage", "")
+
+    @property
+    def nonProductiePackage(self) -> str:
+        return self.get("nonProductiePackage", "")
+
     @classmethod
     def from_file(cls, filename: str) -> Scope:
         with open(filename) as fh:
