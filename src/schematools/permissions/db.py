@@ -20,9 +20,7 @@ from schematools.types import DatasetSchema, Scope
 logger = logging.getLogger(__name__)
 
 existing_roles = set()  # note: used as global cache!
-existing_sequences = {}  #
-
-PUBLIC_SCOPE_OBJECT = Scope({"id": PUBLIC_SCOPE})
+existing_sequences = {}
 
 
 def is_remote(table_name: str) -> bool:
@@ -274,6 +272,7 @@ def get_all_dataset_scopes(
 
     all_scopes = []
     dataset_scopes = ams_schema.scopes
+    PUBLIC_SCOPE_OBJECT = Scope({"id": PUBLIC_SCOPE})
     public_scopes = {PUBLIC_SCOPE_OBJECT, PUBLIC_SCOPE}
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):

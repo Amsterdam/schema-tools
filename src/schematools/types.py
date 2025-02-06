@@ -404,11 +404,10 @@ class DatasetSchema(SchemaType):
     def _find_scope_by_id(self, id):
         all_scopes = self.loader.get_all_scopes()
         name = id.replace("/", "_").lower()
-        if name not in all_scopes:
-            # TODO: return the string value for now, should not be necessary with live data.
-            # Tests rely on scope strings that do not exist in reality.
-            return id
-        return all_scopes.get(name, None)
+        # TODO: return the string value if the scope is not in the selection for now,
+        # this should not be necessary with live data.
+        # Tests rely on scope strings that do not exist in reality.
+        return all_scopes.get(name, id)
 
     @cached_property
     def scopes(self) -> frozenset[Scope] | frozenset[str]:
@@ -421,7 +420,7 @@ class DatasetSchema(SchemaType):
             return frozenset(
                 [s if isinstance(s, Scope) else self._find_scope_by_id(s) for s in scopes]
             )
-        return frozenset({_PUBLIC_SCOPE})
+        return frozenset({self._find_scope_by_id(_PUBLIC_SCOPE)})
 
     @cached_property
     def auth(self) -> frozenset[str]:
@@ -1152,7 +1151,7 @@ class DatasetTableSchema(SchemaType):
             return frozenset(
                 [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
             )
-        return frozenset({_PUBLIC_SCOPE})
+        return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
 
     @cached_property
     def auth(self) -> frozenset[str]:
@@ -1857,7 +1856,7 @@ class DatasetFieldSchema(JsonDict):
             return frozenset(
                 [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
             )
-        return frozenset({_PUBLIC_SCOPE})
+        return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
 
     @cached_property
     def auth(self) -> frozenset[str]:
