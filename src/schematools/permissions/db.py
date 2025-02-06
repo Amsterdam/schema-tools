@@ -13,7 +13,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from schematools.permissions import PUBLIC_SCOPE  # type: ignore [attr-defined]
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, Scope
 
 # Create a module-level logger, so calling code can
 # configure the logger, if needed.
@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 existing_roles = set()  # note: used as global cache!
 existing_sequences = {}  #
+
+PUBLIC_SCOPE_OBJECT = Scope({"id": PUBLIC_SCOPE})
 
 
 def is_remote(table_name: str) -> bool:
@@ -226,11 +228,12 @@ class GrantParam:
 
 
 def get_all_dataset_scopes(
-    session, ams_schema: DatasetSchema, role: str, scope: str
+    session: Session, ams_schema: DatasetSchema, role: str, scope: str
 ) -> list[GrantParam]:
     """Returns all scopes that should be applied to the tables of a dataset.
 
     Args:
+        session: the SQL Alchemy session; used for getting the sequence names
         ams_schema: the amsterdam schema that needs to be processed
         role: the role that needs the grants that are calculated from the schema
             A special value `AUTO` can be used to apply grants for all scopes
@@ -255,13 +258,13 @@ def get_all_dataset_scopes(
         all_scopes (list): Contains a list of scopes with priviliges and grants:
 
         [
-            GrantScope(["SELECT"],           PgObjectType.TABLE, "table1", ["scope_openbaar"]),
-            GrantScope(["SELECT (columnA)"], PgObjectType.TABLE, "table2", ["scope_openbaar"]),
-            GrantScope(["SELECT (columnB)"], PgObjectType.TABLE, "table2", ["scope_A", "scope_B"]),
+            GrantParam(["SELECT"],           PgObjectType.TABLE, "table1", ["scope_openbaar"]),
+            GrantParam(["SELECT (columnA)"], PgObjectType.TABLE, "table2", ["scope_openbaar"]),
+            GrantParam(["SELECT (columnB)"], PgObjectType.TABLE, "table2", ["scope_A", "scope_B"]),
         ]
     """
 
-    def _fetch_grantees(scopes: frozenset[str]) -> list[str]:
+    def _fetch_grantees(scopes: frozenset[str] | frozenset[Scope]) -> list[str]:
         if role == "AUTO":
             return [scope_to_role(_scope) for _scope in scopes]
         elif scope in scopes:
@@ -270,14 +273,15 @@ def get_all_dataset_scopes(
             return []
 
     all_scopes = []
-    dataset_scopes = ams_schema.auth
+    dataset_scopes = ams_schema.scopes
+    public_scopes = {PUBLIC_SCOPE_OBJECT, PUBLIC_SCOPE}
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = table.db_name
         if is_remote(table_name):
             continue
 
-        table_scopes = (table.auth - {PUBLIC_SCOPE}) or dataset_scopes
+        table_scopes = (table.scopes - public_scopes) or dataset_scopes
         fields = [
             field
             for field in table.get_fields(include_subfields=True)
@@ -289,9 +293,9 @@ def get_all_dataset_scopes(
         for field in fields:
             # Object type relations have subfields, in that case
             # the auth scope on the relation is leading.
-            field_scopes = field.auth - {PUBLIC_SCOPE}
+            field_scopes = field.scopes - public_scopes
             if field.is_subfield:
-                field_scopes = (field.parent_field.auth - {PUBLIC_SCOPE}) or field_scopes
+                field_scopes = (field.parent_field.scopes - public_scopes) or field_scopes
 
             if field_scopes:
                 column_scopes[field.db_name] = field_scopes
@@ -690,6 +694,10 @@ def _get_sequence_name(session: Session, table_name: str, column: str) -> str | 
         return value
 
 
-def scope_to_role(scope: str) -> str:
+def scope_to_role(scope: str | Scope) -> str:
     """Return rolename for the postgres database."""
-    return f"scope_{scope.lower().replace('/', '_')}"
+    if isinstance(scope, str):
+        return f"scope_{scope.lower().replace('/', '_')}"
+    # productiePackage has the pattern "EM4W-DATA-schemascope-p-scope_some_auth_level".
+    # We need the last part including the "scope_" prefix.
+    return scope.productiePackage.split("-")[-1]

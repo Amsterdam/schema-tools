@@ -387,7 +387,7 @@ class DatasetSchema(SchemaType):
         Defaults to True, in order to stay backwards compatible."""
         return self.default_version == self.version
 
-    def _resolve_auth(self, auth):
+    def _resolve_scope(self, auth):
         """Auth may contain a reference to a scope, or a list of such references.
 
         It may also be a string or list of strings.
@@ -397,16 +397,38 @@ class DatasetSchema(SchemaType):
                 raise RuntimeError(f"{self!r} has no loader defined, can't resolve auth.")
             return self.loader.get_scope(auth["$ref"])
         elif isinstance(auth, list):
-            return [self._resolve_auth(a) for a in auth]
+            return [self._resolve_scope(a) for a in auth]
         else:
             return auth
+
+    def _find_scope_by_id(self, id):
+        all_scopes = self.loader.get_all_scopes()
+        name = id.replace("/", "_").lower()
+        if name not in all_scopes:
+            # TODO: return the string value for now, should not be necessary with live data.
+            # Tests rely on scope strings that do not exist in reality.
+            return id
+        return all_scopes.get(name, None)
+
+    @cached_property
+    def scopes(self) -> frozenset[Scope] | frozenset[str]:
+        scopes = self._resolve_scope(self.get("auth"))
+        if isinstance(scopes, Scope):
+            return frozenset({scopes})
+        elif isinstance(scopes, str):
+            return frozenset({self._find_scope_by_id(scopes)})
+        elif isinstance(scopes, list):
+            return frozenset(
+                [s if isinstance(s, Scope) else self._find_scope_by_id(s) for s in scopes]
+            )
+        return frozenset({_PUBLIC_SCOPE})
 
     @cached_property
     def auth(self) -> frozenset[str]:
         """Auth of the dataset, or OPENBAAR."""
-        auth = self._resolve_auth(self.get("auth"))
+        auth = self._resolve_scope(self.get("auth"))
 
-        return _normalize_scopes(auth)
+        return _normalize_auth(auth)
 
     @property
     def status(self) -> DatasetSchema.Status:
@@ -1113,6 +1135,25 @@ class DatasetTableSchema(SchemaType):
 
         return None
 
+    @property
+    def schema(self) -> DatasetSchema:
+        if self._parent_schema is None:
+            raise RuntimeError(f"{self!r} doesn't have a parent schema defined.")
+        return self._parent_schema
+
+    @cached_property
+    def scopes(self) -> frozenset[Scope]:
+        scopes = self.schema._resolve_scope(self.get("auth"))
+        if isinstance(scopes, Scope):
+            return frozenset({scopes})
+        elif isinstance(scopes, str):
+            return frozenset({self.schema._find_scope_by_id(scopes)})
+        elif isinstance(scopes, list):
+            return frozenset(
+                [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
+            )
+        return frozenset({_PUBLIC_SCOPE})
+
     @cached_property
     def auth(self) -> frozenset[str]:
         """Auth of the table, or OPENBAAR."""
@@ -1121,14 +1162,10 @@ class DatasetTableSchema(SchemaType):
             isinstance(auth, list) and any("$ref" in a for a in auth)
         ):
             # Resolution of $ref is needed.
-            if self._parent_schema is None:
-                raise RuntimeError(
-                    f"{self!r} doesn't have a parent schema defined, can't resolve auth."
-                )
-            resolved_auth = self._parent_schema._resolve_auth(auth)
-            return _normalize_scopes(resolved_auth)
+            resolved_auth = self.schema._resolve_scope(auth)
+            return _normalize_auth(resolved_auth)
 
-        return _normalize_scopes(auth)
+        return _normalize_auth(auth)
 
     @property
     def is_through_table(self) -> bool:
@@ -1341,7 +1378,9 @@ class DatasetFieldSchema(JsonDict):
 
     @property
     def schema(self) -> DatasetSchema | None:
-        return self.table._parent_schema if self.table else None
+        if not self.table and self.table._parent_schema:
+            raise RuntimeError(f"{self!r} doesn't have a parent schema defined.")
+        return self.table._parent_schema
 
     @cached_property
     def qualified_id(self) -> str:
@@ -1808,6 +1847,19 @@ class DatasetFieldSchema(JsonDict):
         return self._parent_table.dataset.build_through_table(field=self)
 
     @cached_property
+    def scopes(self) -> frozenset[Scope]:
+        scopes = self.schema._resolve_scope(self.get("auth"))
+        if isinstance(scopes, Scope):
+            return frozenset({scopes})
+        elif isinstance(scopes, str):
+            return frozenset({self.schema._find_scope_by_id(scopes)})
+        elif isinstance(scopes, list):
+            return frozenset(
+                [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
+            )
+        return frozenset({_PUBLIC_SCOPE})
+
+    @cached_property
     def auth(self) -> frozenset[str]:
         """Auth of the field, or OPENBAAR.
 
@@ -1823,14 +1875,10 @@ class DatasetFieldSchema(JsonDict):
             isinstance(auth, list) and any("$ref" in a for a in auth)
         ):
             # Resolution of $ref is needed.
-            if self.schema is None:
-                raise RuntimeError(
-                    f"{self!r} doesn't have a parent schema defined, can't resolve auth."
-                )
-            resolved_auth = self.schema._resolve_auth(auth)
-            return _normalize_scopes(resolved_auth)
+            resolved_auth = self.schema._resolve_scope(auth)
+            return _normalize_auth(resolved_auth)
 
-        return _normalize_scopes(auth)
+        return _normalize_auth(auth)
 
     @cached_property
     def filter_auth(self) -> frozenset[str]:
@@ -1840,7 +1888,7 @@ class DatasetFieldSchema(JsonDict):
         """
         if self.is_subfield:
             return self.parent_field.filter_auth
-        return _normalize_scopes(self.get("filterAuth"))
+        return _normalize_auth(self.get("filterAuth"))
 
     @cached_property
     def is_composite_key(self):
@@ -2091,7 +2139,7 @@ class ProfileSchema(SchemaType):
     @cached_property
     def scopes(self) -> frozenset[str]:
         """All these scopes should match in order to activate the profile."""
-        return _normalize_scopes(self.get("scopes"))
+        return _normalize_auth(self.get("scopes"))
 
     @cached_property
     def datasets(self) -> dict[str, ProfileDatasetSchema]:
@@ -2276,7 +2324,7 @@ class Temporal:
         return [field for fields in self.dimensions.values() for field in fields]
 
 
-def _normalize_scopes(auth: None | str | list | tuple | dict) -> frozenset[str]:
+def _normalize_auth(auth: None | str | list | tuple | dict) -> frozenset[str]:
     """Make sure the auth field has a consistent type."""
     if not auth:
         # No auth implies OPENBAAR.
