@@ -310,7 +310,15 @@ def permissions_apply(
         # profiles = profile_defs_from_url(profiles_url=profile_url)
         profiles = None
 
-    if auto or (role and scope):
+    if not (auto or (role and scope)):
+        click.echo(
+            "Choose --auto or specify both a --role and a --scope to be able to grant permissions"
+        )
+    elif revoke and not (set_read_permissions and set_write_permissions):
+        click.echo(
+            "Using --revoke without setting both read and write permissions is destructive."
+        )
+    else:
         apply_schema_and_profile_permissions(
             engine,
             pg_schema,
@@ -325,10 +333,6 @@ def permissions_apply(
             revoke,
             verbose=verbose,
             additional_grants=additional_grants,
-        )
-    else:
-        click.echo(
-            "Choose --auto or specify both a --role and a --scope to be able to grant permissions"
         )
 
 
