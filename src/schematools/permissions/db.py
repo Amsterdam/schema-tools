@@ -695,8 +695,5 @@ def _get_sequence_name(session: Session, table_name: str, column: str) -> str | 
 
 def scope_to_role(scope: str | Scope) -> str:
     """Return rolename for the postgres database."""
-    if isinstance(scope, str):
-        return f"scope_{scope.lower().replace('/', '_')}"
-    # productiePackage has the pattern "EM4W-DATA-schemascope-p-scope_some_auth_level".
-    # We need the last part including the "scope_" prefix.
-    return scope.productiePackage.split("-")[-1]
+    id = scope.id if isinstance(scope, Scope) else scope
+    return f"scope_{id.lower().replace('/', '_')}"
