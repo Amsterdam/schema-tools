@@ -1,3 +1,8 @@
+# 2025-02-06 (6.3)
+
+* The get_all_dataset_scopes function now prefers Scopes (with a fallback on old-school auth
+  strings). These are used to create the grants.
+
 # 2025-02-05 (6.2.2)
 
 * Scope objects have fields for productiePackage en nonProductiePackage.

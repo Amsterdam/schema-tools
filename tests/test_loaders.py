@@ -38,47 +38,53 @@ def test_publisher_url():
     assert loader._get_publisher_url() == "https://foo.bar/baz/publishers"
 
 
+GLEBZ_SCOPE = Scope(
+    {
+        "name": "GLEBZscope",
+        "id": "GLEBZ",
+        "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_glebz",
+        "productiePackage": "EM4W-DATA-schemascope-p-scope_glebz",
+        "owner": {"$ref": "publishers/GLEBZ"},
+    }
+)
+HARRY_ONE_SCOPE = Scope(
+    {
+        "name": "HARRYscope1",
+        "id": "HARRY/ONE",
+        "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_one",
+        "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_one",
+        "owner": {"$ref": "publishers/HARRY"},
+    }
+)
+HARRY_TWO_SCOPE = Scope(
+    {
+        "name": "HARRYscope2",
+        "id": "HARRY/TWO",
+        "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_two",
+        "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_two",
+        "owner": {"$ref": "publishers/HARRY"},
+    }
+)
+HARRY_THREE_SCOPE = Scope(
+    {
+        "name": "HARRYscope3",
+        "id": "HARRY/THREE",
+        "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_three",
+        "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_three",
+        "owner": {"$ref": "publishers/HARRY"},
+    }
+)
+
+
 def test_load_all_scopes_file_loader(schema_loader):
     scopes = schema_loader.get_all_scopes()
     # Unclear why this needs the Scope() objects, while the test_load_all_publishers
     # test does not need the Publisher() objects.
     assert scopes == {
-        "GLEBZ": Scope(
-            {
-                "name": "GLEBZscope",
-                "id": "GLEBZ",
-                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_glebz",
-                "productiePackage": "EM4W-DATA-schemascope-p-scope_glebz",
-                "owner": {"$ref": "publishers/GLEBZ"},
-            }
-        ),
-        "HARRY/ONE": Scope(
-            {
-                "name": "HARRYscope1",
-                "id": "HARRY/ONE",
-                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_one",
-                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_one",
-                "owner": {"$ref": "publishers/HARRY"},
-            }
-        ),
-        "HARRY/TWO": Scope(
-            {
-                "name": "HARRYscope2",
-                "id": "HARRY/TWO",
-                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_two",
-                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_two",
-                "owner": {"$ref": "publishers/HARRY"},
-            }
-        ),
-        "HARRY/THREE": Scope(
-            {
-                "name": "HARRYscope3",
-                "id": "HARRY/THREE",
-                "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_harry_three",
-                "productiePackage": "EM4W-DATA-schemascope-p-scope_harry_three",
-                "owner": {"$ref": "publishers/HARRY"},
-            }
-        ),
+        "GLEBZ": GLEBZ_SCOPE,
+        "HARRY/ONE": HARRY_ONE_SCOPE,
+        "HARRY/TWO": HARRY_TWO_SCOPE,
+        "HARRY/THREE": HARRY_THREE_SCOPE,
     }
 
 

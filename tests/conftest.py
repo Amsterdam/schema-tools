@@ -350,6 +350,11 @@ def gebieden_schema_auth(schema_loader) -> DatasetSchema:
 
 
 @pytest.fixture
+def gebieden_schema_scopes(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("gebieden_auth_scopes.json")
+
+
+@pytest.fixture
 def gebieden_schema_auth_list(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("gebieden_auth_list.json")
 

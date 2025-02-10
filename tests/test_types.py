@@ -11,8 +11,11 @@ from schematools.types import (
     Permission,
     PermissionLevel,
     ProfileSchema,
+    Scope,
     SemVer,
 )
+
+from .test_loaders import HARRY_ONE_SCOPE, HARRY_THREE_SCOPE, HARRY_TWO_SCOPE
 
 
 def test_permission_level_ordering() -> None:
@@ -335,6 +338,68 @@ def test_load_multiple_scope_objects(schema_loader):
     field = schema.tables[0].get_field_by_id("id")
 
     assert field.auth == frozenset({"HARRY/ONE", "HARRY/TWO"})
+
+
+def test_scopes_comparison():
+    scope_a = Scope.from_dict(
+        {
+            "id": "SCOPE/A",
+            "name": "scope A",
+            "owner": {"$ref": "publishers/BENK"},
+            "productiePackage": "p-scope_a",
+            "nonProductiePackage": "ot-scope_a",
+        }
+    )
+    scope_b = Scope.from_dict(
+        {
+            "id": "SCOPE/B",
+            "name": "scope B",
+            "owner": {"$ref": "publishers/BENK"},
+            "productiePackage": "p-scope_b",
+            "nonProductiePackage": "ot-scope_b",
+        }
+    )
+    scope_b2 = Scope.from_dict(
+        {
+            "id": "SCOPE/B",
+            "name": "scope B",
+            "owner": {"$ref": "publishers/BENK"},
+            "productiePackage": "p-scope_b",
+            "nonProductiePackage": "ot-scope_b",
+        }
+    )
+
+    assert scope_a != scope_b
+    assert scope_b == scope_b2
+
+    set_one = frozenset({scope_a, scope_b})
+    assert set_one - {scope_b2} == frozenset({scope_a})
+
+
+def test_loading_scopes_from_dataset(schema_loader):
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+
+    assert schema.scopes == frozenset({HARRY_ONE_SCOPE})
+
+
+def test_loading_scopes_from_table(schema_loader):
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+
+    assert schema.tables[0].scopes == frozenset({HARRY_TWO_SCOPE})
+
+
+def test_loading_scopes_from_field(schema_loader):
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+    field = schema.tables[0].get_field_by_id("identificatie")
+
+    assert field.scopes == frozenset({HARRY_THREE_SCOPE})
+
+
+def test_loading_multiple_scopes_from_field(schema_loader):
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+    field = schema.tables[0].get_field_by_id("id")
+
+    assert field.scopes == frozenset({HARRY_ONE_SCOPE, HARRY_TWO_SCOPE})
 
 
 def test_repr_broken_schema():

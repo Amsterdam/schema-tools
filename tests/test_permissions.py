@@ -44,6 +44,47 @@ class TestReadPermissions:
             engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
         )
 
+    def test_auto_permissions_with_scopes(self, here, engine, gebieden_schema_scopes, dbsession):
+        """
+        Prove that roles are automatically created for each Scope objects.
+
+        Scope objects are properly resolved and permissions granted.
+        Using Scope objects in the scopes/HARRY folder on dataset, table, and field level.
+        Ensure we can still use auth strings in the same schema.
+        """
+        ndjson_path = here / "files" / "data" / "gebieden.ndjson"
+        importer = NDJSONImporter(gebieden_schema_scopes, engine)
+        importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
+        importer.load_file(ndjson_path)
+        importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
+
+        # Setup schema and profile
+        ams_schema = {gebieden_schema_scopes.id: gebieden_schema_scopes}
+        profile_path = here / "files" / "profiles" / "gebieden_test.json"
+        with open(profile_path) as f:
+            profile = json.load(f)
+        profiles = {profile["name"]: profile}
+
+        # Apply the permissions from Schema and Profiles.
+        apply_schema_and_profile_permissions(
+            engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True
+        )
+        _check_select_permission_granted(engine, "scope_harry_one", "gebieden_buurten")
+        _check_select_permission_granted(
+            engine, "scope_harry_two", "gebieden_bouwblokken", "id, eind_geldigheid"
+        )
+        _check_select_permission_granted(
+            engine, "scope_harry_three", "gebieden_bouwblokken", "begin_geldigheid"
+        )
+
+        # Check if auth strings in the same schema also work.
+        _check_select_permission_granted(
+            engine,
+            "scope_level_d",
+            "gebieden_bouwblokken",
+            "ligt_in_buurt_id, ligt_in_buurt_loose_id",
+        )
+
     def test_nm_relations_permissions(
         self, here, engine, kadastraleobjecten_schema, dbsession, caplog
     ):

@@ -206,7 +206,7 @@ class CachedSchemaLoader(SchemaLoader):
         return scope
 
     def get_all_scopes(self) -> dict[str, Scope]:
-        """Load all publishers, and fill the cache"""
+        """Load all scopes, and fill the cache"""
         if not self._has_all_scopes:
             if self._loader is None:
                 raise RuntimeError("This dataset collection can't retrieve new scopes")
