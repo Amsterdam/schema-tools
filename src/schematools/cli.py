@@ -1185,33 +1185,5 @@ def convert_to_snake_case(input_str: str) -> str:
     click.echo(to_snake_case(input_str))
 
 
-@kafka.command()
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.option("--additional-schemas", "-a", multiple=True)
-@click.option("--topics", "-t", multiple=True)
-@click.option("--truncate-table", default=False, is_flag=True)
-def consume(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    additional_schemas: str,
-    topics: Iterable[str],
-    truncate_table: bool,
-) -> None:
-    """Consume kafka events."""
-    # Late import, to prevent dependency on confluent-kafka for every cli user
-    from schematools.events.consumer import consume_events
-
-    engine = _get_engine(db_url)
-    dataset_schemas = [_get_dataset_schema(dataset_id, schema_url)]
-    for schema in additional_schemas:
-        dataset_schemas.append(_get_dataset_schema(schema, schema_url))
-    # Create connection, do not start a transaction.
-    with engine.connect() as connection:
-        consume_events(dataset_schemas, connection, topics, truncate=truncate_table)
-
-
 if __name__ == "__main__":
     main()
