@@ -1,3 +1,9 @@
+# 2025-02-12 (6.4)
+
+* The scope objects are now rearranged and contain an `accessPackages` field which in turn have
+  packages for each relevant environment. `productionPackage` and `nonProductionPackage`
+  properties are added as well, but these are not required in the schema.
+
 # 2025-02-06 (6.3)
 
 * The get_all_dataset_scopes function now prefers Scopes (with a fallback on old-school auth
