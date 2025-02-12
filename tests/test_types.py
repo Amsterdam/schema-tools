@@ -346,8 +346,7 @@ def test_scopes_comparison():
             "id": "SCOPE/A",
             "name": "scope A",
             "owner": {"$ref": "publishers/BENK"},
-            "productiePackage": "p-scope_a",
-            "nonProductiePackage": "ot-scope_a",
+            "accessPackages": {"production": "p-scope_a", "nonProduction": "ot-scope_a"},
         }
     )
     scope_b = Scope.from_dict(
@@ -355,8 +354,7 @@ def test_scopes_comparison():
             "id": "SCOPE/B",
             "name": "scope B",
             "owner": {"$ref": "publishers/BENK"},
-            "productiePackage": "p-scope_b",
-            "nonProductiePackage": "ot-scope_b",
+            "accessPackages": {"production": "p-scope_b", "nonProduction": "ot-scope_b"},
         }
     )
     scope_b2 = Scope.from_dict(
@@ -364,8 +362,7 @@ def test_scopes_comparison():
             "id": "SCOPE/B",
             "name": "scope B",
             "owner": {"$ref": "publishers/BENK"},
-            "productiePackage": "p-scope_b",
-            "nonProductiePackage": "ot-scope_b",
+            "accessPackages": {"production": "p-scope_b", "nonProduction": "ot-scope_b"},
         }
     )
 

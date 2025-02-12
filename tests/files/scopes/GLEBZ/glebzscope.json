@@ -1,8 +1,10 @@
 {
     "name": "GLEBZscope",
     "id": "GLEBZ",
-    "nonProductiePackage": "EM4W-DATA-schemascope-ot-scope_glebz",
-    "productiePackage": "EM4W-DATA-schemascope-p-scope_glebz",
+    "accessPackages": {
+        "production": "EM4W-DATA-schemascope-p-scope_glebz",
+        "nonProduction": "EM4W-DATA-schemascope-ot-scope_glebz"
+    },
     "owner": {
         "$ref": "publishers/GLEBZ"
     }

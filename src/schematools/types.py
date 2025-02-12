@@ -2388,12 +2388,16 @@ class Scope(SchemaType):
         return self.get("owner", {})
 
     @property
-    def productiePackage(self) -> str:
-        return self.get("productiePackage", "")
+    def accessPackages(self) -> dict[str, str]:
+        return self.get("accessPackages", {})
 
     @property
-    def nonProductiePackage(self) -> str:
-        return self.get("nonProductiePackage", "")
+    def productionPackage(self) -> str:
+        return self.accessPackages.get("production", "")
+
+    @property
+    def nonProductionPackage(self) -> str:
+        return self.accessPackages.get("nonProduction", "")
 
     @classmethod
     def from_file(cls, filename: str) -> Scope:
