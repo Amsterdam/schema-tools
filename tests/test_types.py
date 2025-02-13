@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import operator
 
 import pytest
@@ -377,16 +376,12 @@ def test_scopes_comparison():
 
 
 def test_scope_json_data():
-    assert scope_a.json_data() == json.loads(
-        """
-        {
-            "id": "SCOPE/A",
-            "name": "scope A",
-            "owner": {"$ref": "publishers/BENK"},
-            "accessPackages": {"production": "p-scope_a", "nonProduction": "ot-scope_a"}
-        }
-    """
-    )
+    assert scope_a.json_data() == {
+        "id": "SCOPE/A",
+        "name": "scope A",
+        "owner": {"$ref": "publishers/BENK"},
+        "accessPackages": {"production": "p-scope_a", "nonProduction": "ot-scope_a"},
+    }
 
 
 def test_loading_scopes_from_dataset(schema_loader):
