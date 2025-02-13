@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import operator
 
 import pytest
@@ -340,23 +341,25 @@ def test_load_multiple_scope_objects(schema_loader):
     assert field.auth == frozenset({"HARRY/ONE", "HARRY/TWO"})
 
 
+scope_a = Scope.from_dict(
+    {
+        "id": "SCOPE/A",
+        "name": "scope A",
+        "owner": {"$ref": "publishers/BENK"},
+        "accessPackages": {"production": "p-scope_a", "nonProduction": "ot-scope_a"},
+    }
+)
+scope_b = Scope.from_dict(
+    {
+        "id": "SCOPE/B",
+        "name": "scope B",
+        "owner": {"$ref": "publishers/BENK"},
+        "accessPackages": {"production": "p-scope_b", "nonProduction": "ot-scope_b"},
+    }
+)
+
+
 def test_scopes_comparison():
-    scope_a = Scope.from_dict(
-        {
-            "id": "SCOPE/A",
-            "name": "scope A",
-            "owner": {"$ref": "publishers/BENK"},
-            "accessPackages": {"production": "p-scope_a", "nonProduction": "ot-scope_a"},
-        }
-    )
-    scope_b = Scope.from_dict(
-        {
-            "id": "SCOPE/B",
-            "name": "scope B",
-            "owner": {"$ref": "publishers/BENK"},
-            "accessPackages": {"production": "p-scope_b", "nonProduction": "ot-scope_b"},
-        }
-    )
     scope_b2 = Scope.from_dict(
         {
             "id": "SCOPE/B",
@@ -371,6 +374,19 @@ def test_scopes_comparison():
 
     set_one = frozenset({scope_a, scope_b})
     assert set_one - {scope_b2} == frozenset({scope_a})
+
+
+def test_scope_json_data():
+    assert scope_a.json_data() == json.loads(
+        """
+        {
+            "id": "SCOPE/A",
+            "name": "scope A",
+            "owner": {"$ref": "publishers/BENK"},
+            "accessPackages": {"production": "p-scope_a", "nonProduction": "ot-scope_a"}
+        }
+    """
+    )
 
 
 def test_loading_scopes_from_dataset(schema_loader):
