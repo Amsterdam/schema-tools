@@ -220,7 +220,9 @@ class Dataset(models.Model):
             path = name
         obj = cls(
             name=name,
-            schema_data=schema.json(inline_tables=True, inline_publishers=True),
+            schema_data=schema.json(
+                inline_tables=True, inline_publishers=True, inline_scopes=True
+            ),
             view_data=schema.get_view_sql(),
             auth=" ".join(schema.auth),
             path=path,
@@ -243,7 +245,9 @@ class Dataset(models.Model):
 
     def save_for_schema(self, schema: DatasetSchema):
         """Update this model with schema data"""
-        self.schema_data = schema.json(inline_tables=True, inline_publishers=True)
+        self.schema_data = schema.json(
+            inline_tables=True, inline_publishers=True, inline_scopes=True
+        )
         self.view_data = schema.get_view_sql()
         self.auth = " ".join(schema.auth)
         self.enable_api = Dataset.has_api_enabled(schema)

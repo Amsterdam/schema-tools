@@ -323,9 +323,14 @@ class DatasetSchema(SchemaType):
         """Parses given dict and validates the given schema."""
         return cls(obj, dataset_collection=dataset_collection)
 
-    def json(self, inline_tables: bool = False, inline_publishers: bool = False) -> str:
+    def json(
+        self,
+        inline_tables: bool = False,
+        inline_publishers: bool = False,
+        inline_scopes: bool = False,
+    ) -> str:
         """Overwritten JSON logic that allows inlining of $refs"""
-        if not inline_tables and not inline_publishers:
+        if not inline_tables and not inline_publishers and not inline_scopes:
             return json.dumps(self.data)
 
         data = self.data.copy()
@@ -333,6 +338,8 @@ class DatasetSchema(SchemaType):
             data["tables"] = [t.json_data() for t in self.tables]
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
+        if inline_scopes and isinstance(self.scopes, frozenset[Scope]):
+            data["scopes"] = [s.json_data() for s in self.scopes]
         return json.dumps(data)
 
     def json_data(self, inline_tables: bool = False, inline_publishers: bool = False) -> Json:
