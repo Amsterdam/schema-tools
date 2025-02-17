@@ -1,3 +1,7 @@
+# 2025-02-17 (6.5)
+
+* Scope objects are now inlined for persistence.
+
 # 2025-02-12 (6.4)
 
 * The scope objects are now rearranged and contain an `accessPackages` field which in turn have
