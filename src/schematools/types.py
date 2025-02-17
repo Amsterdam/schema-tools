@@ -434,7 +434,7 @@ class DatasetSchema(SchemaType):
         return scope
 
     @cached_property
-    def scopes(self) -> frozenset[Scope] | None:
+    def scopes(self) -> frozenset[Scope]:
         try:
             scopes = self._resolve_scope(self.get("auth"))
             if isinstance(scopes, Scope):
@@ -447,7 +447,7 @@ class DatasetSchema(SchemaType):
                 )
             return frozenset({self._find_scope_by_id(_PUBLIC_SCOPE)})
         except RuntimeError:
-            return None
+            return self.auth
 
     @cached_property
     def auth(self) -> frozenset[str]:
@@ -1151,7 +1151,7 @@ class DatasetTableSchema(SchemaType):
         return self._parent_schema
 
     @cached_property
-    def scopes(self) -> frozenset[Scope] | None:
+    def scopes(self) -> frozenset[Scope]:
         try:
             scopes = self.schema._resolve_scope(self.get("auth"))
             if isinstance(scopes, Scope):
@@ -1167,7 +1167,7 @@ class DatasetTableSchema(SchemaType):
                 )
             return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
         except RuntimeError:
-            return None
+            return self.auth
 
     @cached_property
     def auth(self) -> frozenset[str]:
@@ -1878,7 +1878,7 @@ class DatasetFieldSchema(JsonDict):
                 )
             return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
         except RuntimeError:
-            return None
+            return self.auth
 
     @cached_property
     def auth(self) -> frozenset[str]:
