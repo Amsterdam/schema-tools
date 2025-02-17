@@ -388,7 +388,7 @@ def test_scope_db_python_names():
     assert scope_a.db_name == "scope_a"
     assert scope_a.python_name == "scope_a"
 
-    
+
 def test_loading_scopes_from_dataset(schema_loader):
     schema = schema_loader.get_dataset_from_file("metaschema2.json")
 
