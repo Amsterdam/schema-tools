@@ -2398,6 +2398,18 @@ class Scope(SchemaType):
         return hash(self.id)
 
     @property
+    def db_name(self) -> str:
+        """The object name in a database-compatible format."""
+        return to_snake_case(self.id.lower())
+
+    @cached_property
+    def python_name(self) -> str:
+        """The 'id', but snake-cased like a python variable.
+        Some object types (e.g. dataset and table) may override this in classname notation.
+        """
+        return to_snake_case(self.id.lower())
+
+    @property
     def name(self) -> str:
         return self.get("name", "")
 
