@@ -342,10 +342,19 @@ class DatasetSchema(SchemaType):
             data["auth"] = [s.json_data() if isinstance(s, Scope) else s for s in self.scopes]
         return json.dumps(data)
 
-    def json_data(self, inline_tables: bool = False, inline_publishers: bool = False) -> Json:
+    def json_data(
+        self,
+        inline_tables: bool = False,
+        inline_publishers: bool = False,
+        inline_scopes: bool = False,
+    ) -> Json:
         """Overwritten logic that inlines tables"""
         return json.loads(
-            self.json(inline_tables=inline_tables, inline_publishers=inline_publishers)
+            self.json(
+                inline_tables=inline_tables,
+                inline_publishers=inline_publishers,
+                inline_scopes=inline_scopes,
+            )
         )
 
     def get_view_sql(self) -> str:
