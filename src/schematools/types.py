@@ -323,9 +323,14 @@ class DatasetSchema(SchemaType):
         """Parses given dict and validates the given schema."""
         return cls(obj, dataset_collection=dataset_collection)
 
-    def json(self, inline_tables: bool = False, inline_publishers: bool = False) -> str:
+    def json(
+        self,
+        inline_tables: bool = False,
+        inline_publishers: bool = False,
+        inline_scopes: bool = False,
+    ) -> str:
         """Overwritten JSON logic that allows inlining of $refs"""
-        if not inline_tables and not inline_publishers:
+        if not inline_tables and not inline_publishers and not inline_scopes:
             return json.dumps(self.data)
 
         data = self.data.copy()
@@ -333,12 +338,23 @@ class DatasetSchema(SchemaType):
             data["tables"] = [t.json_data() for t in self.tables]
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
+        if inline_scopes:
+            data["auth"] = [s.json_data() if isinstance(s, Scope) else s for s in self.scopes]
         return json.dumps(data)
 
-    def json_data(self, inline_tables: bool = False, inline_publishers: bool = False) -> Json:
+    def json_data(
+        self,
+        inline_tables: bool = False,
+        inline_publishers: bool = False,
+        inline_scopes: bool = False,
+    ) -> Json:
         """Overwritten logic that inlines tables"""
         return json.loads(
-            self.json(inline_tables=inline_tables, inline_publishers=inline_publishers)
+            self.json(
+                inline_tables=inline_tables,
+                inline_publishers=inline_publishers,
+                inline_scopes=inline_scopes,
+            )
         )
 
     def get_view_sql(self) -> str:
@@ -392,10 +408,12 @@ class DatasetSchema(SchemaType):
 
         It may also be a string or list of strings.
         """
-        if isinstance(auth, dict) and "$ref" in auth:
-            if self.loader is None:
-                raise RuntimeError(f"{self!r} has no loader defined, can't resolve auth.")
-            return self.loader.get_scope(auth["$ref"])
+        if isinstance(auth, dict):
+            if "$ref" in auth:
+                if self.loader is None:
+                    raise RuntimeError(f"{self!r} has no loader defined, can't resolve auth.")
+                return self.loader.get_scope(auth["$ref"])
+            return Scope(auth)
         elif isinstance(auth, list):
             return [self._resolve_scope(a) for a in auth]
         else:
