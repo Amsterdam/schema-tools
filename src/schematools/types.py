@@ -399,10 +399,12 @@ class DatasetSchema(SchemaType):
 
         It may also be a string or list of strings.
         """
-        if isinstance(auth, dict) and "$ref" in auth:
-            if self.loader is None:
-                raise RuntimeError(f"{self!r} has no loader defined, can't resolve auth.")
-            return self.loader.get_scope(auth["$ref"])
+        if isinstance(auth, dict):
+            if "$ref" in auth:
+                if self.loader is None:
+                    raise RuntimeError(f"{self!r} has no loader defined, can't resolve auth.")
+                return self.loader.get_scope(auth["$ref"])
+            return Scope(auth)
         elif isinstance(auth, list):
             return [self._resolve_scope(a) for a in auth]
         else:
