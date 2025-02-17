@@ -345,9 +345,7 @@ class DatasetSchema(SchemaType):
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
         if inline_scopes:
-            scopes = self.scopes
-            if scopes:
-                data["auth"] = [s.json_data() for s in self.scopes]
+            data["auth"] = [s.json_data() if isinstance(s, Scope) else s for s in self.scopes]
         return json.dumps(data)
 
     def json_data(
