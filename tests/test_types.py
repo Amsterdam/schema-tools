@@ -415,6 +415,21 @@ def test_loading_multiple_scopes_from_field(schema_loader):
     assert field.scopes == frozenset({HARRY_ONE_SCOPE, HARRY_TWO_SCOPE})
 
 
+def test_schema_json_data_can_inline_scopes(schema_loader):
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+
+    json_data = schema.json_data(inline_tables=True, inline_publishers=True, inline_scopes=True)
+
+    assert all("accessPackages" in a for a in json_data["auth"])
+    assert "accessPackages" in json_data["tables"][0]["auth"]
+    for field in json_data["tables"][0]["schema"]["properties"].values():
+        auth = field.get("auth")
+        if isinstance(auth, list):
+            assert all("accessPackages" in a for a in auth)
+        if isinstance(auth, dict):
+            assert "accessPackages" in auth
+
+
 def test_repr_broken_schema():
     """Regression test: __repr__ and __missing__ performed infinite mutual recursion
     when dealing with broken schemas.

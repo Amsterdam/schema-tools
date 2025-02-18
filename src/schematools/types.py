@@ -344,8 +344,8 @@ class DatasetSchema(SchemaType):
             return json.dumps(self.data)
 
         data = self.data.copy()
-        if inline_tables and any(t.get("$ref") for t in self["tables"]):
-            data["tables"] = [t.json_data() for t in self.tables]
+        if inline_tables:
+            data["tables"] = [t.json_data(inline_scopes=inline_scopes) for t in self.tables]
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
         if inline_scopes:
@@ -822,6 +822,36 @@ class DatasetTableSchema(SchemaType):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.qualified_id}>"
+
+    def json_data(self, inline_scopes: bool = False):
+        data = super().json_data()
+        if inline_scopes:
+            # Resolve auth on table level
+            if data.get("auth"):
+                if "$ref" in data["auth"]:
+                    data["auth"] = self.schema.loader.get_scope(data["auth"]["$ref"]).json_data()
+                if isinstance(data["auth"], list):
+                    data["auth"] = [
+                        self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a
+                        for a in data["auth"]
+                    ]
+            # Resolve auths on the fields
+            for field in data["schema"]["properties"].values():
+                if field.get("auth"):
+                    if "$ref" in field["auth"]:
+                        field["auth"] = self.schema.loader.get_scope(
+                            field["auth"]["$ref"]
+                        ).json_data()
+                    if isinstance(field["auth"], list):
+                        field["auth"] = [
+                            (
+                                self.schema.loader.get_scope(a["$ref"]).json_data()
+                                if "$ref" in a
+                                else a
+                            )
+                            for a in field["auth"]
+                        ]
+        return data
 
     @cached_property
     def qualified_id(self) -> str:
