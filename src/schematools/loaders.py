@@ -347,11 +347,10 @@ class _FileBasedSchemaLoader(SchemaLoader):
         for subdir in (self.root.parent / SCOPE_DIR).iterdir():
             for file in subdir.glob("*.json"):
                 scope = Scope.from_dict(_read_json_path(file))
-                if scope.id in result:
-                    raise DuplicateScopeId(
-                        f'Scope ID "{scope.id}" is already used in another scope'
-                    )
-                result[scope.id] = scope
+                id = scope.db_name
+                if id in result:
+                    raise DuplicateScopeId(f'Scope ID "{id}" is already used in another scope')
+                result[id] = scope
         return result
 
 

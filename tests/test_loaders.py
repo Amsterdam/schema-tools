@@ -89,10 +89,10 @@ def test_load_all_scopes_file_loader(schema_loader):
     # Unclear why this needs the Scope() objects, while the test_load_all_publishers
     # test does not need the Publisher() objects.
     assert scopes == {
-        "GLEBZ": GLEBZ_SCOPE,
-        "HARRY/ONE": HARRY_ONE_SCOPE,
-        "HARRY/TWO": HARRY_TWO_SCOPE,
-        "HARRY/THREE": HARRY_THREE_SCOPE,
+        "glebz": GLEBZ_SCOPE,
+        "harry_one": HARRY_ONE_SCOPE,
+        "harry_two": HARRY_TWO_SCOPE,
+        "harry_three": HARRY_THREE_SCOPE,
     }
 
 
