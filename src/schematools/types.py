@@ -29,8 +29,10 @@ from schematools._utils import cached_method
 from schematools.exceptions import (
     DatasetFieldNotFound,
     DatasetTableNotFound,
+    LoaderNotFound,
     ParserError,
     SchemaObjectNotFound,
+    ScopeNotFound,
 )
 from schematools.naming import to_snake_case, toCamelCase
 
@@ -319,7 +321,9 @@ class DatasetSchema(SchemaType):
     @property
     def loader(self) -> CachedSchemaLoader:
         if self._loader is None:
-            raise RuntimeError(f"{self!r} has no loader defined, can't resolve requested object.")
+            raise LoaderNotFound(
+                f"{self!r} has no loader defined, can't resolve requested object."
+            )
         return self._loader
 
     @classmethod
@@ -428,7 +432,7 @@ class DatasetSchema(SchemaType):
         name = id.replace("/", "_").lower()
         scope = all_scopes.get(name)
         if not scope:
-            raise RuntimeError(f"Scope {id} doesn't exist")
+            raise ScopeNotFound(f"Scope {id} doesn't exist")
         return scope
 
     @cached_property
@@ -444,7 +448,7 @@ class DatasetSchema(SchemaType):
                     [s if isinstance(s, Scope) else self._find_scope_by_id(s) for s in scopes]
                 )
             return frozenset({self._find_scope_by_id(_PUBLIC_SCOPE)})
-        except RuntimeError:
+        except ScopeNotFound:
             return self.auth
 
     @cached_property
@@ -1145,7 +1149,7 @@ class DatasetTableSchema(SchemaType):
     @property
     def schema(self) -> DatasetSchema:
         if self._parent_schema is None:
-            raise RuntimeError(f"{self!r} doesn't have a parent schema defined.")
+            raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
         return self._parent_schema
 
     @cached_property
@@ -1164,7 +1168,7 @@ class DatasetTableSchema(SchemaType):
                     ]
                 )
             return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
-        except RuntimeError:
+        except ScopeNotFound:
             return self.auth
 
     @cached_property
@@ -1392,7 +1396,7 @@ class DatasetFieldSchema(JsonDict):
     @property
     def schema(self) -> DatasetSchema | None:
         if not self.table and self.table._parent_schema:
-            raise RuntimeError(f"{self!r} doesn't have a parent schema defined.")
+            raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
         return self.table._parent_schema
 
     @cached_property
@@ -1875,7 +1879,7 @@ class DatasetFieldSchema(JsonDict):
                     ]
                 )
             return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
-        except RuntimeError:
+        except ScopeNotFound:
             return self.auth
 
     @cached_property

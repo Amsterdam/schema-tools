@@ -37,3 +37,11 @@ class PendingMetaschemaDeprecation(PendingDeprecationWarning):
 
 class DuplicateScopeId(ValueError):
     """The ID is already used in another scope."""
+
+
+class ScopeNotFound(SchemaObjectNotFound):
+    """The scope could not be found."""
+
+
+class LoaderNotFound(Exception):
+    """The loader could not be found."""
