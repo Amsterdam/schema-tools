@@ -29,8 +29,10 @@ from schematools._utils import cached_method
 from schematools.exceptions import (
     DatasetFieldNotFound,
     DatasetTableNotFound,
+    LoaderNotFound,
     ParserError,
     SchemaObjectNotFound,
+    ScopeNotFound,
 )
 from schematools.naming import to_snake_case, toCamelCase
 
@@ -309,12 +311,20 @@ class DatasetSchema(SchemaType):
 
         super().__init__(data)
 
-        self.loader = dataset_collection
+        self._loader = dataset_collection
         if dataset_collection is not None:
             dataset_collection.add_dataset(self)  # done early for self-references
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self['id']}>"
+
+    @property
+    def loader(self) -> CachedSchemaLoader:
+        if self._loader is None:
+            raise LoaderNotFound(
+                f"{self!r} has no loader defined, can't resolve requested object."
+            )
+        return self._loader
 
     @classmethod
     def from_dict(
@@ -334,8 +344,8 @@ class DatasetSchema(SchemaType):
             return json.dumps(self.data)
 
         data = self.data.copy()
-        if inline_tables and any(t.get("$ref") for t in self["tables"]):
-            data["tables"] = [t.json_data() for t in self.tables]
+        if inline_tables:
+            data["tables"] = [t.json_data(inline_scopes=inline_scopes) for t in self.tables]
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
         if inline_scopes:
@@ -410,8 +420,6 @@ class DatasetSchema(SchemaType):
         """
         if isinstance(auth, dict):
             if "$ref" in auth:
-                if self.loader is None:
-                    raise RuntimeError(f"{self!r} has no loader defined, can't resolve auth.")
                 return self.loader.get_scope(auth["$ref"])
             return Scope(auth)
         elif isinstance(auth, list):
@@ -422,23 +430,26 @@ class DatasetSchema(SchemaType):
     def _find_scope_by_id(self, id):
         all_scopes = self.loader.get_all_scopes()
         name = id.replace("/", "_").lower()
-        # TODO: return the string value if the scope is not in the selection for now,
-        # this should not be necessary with live data.
-        # Tests rely on scope strings that do not exist in reality.
-        return all_scopes.get(name, id)
+        scope = all_scopes.get(name)
+        if not scope:
+            raise ScopeNotFound(f"Scope {id} doesn't exist")
+        return scope
 
     @cached_property
-    def scopes(self) -> frozenset[Scope] | frozenset[str]:
-        scopes = self._resolve_scope(self.get("auth"))
-        if isinstance(scopes, Scope):
-            return frozenset({scopes})
-        elif isinstance(scopes, str):
-            return frozenset({self._find_scope_by_id(scopes)})
-        elif isinstance(scopes, list):
-            return frozenset(
-                [s if isinstance(s, Scope) else self._find_scope_by_id(s) for s in scopes]
-            )
-        return frozenset({self._find_scope_by_id(_PUBLIC_SCOPE)})
+    def scopes(self) -> frozenset[Scope]:
+        try:
+            scopes = self._resolve_scope(self.get("auth"))
+            if isinstance(scopes, Scope):
+                return frozenset({scopes})
+            elif isinstance(scopes, str):
+                return frozenset({self._find_scope_by_id(scopes)})
+            elif isinstance(scopes, list):
+                return frozenset(
+                    [s if isinstance(s, Scope) else self._find_scope_by_id(s) for s in scopes]
+                )
+            return frozenset({self._find_scope_by_id(_PUBLIC_SCOPE)})
+        except ScopeNotFound:
+            return self.auth
 
     @cached_property
     def auth(self) -> frozenset[str]:
@@ -460,16 +471,6 @@ class DatasetSchema(SchemaType):
         if dataset_id == self.id:
             return self  # shortcut to avoid unneeded lookups
 
-        if self.loader is None:
-            # Ideally the dataset collection should be mandatory at construction,
-            # but this breaks compatibility. Adding a default collection is also tricky,
-            # as that introduces an implicit cache that would affect unit testing code.
-            # The best option is simply to have an error when the loader would be called.
-            raise RuntimeError(
-                f"{self!r} has no dataset collection defined,"
-                f" can't resolve relation to '{dataset_id}'."
-            ) from None
-
         # It's assumed here that the loader is a CachedSchemaLoader,
         # so data can be fetched multiple times.
         return self.loader.get_dataset(dataset_id)
@@ -482,8 +483,6 @@ class DatasetSchema(SchemaType):
             if "$ref" in table_json:
                 # Dataset uses the new format to define table versions.
                 # Load the default version
-                if self.loader is None:
-                    raise RuntimeError(f"{self!r} has no loader defined, can't resolve tables.")
                 table = self.loader.get_table(self, table_json["$ref"])
             else:
                 # Old format, a single "dataset.json" with all tables embedded.
@@ -513,25 +512,20 @@ class DatasetSchema(SchemaType):
         raw_publisher = self["publisher"]
         if isinstance(raw_publisher, str):
             # Compatibility with meta-schemas prior to 2.0
-            if self.loader is None:
-                return None
-            publishers = self.loader.get_all_publishers()
             try:
+                publishers = self.loader.get_all_publishers()
                 return [
                     publisher
                     for publisher in publishers.values()
                     if publisher["name"] == raw_publisher
                 ][0]
-            except IndexError:
+            except (IndexError, LoaderNotFound):
                 return None
 
         # From metaschema 2.0 it is an object { "$ref": "/publishers/ID" }.
         # First check if we already replaced the publisher in the schema.
         if "$ref" not in raw_publisher:
             return Publisher.from_dict(raw_publisher)
-
-        if self.loader is None:
-            raise RuntimeError(f"{self!r} has no loader defined, can't resolve publisher.")
 
         publisher_id = raw_publisher["$ref"].split("/")[-1]
         return self.loader.get_publisher(publisher_id)
@@ -828,6 +822,33 @@ class DatasetTableSchema(SchemaType):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.qualified_id}>"
+
+    def _resolve_scope(self, element):
+        if "$ref" in element.get("auth", {}):
+            element["auth"] = self.schema.loader.get_scope(element["auth"]["$ref"]).json_data()
+        if isinstance(element.get("auth"), list):
+            element["auth"] = [
+                self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a
+                for a in element["auth"]
+            ]
+        if element.get("type") == "object":
+            # Nested fields may have their own auth.
+            for sub_field in element.get("properties", {}).values():
+                self._resolve_scope(sub_field)
+
+    def json_data(self, inline_scopes: bool = False):
+        data = super().json_data()
+
+        if not inline_scopes:
+            return data
+
+        # Resolve auth on table level
+        self._resolve_scope(data)
+
+        # Resolve auths on the fields
+        self._resolve_scope(data["schema"])
+
+        return data
 
     @cached_property
     def qualified_id(self) -> str:
@@ -1155,21 +1176,27 @@ class DatasetTableSchema(SchemaType):
     @property
     def schema(self) -> DatasetSchema:
         if self._parent_schema is None:
-            raise RuntimeError(f"{self!r} doesn't have a parent schema defined.")
+            raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
         return self._parent_schema
 
     @cached_property
     def scopes(self) -> frozenset[Scope]:
-        scopes = self.schema._resolve_scope(self.get("auth"))
-        if isinstance(scopes, Scope):
-            return frozenset({scopes})
-        elif isinstance(scopes, str):
-            return frozenset({self.schema._find_scope_by_id(scopes)})
-        elif isinstance(scopes, list):
-            return frozenset(
-                [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
-            )
-        return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
+        try:
+            scopes = self.schema._resolve_scope(self.get("auth"))
+            if isinstance(scopes, Scope):
+                return frozenset({scopes})
+            elif isinstance(scopes, str):
+                return frozenset({self.schema._find_scope_by_id(scopes)})
+            elif isinstance(scopes, list):
+                return frozenset(
+                    [
+                        s if isinstance(s, Scope) else self.schema._find_scope_by_id(s)
+                        for s in scopes
+                    ]
+                )
+            return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
+        except ScopeNotFound:
+            return self.auth
 
     @cached_property
     def auth(self) -> frozenset[str]:
@@ -1396,7 +1423,7 @@ class DatasetFieldSchema(JsonDict):
     @property
     def schema(self) -> DatasetSchema | None:
         if not self.table and self.table._parent_schema:
-            raise RuntimeError(f"{self!r} doesn't have a parent schema defined.")
+            raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
         return self.table._parent_schema
 
     @cached_property
@@ -1865,16 +1892,22 @@ class DatasetFieldSchema(JsonDict):
 
     @cached_property
     def scopes(self) -> frozenset[Scope]:
-        scopes = self.schema._resolve_scope(self.get("auth"))
-        if isinstance(scopes, Scope):
-            return frozenset({scopes})
-        elif isinstance(scopes, str):
-            return frozenset({self.schema._find_scope_by_id(scopes)})
-        elif isinstance(scopes, list):
-            return frozenset(
-                [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
-            )
-        return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
+        try:
+            scopes = self.schema._resolve_scope(self.get("auth"))
+            if isinstance(scopes, Scope):
+                return frozenset({scopes})
+            elif isinstance(scopes, str):
+                return frozenset({self.schema._find_scope_by_id(scopes)})
+            elif isinstance(scopes, list):
+                return frozenset(
+                    [
+                        s if isinstance(s, Scope) else self.schema._find_scope_by_id(s)
+                        for s in scopes
+                    ]
+                )
+            return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
+        except ScopeNotFound:
+            return self.auth
 
     @cached_property
     def auth(self) -> frozenset[str]:

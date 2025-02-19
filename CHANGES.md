@@ -1,3 +1,8 @@
+# 2025-02-17 (6.5.1)
+
+* Bugfix for interoperability with DSO-API. The RuntimeErrors resulting from missing loaders
+  or missing scopes in the DSO test suite should be resolved this way.
+
 # 2025-02-17 (6.5)
 
 * Scope objects are now inlined for persistence.

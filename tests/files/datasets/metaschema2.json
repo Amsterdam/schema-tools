@@ -25,18 +25,24 @@
         "type": "object",
         "additionalProperties": false,
         "identifier": "identificatie",
-        "required": ["schema", "id"],
+        "required": [
+          "schema",
+          "id"
+        ],
         "display": "id",
         "properties": {
           "schema": {
             "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
           },
           "id": {
-            "auth": [{
-              "$ref": "scopes/HARRY/harryscope1"
-            }, {
-              "$ref": "scopes/HARRY/harryscope2"
-            }],
+            "auth": [
+              {
+                "$ref": "scopes/HARRY/harryscope1"
+              },
+              {
+                "$ref": "scopes/HARRY/harryscope2"
+              }
+            ],
             "type": "string",
             "description": "Unieke identificatie voor dit object"
           },
@@ -46,6 +52,22 @@
             },
             "type": "string",
             "description": "Unieke identificatie van de meting"
+          },
+          "genest_veld": {
+            "type": "object",
+            "properties": {
+              "geheim_veld": {
+                "type": "string",
+                "auth": {
+                  "$ref": "scopes/HARRY/harryscope3"
+                }
+              },
+              "gewoon_veld": {
+                "type": "string"
+              }
+            },
+            "relation": "gebieden:buurten",
+            "description": "De buurt waar het bouwblok in ligt."
           }
         }
       }
