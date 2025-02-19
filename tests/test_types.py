@@ -415,27 +415,26 @@ def test_loading_multiple_scopes_from_field(schema_loader):
     assert field.scopes == frozenset({HARRY_ONE_SCOPE, HARRY_TWO_SCOPE})
 
 
+def _assert_scopes_are_resolved(element):
+    auth = element.get("auth")
+    if isinstance(auth, list):
+        assert all("accessPackages" in a for a in auth)
+    if isinstance(auth, dict):
+        assert "accessPackages" in auth
+    if element.get("type") == "object":
+        # nested field
+        for sub_field in element["properties"].values():
+            _assert_scopes_are_resolved(sub_field)
+
+
 def test_schema_json_data_can_inline_scopes(schema_loader):
     schema = schema_loader.get_dataset_from_file("metaschema2.json")
 
     json_data = schema.json_data(inline_tables=True, inline_publishers=True, inline_scopes=True)
 
-    assert all("accessPackages" in a for a in json_data["auth"])
-    assert "accessPackages" in json_data["tables"][0]["auth"]
-    for field in json_data["tables"][0]["schema"]["properties"].values():
-        auth = field.get("auth")
-        if isinstance(auth, list):
-            assert all("accessPackages" in a for a in auth)
-        if isinstance(auth, dict):
-            assert "accessPackages" in auth
-        if field.get("type") == "object":
-            # nested field
-            for sub_field in field["properties"].values():
-                sub_auth = sub_field.get("auth")
-                if isinstance(sub_auth, list):
-                    assert all("accessPackages" in a for a in sub_auth)
-                if isinstance(sub_auth, dict):
-                    assert "accessPackages" in sub_auth
+    _assert_scopes_are_resolved(json_data)
+    _assert_scopes_are_resolved(json_data["tables"][0])
+    _assert_scopes_are_resolved(json_data["tables"][0]["schema"])
 
 
 def test_repr_broken_schema():
