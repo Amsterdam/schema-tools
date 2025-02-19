@@ -827,30 +827,38 @@ class DatasetTableSchema(SchemaType):
         data = super().json_data()
         if inline_scopes:
             # Resolve auth on table level
-            if data.get("auth"):
-                if "$ref" in data["auth"]:
-                    data["auth"] = self.schema.loader.get_scope(data["auth"]["$ref"]).json_data()
-                if isinstance(data["auth"], list):
-                    data["auth"] = [
-                        self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a
-                        for a in data["auth"]
-                    ]
+            if "$ref" in data.get("auth", {}):
+                data["auth"] = self.schema.loader.get_scope(data["auth"]["$ref"]).json_data()
+            if isinstance(data.get("auth"), list):
+                data["auth"] = [
+                    self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a
+                    for a in data["auth"]
+                ]
             # Resolve auths on the fields
             for field in data["schema"]["properties"].values():
-                if field.get("auth"):
-                    if "$ref" in field["auth"]:
-                        field["auth"] = self.schema.loader.get_scope(
-                            field["auth"]["$ref"]
-                        ).json_data()
-                    if isinstance(field["auth"], list):
-                        field["auth"] = [
-                            (
-                                self.schema.loader.get_scope(a["$ref"]).json_data()
-                                if "$ref" in a
-                                else a
-                            )
-                            for a in field["auth"]
-                        ]
+                if "$ref" in field.get("auth", {}):
+                    field["auth"] = self.schema.loader.get_scope(field["auth"]["$ref"]).json_data()
+                if isinstance(field.get("auth"), list):
+                    field["auth"] = [
+                        (self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a)
+                        for a in field["auth"]
+                    ]
+                # Nested fields may have their own auth.
+                if field.get("type") == "object":
+                    for sub_field in field["properties"].values():
+                        if "$ref" in sub_field.get("auth", {}):
+                            sub_field["auth"] = self.schema.loader.get_scope(
+                                sub_field["auth"]["$ref"]
+                            ).json_data()
+                        if isinstance(sub_field.get("auth"), list):
+                            sub_field["auth"] = [
+                                (
+                                    self.schema.loader.get_scope(a["$ref"]).json_data()
+                                    if "$ref" in a
+                                    else a
+                                )
+                                for a in field["auth"]
+                            ]
         return data
 
     @cached_property

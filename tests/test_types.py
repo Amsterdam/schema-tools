@@ -428,6 +428,14 @@ def test_schema_json_data_can_inline_scopes(schema_loader):
             assert all("accessPackages" in a for a in auth)
         if isinstance(auth, dict):
             assert "accessPackages" in auth
+        if field.get("type") == "object":
+            # nested field
+            for sub_field in field["properties"].values():
+                sub_auth = sub_field.get("auth")
+                if isinstance(sub_auth, list):
+                    assert all("accessPackages" in a for a in sub_auth)
+                if isinstance(sub_auth, dict):
+                    assert "accessPackages" in sub_auth
 
 
 def test_repr_broken_schema():
