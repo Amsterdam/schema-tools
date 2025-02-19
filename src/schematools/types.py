@@ -519,7 +519,7 @@ class DatasetSchema(SchemaType):
                     for publisher in publishers.values()
                     if publisher["name"] == raw_publisher
                 ][0]
-            except (IndexError, RuntimeError):
+            except (IndexError, LoaderNotFound):
                 return None
 
         # From metaschema 2.0 it is an object { "$ref": "/publishers/ID" }.
