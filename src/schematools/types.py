@@ -833,7 +833,7 @@ class DatasetTableSchema(SchemaType):
             ]
         if element.get("type") == "object":
             # Nested fields may have their own auth.
-            for sub_field in element["properties"].values():
+            for sub_field in element.get("properties", {}).values():
                 self._resolve_scope(sub_field)
 
     def json_data(self, inline_scopes: bool = False):
