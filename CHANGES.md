@@ -1,3 +1,8 @@
+# 2025-02-25 (6.5.2)
+
+* Fixed bug where grantees were not found for Scope objects. This was handled by a fallback
+  in previous versions.
+
 # 2025-02-17 (6.5.1)
 
 * Bugfix for interoperability with DSO-API. The RuntimeErrors resulting from missing loaders
