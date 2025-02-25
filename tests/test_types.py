@@ -4,7 +4,7 @@ import operator
 
 import pytest
 
-from schematools.exceptions import SchemaObjectNotFound
+from schematools.exceptions import SchemaObjectNotFound, ScopeNotFound
 from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
@@ -387,6 +387,19 @@ def test_scope_json_data():
 def test_scope_db_python_names():
     assert scope_a.db_name == "scope_a"
     assert scope_a.python_name == "scope_a"
+
+
+def test_find_scope_by_id_is_happy(schema_loader):
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+
+    assert schema._find_scope_by_id(HARRY_ONE_SCOPE.id) == HARRY_ONE_SCOPE
+
+
+@pytest.mark.xfail(raises=ScopeNotFound)
+def test_find_scope_by_id_fails_gracefully(schema_loader):
+    schema = schema_loader.get_dataset_from_file("metaschema2.json")
+
+    schema._find_scope_by_id("SOME_RANDOM_SCOPE_ID_THAT_DOESNT_EXIST")
 
 
 def test_loading_scopes_from_dataset(schema_loader):
