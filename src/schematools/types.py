@@ -437,19 +437,16 @@ class DatasetSchema(SchemaType):
 
     @cached_property
     def scopes(self) -> frozenset[Scope]:
-        try:
-            scopes = self._resolve_scope(self.get("auth"))
-            if isinstance(scopes, Scope):
-                return frozenset({scopes})
-            elif isinstance(scopes, str):
-                return frozenset({self._find_scope_by_id(scopes)})
-            elif isinstance(scopes, list):
-                return frozenset(
-                    [s if isinstance(s, Scope) else self._find_scope_by_id(s) for s in scopes]
-                )
-            return frozenset({self._find_scope_by_id(_PUBLIC_SCOPE)})
-        except ScopeNotFound:
-            return self.auth
+        scopes = self._resolve_scope(self.get("auth"))
+        if isinstance(scopes, Scope):
+            return frozenset({scopes})
+        elif isinstance(scopes, str):
+            return frozenset({self._find_scope_by_id(scopes)})
+        elif isinstance(scopes, list):
+            return frozenset(
+                [s if isinstance(s, Scope) else self._find_scope_by_id(s) for s in scopes]
+            )
+        return frozenset({self._find_scope_by_id(_PUBLIC_SCOPE)})
 
     @cached_property
     def auth(self) -> frozenset[str]:
@@ -1181,22 +1178,16 @@ class DatasetTableSchema(SchemaType):
 
     @cached_property
     def scopes(self) -> frozenset[Scope]:
-        try:
-            scopes = self.schema._resolve_scope(self.get("auth"))
-            if isinstance(scopes, Scope):
-                return frozenset({scopes})
-            elif isinstance(scopes, str):
-                return frozenset({self.schema._find_scope_by_id(scopes)})
-            elif isinstance(scopes, list):
-                return frozenset(
-                    [
-                        s if isinstance(s, Scope) else self.schema._find_scope_by_id(s)
-                        for s in scopes
-                    ]
-                )
-            return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
-        except ScopeNotFound:
-            return self.auth
+        scopes = self.schema._resolve_scope(self.get("auth"))
+        if isinstance(scopes, Scope):
+            return frozenset({scopes})
+        elif isinstance(scopes, str):
+            return frozenset({self.schema._find_scope_by_id(scopes)})
+        elif isinstance(scopes, list):
+            return frozenset(
+                [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
+            )
+        return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
 
     @cached_property
     def auth(self) -> frozenset[str]:
@@ -1892,22 +1883,16 @@ class DatasetFieldSchema(JsonDict):
 
     @cached_property
     def scopes(self) -> frozenset[Scope]:
-        try:
-            scopes = self.schema._resolve_scope(self.get("auth"))
-            if isinstance(scopes, Scope):
-                return frozenset({scopes})
-            elif isinstance(scopes, str):
-                return frozenset({self.schema._find_scope_by_id(scopes)})
-            elif isinstance(scopes, list):
-                return frozenset(
-                    [
-                        s if isinstance(s, Scope) else self.schema._find_scope_by_id(s)
-                        for s in scopes
-                    ]
-                )
-            return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
-        except ScopeNotFound:
-            return self.auth
+        scopes = self.schema._resolve_scope(self.get("auth"))
+        if isinstance(scopes, Scope):
+            return frozenset({scopes})
+        elif isinstance(scopes, str):
+            return frozenset({self.schema._find_scope_by_id(scopes)})
+        elif isinstance(scopes, list):
+            return frozenset(
+                [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
+            )
+        return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
 
     @cached_property
     def auth(self) -> frozenset[str]:

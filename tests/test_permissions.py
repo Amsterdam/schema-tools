@@ -9,6 +9,14 @@ from sqlalchemy.exc import ProgrammingError
 
 from schematools.importer.ndjson import NDJSONImporter
 from schematools.permissions.db import apply_schema_and_profile_permissions
+from schematools.types import DatasetSchema, Scope
+
+
+# In test files we use a lot of non-existent scopes, so instead of writing scope
+# json files we monkeypatch this method.
+@pytest.fixture(autouse=True)
+def patch_find_scope_by_id(monkeypatch):
+    monkeypatch.setattr(DatasetSchema, "_find_scope_by_id", Scope.from_string)
 
 
 class TestReadPermissions:
