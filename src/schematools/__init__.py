@@ -39,4 +39,4 @@ SRID_3D: Final[list[int]] = [
 # package version is compatible with. This means that it
 # can only handle schema objects that are compliant
 # under at least one of these versions.
-COMPATIBLE_METASCHEMAS = [1, 2]
+COMPATIBLE_METASCHEMAS = [1, 2, 3]

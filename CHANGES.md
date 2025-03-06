@@ -1,3 +1,8 @@
+# 2025-03-06 (7.0.0)
+
+* Add support for Amsterdam Schema V3. Introduction of the DatasetVersionSchema to allow
+  for multiple versions of a dataset.
+
 # 2025-02-25 (6.5.2)
 
 * Fixed bug where grantees were not found for Scope objects. This was handled by a fallback

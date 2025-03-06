@@ -29,6 +29,7 @@ from schematools._utils import cached_method
 from schematools.exceptions import (
     DatasetFieldNotFound,
     DatasetTableNotFound,
+    DatasetVersionNotFound,
     LoaderNotFound,
     ParserError,
     SchemaObjectNotFound,
@@ -194,6 +195,10 @@ class SemVer(str):
         """
         return f"{self.major}_{self.minor}"
 
+    @property
+    def is_production_version(self):
+        return self.major >= 1
+
 
 class JsonDict(UserDict):
     def json(self) -> str:
@@ -304,7 +309,9 @@ class DatasetSchema(SchemaType):
             dataset_collection: The shared collection that the dataset should become part of.
                                 This is used to resolve relations between different datasets.
         """
-        if data.get("type") != "dataset" or not isinstance(data.get("tables"), list):
+        if data.get("type") != "dataset" and (
+            not isinstance(data.get("tables"), list) or not isinstance(data.get("versions"), dict)
+        ):
             raise ValueError("Invalid Amsterdam Dataset schema file")
 
         self.view_sql = view_sql if view_sql is not None else None
@@ -344,8 +351,16 @@ class DatasetSchema(SchemaType):
             return json.dumps(self.data)
 
         data = self.data.copy()
+
+        # As a temporary fix add the status property of the default version
+        data["status"] = self.status.value
+
         if inline_tables:
-            data["tables"] = [t.json_data(inline_scopes=inline_scopes) for t in self.tables]
+            table_data = [t.json_data(inline_scopes=inline_scopes) for t in self.tables]
+            # Support both v2 and v3 metaschema for now
+            data["tables"] = table_data
+            if "versions" in data:
+                data["versions"][self.default_version]["tables"] = table_data
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
         if inline_scopes:
@@ -405,13 +420,14 @@ class DatasetSchema(SchemaType):
     @property
     def default_version(self) -> str:
         """Default version for this schema."""
-        return self.get("default_version", self.version)
+        return self.get("defaultVersion", "v1")
 
     @property
     def is_default_version(self) -> bool:
         """Is this Default Dataset version.
-        Defaults to True, in order to stay backwards compatible."""
-        return self.default_version == self.version
+        Always returns True, in order to stay backwards compatible.
+        """
+        return True
 
     def _resolve_scope(self, auth):
         """Auth may contain a reference to a scope, or a list of such references.
@@ -457,7 +473,10 @@ class DatasetSchema(SchemaType):
 
     @property
     def status(self) -> DatasetSchema.Status:
-        value = self.get("status")
+        if self.get("versions"):
+            return self.get_version(self.default_version).status
+        else:
+            value = self.get("status")
         try:
             return DatasetSchema.Status[value]
         except KeyError:
@@ -473,25 +492,43 @@ class DatasetSchema(SchemaType):
         return self.loader.get_dataset(dataset_id)
 
     @cached_property
+    def versions(self) -> dict[str, DatasetVersionSchema]:
+        """Access the versions within the file."""
+        if not self.get("versions"):
+            version_dict = {
+                "status": DatasetSchema.Status.beschikbaar.value,
+                "version": "1.0.0",
+                "tables": self.get("tables"),
+            }
+            return {self.default_version: DatasetVersionSchema(version_dict, parent_schema=self)}
+        return {
+            version_number: DatasetVersionSchema(version, parent_schema=self)
+            for version_number, version in self.get("versions").items()
+        }
+
+    def get_version(self, version):
+        """Get a specific version of the dataset."""
+        try:
+            return self.versions[version]
+        except KeyError:
+            raise DatasetVersionNotFound(
+                f"Version {version} not found in dataset. "
+                f"Available versions are {list(self.versions)}"
+            ) from None
+
+    @property
     def tables(self) -> list[DatasetTableSchema]:
         """Access the tables within the file."""
-        tables: list[DatasetTableSchema] = []
-        for table_json in self["tables"]:
-            if "$ref" in table_json:
-                # Dataset uses the new format to define table versions.
-                # Load the default version
-                table = self.loader.get_table(self, table_json["$ref"])
-            else:
-                # Old format, a single "dataset.json" with all tables embedded.
-                # This format is also used when the dataset is serialized for database storage.
-                table = DatasetTableSchema(table_json, parent_schema=self)
-            tables.append(table)
-
-        return tables
+        version = self.get_version(self.default_version)
+        return version.get_tables()
 
     @cached_property
     def table_versions(self) -> dict[str, TableVersions]:
         """Access different versions of the table, as mentioned in the dataset file."""
+        if not self.get("tables"):
+            # V3 of the Amsterdam Meta Schema does not support activeVersions on tables
+            # Will be deprecated once we're fully transitioned to V3
+            return {}
         return {
             table_json["id"]: TableVersions(
                 table_id=table_json["id"],
@@ -529,38 +566,32 @@ class DatasetSchema(SchemaType):
 
     def get_tables(
         self,
+        version: str | None = None,
         include_nested: bool = False,
         include_through: bool = False,
     ) -> list[DatasetTableSchema]:
-        """List tables, including nested."""
-        return list(
-            self._get_tables(include_nested=include_nested, include_through=include_through)
+        """List tables, including nested. Kept in place to provide backwards compatibility,
+        but uses the specified (or default) version."""
+        version = version if version else self.default_version
+        version_schema = self.get_version(version)
+        return version_schema.get_tables(
+            include_nested=include_nested, include_through=include_through
         )
-
-    def _get_tables(self, include_nested: bool = False, include_through: bool = False):
-        # Using yield so nested/through tables aren't analyzed until they really have to.
-        # This avoids unnecessary retrieval of related datasets/tables for get_table_by_id().
-        yield from self.tables
-        if include_nested:
-            yield from self.nested_tables
-        if include_through:
-            yield from self.through_tables
 
     @cached_method()  # type: ignore[misc]
     def get_table_by_id(
-        self, table_id: str, include_nested: bool = True, include_through: bool = True
+        self,
+        table_id: str,
+        version: str | None = None,
+        include_nested: bool = True,
+        include_through: bool = True,
     ) -> DatasetTableSchema:
-        snakecased_table_id = to_snake_case(table_id)
-        for table in self.get_tables(
-            include_nested=include_nested, include_through=include_through
-        ):
-            if to_snake_case(table.id) == snakecased_table_id:
-                return table
-
-        available = "', '".join([table["id"] for table in self["tables"]])
-        raise DatasetTableNotFound(
-            f"Table '{table_id}' does not exist "
-            f"in schema '{self.id}', available are: '{available}'"
+        """Get table by id. Kept in place for backwards compatibility, but uses the
+        specified (or default) version."""
+        version = version if version else self.default_version
+        version_schema = self.get_version(version)
+        return version_schema.get_table_by_id(
+            table_id, include_nested=include_nested, include_through=include_through
         )
 
     @property
@@ -781,6 +812,102 @@ class DatasetSchema(SchemaType):
             related_ids.update(table.related_dataset_ids)
 
         return related_ids
+
+
+class DatasetVersionSchema(SchemaType):
+    """
+    Minimal implementation of DatasetVersionSchema to be able to work with
+    Amsterdam Schema V3.
+    """
+
+    def __init__(
+        self,
+        data: dict,
+        parent_schema: DatasetSchema,
+    ):
+        self._parent_schema = parent_schema
+        super().__init__(data)
+
+    @property
+    def status(self) -> DatasetSchema.Status:
+        value = self.data.get("status")
+        try:
+            return DatasetSchema.Status[value]
+        except KeyError:
+            raise ParserError(f"Status field contains an unknown value: {value}") from None
+
+    @property
+    def schema(self) -> DatasetSchema:
+        if self._parent_schema is None:
+            raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
+        return self._parent_schema
+
+    @cached_property
+    def tables(self) -> list[DatasetTableSchema]:
+        """Access the tables within the file."""
+        tables: list[DatasetTableSchema] = []
+        for table_json in self.get("tables"):
+            if "$ref" in table_json:
+                # Dataset uses the new format to define table versions.
+                # Load the default version
+                table = self.schema.loader.get_table(self.schema, table_json["$ref"])
+            else:
+                # Old format, a single "dataset.json" with all tables embedded.
+                # This format is also used when the dataset is serialized for database storage.
+                table = DatasetTableSchema(table_json, parent_schema=self.schema)
+            tables.append(table)
+
+        return tables
+
+    def get_tables(
+        self,
+        include_nested: bool = False,
+        include_through: bool = False,
+    ) -> list[DatasetTableSchema]:
+        """List tables, including nested."""
+        return list(
+            self._get_tables(include_nested=include_nested, include_through=include_through)
+        )
+
+    @cached_method()  # type: ignore[misc]
+    def get_table_by_id(
+        self, table_id: str, include_nested: bool = True, include_through: bool = True
+    ) -> DatasetTableSchema:
+        snakecased_table_id = to_snake_case(table_id)
+        tables = self.get_tables(include_nested=include_nested, include_through=include_through)
+        for table in tables:
+            if to_snake_case(table.id) == snakecased_table_id:
+                return table
+
+        available = "', '".join([table["id"] for table in tables])
+        raise DatasetTableNotFound(
+            f"Table '{table_id}' does not exist "
+            f"in schema '{self.id}', available are: '{available}'"
+        )
+
+    def _get_tables(self, include_nested: bool = False, include_through: bool = False):
+        # Using yield so nested/through tables aren't analyzed until they really have to.
+        # This avoids unnecessary retrieval of related datasets/tables for get_table_by_id().
+        yield from self.tables
+        if include_nested:
+            yield from self.nested_tables
+        if include_through:
+            yield from self.through_tables
+
+    @property
+    def nested_tables(self) -> list[DatasetTableSchema]:
+        """Access list of nested tables."""
+        return [f.nested_table for t in self.tables for f in t.fields if f.is_nested_table]
+
+    @property
+    def through_tables(self) -> list[DatasetTableSchema]:
+        """Access list of through_tables, for n-m relations."""
+        return [
+            f.through_table
+            for t in self.tables
+            for f in t.fields
+            if f.is_through_table and not (f.is_loose_relation and f.nm_relation is None)
+        ]
 
 
 class DatasetTableSchema(SchemaType):
@@ -1614,7 +1741,6 @@ class DatasetFieldSchema(JsonDict):
         relation = self.get("relation")  # works for both 1:N and N:M relations
         if not relation:
             return None
-
         # Find the related field
         related_dataset_id, related_table_id = relation.split(":")
         dataset = self.table.dataset
