@@ -500,4 +500,41 @@ def _check_schema_ref(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:
         fragments = urlparse(table["schema"]["properties"]["schema"]["$ref"])
         if fragments.hostname != "schemas.data.amsterdam.nl" or fragments.scheme != "https":
-            yield (f"Incorrect `$ref` for {table.id}. Value should be `https://data.amsterdam.nl`")
+            yield (
+                f"Incorrect `$ref` for {table.id}. Value should be "
+                f"`https://schemas.data.amsterdam.nl`"
+            )
+
+
+@_register_validator("defaultVersion")
+def _check_default_version(dataset: DatasetSchema) -> Iterator[str]:
+    """Check that defaultVersion field for a dataset matches the only 'beschikbaar' version."""
+    enabled_versions = []
+    for version_number, version in dataset.versions.items():
+        if version.status == DatasetSchema.Status.beschikbaar:
+            enabled_versions.append(version_number)
+            if version_number != dataset.default_version:
+                yield (
+                    f"Default version {dataset.default_version} does not match enabled "
+                    f"version {version_number}"
+                )
+
+
+@_register_validator("production version")
+def _check_production_version_tables(dataset: DatasetSchema) -> Iterator[str]:
+    """Check that a production version (>= v1) contains no v0, alpha or beta tables."""
+    non_production_versions = ["alpha", "beta", "v0"]
+    version_regex = r"(v?(?P<major>\d+)(?:\.(?P<minor>\d+)(?:\.(?P<patch>\d+))?)?)|(alpha|beta)"
+    for version_number, version in dataset.versions.items():
+        if version_number in non_production_versions:
+            continue
+
+        for table in version.data.get("tables"):
+            # Don't validate inline tables, to allow backwards compatibility
+            if "$ref" in table:
+                table_version = re.search(version_regex, table["$ref"]).group(0)
+                if table_version in non_production_versions:
+                    yield (
+                        f"Dataset version ({version_number}) cannot contain non-production "
+                        f"table [{table['$ref']}]"
+                    )

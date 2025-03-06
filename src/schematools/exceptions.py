@@ -17,6 +17,10 @@ class DatasetNotFound(SchemaObjectNotFound):
     """The dataset could not be found."""
 
 
+class DatasetVersionNotFound(SchemaObjectNotFound):
+    """The version could not be found."""
+
+
 class DatasetTableNotFound(SchemaObjectNotFound):
     """The table could not be found."""
 
