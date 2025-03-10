@@ -333,3 +333,26 @@ def test_schema_ref(schema_loader) -> None:
     assert """Incorrect `$ref` for""" in error.message
 
     assert list(errors) == []
+
+
+def test_check_default_version(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("schema_default_version.json")
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 0
+
+    # Prove that wrong default version gives an error
+    dataset["defaultVersion"] = "v2"
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1
+    assert "Default version v2 does not match enabled version v1" in errors[0].message
+
+
+def test_production_version_tables(schema_loader) -> None:
+    dataset = schema_loader.get_dataset("production_version")
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1
+    assert (
+        "Dataset version (v1) cannot contain non-production table [tables/v0]" in errors[0].message
+    )

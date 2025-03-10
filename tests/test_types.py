@@ -478,3 +478,22 @@ def test_extra_properties_of_relation_field_are_also_in_through_table(gebieden_s
     assert {"beginGeldigheid", "eindGeldigheid"} < fields_on_through_table[
         "ligtInBuurt"
     ].json_data()["properties"].keys()
+
+
+def test_datasetversions(schema_loader):
+    """
+    Test dataset versioning results in multiple versions on the dataset and
+    backwards compatibility for tables still works.
+    """
+    dataset = schema_loader.get_dataset("metaschema3")
+
+    assert dataset.default_version == "v1"
+    assert len(dataset.versions) == 2
+
+    # Test backwards compatible properties
+    assert dataset.tables == dataset.get_tables("v1")
+    assert dataset.status == DatasetSchema.Status.beschikbaar
+
+    # Test each version of the dataset is accessible
+    assert dataset.get_version("v0").status == DatasetSchema.Status.niet_beschikbaar
+    assert dataset.get_version("v1").status == DatasetSchema.Status.beschikbaar
