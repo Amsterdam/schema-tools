@@ -1,0 +1,28 @@
+{
+  "id": "metaschema3",
+  "type": "dataset",
+  "status": "beschikbaar",
+  "defaultVersion": "v1",
+  "versions": {
+    "v0": {
+      "status": "niet_beschikbaar",
+      "version": "0.2.1",
+      "tables": [
+        {
+          "id": "tables",
+          "$ref": "tables/v0"
+        }
+      ]
+    },
+    "v1": {
+      "status": "beschikbaar",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "tables",
+          "$ref": "tables/v1"
+        }
+      ]
+    }
+  }
+}

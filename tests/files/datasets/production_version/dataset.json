@@ -1,0 +1,24 @@
+{
+  "type": "dataset",
+  "id": "production_version",
+  "title": "Schema production version tables Validation Test",
+  "description": "Schema for unit testing that production versions do not point to non-production tables",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "productiontable",
+          "$ref": "tables/v1"
+        },
+        {
+          "id": "productiontable",
+          "$ref": "tables/v0"
+        }
+      ]
+    }
+  },
+  "publisher": "unknown"
+}
