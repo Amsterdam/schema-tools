@@ -352,12 +352,16 @@ class DatasetSchema(SchemaType):
 
         data = self.data.copy()
 
-        # As a temporary fix add the status property of the default version
+        # As a temporary fix add the status property of the default version, this can be
+        # removed once the DSO-API doesn't rely on the status of a DatasetSchema, but on
+        # the status of a DatasetVersionSchema.
         data["status"] = self.status.value
 
         if inline_tables:
             table_data = [t.json_data(inline_scopes=inline_scopes) for t in self.tables]
-            # Support both v2 and v3 metaschema for now
+            # Support both v2 and v3 metaschema for now, this duplication can be removed
+            # once the DSO-API uses the tables from a DatasetVersionSchema instead of
+            # a DatasetSchema
             data["tables"] = table_data
             if "versions" in data:
                 data["versions"][self.default_version]["tables"] = table_data
@@ -506,7 +510,7 @@ class DatasetSchema(SchemaType):
             for version_number, version in self.get("versions").items()
         }
 
-    def get_version(self, version):
+    def get_version(self, version) -> DatasetVersionSchema:
         """Get a specific version of the dataset."""
         try:
             return self.versions[version]
