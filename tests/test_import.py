@@ -55,7 +55,7 @@ def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsess
         "schema": "irrelevant",
     }
     records = [
-        dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken ORDER BY id")
+        dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken_v1 ORDER BY id")
     ]
     assert len(records) == 2
     assert set(records[0].keys()) == {
@@ -75,7 +75,7 @@ def test_skip_duplicate_keys_in_batch_during_import(here, engine, bouwblokken_sc
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     last_record = importer.load_file(ndjson_path)
     records = [
-        dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken ORDER BY id")
+        dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken_v1 ORDER BY id")
     ]
     assert records == [
         # Only one inserted, and no crash happened.
@@ -132,7 +132,7 @@ def test_numeric_datatype_scale(
             SELECT data_type, numeric_scale
                 FROM information_schema.columns
                 WHERE table_schema = 'public'
-                  AND table_name = 'woningbouwplannen_woningbouwplan'
+                  AND table_name = 'woningbouwplannen_woningbouwplan_v1'
                   AND column_name = 'avarage_sales_price';
             """
         )
@@ -155,7 +155,7 @@ def test_invalid_numeric_datatype_scale(
             SELECT data_type, numeric_scale
                 FROM information_schema.columns
                 WHERE table_schema = 'public'
-                    AND table_name = 'woningbouwplannen_woningbouwplan'
+                    AND table_name = 'woningbouwplannen_woningbouwplan_v1'
                     AND column_name = 'avarage_sales_price_incorrect'
                    OR column_name = 'avarage_sales_price_incorrect_zero'
             """
@@ -177,7 +177,7 @@ def test_biginteger_datatype(here, engine, woningbouwplannen_schema, gebieden_sc
         SELECT data_type, numeric_precision
             FROM information_schema.columns
             WHERE table_schema = 'public'
-              AND table_name = 'woningbouwplannen_woningbouwplan'
+              AND table_name = 'woningbouwplannen_woningbouwplan_v1'
               AND column_name = 'id';
         """
     )
@@ -197,7 +197,7 @@ def test_add_column_comment(here, engine, woningbouwplannen_schema, dbsession):
                      INNER JOIN pg_catalog.pg_description pgd ON (pgd.objoid = st.relid)
                      INNER JOIN information_schema.columns c ON (pgd.objsubid = c.ordinal_position
                 AND c.table_schema = st.schemaname AND c.table_name = st.relname)
-            WHERE table_name = 'woningbouwplannen_woningbouwplan'
+            WHERE table_name = 'woningbouwplannen_woningbouwplan_v1'
               AND column_name = 'projectnaam';
         """
     )
@@ -211,7 +211,7 @@ def test_add_table_comment(here, engine, woningbouwplannen_schema, dbsession):
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=False)
     results = engine.execute(
         """
-        SELECT OBJ_DESCRIPTION('public.woningbouwplannen_woningbouwplan'::REGCLASS) AS description;
+        SELECT OBJ_DESCRIPTION('public.woningbouwplannen_woningbouwplan_v1'::REGCLASS) AS description;
         """
     )
     record = results.fetchone()
@@ -234,7 +234,7 @@ def test_create_table_db_schema(here, engine, woningbouwplannen_schema, dbsessio
     )
     results = engine.execute(
         """
-        SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan'
+        SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan_v1'
         """
     )
     record = results.fetchone()
@@ -247,7 +247,7 @@ def test_create_table_no_db_schema(here, engine, woningbouwplannen_schema, dbses
     importer.generate_db_objects("woningbouwplan", None, ind_tables=True, ind_extra_index=False)
     results = engine.execute(
         """
-        SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan'
+        SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan_v1'
         """
     )
     record = results.fetchone()
@@ -266,15 +266,15 @@ def test_generate_db_objects_is_versioned_dataset(
     )
     assert engine.scalar(SCHEMA_EXISTS, schema_name="woningbouwplannen")
     for table_name in (
-        "woningbouwplan_1_0",
-        "woningbouwplan_buurten_1_0",
-        "woningbouwplan_buurten_as_scalar_1_0",
+        "woningbouwplan_v1",
+        "woningbouwplan_buurten_v1",
+        "woningbouwplan_buurten_as_scalar_v1",
     ):
         assert engine.scalar(TABLE_EXISTS, schema_name="woningbouwplannen", table_name=table_name)
     for view_name in (
-        "woningbouwplannen_woningbouwplan",
-        "woningbouwplannen_woningbouwplan_buurten",
-        "woningbouwplannen_woningbouwplan_buurten_as_scalar",
+        "woningbouwplannen_woningbouwplan_v1",
+        "woningbouwplannen_woningbouwplan_buurten_v1",
+        "woningbouwplannen_woningbouwplan_buurten_as_scalar_v1",
     ):
         assert engine.scalar(VIEW_EXISTS, schema_name="public", view_name=view_name)
 

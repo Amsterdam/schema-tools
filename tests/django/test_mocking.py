@@ -7,6 +7,7 @@ import pytest
 
 from schematools.contrib.django.db import create_tables
 from schematools.contrib.django.factories import (
+    _get_model_name,
     schema_model_mockers_factory,
     schema_models_factory,
 )
@@ -23,7 +24,7 @@ def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
     create_data_for(gebieden_dataset, size=size)
 
     table_schemas = {
-        to_snake_case(t.id): t for t in gebieden_schema.get_tables(include_through=True)
+        _get_model_name(t): t for t in gebieden_schema.get_tables(include_through=True)
     }
     models = {}
     for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
@@ -50,7 +51,7 @@ def test_mocking_take_min_max_into_account(
     for cls in schema_models_factory(afvalwegingen_dataset, base_app_name="dso_api.dynamic_api"):
         models[cls._meta.model_name] = cls
 
-    assert models["containertypes"].objects.filter(volume__gt=12, volume__lt=5).count() == 0
+    assert models["containertypes_v1"].objects.filter(volume__gt=12, volume__lt=5).count() == 0
 
 
 @pytest.mark.django_db
@@ -79,9 +80,9 @@ def test_mocking_add_ids_for_relations(
 
     # The relations should be filled with None values
     for dataset_id, table_id, relation_ids in (
-        ("afvalwegingen", "containers", ("cluster", "containertype")),
-        ("afvalwegingen", "clusters", (to_snake_case("bagHoofdadresVerblijfsobject"),)),
-        ("afvalwegingen", "wegingen", ("cluster",)),
+        ("afvalwegingen", "containers_v1", ("cluster", "containertype")),
+        ("afvalwegingen", "clusters_v1", (to_snake_case("bagHoofdadresVerblijfsobject"),)),
+        ("afvalwegingen", "wegingen_v1", ("cluster",)),
     ):
 
         for relation_id in relation_ids:
@@ -95,9 +96,9 @@ def test_mocking_add_ids_for_relations(
 
     # Check if relations are added.
     for dataset_id, table_id, relation_ids in (
-        ("afvalwegingen", "containers", ("cluster", "containertype")),
-        ("afvalwegingen", "clusters", (to_snake_case("bagHoofdadresVerblijfsobject"),)),
-        ("afvalwegingen", "wegingen", ("cluster",)),
+        ("afvalwegingen", "containers_v1", ("cluster", "containertype")),
+        ("afvalwegingen", "clusters_v1", (to_snake_case("bagHoofdadresVerblijfsobject"),)),
+        ("afvalwegingen", "wegingen_v1", ("cluster",)),
     ):
 
         for relation_id in relation_ids:
@@ -131,7 +132,7 @@ def test_mocking_uses_enum(
             afvalwegingen_dataset, base_app_name="dso_api.dynamic_api"
         )
     }
-    mocked_fractie_codes = {o.afvalfractie for o in models["containers"].objects.all()}
+    mocked_fractie_codes = {o.afvalfractie for o in models["containers_v1"].objects.all()}
     all_fractie_codes = {"Rest", "Glas", "Papier", "Plastic", "Textiel"}
     assert all_fractie_codes >= mocked_fractie_codes and mocked_fractie_codes
 
@@ -151,7 +152,7 @@ def test_mocking_add_temporal_fields_for_1n_relations(
 
     relate_datasets(gebieden_dataset)
 
-    for bb in models["bouwblokken"].objects.all():
+    for bb in models["bouwblokken_v1"].objects.all():
         bb.ligt_in_buurt_id = ".".join(
             [
                 bb.ligt_in_buurt_identificatie,
@@ -182,8 +183,8 @@ def test_mocking_adds_nm_relations(
 
     relate_datasets(kadastraleobjecten_dataset)
 
-    source_model = models["kadastraleobjecten"]
-    through_model = models["kadastraleobjecten_is_ontstaan_uit_kadastraalobject"]
+    source_model = models["kadastraleobjecten_v1"]
+    through_model = models["kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1"]
     through_model_objects = through_model.objects.all()
     source_ids = {o.id for o in source_model.objects.all()}
     through_source_ids = {o.kadastraleobjecten_id for o in through_model_objects}
@@ -219,7 +220,7 @@ def test_mocking_with_shortname_on_relation(gebieden_dataset, gebieden_schema):
     for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
         models[cls._meta.model_name] = cls
 
-    fields = {f.name: f for f in models["bouwblokken"]._meta.get_fields()}
+    fields = {f.name: f for f in models["bouwblokken_v1"]._meta.get_fields()}
     # proves both the existence of the (long) fieldname + correct (short) db_column
     assert fields["ligt_in_buurt_met_te_lange_naam"].db_column == "lgt_in_brt_id"
 
@@ -283,7 +284,7 @@ def test_mocking_fills_nested_objects(
         )
     }
 
-    kad_obj = models["kadastraleobjecten"].objects.first()
+    kad_obj = models["kadastraleobjecten_v1"].objects.first()
     # Random value in `soort_grootte` should be a valid json string.
     json.loads(kad_obj.soort_grootte)
 

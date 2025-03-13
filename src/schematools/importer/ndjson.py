@@ -267,7 +267,9 @@ class TableFieldMapper:
         self, nm_field: DatasetFieldSchema, values: list[dict], source: dict
     ) -> list[Record]:
         """Provide the records for a Many-to-Many (NM) fields."""
-        source_db_name = self.dataset_table.db_name_variant(with_dataset_prefix=False)
+        source_db_name = self.dataset_table.db_name_variant(
+            with_dataset_prefix=False, with_version=False
+        )
         src_id_value = self._get_composite_id(source)
         if not isinstance(values, list):
             values = [values]

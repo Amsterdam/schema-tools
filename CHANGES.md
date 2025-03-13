@@ -1,3 +1,8 @@
+# 2025-03-26 (7.1.0)
+
+* Add support for versioned tables. All tables will now receive a major version number in
+  their name.
+
 # 2025-03-06 (7.0.0)
 
 * Add support for Amsterdam Schema V3. Introduction of the DatasetVersionSchema to allow

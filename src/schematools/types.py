@@ -196,6 +196,16 @@ class SemVer(str):
         return f"{self.major}_{self.minor}"
 
     @property
+    def vmajor(self) -> str:
+        """Return stringified major part of SemVer.
+
+        Examples:
+            >>> SemVer("v3.9.0").vmajor
+            "v3"
+        """
+        return f"v{self.major}"
+
+    @property
     def is_production_version(self):
         return self.major >= 1
 
@@ -986,7 +996,7 @@ class DatasetTableSchema(SchemaType):
             prefix = f"{self._parent_schema.id}."
         if self._parent_table is not None:
             prefix = f"{prefix}{self._parent_table.id}."
-        return f"{prefix}{self['id']}"
+        return f"{prefix}{self['id']}.{self.version.vmajor}"
 
     @property
     def python_name(self) -> str:
@@ -1360,7 +1370,7 @@ class DatasetTableSchema(SchemaType):
         self,
         *,
         with_dataset_prefix: bool = True,
-        with_version: bool = False,
+        with_version: bool = True,
         postfix: str = "",
         check_assert: bool = True,
     ) -> str:
@@ -1379,7 +1389,7 @@ class DatasetTableSchema(SchemaType):
         """
         dataset_prefix = version_postfix = ""
         if with_version:
-            version_postfix = self.version.signif
+            version_postfix = f"{self.version.vmajor}"
         if with_dataset_prefix:
             dataset_prefix = to_snake_case(self.dataset.id)
 
