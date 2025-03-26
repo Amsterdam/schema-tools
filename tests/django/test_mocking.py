@@ -7,7 +7,7 @@ import pytest
 
 from schematools.contrib.django.db import create_tables
 from schematools.contrib.django.factories import (
-    _get_model_name,
+    get_model_name,
     schema_model_mockers_factory,
     schema_models_factory,
 )
@@ -24,7 +24,7 @@ def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
     create_data_for(gebieden_dataset, size=size)
 
     table_schemas = {
-        _get_model_name(t): t for t in gebieden_schema.get_tables(include_through=True)
+        get_model_name(t): t for t in gebieden_schema.get_tables(include_through=True)
     }
     models = {}
     for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):

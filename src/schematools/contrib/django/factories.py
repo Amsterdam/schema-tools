@@ -139,7 +139,7 @@ def schema_model_mockers_factory(
     ]
 
 
-def _get_model_name(table_schema: DatasetTableSchema) -> str:
+def get_model_name(table_schema: DatasetTableSchema) -> str:
     """Returns model name for this table including the version number."""
     # Using table_schema.python_name gives UpperCamelCased names, the old format is kept here.
     # This also keeps model names more readable and recognizable/linkable with db table names.
@@ -210,7 +210,7 @@ def model_factory(
     )
 
     model_class = ModelBase(
-        _get_model_name(table_schema),
+        get_model_name(table_schema),
         (base_model,),
         {
             **fields,
@@ -302,7 +302,7 @@ def _fk_field_factory(field: DatasetFieldSchema) -> models.ForeignKey:
     """
     to_field = _get_fk_to_field(field)
     kwargs = {
-        "to": f"{field.related_table.dataset.id}.{_get_model_name(field.related_table)}",
+        "to": f"{field.related_table.dataset.id}.{get_model_name(field.related_table)}",
         **_get_basic_kwargs(field),
         "on_delete": models.CASCADE if field.required else models.SET_NULL,
         "db_column": field.db_name,
@@ -429,10 +429,10 @@ def _nm_field_factory(field: DatasetFieldSchema) -> models.ManyToManyField:
         related_name = f"rev_{field.table.python_name}_{field.python_name}+"
 
     kwargs = {
-        "to": f"{field.related_table.dataset.id}.{_get_model_name(field.related_table)}",
+        "to": f"{field.related_table.dataset.id}.{get_model_name(field.related_table)}",
         **_get_basic_kwargs(field),
         "related_name": related_name,
-        "through": f"{through_table.dataset.id}.{_get_model_name(through_table)}",
+        "through": f"{through_table.dataset.id}.{get_model_name(through_table)}",
         "through_fields": through_fields,
     }
 
@@ -502,7 +502,7 @@ def model_mocker_factory(
         "Meta",
         (),
         {
-            "model": f"{app_label}.{_get_model_name(table_schema)}",
+            "model": f"{app_label}.{get_model_name(table_schema)}",
             "database": "default",
         },
     )
@@ -513,7 +513,7 @@ def model_mocker_factory(
     params_cls = type("Params", (), {"table_schema": table_schema})
 
     return type(
-        f"{_get_model_name(table_schema)}_factory",
+        f"{get_model_name(table_schema)}_factory",
         (DynamicModelMocker,),
         {
             **fields,
