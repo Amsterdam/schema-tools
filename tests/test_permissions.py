@@ -44,12 +44,12 @@ class TestReadPermissions:
         apply_schema_and_profile_permissions(
             engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True
         )
-        _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten")
+        _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten_v1")
         _check_select_permission_granted(
-            engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "scope_level_b", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_granted(
-            engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "scope_level_c", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
 
     def test_auto_permissions_with_scopes(self, here, engine, gebieden_schema_scopes, dbsession):
@@ -77,19 +77,19 @@ class TestReadPermissions:
         apply_schema_and_profile_permissions(
             engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True
         )
-        _check_select_permission_granted(engine, "scope_harry_one", "gebieden_buurten")
+        _check_select_permission_granted(engine, "scope_harry_one", "gebieden_buurten_v1")
         _check_select_permission_granted(
-            engine, "scope_harry_two", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "scope_harry_two", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_granted(
-            engine, "scope_harry_three", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "scope_harry_three", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
 
         # Check if auth strings in the same schema also work.
         _check_select_permission_granted(
             engine,
             "scope_level_d",
-            "gebieden_bouwblokken",
+            "gebieden_bouwblokken_v1",
             "ligt_in_buurt_id, ligt_in_buurt_loose_id",
         )
 
@@ -109,9 +109,9 @@ class TestReadPermissions:
 
         # Check if the roles exist, the tables exist,
         # and the roles have no read privilege on the tables.
-        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten")
-        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten")
-        _check_select_permission_denied(engine, "brk_ro", "brk_kadastraleobjecten")
+        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten_v1")
+        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten_v1")
+        _check_select_permission_denied(engine, "brk_ro", "brk_kadastraleobjecten_v1")
 
         # make sure role 'write_brk' exists with create_roles=True
         # The role exists now for all test following this statement
@@ -135,54 +135,54 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
-            "GRANT SELECT (begin_geldigheid) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
-            "GRANT SELECT (eind_geldigheid) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
-            "GRANT SELECT (id) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
-            "GRANT SELECT (identificatie) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
-            "GRANT SELECT (koopsom) ON TABLE public.brk_kadastraleobjecten TO brk_ro",
-            "GRANT SELECT (neuron_id) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
-            "GRANT SELECT (registratiedatum) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
-            "GRANT SELECT (soort_cultuur_onbebouwd_code) ON TABLE public.brk_kadastraleobjecten TO brk_ro",
-            "GRANT SELECT (soort_cultuur_onbebouwd_omschrijving) ON TABLE public.brk_kadastraleobjecten TO brk_ro",
-            "GRANT SELECT (soort_grootte) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
-            "GRANT SELECT (volgnummer) ON TABLE public.brk_kadastraleobjecten TO brk_rsn",
-            "GRANT SELECT ON SEQUENCE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_id_seq TO brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject TO brk_rsn",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_id_seq TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_id_seq TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_id_seq TO write_brk",
+            "GRANT SELECT (begin_geldigheid) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
+            "GRANT SELECT (eind_geldigheid) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
+            "GRANT SELECT (id) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
+            "GRANT SELECT (identificatie) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
+            "GRANT SELECT (koopsom) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_ro",
+            "GRANT SELECT (neuron_id) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
+            "GRANT SELECT (registratiedatum) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
+            "GRANT SELECT (soort_cultuur_onbebouwd_code) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_ro",
+            "GRANT SELECT (soort_cultuur_onbebouwd_omschrijving) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_ro",
+            "GRANT SELECT (soort_grootte) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
+            "GRANT SELECT (volgnummer) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
+            "GRANT SELECT ON SEQUENCE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject__id_seq TO brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1 TO brk_rsn",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_v1 TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject__id_seq TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject__id_seq TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject__id_seq TO write_brk",
         ]
 
         # table denied
-        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten")
-        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten", "koopsom")
+        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten_v1")
+        _check_select_permission_denied(engine, "openbaar", "brk_kadastraleobjecten_v1", "koopsom")
 
         # table denied, column granted, auth level dataset
-        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten")
-        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten", "koopsom")
+        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten_v1")
+        _check_select_permission_denied(engine, "brk_rsn", "brk_kadastraleobjecten_v1", "koopsom")
         _check_select_permission_granted(
-            engine, "brk_rsn", "brk_kadastraleobjecten", "identificatie"
+            engine, "brk_rsn", "brk_kadastraleobjecten_v1", "identificatie"
         )
 
         # table denied, column granted, auth level field
-        _check_select_permission_denied(engine, "brk_ro", "brk_kadastraleobjecten")
-        _check_select_permission_granted(engine, "brk_ro", "brk_kadastraleobjecten", "koopsom")
+        _check_select_permission_denied(engine, "brk_ro", "brk_kadastraleobjecten_v1")
+        _check_select_permission_granted(engine, "brk_ro", "brk_kadastraleobjecten_v1", "koopsom")
 
         # nm relations table tests, should have dataset auth level: brk_rsn
         _check_select_permission_denied(
-            engine, "openbaar", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject"
+            engine, "openbaar", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1"
         )
         _check_select_permission_denied(
-            engine, "brk_ro", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject"
+            engine, "brk_ro", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1"
         )
         _check_select_permission_granted(
-            engine, "brk_rsn", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject"
+            engine, "brk_rsn", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1"
         )
 
     def test_brk_permissions(
@@ -214,63 +214,63 @@ class TestReadPermissions:
         grants = _filter_grant_statements(caplog)
         assert grants == [
             "GRANT SELECT ON SEQUENCE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_pers_id_seq TO scope_brk_rsn",
-            "GRANT SELECT ON SEQUENCE public.brk_aantekeningenrechten_heeft_betrokken_persoon_id_seq TO scope_brk_rsn",
-            "GRANT SELECT ON SEQUENCE public.brk_aantekeningenrechten_is_gbsd_op_sdl_id_seq TO scope_brk_rsn",
-            "GRANT SELECT ON SEQUENCE public.brk_kadastraleobjecten_hft_rel_mt_vot_id_seq TO scope_brk_rsn",
-            "GRANT SELECT ON SEQUENCE public.brk_kadastraleobjecten_soort_cultuur_bebouwd_id_seq TO scope_brk_rsn",
+            "GRANT SELECT ON SEQUENCE public.brk_aantekeningenrechten_heeft_betrokken_persoon_v1_id_seq TO scope_brk_rsn",
+            "GRANT SELECT ON SEQUENCE public.brk_aantekeningenrechten_is_gbsd_op_sdl_v1_id_seq TO scope_brk_rsn",
+            "GRANT SELECT ON SEQUENCE public.brk_kadastraleobjecten_hft_rel_mt_vot_v1_id_seq TO scope_brk_rsn",
+            "GRANT SELECT ON SEQUENCE public.brk_kadastraleobjecten_soort_cultuur_bebouwd_v1_id_seq TO scope_brk_rsn",
             "GRANT SELECT ON SEQUENCE public.brk_stukdelen_is_bron_voor_aantekening_kadastraal_object_id_seq TO scope_brk_rsn",
-            "GRANT SELECT ON SEQUENCE public.brk_stukdelen_is_bron_voor_aantekening_recht_id_seq TO scope_brk_rsn",
-            "GRANT SELECT ON SEQUENCE public.brk_stukdelen_is_bron_voor_zakelijk_recht_id_seq TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_aantekeningenkadastraleobjecten TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_persoon TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten_heeft_betrokken_persoon TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten_is_gbsd_op_sdl TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_aardzakelijkerechten TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_gemeentes TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_kadastralegemeentecodes TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_kadastralegemeentes TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_hft_rel_mt_vot TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_soort_cultuur_bebouwd TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_kadastralesecties TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_kadastralesubjecten TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_meta TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_stukdelen TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_kadastraal_object TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_recht TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_zakelijk_recht TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_tenaamstellingen TO scope_brk_rsn",
-            "GRANT SELECT ON TABLE public.brk_zakelijkerechten TO scope_brk_rsn",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenkadastraleobjecten TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_persoon TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten_heeft_betrokken_persoon TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten_is_gbsd_op_sdl TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aardzakelijkerechten TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_gemeentes TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralegemeentecodes TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralegemeentes TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_hft_rel_mt_vot TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_soort_cultuur_bebouwd TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralesecties TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralesubjecten TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_meta TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_kadastraal_object TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_recht TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_zakelijk_recht TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_tenaamstellingen TO write_brk",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_zakelijkerechten TO write_brk",
+            "GRANT SELECT ON SEQUENCE public.brk_stukdelen_is_bron_voor_aantekening_recht_v1_id_seq TO scope_brk_rsn",
+            "GRANT SELECT ON SEQUENCE public.brk_stukdelen_is_bron_voor_zakelijk_recht_v1_id_seq TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_persoon_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenkadastraleobjecten_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten_heeft_betrokken_persoon_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten_is_gbsd_op_sdl_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aantekeningenrechten_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_aardzakelijkerechten_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_gemeentes_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastralegemeentecodes_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastralegemeentes_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_hft_rel_mt_vot_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_soort_cultuur_bebouwd_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastralesecties_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_kadastralesubjecten_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_meta_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_kadastraal_object_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_recht_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_stukdelen_is_bron_voor_zakelijk_recht_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_stukdelen_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_tenaamstellingen_v1 TO scope_brk_rsn",
+            "GRANT SELECT ON TABLE public.brk_zakelijkerechten_v1 TO scope_brk_rsn",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_persoon_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenkadastraleobjecten_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten_heeft_betrokken_persoon_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten_is_gbsd_op_sdl_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aantekeningenrechten_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_aardzakelijkerechten_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_gemeentes_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralegemeentecodes_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralegemeentes_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_hft_rel_mt_vot_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_soort_cultuur_bebouwd_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastraleobjecten_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralesecties_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_kadastralesubjecten_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_meta_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_kadastraal_object_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_aantekening_recht_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_is_bron_voor_zakelijk_recht_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_stukdelen_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_tenaamstellingen_v1 TO write_brk",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.brk_zakelijkerechten_v1 TO write_brk",
             "GRANT USAGE ON SEQUENCE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_pers_id_seq TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_aantekeningenrechten_heeft_betrokken_persoon_id_seq TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_aantekeningenrechten_is_gbsd_op_sdl_id_seq TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_hft_rel_mt_vot_id_seq TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_soort_cultuur_bebouwd_id_seq TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_aantekeningenrechten_heeft_betrokken_persoon_v1_id_seq TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_aantekeningenrechten_is_gbsd_op_sdl_v1_id_seq TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_hft_rel_mt_vot_v1_id_seq TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_kadastraleobjecten_soort_cultuur_bebouwd_v1_id_seq TO write_brk",
             "GRANT USAGE ON SEQUENCE public.brk_stukdelen_is_bron_voor_aantekening_kadastraal_object_id_seq TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_stukdelen_is_bron_voor_aantekening_recht_id_seq TO write_brk",
-            "GRANT USAGE ON SEQUENCE public.brk_stukdelen_is_bron_voor_zakelijk_recht_id_seq TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_stukdelen_is_bron_voor_aantekening_recht_v1_id_seq TO write_brk",
+            "GRANT USAGE ON SEQUENCE public.brk_stukdelen_is_bron_voor_zakelijk_recht_v1_id_seq TO write_brk",
         ]
 
     def test_openbaar_permissions(self, here, engine, afval_schema, dbsession, caplog):
@@ -294,8 +294,8 @@ class TestReadPermissions:
         _create_role(engine, "bag_r")
         # Check if the roles exist, the tables exist,
         # and the roles have no read privilige on the tables.
-        _check_select_permission_denied(engine, "openbaar", "afvalwegingen_containers")
-        _check_select_permission_denied(engine, "bag_r", "afvalwegingen_clusters")
+        _check_select_permission_denied(engine, "openbaar", "afvalwegingen_containers_v1")
+        _check_select_permission_denied(engine, "bag_r", "afvalwegingen_clusters_v1")
 
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
             apply_schema_and_profile_permissions(
@@ -320,15 +320,15 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
-            "GRANT SELECT ON TABLE public.afvalwegingen_clusters TO bag_r",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_clusters TO write_afvalwegingen",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_containers TO write_afvalwegingen",
+            "GRANT SELECT ON TABLE public.afvalwegingen_clusters_v1 TO bag_r",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_clusters_v1 TO write_afvalwegingen",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_containers_v1 TO write_afvalwegingen",
         ]
 
-        _check_select_permission_granted(engine, "openbaar", "afvalwegingen_containers")
-        _check_select_permission_denied(engine, "openbaar", "afvalwegingen_clusters")
-        _check_select_permission_denied(engine, "bag_r", "afvalwegingen_containers")
-        _check_select_permission_granted(engine, "bag_r", "afvalwegingen_clusters")
+        _check_select_permission_granted(engine, "openbaar", "afvalwegingen_containers_v1")
+        _check_select_permission_denied(engine, "openbaar", "afvalwegingen_clusters_v1")
+        _check_select_permission_denied(engine, "bag_r", "afvalwegingen_containers_v1")
+        _check_select_permission_granted(engine, "bag_r", "afvalwegingen_clusters_v1")
 
     def test_interacting_permissions(self, here, engine, gebieden_schema_auth, dbsession):
         """
@@ -363,7 +363,7 @@ class TestReadPermissions:
         # Check if the roles exist, the tables exist,
         # and the roles have no read privilige on the tables.
         for test_role in test_roles:
-            for table in ["gebieden_bouwblokken", "gebieden_buurten"]:
+            for table in ["gebieden_bouwblokken_v1", "gebieden_buurten_v1"]:
                 _check_select_permission_denied(engine, test_role, table)
 
         # Apply the permissions from Schema and Profiles.
@@ -378,24 +378,24 @@ class TestReadPermissions:
         )
 
         # Check if the read priviliges are correct
-        _check_select_permission_denied(engine, "level_a", "gebieden_bouwblokken")
-        _check_select_permission_granted(engine, "level_a", "gebieden_buurten")
+        _check_select_permission_denied(engine, "level_a", "gebieden_bouwblokken_v1")
+        _check_select_permission_granted(engine, "level_a", "gebieden_buurten_v1")
 
         _check_select_permission_granted(
-            engine, "level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "level_b", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_denied(
-            engine, "level_b", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "level_b", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
-        _check_select_permission_denied(engine, "level_b", "gebieden_buurten")
+        _check_select_permission_denied(engine, "level_b", "gebieden_buurten_v1")
 
         _check_select_permission_denied(
-            engine, "level_c", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "level_c", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_granted(
-            engine, "level_c", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "level_c", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
-        _check_select_permission_denied(engine, "level_c", "gebieden_buurten")
+        _check_select_permission_denied(engine, "level_c", "gebieden_buurten_v1")
 
     def test_auth_list_permissions(
         self, here, engine, gebieden_schema_auth_list, dbsession, caplog
@@ -440,7 +440,7 @@ class TestReadPermissions:
         # Check if the roles exist, the tables exist,
         # and the roles have no read privilige on the tables.
         for test_role in test_roles:
-            for table in ["gebieden_bouwblokken", "gebieden_buurten"]:
+            for table in ["gebieden_bouwblokken_v1", "gebieden_buurten_v1"]:
                 _check_select_permission_denied(engine, test_role, table)
 
         # Apply the permissions from Schema and Profiles.
@@ -450,15 +450,15 @@ class TestReadPermissions:
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
-                "GRANT SELECT ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO level_a1",
-                "GRANT SELECT ON TABLE public.gebieden_buurten TO level_a1",
-                "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk TO level_a1",
-                "GRANT SELECT ON TABLE public.gebieden_wijken TO level_a1",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
-                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO write_gebieden",
+                "GRANT SELECT ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO level_a1",
+                "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO level_a1",
+                "GRANT SELECT ON TABLE public.gebieden_buurten_v1 TO level_a1",
+                "GRANT SELECT ON TABLE public.gebieden_wijken_v1 TO level_a1",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken_v1 TO write_gebieden",
+                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO write_gebieden",
             ]
 
             apply_schema_and_profile_permissions(
@@ -466,14 +466,14 @@ class TestReadPermissions:
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
-                "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken TO level_b1",
-                "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken TO level_b1",
-                "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken TO level_b1",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
-                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO write_gebieden",
+                "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken_v1 TO level_b1",
+                "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken_v1 TO level_b1",
+                "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken_v1 TO level_b1",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken_v1 TO write_gebieden",
+                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO write_gebieden",
             ]
 
             apply_schema_and_profile_permissions(
@@ -481,12 +481,12 @@ class TestReadPermissions:
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
-                "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken TO level_c1",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
-                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO write_gebieden",
+                "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken_v1 TO level_c1",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken_v1 TO write_gebieden",
+                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO write_gebieden",
             ]
 
             apply_schema_and_profile_permissions(
@@ -494,15 +494,15 @@ class TestReadPermissions:
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
-                "GRANT SELECT ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO level_a2",
-                "GRANT SELECT ON TABLE public.gebieden_buurten TO level_a2",
-                "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk TO level_a2",
-                "GRANT SELECT ON TABLE public.gebieden_wijken TO level_a2",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
-                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO write_gebieden",
+                "GRANT SELECT ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO level_a2",
+                "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO level_a2",
+                "GRANT SELECT ON TABLE public.gebieden_buurten_v1 TO level_a2",
+                "GRANT SELECT ON TABLE public.gebieden_wijken_v1 TO level_a2",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken_v1 TO write_gebieden",
+                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO write_gebieden",
             ]
 
             apply_schema_and_profile_permissions(
@@ -510,14 +510,14 @@ class TestReadPermissions:
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
-                "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken TO level_b2",
-                "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken TO level_b2",
-                "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken TO level_b2",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
-                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO write_gebieden",
+                "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken_v1 TO level_b2",
+                "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken_v1 TO level_b2",
+                "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken_v1 TO level_b2",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken_v1 TO write_gebieden",
+                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO write_gebieden",
             ]
 
             apply_schema_and_profile_permissions(
@@ -525,58 +525,62 @@ class TestReadPermissions:
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
-                "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken TO level_c2",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
-                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO write_gebieden",
+                "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken_v1 TO level_c2",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_v1 TO write_gebieden",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken_v1 TO write_gebieden",
+                "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO write_gebieden",
             ]
 
         # Check if the read priviliges are correct
-        _check_select_permission_denied(engine, "level_a1", "gebieden_bouwblokken")
-        _check_select_permission_granted(engine, "level_a1", "gebieden_buurten")
-        _check_select_permission_denied(engine, "level_a2", "gebieden_bouwblokken")
-        _check_select_permission_granted(engine, "level_a2", "gebieden_buurten")
+        _check_select_permission_denied(engine, "level_a1", "gebieden_bouwblokken_v1")
+        _check_select_permission_granted(engine, "level_a1", "gebieden_buurten_v1")
+        _check_select_permission_denied(engine, "level_a2", "gebieden_bouwblokken_v1")
+        _check_select_permission_granted(engine, "level_a2", "gebieden_buurten_v1")
 
         _check_select_permission_granted(
-            engine, "level_b1", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "level_b1", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_denied(
-            engine, "level_b1", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "level_b1", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
-        _check_select_permission_denied(engine, "level_b1", "gebieden_buurten")
+        _check_select_permission_denied(engine, "level_b1", "gebieden_buurten_v1")
         _check_select_permission_granted(
-            engine, "level_b2", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "level_b2", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_denied(
-            engine, "level_b2", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "level_b2", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
-        _check_select_permission_denied(engine, "level_b2", "gebieden_buurten")
+        _check_select_permission_denied(engine, "level_b2", "gebieden_buurten_v1")
 
         _check_select_permission_denied(
-            engine, "level_c1", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "level_c1", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_granted(
-            engine, "level_c1", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "level_c1", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
-        _check_select_permission_denied(engine, "level_c1", "gebieden_buurten")
+        _check_select_permission_denied(engine, "level_c1", "gebieden_buurten_v1")
 
         _check_select_permission_denied(
-            engine, "level_c2", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "level_c2", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_granted(
-            engine, "level_c2", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "level_c2", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
-        _check_select_permission_denied(engine, "level_c2", "gebieden_buurten")
+        _check_select_permission_denied(engine, "level_c2", "gebieden_buurten_v1")
 
         # Check that there are no INSERT, UPDATE, TRUNCATE, DELETE privileges
-        _check_insert_permission_denied(engine, "level_b1", "gebieden_bouwblokken", "id", "'abc'")
-        _check_update_permission_denied(
-            engine, "level_b1", "gebieden_bouwblokken", "id", "'def'", "id = 'abc'"
+        _check_insert_permission_denied(
+            engine, "level_b1", "gebieden_bouwblokken_v1", "id", "'abc'"
         )
-        _check_delete_permission_denied(engine, "level_b1", "gebieden_bouwblokken", "id = 'abc'")
-        _check_truncate_permission_denied(engine, "level_b1", "gebieden_bouwblokken")
+        _check_update_permission_denied(
+            engine, "level_b1", "gebieden_bouwblokken_v1", "id", "'def'", "id = 'abc'"
+        )
+        _check_delete_permission_denied(
+            engine, "level_b1", "gebieden_bouwblokken_v1", "id = 'abc'"
+        )
+        _check_truncate_permission_denied(engine, "level_b1", "gebieden_bouwblokken_v1")
 
     def test_auto_create_roles(self, here, engine, gebieden_schema_auth, dbsession, caplog):
         """
@@ -620,90 +624,90 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
-            "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken TO scope_level_c",
-            "GRANT SELECT (begingeldigheid) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
-            "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken TO scope_level_b",
-            "GRANT SELECT (eindgeldigheid) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
-            "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken TO scope_level_b",
-            "GRANT SELECT (id) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
-            "GRANT SELECT (identificatie) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
-            "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken TO scope_level_d",
-            "GRANT SELECT (ligt_in_buurt_identificatie) ON TABLE public.gebieden_bouwblokken TO scope_level_d",
-            "GRANT SELECT (ligt_in_buurt_loose_id) ON TABLE public.gebieden_bouwblokken TO scope_level_d",
-            "GRANT SELECT (ligt_in_buurt_volgnummer) ON TABLE public.gebieden_bouwblokken TO scope_level_d",
-            "GRANT SELECT (volgnummer) ON TABLE public.gebieden_ggwgebieden TO scope_level_a",
-            "GRANT SELECT ON SEQUENCE public.gebieden_bouwblokken_ligt_in_buurt_id_seq TO scope_level_d",
-            "GRANT SELECT ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO scope_level_a",
-            "GRANT SELECT ON SEQUENCE public.gebieden_ggwgebieden_bestaat_uit_buurten_id_seq TO scope_level_e",
-            "GRANT SELECT ON SEQUENCE public.gebieden_ggwgebieden_gebieds_grenzen_id_seq TO scope_level_f",
-            "GRANT SELECT ON TABLE public.gebieden_bouwblokken_ligt_in_buurt TO scope_level_d",
-            "GRANT SELECT ON TABLE public.gebieden_buurten TO scope_level_a",
-            "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk TO scope_level_a",
-            "GRANT SELECT ON TABLE public.gebieden_ggwgebieden_bestaat_uit_buurten TO scope_level_e",
-            "GRANT SELECT ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen TO scope_level_f",
-            "GRANT SELECT ON TABLE public.gebieden_wijken TO scope_level_a",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken TO write_gebieden",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_ligt_in_buurt TO write_gebieden",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten TO write_gebieden",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk TO write_gebieden",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden TO write_gebieden",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden_bestaat_uit_buurten TO write_gebieden",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen TO write_gebieden",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken TO write_gebieden",
-            "GRANT USAGE ON SEQUENCE public.gebieden_bouwblokken_ligt_in_buurt_id_seq TO write_gebieden",
-            "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_id_seq TO write_gebieden",
-            "GRANT USAGE ON SEQUENCE public.gebieden_ggwgebieden_bestaat_uit_buurten_id_seq TO write_gebieden",
-            "GRANT USAGE ON SEQUENCE public.gebieden_ggwgebieden_gebieds_grenzen_id_seq TO write_gebieden",
+            "GRANT SELECT (begin_geldigheid) ON TABLE public.gebieden_bouwblokken_v1 TO scope_level_c",
+            "GRANT SELECT (begingeldigheid) ON TABLE public.gebieden_ggwgebieden_v1 TO scope_level_a",
+            "GRANT SELECT (eind_geldigheid) ON TABLE public.gebieden_bouwblokken_v1 TO scope_level_b",
+            "GRANT SELECT (eindgeldigheid) ON TABLE public.gebieden_ggwgebieden_v1 TO scope_level_a",
+            "GRANT SELECT (id) ON TABLE public.gebieden_bouwblokken_v1 TO scope_level_b",
+            "GRANT SELECT (id) ON TABLE public.gebieden_ggwgebieden_v1 TO scope_level_a",
+            "GRANT SELECT (identificatie) ON TABLE public.gebieden_ggwgebieden_v1 TO scope_level_a",
+            "GRANT SELECT (ligt_in_buurt_id) ON TABLE public.gebieden_bouwblokken_v1 TO scope_level_d",
+            "GRANT SELECT (ligt_in_buurt_identificatie) ON TABLE public.gebieden_bouwblokken_v1 TO scope_level_d",
+            "GRANT SELECT (ligt_in_buurt_loose_id) ON TABLE public.gebieden_bouwblokken_v1 TO scope_level_d",
+            "GRANT SELECT (ligt_in_buurt_volgnummer) ON TABLE public.gebieden_bouwblokken_v1 TO scope_level_d",
+            "GRANT SELECT (volgnummer) ON TABLE public.gebieden_ggwgebieden_v1 TO scope_level_a",
+            "GRANT SELECT ON SEQUENCE public.gebieden_bouwblokken_ligt_in_buurt_v1_id_seq TO scope_level_d",
+            "GRANT SELECT ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO scope_level_a",
+            "GRANT SELECT ON SEQUENCE public.gebieden_ggwgebieden_bestaat_uit_buurten_v1_id_seq TO scope_level_e",
+            "GRANT SELECT ON SEQUENCE public.gebieden_ggwgebieden_gebieds_grenzen_v1_id_seq TO scope_level_f",
+            "GRANT SELECT ON TABLE public.gebieden_bouwblokken_ligt_in_buurt_v1 TO scope_level_d",
+            "GRANT SELECT ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO scope_level_a",
+            "GRANT SELECT ON TABLE public.gebieden_buurten_v1 TO scope_level_a",
+            "GRANT SELECT ON TABLE public.gebieden_ggwgebieden_bestaat_uit_buurten_v1 TO scope_level_e",
+            "GRANT SELECT ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen_v1 TO scope_level_f",
+            "GRANT SELECT ON TABLE public.gebieden_wijken_v1 TO scope_level_a",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_ligt_in_buurt_v1 TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_bouwblokken_v1 TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_ligt_in_wijk_v1 TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_buurten_v1 TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden_bestaat_uit_buurten_v1 TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden_gebieds_grenzen_v1 TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_ggwgebieden_v1 TO write_gebieden",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.gebieden_wijken_v1 TO write_gebieden",
+            "GRANT USAGE ON SEQUENCE public.gebieden_bouwblokken_ligt_in_buurt_v1_id_seq TO write_gebieden",
+            "GRANT USAGE ON SEQUENCE public.gebieden_buurten_ligt_in_wijk_v1_id_seq TO write_gebieden",
+            "GRANT USAGE ON SEQUENCE public.gebieden_ggwgebieden_bestaat_uit_buurten_v1_id_seq TO write_gebieden",
+            "GRANT USAGE ON SEQUENCE public.gebieden_ggwgebieden_gebieds_grenzen_v1_id_seq TO write_gebieden",
         ]
 
         # Check if roles exist and the read priviliges are correct
-        _check_select_permission_denied(engine, "scope_level_a", "gebieden_bouwblokken")
-        _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten")
+        _check_select_permission_denied(engine, "scope_level_a", "gebieden_bouwblokken_v1")
+        _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten_v1")
 
         _check_select_permission_granted(
-            engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "scope_level_b", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_denied(
-            engine, "scope_level_b", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "scope_level_b", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
-        _check_select_permission_denied(engine, "scope_level_b", "gebieden_buurten")
+        _check_select_permission_denied(engine, "scope_level_b", "gebieden_buurten_v1")
 
         _check_select_permission_denied(
-            engine, "scope_level_c", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "scope_level_c", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_granted(
-            engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "scope_level_c", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
         _check_select_permission_granted(
-            engine, "scope_level_d", "gebieden_bouwblokken", "ligt_in_buurt_loose_id"
+            engine, "scope_level_d", "gebieden_bouwblokken_v1", "ligt_in_buurt_loose_id"
         )
         _check_select_permission_granted(
-            engine, "scope_level_d", "gebieden_bouwblokken", "ligt_in_buurt_id"
+            engine, "scope_level_d", "gebieden_bouwblokken_v1", "ligt_in_buurt_id"
         )
         _check_select_permission_granted(
-            engine, "scope_level_d", "gebieden_bouwblokken", "ligt_in_buurt_identificatie"
+            engine, "scope_level_d", "gebieden_bouwblokken_v1", "ligt_in_buurt_identificatie"
         )
         _check_select_permission_granted(
-            engine, "scope_level_d", "gebieden_bouwblokken", "ligt_in_buurt_volgnummer"
+            engine, "scope_level_d", "gebieden_bouwblokken_v1", "ligt_in_buurt_volgnummer"
         )
-        _check_select_permission_denied(engine, "scope_level_c", "gebieden_buurten")
-        _check_select_permission_denied(engine, "scope_level_d", "gebieden_buurten")
+        _check_select_permission_denied(engine, "scope_level_c", "gebieden_buurten_v1")
+        _check_select_permission_denied(engine, "scope_level_d", "gebieden_buurten_v1")
 
         # Check the through table, for all columns
         _check_select_permission_granted(
-            engine, "scope_level_e", "gebieden_ggwgebieden_bestaat_uit_buurten"
+            engine, "scope_level_e", "gebieden_ggwgebieden_bestaat_uit_buurten_v1"
         )
         # Check the nested table, for all columns
         _check_select_permission_granted(
-            engine, "scope_level_f", "gebieden_ggwgebieden_gebieds_grenzen"
+            engine, "scope_level_f", "gebieden_ggwgebieden_gebieds_grenzen_v1"
         )
         # Check the through table
         _check_select_permission_denied(
-            engine, "scope_level_a", "gebieden_ggwgebieden_bestaat_uit_buurten"
+            engine, "scope_level_a", "gebieden_ggwgebieden_bestaat_uit_buurten_v1"
         )
         # Check the nested table
         _check_select_permission_denied(
-            engine, "scope_level_a", "gebieden_ggwgebieden_gebieds_grenzen"
+            engine, "scope_level_a", "gebieden_ggwgebieden_gebieds_grenzen_v1"
         )
 
     def test_single_dataset_permissions(
@@ -732,12 +736,12 @@ class TestReadPermissions:
             engine, "public", gebieden_schema_auth, None, "AUTO", "ALL", create_roles=True
         )
         # Check perms on gebieden
-        _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten")
+        _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten_v1")
         _check_select_permission_granted(
-            engine, "scope_level_b", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "scope_level_b", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
         _check_select_permission_granted(
-            engine, "scope_level_c", "gebieden_bouwblokken", "begin_geldigheid"
+            engine, "scope_level_c", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
 
         # Apply the permissions to meetbouten
@@ -745,7 +749,7 @@ class TestReadPermissions:
             engine, "public", meetbouten_schema, None, "AUTO", "ALL", create_roles=True
         )
         # Check perms on meetbouten
-        _check_select_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten")
+        _check_select_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten_v1")
 
         # Revoke permissions for dataset gebieden and set grant again
         apply_schema_and_profile_permissions(
@@ -759,7 +763,7 @@ class TestReadPermissions:
             revoke=True,
         )
         # Check perms again on meetbouten
-        _check_select_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten")
+        _check_select_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten_v1")
 
     def test_permissions_support_shortnames(self, here, engine, hr_schema_auth, dbsession, caplog):
         """
@@ -799,18 +803,18 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
-            "GRANT SELECT (identifier) ON TABLE public.hr_sbi_ac TO level_b",
-            "GRANT SELECT (sbi_ac_naam) ON TABLE public.hr_sbi_ac TO level_b",
-            "GRANT SELECT (sbi_ac_no) ON TABLE public.hr_sbi_ac TO level_c",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.hr_sbi_ac TO write_hr",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.hr_sbi_ac TO write_hr",
+            "GRANT SELECT (identifier) ON TABLE public.hr_sbi_ac_v1 TO level_b",
+            "GRANT SELECT (sbi_ac_naam) ON TABLE public.hr_sbi_ac_v1 TO level_b",
+            "GRANT SELECT (sbi_ac_no) ON TABLE public.hr_sbi_ac_v1 TO level_c",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.hr_sbi_ac_v1 TO write_hr",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.hr_sbi_ac_v1 TO write_hr",
         ]
 
         # Check if the read priviliges are correct
-        _check_select_permission_granted(engine, "level_b", "hr_sbi_ac", "sbi_ac_naam")
-        _check_select_permission_denied(engine, "level_b", "hr_sbi_ac", "sbi_ac_no")
-        _check_select_permission_denied(engine, "level_c", "hr_sbi_ac", "sbi_ac_naam")
-        _check_select_permission_granted(engine, "level_c", "hr_sbi_ac", "sbi_ac_no")
+        _check_select_permission_granted(engine, "level_b", "hr_sbi_ac_v1", "sbi_ac_naam")
+        _check_select_permission_denied(engine, "level_b", "hr_sbi_ac_v1", "sbi_ac_no")
+        _check_select_permission_denied(engine, "level_c", "hr_sbi_ac_v1", "sbi_ac_naam")
+        _check_select_permission_granted(engine, "level_c", "hr_sbi_ac_v1", "sbi_ac_no")
 
 
 class TestWritePermissions:
@@ -832,7 +836,7 @@ class TestWritePermissions:
 
         # The write_ roles do not have SELECT permissions
         _check_insert_permission_denied(
-            engine, "write_gebieden", "gebieden_bouwblokken", "id", "'abc'"
+            engine, "write_gebieden", "gebieden_bouwblokken_v1", "id", "'abc'"
         )
 
         apply_schema_and_profile_permissions(
@@ -858,16 +862,20 @@ class TestWritePermissions:
             connection.execute("GRANT write_gebieden TO testuser")
 
         #  It is now possible to INSERT data into the dataset tables
-        _check_insert_permission_granted(engine, "testuser", "gebieden_bouwblokken", "id", "'abc'")
+        _check_insert_permission_granted(
+            engine, "testuser", "gebieden_bouwblokken_v1", "id", "'abc'"
+        )
 
         #  The write_ roles do have SELECT permissions, therefore testuser should not have it
-        _check_select_permission_granted(engine, "testuser", "gebieden_bouwblokken")
+        _check_select_permission_granted(engine, "testuser", "gebieden_bouwblokken_v1")
 
         #  With SELECT it is possible to UPDATE or DELETE on given condition
         _check_update_permission_granted(
-            engine, "testuser", "gebieden_bouwblokken", "id", "'def'", "id = 'abc'"
+            engine, "testuser", "gebieden_bouwblokken_v1", "id", "'def'", "id = 'abc'"
         )
-        _check_delete_permission_granted(engine, "testuser", "gebieden_bouwblokken", "id = 'abc'")
+        _check_delete_permission_granted(
+            engine, "testuser", "gebieden_bouwblokken_v1", "id = 'abc'"
+        )
 
         # Add SELECT permissions by granting the appropriate scope to the user
         with engine.begin() as connection:
@@ -875,18 +883,20 @@ class TestWritePermissions:
 
         # But now it's possible to SELECT the columns within scope level_b
         _check_select_permission_granted(
-            engine, "testuser", "gebieden_bouwblokken", "id, eind_geldigheid"
+            engine, "testuser", "gebieden_bouwblokken_v1", "id, eind_geldigheid"
         )
 
         # And it's also possible to UPDATE and DELETE,
         # if the column for the condition is within scope
         _check_update_permission_granted(
-            engine, "testuser", "gebieden_bouwblokken", "id", "'def'", "id = 'abc'"
+            engine, "testuser", "gebieden_bouwblokken_v1", "id", "'def'", "id = 'abc'"
         )
-        _check_delete_permission_granted(engine, "testuser", "gebieden_bouwblokken", "id = 'def'")
+        _check_delete_permission_granted(
+            engine, "testuser", "gebieden_bouwblokken_v1", "id = 'def'"
+        )
 
         # TRUNCATE is also allowed, even though the table is already empty by now
-        _check_truncate_permission_granted(engine, "testuser", "gebieden_bouwblokken")
+        _check_truncate_permission_granted(engine, "testuser", "gebieden_bouwblokken_v1")
 
     def test_multiple_datasets_write_roles(self, here, engine, parkeervakken_schema, afval_schema):
         """
@@ -930,19 +940,19 @@ class TestWritePermissions:
 
         #  parkeer_tester has INSERT permission on parkeervakken datasets
         _check_insert_permission_granted(
-            engine, "parkeer_tester", "parkeervakken_parkeervakken", "id", "'abc'"
+            engine, "parkeer_tester", "parkeervakken_parkeervakken_v1", "id", "'abc'"
         )
         #  afval_tester has INSERT permission on afvalwegingen datasets
         _check_insert_permission_granted(
-            engine, "afval_tester", "afvalwegingen_containers", "id", "3"
+            engine, "afval_tester", "afvalwegingen_containers_v1", "id", "3"
         )
         #  parkeer_tester has NO INSERT permission on afvalwegingen datasets
         _check_insert_permission_denied(
-            engine, "parkeer_tester", "afvalwegingen_containers", "id", "3"
+            engine, "parkeer_tester", "afvalwegingen_containers_v1", "id", "3"
         )
         #  afval_tester has NO INSERT permission on parkeervakken datasets
         _check_insert_permission_denied(
-            engine, "afval_tester", "parkeervakken_parkeervakken", "id", "'abc'"
+            engine, "afval_tester", "parkeervakken_parkeervakken_v1", "id", "'abc'"
         )
 
     def test_permissions_support_shortnames(self, here, engine, hr_schema_auth, dbsession):
@@ -967,7 +977,7 @@ class TestWritePermissions:
         _check_insert_permission_granted(
             engine,
             "write_hr",
-            "hr_sbi_ac",
+            "hr_sbi_ac_v1",
             "sbi_ac_naam,sbi_ac_no,identifier",
             "'berry','14641','15101051'",
         )
@@ -1002,21 +1012,21 @@ class TestWritePermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
-            "GRANT SELECT ON SEQUENCE public.meetbouten_meetbouten_ligt_in_buurt_id_seq TO scope_openbaar",
-            "GRANT SELECT ON SEQUENCE public.meetbouten_metingen_refereertaanreferentiepunten_id_seq TO scope_openbaar",
+            "GRANT SELECT ON SEQUENCE public.meetbouten_meetbouten_ligt_in_buurt_v1_id_seq TO scope_openbaar",
+            "GRANT SELECT ON SEQUENCE public.meetbouten_metingen_refereertaanreferentiepunten_v1_id_seq TO scope_openbaar",
             "GRANT SELECT ON TABLE public.datasets_dataset TO scope_openbaar",
-            "GRANT SELECT ON TABLE public.meetbouten_meetbouten TO scope_openbaar",
-            "GRANT SELECT ON TABLE public.meetbouten_meetbouten_ligt_in_buurt TO scope_openbaar",
-            "GRANT SELECT ON TABLE public.meetbouten_metingen TO scope_openbaar",
-            "GRANT SELECT ON TABLE public.meetbouten_metingen_refereertaanreferentiepunten TO scope_openbaar",
-            "GRANT SELECT ON TABLE public.meetbouten_referentiepunten TO scope_openbaar",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_meetbouten TO write_meetbouten",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_meetbouten_ligt_in_buurt TO write_meetbouten",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_metingen TO write_meetbouten",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_metingen_refereertaanreferentiepunten TO write_meetbouten",
-            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_referentiepunten TO write_meetbouten",
-            "GRANT USAGE ON SEQUENCE public.meetbouten_meetbouten_ligt_in_buurt_id_seq TO write_meetbouten",
-            "GRANT USAGE ON SEQUENCE public.meetbouten_metingen_refereertaanreferentiepunten_id_seq TO write_meetbouten",
+            "GRANT SELECT ON TABLE public.meetbouten_meetbouten_ligt_in_buurt_v1 TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_meetbouten_v1 TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_metingen_refereertaanreferentiepunten_v1 TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_metingen_v1 TO scope_openbaar",
+            "GRANT SELECT ON TABLE public.meetbouten_referentiepunten_v1 TO scope_openbaar",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_meetbouten_ligt_in_buurt_v1 TO write_meetbouten",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_meetbouten_v1 TO write_meetbouten",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_metingen_refereertaanreferentiepunten_v1 TO write_meetbouten",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_metingen_v1 TO write_meetbouten",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.meetbouten_referentiepunten_v1 TO write_meetbouten",
+            "GRANT USAGE ON SEQUENCE public.meetbouten_meetbouten_ligt_in_buurt_v1_id_seq TO write_meetbouten",
+            "GRANT USAGE ON SEQUENCE public.meetbouten_metingen_refereertaanreferentiepunten_v1_id_seq TO write_meetbouten",
         ]
 
         # Check perms on the datasets_dataset table

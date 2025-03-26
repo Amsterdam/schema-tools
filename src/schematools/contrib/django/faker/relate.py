@@ -124,7 +124,9 @@ def relate_datasets(*datasets: Dataset) -> None:
                     through_model = m2m_descriptor.through
 
                     objs = []
-                    source_id = table.db_name_variant(with_dataset_prefix=False, postfix="_id")
+                    source_id = table.db_name_variant(
+                        with_dataset_prefix=False, with_version=False, postfix="_id"
+                    )
                     target_id = field_name + "_id"
 
                     # first delete all relations
@@ -137,7 +139,9 @@ def relate_datasets(*datasets: Dataset) -> None:
                         # the source and target side of the relation.
                         if not f.is_loose_relation:
                             attrs = add_temporal_attrs(
-                                table.db_name_variant(with_dataset_prefix=False),
+                                table.db_name_variant(
+                                    with_dataset_prefix=False, with_version=False
+                                ),
                                 source_value,
                                 attrs,
                                 table,

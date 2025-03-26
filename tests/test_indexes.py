@@ -59,13 +59,13 @@ def test_index_creation(engine, db_schema):
         meta_data = MetaData(bind=conn)
         meta_data.reflect()
         metadata_inspector = inspect(meta_data.bind)
-        table_db_name = f"{test_data['id']}_{table['id']}"  # test_test
+        table_db_name = f"{test_data['id']}_{table['id']}_v1"  # test_test
         indexes = metadata_inspector.get_indexes(table_db_name, schema=None)
         index_names.update(index["name"] for index in indexes)
 
     assert index_names == {
-        "test_test_identifier_idx",
-        "test_test_geometry_idx",
+        "test_test_v1_identifier_idx",
+        "test_test_v1_geometry_idx",
     }
 
 
@@ -186,10 +186,10 @@ def test_index_troughtables_creation(engine, db_schema):
                 indexes_names.update(index["name"] for index in indexes)
 
     assert indexes_names == {
-        "public.test_test_1_heeft_onderzoeken_heeft_onderzoeken_id_idx",
-        "public.test_test_1_heeft_onderzoeken_test_1_id_idx",
-        "public.test_test_1_some_random_name_some_random_name_id_idx",
-        "public.test_test_1_some_random_name_test_1_id_idx",
+        "6a5852e97fadf4a1a08cf016e1f6ef37d733a937_idx",
+        "public.test_test_1_heeft_onderzoeken_v1_test_1_id_idx",
+        "public.test_test_1_some_random_name_v1_some_random_name_id_idx",
+        "public.test_test_1_some_random_name_v1_test_1_id_idx",
     }
 
 
@@ -266,8 +266,8 @@ def test_fk_index_creation(engine, db_schema):
     indexes = metadata_inspector.get_indexes(table.db_name, schema=None)
     indexes_name = {index["name"] for index in indexes}
     assert indexes_name == {
-        "test_child_test_identifier_idx",
-        "test_child_test_fk_column_reference_id_idx",
+        "test_child_test_v1_identifier_idx",
+        "test_child_test_v1_fk_column_reference_id_idx",
     }
 
 
@@ -346,7 +346,7 @@ def test_size_of_index_name(engine, db_schema):
     meta_data = MetaData(bind=conn)
     meta_data.reflect()
     metadata_inspector = inspect(meta_data.bind)
-    indexes = metadata_inspector.get_indexes(f"{data['id']}_{table['id']}", schema=None)
+    indexes = metadata_inspector.get_indexes(f"{data['id']}_{table['id']}_v1", schema=None)
     indexes_name = []
 
     for index in indexes:
@@ -367,7 +367,7 @@ def test_index_creation_db_schema2(engine, stadsdelen_schema):
     meta_data.reflect()
     metadata_inspector = inspect(meta_data.bind)
     indexes = metadata_inspector.get_indexes(
-        f"{stadsdelen_schema['id']}_stadsdelen", schema="schema_foo_bar"
+        f"{stadsdelen_schema['id']}_stadsdelen_v1", schema="schema_foo_bar"
     )
     index_names = {index["name"] for index in indexes}
-    assert index_names == {"stadsdelen_stadsdelen_identifier_idx"}
+    assert index_names == {"stadsdelen_stadsdelen_v1_identifier_idx"}
