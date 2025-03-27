@@ -584,7 +584,7 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
             return super().get_dataset(dataset_id, prefetch_related=prefetch_related)
 
     def _read_index(self) -> dict[str, str]:
-        return dict(self._read_json_url(self.schema_url / "index.json"))
+        return dict(self._read_json_url(self.schema_url / "index"))
 
     def _read_dataset(self, dataset_id: str) -> Json:
         dataset_path = self.get_dataset_path(dataset_id)
@@ -686,7 +686,7 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
     def get_all_profiles(self) -> list[ProfileSchema]:
         profiles = []
         with self._persistent_connection():
-            index = self._read_json_url(self.profiles_url / "index.json")
+            index = self._read_json_url(self.profiles_url / "index")
             for name in index:
                 profiles.append(self.get_profile(name))
 
