@@ -121,3 +121,4 @@ monkeytype.sqlite3
 
 # Dataset indices used during development are ignored
 datasets/index.json
+datasets/index
