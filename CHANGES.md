@@ -1,4 +1,4 @@
-# 2025-03-27 (6.5.3)
+# 2025-03-27 (6.5.4)
 
 * Removed the .json extension from index files, as this has been changed in amsterdam-schema
 
