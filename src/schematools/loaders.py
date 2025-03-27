@@ -686,7 +686,7 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
     def get_all_profiles(self) -> list[ProfileSchema]:
         profiles = []
         with self._persistent_connection():
-            index = self._read_json_url(self.profiles_url / "index.json")
+            index = self._read_json_url(self.profiles_url / "index")
             for name in index:
                 profiles.append(self.get_profile(name))
 

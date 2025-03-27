@@ -1,3 +1,7 @@
+# 2025-03-27 (6.5.3)
+
+* Removed the .json extension from index files, as this has been changed in amsterdam-schema
+
 # 2025-02-25 (6.5.2)
 
 * Fixed bug where grantees were not found for Scope objects. This was handled by a fallback
