@@ -1,3 +1,7 @@
+# 2025-03-27 (7.1.1)
+
+* Removed the .json extension from index files, as this has been changed in amsterdam-schema
+
 # 2025-03-26 (7.1.0)
 
 * Add support for versioned tables. All tables will now receive a major version number in
@@ -7,6 +11,10 @@
 
 * Add support for Amsterdam Schema V3. Introduction of the DatasetVersionSchema to allow
   for multiple versions of a dataset.
+
+# 2025-03-27 (6.5.4)
+
+* Removed the .json extension from index files, as this has been changed in amsterdam-schema
 
 # 2025-02-25 (6.5.2)
 
