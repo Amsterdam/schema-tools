@@ -5,7 +5,7 @@ import io
 from django.core.management import BaseCommand, CommandError
 from django.db import connection
 from django.db.utils import ProgrammingError
-from psycopg2 import sql
+from psycopg import sql
 
 from schematools.contrib.django.models import Dataset, DatasetTable
 from schematools.naming import to_snake_case
