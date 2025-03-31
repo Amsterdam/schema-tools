@@ -163,7 +163,6 @@ class Dataset(models.Model):
     enable_api = models.BooleanField(default=True)
     enable_db = models.BooleanField(default=True)
     enable_export = models.BooleanField(default=False)
-    endpoint_url = models.URLField(blank=True, null=True)
     path = models.TextField(unique=True, blank=False, validators=[URLPathValidator()])
     auth = models.CharField(_("Authorization"), blank=True, null=True, max_length=250)
     ordering = models.IntegerField(_("Ordering"), default=1)

@@ -82,20 +82,6 @@ class Command(BaseCommand):  # noqa: D101
             available = ", ".join(sorted(Dataset.objects.values_list("name", flat=True)))
             raise CommandError(f"Dataset not found: {name}.\nAvailable are: {available}") from None
 
-        # Validate illogical combinations
-        endpoint_url = options.get("endpoint_url")
-        if endpoint_url is not None:
-            if options.get("enable_db"):
-                raise CommandError("Can't use --endpoint-url with --enable-db")
-
-            if dataset.enable_db:
-                options["enable_db"] = False
-
-        # URL endpoints need to contain {table_id}, which DSO-API replaces
-        # with the actual table name.
-        if endpoint_url is not None and "{table_id}" not in endpoint_url:
-            raise CommandError("--endpoint-url argument must contain '{table_id}'")
-
         changed = False
         if options.get("enable_geosearch") is not None:
             dataset.tables.all().update(enable_geosearch=options.get("enable_geosearch"))

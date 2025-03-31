@@ -23,16 +23,6 @@ existing_roles = set()  # note: used as global cache!
 existing_sequences = {}
 
 
-def is_remote(table_name: str) -> bool:
-    """Test if table_name refers a remote table.
-
-    WARNING: UGLY HACK until 265311 is resolved and we
-    can interrogate schematools to find out whether a table
-    is remote.
-    """
-    return table_name.startswith("brp")
-
-
 def introspect_permissions(engine: Engine, role: str) -> None:
     """Shows the table permissions."""
     schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
@@ -177,9 +167,6 @@ def set_dataset_write_permissions(
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = table.db_name
-        if is_remote(table_name):
-            continue
-
         _execute_grant(
             session,
             grant(
@@ -277,9 +264,6 @@ def get_all_dataset_scopes(
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = table.db_name
-        if is_remote(table_name):
-            continue
-
         table_scopes = (table.scopes - public_scopes) or dataset_scopes
         fields = [
             field

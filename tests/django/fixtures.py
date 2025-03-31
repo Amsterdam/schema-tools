@@ -56,12 +56,6 @@ def brp_rname_profile(brp_rname_profile_schema: ProfileSchema) -> Profile:
 
 
 @pytest.fixture
-def brp_dataset(brp_schema: DatasetSchema) -> Dataset:
-    """Create a remote dataset."""
-    return Dataset.create_for_schema(brp_schema, path="brp", enable_db=False)
-
-
-@pytest.fixture
 def aardgasverbruik_dataset(aardgasverbruik_schema: DatasetSchema) -> Dataset:
     """Create Aardgasverbruik dataset."""
     return Dataset.create_for_schema(aardgasverbruik_schema)
