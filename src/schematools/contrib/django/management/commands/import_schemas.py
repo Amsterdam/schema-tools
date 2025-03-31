@@ -47,7 +47,7 @@ class Command(BaseCommand):
             return
 
         # Reasons for not creating tables directly are to manually configure the
-        # "Datasets" model flags first. E.g. disable "enable_db", set a remote URL.
+        # "Datasets" model flags first. E.g. disable "enable_db".
         if options["create_tables"]:
             create_tables(self, datasets, allow_unmanaged=True)
 
