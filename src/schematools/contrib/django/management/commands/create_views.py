@@ -4,7 +4,7 @@ from collections.abc import Iterable
 
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, transaction
-from psycopg2 import sql
+from psycopg import sql
 
 from schematools.contrib.django.models import Dataset, DatasetTableSchema
 from schematools.naming import to_snake_case

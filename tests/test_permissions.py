@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 import pytest
-from psycopg2.errors import DuplicateObject
+from psycopg.errors import DuplicateObject
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 

@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import cast
 
 from geoalchemy2.types import Geometry
-from psycopg2 import sql
+from psycopg import sql
 from sqlalchemy import JSON, BigInteger, Boolean, Date, DateTime, Float, Numeric, String, Time
 from sqlalchemy.sql.schema import Column, Index, MetaData, Table
 from sqlalchemy.types import ARRAY
