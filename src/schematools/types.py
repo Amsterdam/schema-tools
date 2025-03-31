@@ -896,7 +896,7 @@ class DatasetVersionSchema(SchemaType):
         available = "', '".join([table["id"] for table in tables])
         raise DatasetTableNotFound(
             f"Table '{table_id}' does not exist "
-            f"in schema '{self.id}', available are: '{available}'"
+            f"in schema '{self._parent_schema.id}', available are: '{available}'"
         )
 
     def _get_tables(self, include_nested: bool = False, include_through: bool = False):

@@ -65,7 +65,7 @@ def test_model_factory_table_name_no_versions(afval_dataset):
         cls._meta.model_name: cls
         for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
     }
-    Containers = models["containers_v1"]
+    Containers = models["containers"]
     assert Containers._meta.db_table == "afvalwegingen_containers_v1"
 
 
@@ -80,9 +80,9 @@ def test_model_factory_table_name_default_version(afval_schema):
         cls._meta.model_name: cls
         for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
     }
-    assert "containers_v1" in models
+    assert "containers" in models
     assert "containers_1_0_1" not in models
-    Containers = models["containers_v1"]
+    Containers = models["containers"]
     assert Containers._meta.db_table == "afvalwegingen_containers_v1"
 
 
@@ -93,9 +93,9 @@ def test_model_factory_relations(afval_dataset):
         cls._meta.model_name: cls
         for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
     }
-    cluster_fk = models["containers_v1"]._meta.get_field("cluster")
+    cluster_fk = models["containers"]._meta.get_field("cluster")
     # Cannot compare using identity for dynamically generated classes
-    assert cluster_fk.related_model._table_schema.id == models["clusters_v1"]._table_schema.id
+    assert cluster_fk.related_model._table_schema.id == models["clusters"]._table_schema.id
 
 
 @pytest.mark.django_db
@@ -105,7 +105,7 @@ def test_model_factory_n_m_relations(gebieden_dataset, meetbouten_dataset):
         cls._meta.model_name: cls
         for cls in schema_models_factory(meetbouten_dataset, base_app_name="dso_api.dynamic_api")
     }
-    nm_ref = model_dict["metingen_v1"]._meta.get_field("refereertaanreferentiepunten")
+    nm_ref = model_dict["metingen"]._meta.get_field("refereertaanreferentiepunten")
     assert isinstance(nm_ref, models.ManyToManyField)
 
 
@@ -155,9 +155,9 @@ def test_model_factory_sub_objects(parkeervakken_dataset):
             parkeervakken_dataset, base_app_name="dso_api.dynamic_api"
         )
     }
-    assert "parkeervakken_regimes_v1" in model_dict
+    assert "parkeervakken_regimes" in model_dict
 
-    fields_dict = {f.name: f for f in model_dict["parkeervakken_regimes_v1"]._meta.fields}
+    fields_dict = {f.name: f for f in model_dict["parkeervakken_regimes"]._meta.fields}
     assert "parent" in fields_dict
     assert isinstance(fields_dict["parent"], models.ForeignKey)
 
@@ -173,14 +173,14 @@ def test_model_factory_sub_objects_for_shortened_names(verblijfsobjecten_dataset
     # XXX Change: one field is now nested, the other is changed to a relation
     # Check a relation where the fieldname is intact and one where fieldname is shortened
     model = model_dict[
-        "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_maatschappelijke_activiteit_v1"
+        "maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_maatschappelijke_activiteit"
     ]
     fields_dict = {f.name: f for f in model._meta.fields}
 
     # Field is nested, should have a parent field
     assert isinstance(fields_dict["parent"], models.ForeignKey)
 
-    model = model_dict["maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming_v1"]
+    model = model_dict["maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"]
     fields_dict = {f.name: f for f in model._meta.fields}
 
     # Field is a related, should have 2 FKs to both sides of the relation
@@ -203,7 +203,7 @@ def test_model_factory_temporary_1_n_relation(ggwgebieden_dataset):
         "ligtinstadsdeel_identificatie",
         "ligtinstadsdeel_volgnummer",
     }
-    model_fields = {f.name for f in model_dict["ggwgebieden_v1"]._meta.fields}
+    model_fields = {f.name for f in model_dict["ggwgebieden"]._meta.fields}
     assert model_fields > related_temporary_fields
 
 
@@ -215,7 +215,7 @@ def test_model_factory_temporary_n_m_relation(ggwgebieden_dataset):
         for cls in schema_models_factory(ggwgebieden_dataset, base_app_name="dso_api.dynamic_api")
     }
     # The through table is created
-    through_table_name = "ggwgebieden_bestaatuitbuurten_v1"
+    through_table_name = "ggwgebieden_bestaatuitbuurten"
     assert through_table_name in model_dict
 
     # Through table has refs to both 'sides' and extra fields for the relation
@@ -241,7 +241,7 @@ def test_model_factory_loose_relations(meldingen_dataset, gebieden_dataset):
         cls._meta.model_name: cls
         for cls in schema_models_factory(meldingen_dataset, base_app_name="dso_api.dynamic_api")
     }
-    model_cls = model_dict["statistieken_v1"]
+    model_cls = model_dict["statistieken"]
     meta = model_cls._meta
     assert isinstance(meta.get_field("buurt"), LooseRelationField)
 
@@ -262,7 +262,7 @@ def test_model_factory_loose_relations_n_m_temporeel(woningbouwplannen_dataset, 
             woningbouwplannen_dataset, base_app_name="dso_api.dynamic_api"
         )
     }
-    model_cls = model_dict["woningbouwplan_v1"]
+    model_cls = model_dict["woningbouwplan"]
     meta = model_cls._meta
     buurten_field = meta.get_field("buurten")
     intermediate_table = buurten_field.remote_field.through
@@ -334,7 +334,7 @@ def test_column_shortnames_in_nm_throughtables(verblijfsobjecten_dataset, hr_dat
     }
 
     db_colnames = {"activiteiten_id", "sbi_voor_activiteit_id"}
-    model = model_dict["maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming_v1"]
+    model = model_dict["maatschappelijkeactiviteiten_heeft_sbi_activiteiten_voor_onderneming"]
     assert db_colnames == {f.db_column for f in model._meta.fields if f.db_column is not None}
 
 
@@ -348,7 +348,7 @@ def test_nested_objects_should_never_be_temporal(verblijfsobjecten_dataset):
         )
     }
 
-    assert not model_dict["verblijfsobjecten_gebruiksdoel_v1"].is_temporal()
+    assert not model_dict["verblijfsobjecten_gebruiksdoel"].is_temporal()
 
 
 @pytest.mark.django_db
@@ -368,7 +368,7 @@ def test_temporal_subfields_are_skipped(verblijfsobjecten_dataset):
         )
     }
 
-    begin_geldigheid_field = model_dict["verblijfsobjecten_v1"]._meta.get_field("begin_geldigheid")
+    begin_geldigheid_field = model_dict["verblijfsobjecten"]._meta.get_field("begin_geldigheid")
     assert isinstance(begin_geldigheid_field, DateTimeField)
 
 
@@ -382,7 +382,7 @@ def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_da
         )
     }
 
-    model = model_dict["parkeervakken_v1"]
+    model = model_dict["parkeervakken"]
 
     with pytest.raises(
         IntegrityError,
@@ -409,7 +409,7 @@ def test_model_factory_sub_object_is_flattened(kadastraleobjecten_dataset):
             kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
         )
     }
-    model_field_names = {f.name for f in model_dict["kadastraleobjecten_v1"]._meta.fields}
+    model_field_names = {f.name for f in model_dict["kadastraleobjecten"]._meta.fields}
     assert {
         "soort_cultuur_onbebouwd_code",
         "soort_cultuur_onbebouwd_omschrijving",
@@ -425,7 +425,7 @@ def test_model_factory_sub_object_is_json(kadastraleobjecten_dataset):
             kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
         )
     }
-    model_fields = {f.name: f for f in model_dict["kadastraleobjecten_v1"]._meta.fields}
+    model_fields = {f.name: f for f in model_dict["kadastraleobjecten"]._meta.fields}
     assert isinstance(model_fields["soort_grootte"], models.JSONField)
 
 

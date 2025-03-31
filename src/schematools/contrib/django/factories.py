@@ -144,7 +144,7 @@ def get_model_name(table_schema: DatasetTableSchema) -> str:
     # Using table_schema.python_name gives UpperCamelCased names, the old format is kept here.
     # This also keeps model names more readable and recognizable/linkable with db table names.
     model_name = to_snake_case(table_schema.id)
-    return f"{model_name}_{table_schema.version.vmajor}"
+    return f"{model_name}"
 
 
 def model_factory(

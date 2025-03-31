@@ -1,3 +1,8 @@
+# 2025-03-31 (7.1.2)
+
+* Removed the version name from Django model names to prevent issues in DSO-API. We will need
+  this when we'll implement versioning in the DSO-API, but for now it causes issues.
+
 # 2025-03-27 (7.1.1)
 
 * Removed the .json extension from index files, as this has been changed in amsterdam-schema

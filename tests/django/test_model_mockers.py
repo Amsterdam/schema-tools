@@ -30,7 +30,7 @@ def test_model_mocker_factory_registers_a_dynamic_model_in_the_app_config(afval_
     # So we assert that the DynamicModel is indeed registered.
     model_mocker_factory(afval_dataset, table_schema, base_app_name="dso_api.dynamic_api")
     registered_models = [f"{m._meta.app_label}.{m._meta.model_name}" for m in apps.get_models()]
-    assert "afvalwegingen.containers_v1" in registered_models
+    assert "afvalwegingen.containers" in registered_models
 
     # The afval_dataset has two tables (containers, clusters),
     # so we check the second table (i.e. second model) too.
@@ -44,7 +44,7 @@ def test_model_mocker_factory_registers_a_dynamic_model_in_the_app_config(afval_
     registered_models_updated = [
         f"{m._meta.app_label}.{m._meta.model_name}" for m in apps.get_models()
     ]
-    assert "afvalwegingen.clusters_v1" in registered_models_updated
+    assert "afvalwegingen.clusters" in registered_models_updated
 
 
 @pytest.mark.skip(
@@ -121,18 +121,18 @@ def test_schema_model_mockers_factory(afval_dataset):
         cls._meta.get_model_class()._meta.model_name: cls
         for cls in schema_model_mockers_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
     }
-    assert "containers_v1" in model_mockers
-    ContainersMocker = model_mockers["containers_v1"]
+    assert "containers" in model_mockers
+    ContainersMocker = model_mockers["containers"]
     assert isinstance(ContainersMocker, FactoryMetaClass)
     assert str(ContainersMocker) == (
-        "<containers_v1_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.containers_v1'>>"
+        "<containers_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.containers'>>"
     )
 
-    assert "clusters_v1" in model_mockers
-    ClustersMocker = model_mockers["clusters_v1"]
+    assert "clusters" in model_mockers
+    ClustersMocker = model_mockers["clusters"]
     assert isinstance(ClustersMocker, FactoryMetaClass)
     assert str(ClustersMocker) == (
-        "<clusters_v1_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.clusters_v1'>>"
+        "<clusters_factory for <class 'dso_api.dynamic_api.afvalwegingen.models.clusters'>>"
     )
 
 
@@ -155,7 +155,7 @@ def test_model_mocker_factory_fields(afval_dataset) -> None:
         "kortenaam",
     }
 
-    ContainersMocker = model_mockers["containers_v1"]
+    ContainersMocker = model_mockers["containers"]
     assert {f.name for f in ContainersMocker._meta.get_model_class()._meta.get_fields()} == fields
 
 
@@ -170,8 +170,8 @@ def test_model_mocker_factory_records_count(afval_dataset) -> None:
         cls._meta.model_name: cls
         for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
     }
-    ContainersMocker = model_mockers["containers_v1"]
-    Container = models["containers_v1"]
+    ContainersMocker = model_mockers["containers"]
+    Container = models["containers"]
     # Create the tables for the dataset, to be able te add records to it.
     create_tables(afval_dataset)
     ContainersMocker.create()
@@ -192,8 +192,8 @@ def test_model_mocker_factory_field_types(afval_dataset) -> None:
         cls._meta.model_name: cls
         for cls in schema_models_factory(afval_dataset, base_app_name="dso_api.dynamic_api")
     }
-    ContainersMocker = model_mockers["containers_v1"]
-    Container = models["containers_v1"]
+    ContainersMocker = model_mockers["containers"]
+    Container = models["containers"]
     # Create the tables for the dataset, to be able te add records to it.
     create_tables(afval_dataset)
     ContainersMocker.create()
