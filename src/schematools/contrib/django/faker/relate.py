@@ -59,7 +59,7 @@ def relate_datasets(*datasets: Dataset) -> None:
         dataset_schema = dataset.schema
         for table in dataset_schema.tables:
             model = models[dataset_schema.db_name][
-                table.db_name_variant(with_dataset_prefix=False)
+                table.db_name_variant(with_dataset_prefix=False, with_version=False)
             ]
             for f in table.fields:
                 field_name = f.python_name
