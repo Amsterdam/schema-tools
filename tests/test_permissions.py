@@ -5,6 +5,7 @@ import logging
 
 import pytest
 from psycopg2.errors import DuplicateObject
+from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 
 from schematools.importer.ndjson import NDJSONImporter
@@ -854,12 +855,12 @@ class TestWritePermissions:
 
         # Drop testuser in case previous tests did not terminate correctly
         with engine.begin() as connection:
-            connection.execute("DROP ROLE IF EXISTS testuser")
+            connection.execute(text("DROP ROLE IF EXISTS testuser"))
 
         _create_role(engine, "testuser")
 
         with engine.begin() as connection:
-            connection.execute("GRANT write_gebieden TO testuser")
+            connection.execute(text("GRANT write_gebieden TO testuser"))
 
         #  It is now possible to INSERT data into the dataset tables
         _check_insert_permission_granted(
@@ -879,7 +880,7 @@ class TestWritePermissions:
 
         # Add SELECT permissions by granting the appropriate scope to the user
         with engine.begin() as connection:
-            connection.execute("GRANT scope_level_b TO testuser")
+            connection.execute(text("GRANT scope_level_b TO testuser"))
 
         # But now it's possible to SELECT the columns within scope level_b
         _check_select_permission_granted(
@@ -928,15 +929,15 @@ class TestWritePermissions:
 
         # Drop testuser in case previous tests did not terminate correctly
         with engine.begin() as connection:
-            connection.execute("DROP ROLE IF EXISTS parkeer_tester")
-            connection.execute("DROP ROLE IF EXISTS afval_tester")
+            connection.execute(text("DROP ROLE IF EXISTS parkeer_tester"))
+            connection.execute(text("DROP ROLE IF EXISTS afval_tester"))
 
         _create_role(engine, "parkeer_tester")
         _create_role(engine, "afval_tester")
 
         with engine.begin() as connection:
-            connection.execute("GRANT write_parkeervakken TO parkeer_tester")
-            connection.execute("GRANT write_afvalwegingen TO afval_tester")
+            connection.execute(text("GRANT write_parkeervakken TO parkeer_tester"))
+            connection.execute(text("GRANT write_afvalwegingen TO afval_tester"))
 
         #  parkeer_tester has INSERT permission on parkeervakken datasets
         _check_insert_permission_granted(
@@ -994,7 +995,7 @@ class TestWritePermissions:
 
         # Create the datasets_dataset table
         with engine.begin() as connection:
-            connection.execute("CREATE TABLE datasets_dataset (id integer)")
+            connection.execute(text("CREATE TABLE datasets_dataset (id integer)"))
 
         # Apply the permissions to meetbouten and add the extra grants to datasets_dataset
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
@@ -1038,7 +1039,8 @@ def _create_role(engine, role):
     This may happen if a previous pytest did not terminate correctly.
     """
     try:
-        engine.execute(f'CREATE ROLE "{role}"')
+        with engine.begin() as conn:
+            conn.execute(text(f'CREATE ROLE "{role}"'))
     except ProgrammingError as e:
         if not isinstance(e.orig, DuplicateObject):
             raise
@@ -1047,7 +1049,7 @@ def _create_role(engine, role):
 def _check_role_does_not_exist(engine, role):
     """Check if role does not exist"""
     with engine.begin() as connection:
-        result = connection.execute("SELECT rolname FROM pg_roles WHERE rolname=%s", role)
+        result = connection.execute(text("SELECT rolname FROM pg_roles WHERE rolname=%s"), role)
         rows = list(result)
         assert len(rows) == 0
 
@@ -1059,9 +1061,9 @@ def _check_select_permission_denied(engine, role, table, column="*"):
     with pytest.raises(
         Exception, match=f"permission denied for table {table}"
     ), engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        connection.execute(f"SELECT {column} FROM {table}")
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f"SELECT {column} FROM {table}"))
+        connection.execute(text("RESET ROLE"))
 
 
 def _check_select_permission_granted(engine, role, table, column="*"):
@@ -1069,9 +1071,9 @@ def _check_select_permission_granted(engine, role, table, column="*"):
     Fail if role, table or column does not exist.
     """
     with engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        result = connection.execute(f"SELECT {column} FROM {table}")
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        result = connection.execute(text(f"SELECT {column} FROM {table}"))
+        connection.execute(text("RESET ROLE"))
     assert result
 
 
@@ -1080,9 +1082,9 @@ def _check_insert_permission_granted(engine, role, table, column, value):
     Fail if role, table or column does not exist, or value mismatches in datatype.
     """
     with engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        result = connection.execute(f"INSERT INTO {table} ({column}) VALUES ({value})")
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        result = connection.execute(text(f"INSERT INTO {table} ({column}) VALUES ({value})"))
+        connection.execute(text("RESET ROLE"))
     assert result
 
 
@@ -1091,9 +1093,9 @@ def _check_insert_permission_denied(engine, role, table, column, value):
     Fail if role, table or column does not exist.
     """
     with pytest.raises(Exception) as e_info, engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        connection.execute(f"INSERT INTO {table} ({column}) VALUES ({value})")
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f"INSERT INTO {table} ({column}) VALUES ({value})"))
+        connection.execute(text("RESET ROLE"))
     assert f"permission denied for table {table}" in str(e_info)
 
 
@@ -1102,9 +1104,11 @@ def _check_update_permission_granted(engine, role, table, column, value, conditi
     Fail if role, table or column does not exist, or value mismatches in datatype.
     """
     with engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        result = connection.execute(f"UPDATE {table} SET {column} =  {value} WHERE {condition}")
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        result = connection.execute(
+            text(f"UPDATE {table} SET {column} =  {value} WHERE {condition}")
+        )
+        connection.execute(text("RESET ROLE"))
     assert result
 
 
@@ -1113,9 +1117,9 @@ def _check_update_permission_denied(engine, role, table, column, value, conditio
     Fail if role, table or column does not exist, or value mismatches in datatype.
     """
     with pytest.raises(Exception) as e_info, engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        connection.execute(f"UPDATE {table} SET {column} =  {value} WHERE {condition}")
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f"UPDATE {table} SET {column} =  {value} WHERE {condition}"))
+        connection.execute(text("RESET ROLE"))
     assert f"permission denied for table {table}" in str(e_info)
 
 
@@ -1123,9 +1127,9 @@ def _check_delete_permission_granted(engine, role, table, condition):
     """Check if role has DELETE permission on table.
     Fail if role, table or column does not exist, or value mismatches in datatype."""
     with engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        result = connection.execute(f"DELETE FROM {table} WHERE {condition}")  # noqa: S608
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        result = connection.execute(text(f"DELETE FROM {table} WHERE {condition}"))  # noqa: S608
+        connection.execute(text("RESET ROLE"))
     assert result
 
 
@@ -1133,9 +1137,9 @@ def _check_delete_permission_denied(engine, role, table, condition):
     """Check if role has no DELETE permission on table.
     Fail if role, table or column does not exist, or value mismatches in datatype."""
     with pytest.raises(Exception) as e_info, engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        connection.execute(f"DELETE FROM {table} WHERE {condition}")  # noqa: S608
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f"DELETE FROM {table} WHERE {condition}"))  # noqa: S608
+        connection.execute(text("RESET ROLE"))
     assert f"permission denied for table {table}" in str(e_info)
 
 
@@ -1144,9 +1148,9 @@ def _check_truncate_permission_granted(engine, role, table):
     Fail if role or table does not exist.
     """
     with engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        result = connection.execute(f"TRUNCATE {table}")
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        result = connection.execute(text(f"TRUNCATE {table}"))
+        connection.execute(text("RESET ROLE"))
     assert result
 
 
@@ -1155,9 +1159,9 @@ def _check_truncate_permission_denied(engine, role, table):
     Fail if role or table does not exist.
     """
     with pytest.raises(Exception) as e_info, engine.begin() as connection:
-        connection.execute(f"SET ROLE {role}")
-        connection.execute(f"TRUNCATE {table}")
-        connection.execute("RESET ROLE")
+        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f"TRUNCATE {table}"))
+        connection.execute(text("RESET ROLE"))
     assert f"permission denied for table {table}" in str(e_info)
 
 

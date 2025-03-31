@@ -13,7 +13,7 @@ import click
 import jsonpath_rw
 import psycopg2
 from psycopg2 import sql
-from sqlalchemy import Boolean, exc, inspect, text
+from sqlalchemy import Boolean, exc, inspect, select, text
 from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.exc import ProgrammingError
@@ -179,10 +179,10 @@ class BaseImporter:
             if pk_col.autoincrement:
                 continue
 
-            self.pk_colname_lookup[table_name] = pk_name
             with self.engine.connect() as conn:
-                pks = {getattr(r, pk_name) for r in conn.execute(table.select())}
+                pks = {r[0] for r in conn.execute(select(pk_col)).fetchall()}
 
+            self.pk_colname_lookup[table_name] = pk_name
             self.pk_values_lookup[table_name] = pks
 
     def _schema_exists(self, schema_name: str) -> bool:
@@ -190,7 +190,8 @@ class BaseImporter:
         with self.engine.connect() as conn:
             return bool(
                 conn.scalar(
-                    "SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = %s)", schema_name
+                    text("SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = :name)"),
+                    {"name": schema_name},
                 )
             )
 
@@ -318,7 +319,7 @@ class BaseImporter:
         view_user = table.get_view_user()
         if view_user is not None:
             with closing(self.engine.raw_connection()) as conn, closing(conn.cursor()) as cur:
-                cur.execute(f"CREATE USER {view_user}")
+                cur.execute(text(f"CREATE USER {view_user}"))
                 conn.commit()
 
     def generate_view(self, dataset: DatasetSchema) -> None:
@@ -359,7 +360,8 @@ class BaseImporter:
 
                 table_records = list(self.deduplicate(table_id, table_records))
                 if table_records:
-                    self.engine.execute(insert_statement, table_records)
+                    with self.engine.begin() as conn:
+                        conn.execute(insert_statement, table_records)
             num_imported += len(records)
             self.logger.log_progress(num_imported)
 
@@ -394,10 +396,10 @@ class BaseImporter:
     def prepare_tables(self, tables: dict[str, Table], truncate: bool = False) -> None:
         """Create the tables if needed."""
         for table in tables.values():
-            if not table.exists():
-                table.create()
-            elif truncate:
-                self.engine.execute(table.delete())
+            table.create(self.engine, checkfirst=True)
+            if truncate:
+                with self.engine.begin() as conn:
+                    conn.execute(table.delete())  # DELETE FROM table.
 
     def prepare_views(self) -> None:
         """Create views, if any."""
@@ -475,7 +477,7 @@ class BaseImporter:
 
         Is a no-op if schema already exists.
         """
-        with self.engine.connect() as connection:
+        with self.engine.begin() as connection:
             try:
                 connection.execute(CreateSchema(db_schema_name))
                 self.logger.log_info("Created SQL schema %r", db_schema_name)

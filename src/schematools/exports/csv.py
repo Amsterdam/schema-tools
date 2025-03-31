@@ -57,15 +57,16 @@ class CsvExporter(BaseExporter):  # noqa: D101
         writer = csv.DictWriter(file_handle, field_names, extrasaction="ignore")
         # Use capitalize() on headers, because csv export does the same
         writer.writerow({fn: toCamelCase(fn).capitalize() for fn in field_names})
-        query = select(columns)
+        query = select(*columns)
         if temporal_clause is not None:
             query = query.where(temporal_clause)
         if self.size is not None:
             query = query.limit(self.size)
-        result = self.connection.execution_options(yield_per=1000).execute(query)
-        for partition in result.partitions():
-            for r in partition:
-                writer.writerow(dict(r))
+        with self.connection.execution_options(yield_per=1000).connect() as conn:
+            result = conn.execute(query)
+            for partition in result.mappings().partitions():
+                for r in partition:
+                    writer.writerow(r)
 
 
 def export_csvs(

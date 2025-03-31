@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from sqlalchemy import MetaData, create_engine, inspect
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.sql.ddl import CreateSchema
 
 from schematools import MAX_TABLE_NAME_LENGTH, TABLE_INDEX_POSTFIX
 from schematools.importer.base import BaseImporter
@@ -55,12 +56,10 @@ def test_index_creation(engine, db_schema):
         # the generate_table and create index
         importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
-        conn = create_engine(engine.url, client_encoding="UTF-8")
-        meta_data = MetaData(bind=conn)
-        meta_data.reflect()
-        metadata_inspector = inspect(meta_data.bind)
+        engine2 = create_engine(engine.url, client_encoding="UTF-8")
+        inspector = inspect(engine2)
         table_db_name = f"{test_data['id']}_{table['id']}_v1"  # test_test
-        indexes = metadata_inspector.get_indexes(table_db_name, schema=None)
+        indexes = inspector.get_indexes(table_db_name, schema=None)
         index_names.update(index["name"] for index in indexes)
 
     assert index_names == {
@@ -178,11 +177,9 @@ def test_index_troughtables_creation(engine, db_schema):
     for dataset_table in dataset_schema.tables:
         for field in dataset_table.fields:
             if field.is_through_table:
-                conn = create_engine(engine.url, client_encoding="UTF-8")
-                meta_data = MetaData(bind=conn)
-                meta_data.reflect()
-                metadata_inspector = inspect(meta_data.bind)
-                indexes = metadata_inspector.get_indexes(field.through_table.db_name, schema=None)
+                engine2 = create_engine(engine.url, client_encoding="UTF-8")
+                inspector = inspect(engine2)
+                indexes = inspector.get_indexes(field.through_table.db_name, schema=None)
                 indexes_names.update(index["name"] for index in indexes)
 
     assert indexes_names == {
@@ -259,11 +256,9 @@ def test_fk_index_creation(engine, db_schema):
     # the generate_table and create index
     importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
-    conn = create_engine(engine.url, client_encoding="UTF-8")
-    meta_data = MetaData(bind=conn)
-    meta_data.reflect()
-    metadata_inspector = inspect(meta_data.bind)
-    indexes = metadata_inspector.get_indexes(table.db_name, schema=None)
+    engine2 = create_engine(engine.url, client_encoding="UTF-8")
+    inspector = inspect(engine2)
+    indexes = inspector.get_indexes(table.db_name, schema=None)
     indexes_name = {index["name"] for index in indexes}
     assert indexes_name == {
         "test_child_test_v1_identifier_idx",
@@ -342,11 +337,9 @@ def test_size_of_index_name(engine, db_schema):
     # the generate_table and create index
     importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
 
-    conn = create_engine(engine.url, client_encoding="UTF-8")
-    meta_data = MetaData(bind=conn)
-    meta_data.reflect()
-    metadata_inspector = inspect(meta_data.bind)
-    indexes = metadata_inspector.get_indexes(f"{data['id']}_{table['id']}_v1", schema=None)
+    engine2 = create_engine(engine.url, client_encoding="UTF-8")
+    inspector = inspect(engine2)
+    indexes = inspector.get_indexes(f"{data['id']}_{table['id']}_v1", schema=None)
     indexes_name = []
 
     for index in indexes:
@@ -358,15 +351,15 @@ def test_size_of_index_name(engine, db_schema):
 def test_index_creation_db_schema2(engine, stadsdelen_schema):
     """Prove that indexes are created within given database schema on table."""
     # create DB schema
-    engine.execute("CREATE SCHEMA IF NOT EXISTS schema_foo_bar;")
+    with engine.begin() as conn:
+        conn.execute(CreateSchema("schema_foo_bar", if_not_exists=True))
+
     importer = BaseImporter(stadsdelen_schema, engine)
     importer.generate_db_objects(
         "stadsdelen", "schema_foo_bar", ind_tables=True, ind_extra_index=True
     )
-    meta_data = MetaData(bind=engine)
-    meta_data.reflect()
-    metadata_inspector = inspect(meta_data.bind)
-    indexes = metadata_inspector.get_indexes(
+    inspector = inspect(engine)
+    indexes = inspector.get_indexes(
         f"{stadsdelen_schema['id']}_stadsdelen_v1", schema="schema_foo_bar"
     )
     index_names = {index["name"] for index in indexes}

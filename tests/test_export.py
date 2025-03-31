@@ -4,6 +4,7 @@ import sqlite3
 
 import orjson
 import pytest
+from sqlalchemy import text
 
 from schematools.exports.csv import export_csvs
 from schematools.exports.geopackage import export_geopackages
@@ -69,7 +70,7 @@ def test_geopackage_export(here, engine, meetbouten_schema, dbsession, tmp_path)
         export_geopackages(connection, meetbouten_schema, str(tmp_path), [], [])
     sqlite3_conn = sqlite3.connect(tmp_path / "meetbouten_meetbouten.gpkg")
     cursor = sqlite3_conn.cursor()
-    cursor.execute("select * from rtree_sql_statement_geometrie")
+    cursor.execute(text("select * from rtree_sql_statement_geometrie"))
     res = cursor.fetchall()
     assert res == [(1, 119434.0, 119434.0, 487091.59375, 487091.65625)]
     cursor.execute(

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import datetime
 
+from sqlalchemy import text
+
 from schematools.importer.ndjson import NDJSONImporter
 
 
@@ -10,21 +12,27 @@ def test_ndjson_import_nm(here, engine, meetbouten_schema, gebieden_schema, dbse
     importer = NDJSONImporter(meetbouten_schema, engine)
     importer.generate_db_objects("metingen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [
-        dict(r)
-        for r in engine.execute("SELECT * from meetbouten_metingen_v1 order by identificatie")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * from meetbouten_metingen_v1 order by identificatie"))
+            .mappings()
+            .all()
+        )
     assert len(records) == 4
     # A non-object relation, should just lead to _id field
     assert records[0] == {"identificatie": "173", "hoortbijmeetbout_id": "13881032"}
 
-    # check value from the ndjson input, should be string according to the schema
-    records = [
-        dict(r)
-        for r in engine.execute(
-            "SELECT * from meetbouten_metingen_refereertaanreferentiepunten_v1 order by id"
+    with engine.begin() as conn:
+        # check value from the ndjson input, should be string according to the schema
+        records = (
+            conn.execute(
+                text(
+                    "SELECT * from meetbouten_metingen_refereertaanreferentiepunten_v1 order by id"
+                )
+            )
+            .mappings()
+            .all()
         )
-    ]
     # Should have a field 'id' in the n-m table
     # an extra _identificatie is not needed, this is not a composite key
     assert records[0] == {
@@ -50,9 +58,13 @@ def test_ndjson_import_separate_relations_target_composite(
     )
 
     importer.load_file(ndjson_path, is_through_table=True)
-    records = [
-        dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten_ligt_in_buurt_v1")
-    ]
+
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * from meetbouten_meetbouten_ligt_in_buurt_v1"))
+            .mappings()
+            .all()
+        )
     assert records == [
         {
             "id": 1,
@@ -76,10 +88,12 @@ def test_ndjson_import_separate_relations_both_composite(
     )
 
     importer.load_file(ndjson_path, is_through_table=True)
-    records = [
-        dict(r)
-        for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten_v1")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten_v1"))
+            .mappings()
+            .all()
+        )
 
     assert records == [
         {
@@ -99,7 +113,9 @@ def test_ndjson_import_no_embedded_relation_in_data(here, engine, meetbouten_sch
     importer = NDJSONImporter(meetbouten_schema, engine)
     importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten_v1")]
+
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * from meetbouten_meetbouten_v1")).mappings().all()
     assert records == [
         {
             "identificatie": 1,
@@ -121,15 +137,18 @@ def test_ndjson_import_no_embedded_nm_relation_in_data(
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
 
     importer.load_file(ndjson_path, is_through_table=True)
-    records = [dict(r) for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden_v1")]
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * FROM ggwgebieden_ggwgebieden_v1")).mappings().all()
     assert len(records) == 1
 
     # Through table is available, but has no content
     # (because there is no data  for it in the ndjson).
-    records = [
-        dict(r)
-        for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten_v1")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten_v1"))
+            .mappings()
+            .all()
+        )
     assert len(records) == 0
 
 
@@ -138,7 +157,8 @@ def test_ndjson_import_jsonpath_provenance(here, engine, meetbouten_schema, dbse
     importer = NDJSONImporter(meetbouten_schema, engine)
     importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten_v1")]
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * from meetbouten_meetbouten_v1")).mappings().all()
     assert records == [
         {
             "identificatie": 1,
@@ -157,7 +177,9 @@ def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbses
     importer = NDJSONImporter(ggwgebieden_schema, engine)  # TODO: fix datetime tzinfo
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden_v1")]
+
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * FROM ggwgebieden_ggwgebieden_v1")).mappings().all()
 
     # An "id" should have been generated, concat of the composite key fields
     assert records == [
@@ -177,10 +199,12 @@ def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbses
         }
     ]
 
-    records = [
-        dict(r)
-        for r in engine.execute("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten_v1")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * FROM ggwgebieden_ggwgebieden_bestaatuitbuurten_v1"))
+            .mappings()
+            .all()
+        )
     assert len(records) == 3
     # Also the temporal fields are present in the database
     columns = {
@@ -193,7 +217,7 @@ def test_ndjson_import_nm_composite_keys(here, engine, ggwgebieden_schema, dbses
         "bestaatuitbuurten_volgnummer",
     }
 
-    assert records[0].keys() == columns
+    assert set(records[0].keys()) == columns
 
     # Fails:
     # assert records[0] == {
@@ -212,7 +236,9 @@ def test_ndjson_import_nm_composite_keys_with_geldigheid(here, engine, gebieden_
     importer = NDJSONImporter(gebieden_schema, engine)  # TODO: fix datetime tzinfo
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from gebieden_ggwgebieden_v1")]
+
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * from gebieden_ggwgebieden_v1")).mappings().all()
     assert records == [
         {
             # An "id" should have been generated, concat of the composite key fields:
@@ -233,12 +259,14 @@ def test_ndjson_import_nm_composite_keys_with_geldigheid(here, engine, gebieden_
         }
     ]
 
-    records = [
-        dict(r)
-        for r in engine.execute(
-            "SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten_v1 order by id"
+    with engine.begin() as conn:
+        records = (
+            conn.execute(
+                text("SELECT * from gebieden_ggwgebieden_bestaat_uit_buurten_v1 order by id")
+            )
+            .mappings()
+            .all()
         )
-    ]
     assert len(records) == 3
     # Also the temporal fields are present in the database
     assert records[0] == {
@@ -263,9 +291,12 @@ def test_ndjson_import_nm_composite_selfreferencing_keys(
     importer.load_file(ndjson_path)
 
     # An "id" should have been generated, concat of the composite key fields
-    records = [
-        dict(r) for r in engine.execute("SELECT * from brk_kadastraleobjecten_v1 order by id")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * from brk_kadastraleobjecten_v1 order by id"))
+            .mappings()
+            .all()
+        )
     assert records == [
         {
             "begin_geldigheid": None,
@@ -295,12 +326,14 @@ def test_ndjson_import_nm_composite_selfreferencing_keys(
         },
     ]
 
-    records = [
-        dict(r)
-        for r in engine.execute(
-            "SELECT * from brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1"
+    with engine.begin() as conn:
+        records = (
+            conn.execute(
+                text("SELECT * from brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1")
+            )
+            .mappings()
+            .all()
         )
-    ]
     assert records == [
         {
             "id": 1,
@@ -319,13 +352,17 @@ def test_ndjson_import_nested_tables(here, engine, verblijfsobjecten_schema, dbs
     importer = NDJSONImporter(verblijfsobjecten_schema, engine)
     importer.generate_db_objects("verblijfsobjecten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [
-        dict(r)
-        for r in engine.execute(
-            "SELECT code, omschrijving, parent_id"
-            " FROM verblijfsobjecten_verblijfsobjecten_gebruiksdoel_v1"
+    with engine.begin() as conn:
+        records = (
+            conn.execute(
+                text(
+                    "SELECT code, omschrijving, parent_id"
+                    " FROM verblijfsobjecten_verblijfsobjecten_gebruiksdoel_v1"
+                )
+            )
+            .mappings()
+            .all()
         )
-    ]
     assert records == [
         {"code": "1", "omschrijving": "doel 1", "parent_id": "VB.1"},
         {"code": "2", "omschrijving": "doel 2", "parent_id": "VB.1"},
@@ -337,7 +374,8 @@ def test_ndjson_import_1n(here, engine, meetbouten_schema, dbsession):
     importer = NDJSONImporter(meetbouten_schema, engine)
     importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from meetbouten_meetbouten_v1")]
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * from meetbouten_meetbouten_v1")).mappings().all()
     # The foreign key, needed by Django, should be there
     # And should have the concatenated value
     # And Should have a field identificatie
@@ -360,9 +398,12 @@ def test_inactive_relation_that_are_commented_out(here, engine, stadsdelen_schem
     importer = NDJSONImporter(stadsdelen_schema, engine)
     importer.generate_db_objects("stadsdelen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [
-        dict(r) for r in engine.execute("SELECT * FROM stadsdelen_stadsdelen_v1 ORDER BY id")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * FROM stadsdelen_stadsdelen_v1 ORDER BY id"))
+            .mappings()
+            .all()
+        )
     # Field is stringified, because in schema the relation is 'disabled'
     assert records == [
         {"id": "1", "ligt_in_gemeente": '{"identificatie": "0363"}'},
@@ -376,9 +417,12 @@ def test_missing_fields_in_jsonpath_provenance(here, engine, woonplaatsen_schema
     importer = NDJSONImporter(woonplaatsen_schema, engine)
     importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [
-        dict(r) for r in engine.execute("SELECT * FROM woonplaatsen_woonplaatsen_v1 ORDER BY id")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * FROM woonplaatsen_woonplaatsen_v1 ORDER BY id"))
+            .mappings()
+            .all()
+        )
     assert records == [
         {
             "id": "1.1",
@@ -403,7 +447,8 @@ def test_ndjson_import_with_shortnames_missing_data(here, engine, hr_schema, dbs
         "maatschappelijkeactiviteiten", truncate=True, ind_extra_index=False
     )
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from hr_activiteiten_v1")]
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * from hr_activiteiten_v1")).mappings().all()
 
     # shortname for heeftEenRelatieMetVerblijfsobject, not in hr_missing_nmrelation.ndjson
     assert records == [
@@ -424,46 +469,53 @@ def test_ndjson_import_with_shortnames_in_schema(here, engine, hr_schema, dbsess
         "maatschappelijkeactiviteiten", truncate=True, ind_extra_index=False
     )
     importer.load_file(ndjson_path)
-    records = [dict(r) for r in engine.execute("SELECT * from hr_activiteiten_v1")]
-    assert records == [
-        {
-            "kvknummer": "90004213",
-            "gevestigd_in_identificatie": "01002",
-            "gevestigd_in_volgnummer": 3,
-            "gevestigd_in_id": "01002.3",
-        }
-    ]
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * from hr_activiteiten_v1")).mappings().all()
+        assert records == [
+            {
+                "kvknummer": "90004213",
+                "gevestigd_in_identificatie": "01002",
+                "gevestigd_in_volgnummer": 3,
+                "gevestigd_in_id": "01002.3",
+            }
+        ]
 
-    records = [
-        dict(r) for r in engine.execute("SELECT * from hr_activiteiten_sbi_maatschappelijk_v1")
-    ]
-    assert records == [{"parent_id": "90004213", "bronwaarde": 1130, "id": 1}]
+        records = (
+            conn.execute(text("SELECT * from hr_activiteiten_sbi_maatschappelijk_v1"))
+            .mappings()
+            .all()
+        )
+        assert records == [{"parent_id": "90004213", "bronwaarde": 1130, "id": 1}]
 
-    records = [
-        dict(r) for r in engine.execute("SELECT * from hr_activiteiten_sbi_voor_activiteit_v1")
-    ]
-    # In this case, the through table does not have extra fields, because the
-    # FK to the target is not a composite key.
-    assert records == [
-        {
-            "id": 1,
-            "activiteiten_id": "90004213",
-            "sbi_voor_activiteit_id": "01131",
-        }
-    ]
+        records = (
+            conn.execute(text("SELECT * from hr_activiteiten_sbi_voor_activiteit_v1"))
+            .mappings()
+            .all()
+        )
+        # In this case, the through table does not have extra fields, because the
+        # FK to the target is not a composite key.
+        assert records == [
+            {
+                "id": 1,
+                "activiteiten_id": "90004213",
+                "sbi_voor_activiteit_id": "01131",
+            }
+        ]
 
-    records = [
-        dict(r) for r in engine.execute("SELECT * from hr_activiteiten_verblijfsobjecten_v1")
-    ]
-    assert records == [
-        {
-            "id": 1,
-            "activiteiten_id": "90004213",
-            "verblijfsobjecten_id": "01001.1",
-            "verblijfsobjecten_identificatie": "01001",
-            "verblijfsobjecten_volgnummer": 1,
-        }
-    ]
+        records = (
+            conn.execute(text("SELECT * from hr_activiteiten_verblijfsobjecten_v1"))
+            .mappings()
+            .all()
+        )
+        assert records == [
+            {
+                "id": 1,
+                "activiteiten_id": "90004213",
+                "verblijfsobjecten_id": "01001.1",
+                "verblijfsobjecten_identificatie": "01001",
+                "verblijfsobjecten_volgnummer": 1,
+            }
+        ]
 
 
 def test_ndjson_import_with_shortnames_in_identifier(here, engine, hr_schema, dbsession):
@@ -473,9 +525,12 @@ def test_ndjson_import_with_shortnames_in_identifier(here, engine, hr_schema, db
     importer.generate_db_objects("sbiactiviteiten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
 
-    records = [
-        dict(r) for r in engine.execute("SELECT * from hr_sbiactiviteiten_v1 ORDER BY sbi_act_nr")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * from hr_sbiactiviteiten_v1 ORDER BY sbi_act_nr"))
+            .mappings()
+            .all()
+        )
     assert records == [{"sbi_act_nr": "12"}, {"sbi_act_nr": "16"}]
 
 
@@ -488,7 +543,8 @@ def test_ndjson_import_with_attributes_on_relation(
     importer.generate_db_objects("aantekeningenrechten", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
 
-    records = [dict(r) for r in engine.execute("SELECT * from brk_aantekeningenrechten_v1")]
+    with engine.begin() as conn:
+        records = conn.execute(text("SELECT * from brk_aantekeningenrechten_v1")).mappings().all()
     assert records == [
         {
             "aard_code": None,
@@ -513,9 +569,12 @@ def test_provenance_for_schema_field_ids_equal_to_ndjson_keys(
     importer = NDJSONImporter(woonplaatsen_schema, engine)
     importer.generate_db_objects("woonplaatsen", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    records = [
-        dict(r) for r in engine.execute("SELECT * FROM woonplaatsen_woonplaatsen_v1 ORDER BY id")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * FROM woonplaatsen_woonplaatsen_v1 ORDER BY id"))
+            .mappings()
+            .all()
+        )
     assert records == [
         {
             "id": "1.1",

@@ -4,6 +4,7 @@ from datetime import date
 from typing import Final
 
 from sqlalchemy import Boolean, text
+from sqlalchemy.sql.ddl import CreateSchema
 from sqlalchemy.sql.elements import TextClause
 
 from schematools.importer.base import BaseImporter
@@ -54,9 +55,12 @@ def test_camelcased_names_during_import(here, engine, bouwblokken_schema, dbsess
         "ligtinbuurt": 34,
         "schema": "irrelevant",
     }
-    records = [
-        dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken_v1 ORDER BY id")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * FROM bouwblokken_bouwblokken_v1 ORDER BY id"))
+            .mappings()
+            .all()
+        )
     assert len(records) == 2
     assert set(records[0].keys()) == {
         "id",
@@ -74,9 +78,12 @@ def test_skip_duplicate_keys_in_batch_during_import(here, engine, bouwblokken_sc
     importer = NDJSONImporter(bouwblokken_schema, engine)
     importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
     last_record = importer.load_file(ndjson_path)
-    records = [
-        dict(r) for r in engine.execute("SELECT * FROM bouwblokken_bouwblokken_v1 ORDER BY id")
-    ]
+    with engine.begin() as conn:
+        records = (
+            conn.execute(text("SELECT * FROM bouwblokken_bouwblokken_v1 ORDER BY id"))
+            .mappings()
+            .all()
+        )
     assert records == [
         # Only one inserted, and no crash happened.
         {
@@ -125,20 +132,24 @@ def test_numeric_datatype_scale(
     it's value is used to set the scale of the numeric datatype"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=True)
-    record = [
-        dict(r)
-        for r in engine.execute(
-            """
-            SELECT data_type, numeric_scale
-                FROM information_schema.columns
-                WHERE table_schema = 'public'
-                  AND table_name = 'woningbouwplannen_woningbouwplan_v1'
-                  AND column_name = 'avarage_sales_price';
-            """
+    with engine.begin() as conn:
+        records = (
+            conn.execute(
+                text(
+                    """
+                SELECT data_type, numeric_scale
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'woningbouwplannen_woningbouwplan_v1'
+                      AND column_name = 'avarage_sales_price';
+                """
+                )
+            )
+            .mappings()
+            .all()
         )
-    ]
-    assert record[0]["data_type"] == "numeric"
-    assert record[0]["numeric_scale"] == 4
+    assert records[0]["data_type"] == "numeric"
+    assert records[0]["numeric_scale"] == 4
 
 
 def test_invalid_numeric_datatype_scale(
@@ -148,19 +159,23 @@ def test_invalid_numeric_datatype_scale(
     the datatype is in that case just plain numeric without scale"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=True)
-    record = [
-        dict(r)
-        for r in engine.execute(
-            """
-            SELECT data_type, numeric_scale
-                FROM information_schema.columns
-                WHERE table_schema = 'public'
-                    AND table_name = 'woningbouwplannen_woningbouwplan_v1'
-                    AND column_name = 'avarage_sales_price_incorrect'
-                   OR column_name = 'avarage_sales_price_incorrect_zero'
-            """
+    with engine.begin() as conn:
+        record = (
+            conn.execute(
+                text(
+                    """
+                SELECT data_type, numeric_scale
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                        AND table_name = 'woningbouwplannen_woningbouwplan_v1'
+                        AND column_name = 'avarage_sales_price_incorrect'
+                       OR column_name = 'avarage_sales_price_incorrect_zero'
+                """
+                )
+            )
+            .mappings()
+            .all()
         )
-    ]
     assert record[0]["data_type"] == "numeric"
     assert not record[0]["numeric_scale"]
     assert record[1]["data_type"] == "numeric"
@@ -172,16 +187,19 @@ def test_biginteger_datatype(here, engine, woningbouwplannen_schema, gebieden_sc
     in the database is set to datatype int(8) instead of int(4)"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=True)
-    results = engine.execute(
-        """
-        SELECT data_type, numeric_precision
-            FROM information_schema.columns
-            WHERE table_schema = 'public'
-              AND table_name = 'woningbouwplannen_woningbouwplan_v1'
-              AND column_name = 'id';
-        """
-    )
-    record = results.fetchone()
+    with engine.begin() as conn:
+        results = conn.execute(
+            text(
+                """
+            SELECT data_type, numeric_precision
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'woningbouwplannen_woningbouwplan_v1'
+                  AND column_name = 'id';
+            """
+            )
+        )
+        record = results.fetchone()
     assert record.data_type == "bigint"
     assert record.numeric_precision == 64
 
@@ -190,18 +208,21 @@ def test_add_column_comment(here, engine, woningbouwplannen_schema, dbsession):
     """Prove that a column comment is added as defined in the schema as field description"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=False)
-    results = engine.execute(
-        """
-        SELECT pgd.description
-            FROM pg_catalog.pg_statio_all_tables AS st
-                     INNER JOIN pg_catalog.pg_description pgd ON (pgd.objoid = st.relid)
-                     INNER JOIN information_schema.columns c ON (pgd.objsubid = c.ordinal_position
-                AND c.table_schema = st.schemaname AND c.table_name = st.relname)
-            WHERE table_name = 'woningbouwplannen_woningbouwplan_v1'
-              AND column_name = 'projectnaam';
-        """
-    )
-    record = results.fetchone()
+    with engine.begin() as conn:
+        results = conn.execute(
+            text(
+                """
+            SELECT pgd.description
+                FROM pg_catalog.pg_statio_all_tables AS st
+                         INNER JOIN pg_catalog.pg_description pgd ON (pgd.objoid = st.relid)
+                         INNER JOIN information_schema.columns c ON (pgd.objsubid = c.ordinal_position
+                    AND c.table_schema = st.schemaname AND c.table_name = st.relname)
+                WHERE table_name = 'woningbouwplannen_woningbouwplan_v1'
+                  AND column_name = 'projectnaam';
+            """
+            )
+        )
+        record = results.fetchone()
     assert record.description == "Naam van het project"
 
 
@@ -209,12 +230,15 @@ def test_add_table_comment(here, engine, woningbouwplannen_schema, dbsession):
     """Prove that a table comment is added as defined in the schema as table description"""
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects("woningbouwplan", ind_tables=True, ind_extra_index=False)
-    results = engine.execute(
-        """
-        SELECT OBJ_DESCRIPTION('public.woningbouwplannen_woningbouwplan_v1'::REGCLASS) AS description;
-        """
-    )
-    record = results.fetchone()
+    with engine.begin() as conn:
+        results = conn.execute(
+            text(
+                """
+            SELECT OBJ_DESCRIPTION('public.woningbouwplannen_woningbouwplan_v1'::REGCLASS) AS description;
+            """
+            )
+        )
+        record = results.fetchone()
     assert (
         record.description == "De aantallen vormen de planvoorraad. "
         "Dit zijn niet de aantallen die definitief worden gerealiseerd. "
@@ -227,17 +251,22 @@ def test_add_table_comment(here, engine, woningbouwplannen_schema, dbsession):
 
 def test_create_table_db_schema(here, engine, woningbouwplannen_schema, dbsession):
     """Prove that a table is created in given DB schema."""
-    engine.execute("CREATE SCHEMA IF NOT EXISTS schema_foo_bar;")
+    with engine.begin() as conn:
+        conn.execute(CreateSchema("schema_foo_bar", if_not_exists=True))
+
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects(
         "woningbouwplan", "schema_foo_bar", ind_tables=True, ind_extra_index=False
     )
-    results = engine.execute(
-        """
-        SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan_v1'
-        """
-    )
-    record = results.fetchone()
+    with engine.begin() as conn:
+        results = conn.execute(
+            text(
+                """
+            SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan_v1'
+            """
+            )
+        )
+        record = results.fetchone()
     assert record.schemaname == "schema_foo_bar"
 
 
@@ -245,12 +274,16 @@ def test_create_table_no_db_schema(here, engine, woningbouwplannen_schema, dbses
     """Prove that a table is created in DB schema public if no DB schema is given."""
     importer = BaseImporter(woningbouwplannen_schema, engine)
     importer.generate_db_objects("woningbouwplan", None, ind_tables=True, ind_extra_index=False)
-    results = engine.execute(
-        """
-        SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan_v1'
-        """
-    )
-    record = results.fetchone()
+
+    with engine.begin() as conn:
+        results = conn.execute(
+            text(
+                """
+            SELECT schemaname FROM pg_tables WHERE tablename = 'woningbouwplannen_woningbouwplan_v1'
+            """
+            )
+        )
+        record = results.fetchone()
     assert record.schemaname == "public"
 
 
@@ -258,25 +291,28 @@ def test_generate_db_objects_is_versioned_dataset(
     here, engine, woningbouwplannen_schema, dbsession
 ):
     """Prove that dataset is created in private DB schema with versioned tables."""
-    assert not engine.scalar(SCHEMA_EXISTS, schema_name="woningbouwplannen")
+    with engine.connect() as conn:
+        assert not conn.scalar(SCHEMA_EXISTS, {"schema_name": "woningbouwplannen"})
 
-    importer = BaseImporter(woningbouwplannen_schema, engine)
-    importer.generate_db_objects(
-        "woningbouwplan", ind_tables=True, ind_extra_index=False, is_versioned_dataset=True
-    )
-    assert engine.scalar(SCHEMA_EXISTS, schema_name="woningbouwplannen")
-    for table_name in (
-        "woningbouwplan_v1",
-        "woningbouwplan_buurten_v1",
-        "woningbouwplan_buurten_as_scalar_v1",
-    ):
-        assert engine.scalar(TABLE_EXISTS, schema_name="woningbouwplannen", table_name=table_name)
-    for view_name in (
-        "woningbouwplannen_woningbouwplan_v1",
-        "woningbouwplannen_woningbouwplan_buurten_v1",
-        "woningbouwplannen_woningbouwplan_buurten_as_scalar_v1",
-    ):
-        assert engine.scalar(VIEW_EXISTS, schema_name="public", view_name=view_name)
+        importer = BaseImporter(woningbouwplannen_schema, engine)
+        importer.generate_db_objects(
+            "woningbouwplan", ind_tables=True, ind_extra_index=False, is_versioned_dataset=True
+        )
+        assert conn.scalar(SCHEMA_EXISTS, {"schema_name": "woningbouwplannen"})
+        for table_name in (
+            "woningbouwplan_v1",
+            "woningbouwplan_buurten_v1",
+            "woningbouwplan_buurten_as_scalar_v1",
+        ):
+            assert conn.scalar(
+                TABLE_EXISTS, {"schema_name": "woningbouwplannen", "table_name": table_name}
+            )
+        for view_name in (
+            "woningbouwplannen_woningbouwplan_v1",
+            "woningbouwplannen_woningbouwplan_buurten_v1",
+            "woningbouwplannen_woningbouwplan_buurten_as_scalar_v1",
+        ):
+            assert conn.scalar(VIEW_EXISTS, {"schema_name": "public", "view_name": view_name})
 
 
 def test_create_table_temp_name(engine, db_schema, woningbouwplannen_schema, gebieden_schema):
@@ -289,6 +325,10 @@ def test_create_table_temp_name(engine, db_schema, woningbouwplannen_schema, geb
         ind_tables=True,
         ind_extra_index=False,
     )
-    results = engine.execute("SELECT tablename FROM pg_tables WHERE tablename LIKE 'foo_%%'")
-    names = {r[0] for r in results.fetchall()}
+
+    with engine.begin() as conn:
+        results = conn.execute(
+            text("SELECT tablename FROM pg_tables WHERE tablename LIKE 'foo_%%'")
+        )
+        names = {r[0] for r in results.fetchall()}
     assert names == {"foo_bar"}
