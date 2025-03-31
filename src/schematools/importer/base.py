@@ -11,8 +11,8 @@ from typing import Any, Final, TypeVar
 
 import click
 import jsonpath_rw
-import psycopg2
-from psycopg2 import sql
+from psycopg import sql
+from psycopg.errors import DuplicateSchema
 from sqlalchemy import Boolean, exc, inspect, select, text
 from sqlalchemy.dialects.postgresql.base import PGInspector
 from sqlalchemy.engine.base import Engine
@@ -482,7 +482,7 @@ class BaseImporter:
                 connection.execute(CreateSchema(db_schema_name))
                 self.logger.log_info("Created SQL schema %r", db_schema_name)
             except ProgrammingError as pe:
-                if not isinstance(pe.orig, psycopg2.errors.DuplicateSchema):
+                if not isinstance(pe.orig, DuplicateSchema):
                     # `CreateSchema` does not use the 'IF NOT EXISTS` clause.
                     # Hence we get an error if the schema already exists.
                     raise

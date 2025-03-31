@@ -4,7 +4,7 @@ import os
 from io import StringIO
 from pathlib import Path
 
-from psycopg2 import sql
+from psycopg import sql
 
 from schematools.types import _PUBLIC_SCOPE, DatasetSchema, DatasetTableSchema
 
@@ -20,8 +20,7 @@ def export_geopackages(
     """Export geopackages for all tables or an indicated subset in the dataset.
 
     Args:
-        connection: SQLAlchemy connection object. Is needed for the `psycopg2`
-        formatting.
+        connection: SQLAlchemy connection object. Is needed for the SQL formatting.
         dataset_schema: Schema that needs export as geopackage.
         output: path on the filesystem where output should be stored.
         table_ids: optional parameter for a subset for the tables of the datasetself.

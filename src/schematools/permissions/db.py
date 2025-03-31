@@ -102,7 +102,7 @@ def apply_schema_and_profile_permissions(
     datasets = {schemas.id: schemas} if isinstance(schemas, DatasetSchema) else schemas
 
     if verbose:
-        event.listen(engine, "after_cursor_execute", _after_cursor_execute)
+        event.listen(engine, "before_cursor_execute", _before_cursor_execute)
 
     with engine.connect() as conn:
         try:
@@ -157,13 +157,18 @@ def apply_schema_and_profile_permissions(
             raise
         finally:
             if verbose:
-                event.remove(engine, "after_cursor_execute", _after_cursor_execute)
+                event.remove(engine, "before_cursor_execute", _before_cursor_execute)
 
 
-def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
     """Report notices raised by the 'RAISE NOTICE' statements."""
-    for notice in cursor.connection.notices:
-        logger.info(notice.strip())
+    raw_connection = cursor.connection
+    if not raw_connection._notice_handlers:
+        raw_connection.add_notice_handler(_on_cursor_notice)
+
+
+def _on_cursor_notice(diagnostic):
+    logger.info(diagnostic.message_primary)
 
 
 def _collect_dataset_write_grants(conn: Connection, ams_schema: DatasetSchema) -> list[_Grant]:
