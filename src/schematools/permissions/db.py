@@ -88,10 +88,13 @@ def apply_schema_and_profile_permissions(
 
         if verbose:
 
-            @event.listens_for(engine, "after_cursor_execute")
-            def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-                for notice in cursor.connection.notices:
-                    logger.info(notice.strip())
+            @event.listens_for(engine, "before_cursor_execute")
+            def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+                raw_connection = cursor.connection
+                if not raw_connection._notice_handlers:
+                    raw_connection.add_notice_handler(
+                        lambda diagnostic: logger.info(diagnostic.message_primary)
+                    )
 
         try:
             if ams_schema:

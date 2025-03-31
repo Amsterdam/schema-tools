@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import IO
 
-import psycopg2
 from sqlalchemy import Column, MetaData, Table
 from sqlalchemy.engine import Connection
 from sqlalchemy.sql.elements import ClauseElement
@@ -14,28 +13,6 @@ from schematools.factories import tables_factory
 from schematools.types import _PUBLIC_SCOPE, DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 metadata = MetaData()
-
-
-def enable_datetime_cast():
-    """Register a special cast-to-string for the datetime type.
-
-    This cast is not applied at module level, otherwise this
-    cast would be enabled for all `schema-tools` code.
-    """
-
-    def cast_date(value, cur):
-        if value is None:
-            return None
-        return str(value)
-
-    # The bag_panden table had one record with a date (year = 0001)
-    # that lets the dbapi `cursor.fetchmany` crash.
-    # We need to define a custom type to handle this error,
-    # because the historical record with this particular date cannot
-    # be modified.
-    date_oid = (1184,)  # This oid. can be obtained from cursor.description
-    TIMESTAMPSTR = psycopg2.extensions.new_type(date_oid, "TIMESTAMP", cast_date)
-    psycopg2.extensions.register_type(TIMESTAMPSTR)
 
 
 class BaseExporter:

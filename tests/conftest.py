@@ -43,7 +43,7 @@ def here() -> Path:
 @pytest.fixture(scope="session")
 def db_url():
     """Get the DATABASE_URL, prepend test_ to it."""
-    url = os.environ.get("DATABASE_URL", "postgresql://localhost/schematools")
+    url = os.environ.get("DATABASE_URL", "postgresql+psycopg://localhost/schematools")
 
     parts = urlparse(url)
     dbname = parts.path[1:]

@@ -12,7 +12,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.sql.elements import ClauseElement
 
 from schematools.exports import BaseExporter
-from schematools.exports.csv import DatasetFieldSchema, enable_datetime_cast
+from schematools.exports.csv import DatasetFieldSchema
 from schematools.naming import toCamelCase
 from schematools.types import DatasetSchema, DatasetTableSchema
 
@@ -93,6 +93,5 @@ def export_jsonls(
     size: int,
 ):
     """Utility function to wrap the Exporter."""
-    enable_datetime_cast()
     exporter = JsonLinesExporter(connection, dataset_schema, output, table_ids, scopes, size)
     exporter.export_tables()
