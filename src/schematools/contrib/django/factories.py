@@ -140,7 +140,7 @@ def schema_model_mockers_factory(
 
 
 def get_model_name(table_schema: DatasetTableSchema) -> str:
-    """Returns model name for this table including the version number."""
+    """Returns model name for this table."""
     # Using table_schema.python_name gives UpperCamelCased names, the old format is kept here.
     # This also keeps model names more readable and recognizable/linkable with db table names.
     model_name = to_snake_case(table_schema.id)
