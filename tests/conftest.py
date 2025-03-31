@@ -11,7 +11,7 @@ import pytest
 import requests
 import sqlalchemy_utils
 from more_ds.network.url import URL
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, text
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.ddl import DropTable
@@ -68,7 +68,9 @@ def db_schema(engine, sqlalchemy_keep_db):
 
     if not db_exists:
         sqlalchemy_utils.functions.create_database(engine.url)
-        engine.execute("CREATE EXTENSION postgis")
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION postgis"))
+            conn.commit()
     yield
     sqlalchemy_utils.functions.drop_database(engine.url)
 

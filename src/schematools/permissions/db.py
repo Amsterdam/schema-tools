@@ -8,9 +8,8 @@ from typing import Any, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
 from pg_grant.sql import grant, revoke
-from sqlalchemy import event, text
+from sqlalchemy import Connection, event, text
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session, sessionmaker
 
 from schematools.permissions import PUBLIC_SCOPE  # type: ignore [attr-defined]
 from schematools.types import DatasetSchema, Scope
@@ -25,7 +24,9 @@ existing_sequences = {}
 
 def introspect_permissions(engine: Engine, role: str) -> None:
     """Shows the table permissions."""
-    schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
+    with engine.connect() as conn:
+        schema_relation_infolist = query.get_all_table_acls(conn, schema="public")
+
     for schema_relation_info in schema_relation_infolist:
         if schema_relation_info.acl:
             acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
@@ -42,22 +43,29 @@ def introspect_permissions(engine: Engine, role: str) -> None:
 def revoke_permissions(engine: Engine, role: str, verbose: int = 0) -> None:
     """Revoke all privileges for the indicated role."""
     grantee = role
-    schema_relation_infolist = query.get_all_table_acls(engine, schema="public")
+    with engine.connect() as conn:
+        schema_relation_infolist = query.get_all_table_acls(conn, schema="public")
+
+    revoke_statements = []
     for schema_relation_info in schema_relation_infolist:
         if schema_relation_info.acl:
             acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
             for acl in acl_list:
                 if acl.grantee == role:
-                    if verbose:
-                        logger.info(
-                            'revoking ALL privileges of role "%s" on table "%s"',
-                            role,
-                            schema_relation_info.name,
-                        )
-                    revoke_statement = revoke(
-                        "ALL", PgObjectType.TABLE, schema_relation_info.name, grantee
+                    revoke_statements.append(
+                        revoke("ALL", PgObjectType.TABLE, schema_relation_info.name, grantee)
                     )
-                    engine.execute(revoke_statement)
+
+    with engine.begin() as conn:
+        for revoke_statement in revoke_statements:
+            if verbose:
+                logger.info(
+                    'revoking ALL privileges of role "%s" on table "%s"',
+                    role,
+                    revoke_statement.target,
+                )
+
+            conn.execute(revoke_statement)
 
 
 def apply_schema_and_profile_permissions(
@@ -76,45 +84,42 @@ def apply_schema_and_profile_permissions(
     additional_grants: tuple[str] = (),
 ) -> None:
     """Apply permissions for schema and profile."""
-    SessionCls = sessionmaker(bind=engine)
-    session = SessionCls()
+    with engine.connect() as conn:
 
-    if verbose:
+        if verbose:
 
-        @event.listens_for(engine, "after_cursor_execute")
-        def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-            for notice in cursor.connection.notices:
-                logger.info(notice.strip())
+            @event.listens_for(engine, "after_cursor_execute")
+            def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+                for notice in cursor.connection.notices:
+                    logger.info(notice.strip())
 
-    try:
-        if ams_schema:
-            create_acl_from_schemas(
-                session,
-                pg_schema,
-                ams_schema,
-                role,
-                scope,
-                set_read_permissions,
-                set_write_permissions,
-                dry_run,
-                create_roles,
-                revoke,
-                verbose,
-            )
-        if profiles:
-            profile_list = cast(list[dict[str, Any]], profiles.values())
-            create_acl_from_profiles(engine, pg_schema, profile_list, role, scope, verbose)
+        try:
+            if ams_schema:
+                create_acl_from_schemas(
+                    conn,
+                    pg_schema,
+                    ams_schema,
+                    role,
+                    scope,
+                    set_read_permissions,
+                    set_write_permissions,
+                    dry_run,
+                    create_roles,
+                    revoke,
+                    verbose,
+                )
+            if profiles:
+                profile_list = cast(list[dict[str, Any]], profiles.values())
+                create_acl_from_profiles(engine, pg_schema, profile_list, role, scope, verbose)
 
-        if additional_grants:
-            set_additional_grants(session, pg_schema, dry_run, additional_grants, bool(verbose))
+            if additional_grants:
+                set_additional_grants(conn, pg_schema, dry_run, additional_grants, bool(verbose))
 
-        session.commit()
-    except Exception:
-        session.rollback()
-        logger.warning("Session rolled back")
-        raise
-    finally:
-        session.close()
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            logger.warning("Session rolled back")
+            raise
 
 
 def create_acl_from_profiles(
@@ -129,31 +134,39 @@ def create_acl_from_profiles(
 
     NOTE: Rudimentary, not ready for production!
     """
-    acl_list = query.get_all_table_acls(engine, schema=pg_schema)
+    with engine.connect() as conn:
+        acl_list = query.get_all_table_acls(conn, schema=pg_schema)
     privileges = [
         "SELECT",
     ]
     grantee = role
+
+    grant_statements = []
     for profile in profile_list:
         if scope in profile["scopes"]:
             for dataset, _details in profile["schema_data"]["datasets"].items():
                 for item in acl_list:
                     if item.name.startswith(dataset + "_"):
-                        grant_statement = grant(
-                            privileges,
-                            PgObjectType.TABLE,
-                            item.name,
-                            grantee,
-                            grant_option=False,
-                            schema=pg_schema,
+                        grant_statements.append(
+                            grant(
+                                privileges,
+                                PgObjectType.TABLE,
+                                item.name,
+                                grantee,
+                                grant_option=False,
+                                schema=pg_schema,
+                            )
                         )
-                        if verbose:
-                            logger.info(grant_statement)
-                        engine.execute(grant_statement)
+
+    with engine.begin() as conn:
+        for grant_statement in grant_statements:
+            if verbose:
+                logger.info(grant_statement)
+            conn.execute(grant_statement)
 
 
 def set_dataset_write_permissions(
-    session: Session,
+    conn: Connection,
     pg_schema: str,
     ams_schema: DatasetSchema,
     dry_run: bool,
@@ -163,12 +176,12 @@ def set_dataset_write_permissions(
     """Sets write permissions for the indicated dataset."""
     grantee = f"write_{ams_schema.db_name}"
     if create_roles:
-        _create_role_if_not_exists(session, grantee, dry_run=dry_run)
+        _create_role_if_not_exists(conn, grantee, dry_run=dry_run)
 
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
         table_name = table.db_name
         _execute_grant(
-            session,
+            conn,
             grant(
                 ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"],
                 PgObjectType.TABLE,
@@ -181,11 +194,11 @@ def set_dataset_write_permissions(
             dry_run=dry_run,
         )
         if table.is_autoincrement and (
-            sequence_name := _get_sequence_name(session, table_name, "id")
+            sequence_name := _get_sequence_name(conn, table_name, "id")
         ):
             # Get PostgreSQL generated sequence for 'id' column that Django added.
             _execute_grant(
-                session,
+                conn,
                 grant(
                     ["USAGE"],
                     PgObjectType.SEQUENCE,
@@ -213,7 +226,7 @@ class GrantParam:
 
 
 def get_all_dataset_scopes(
-    session: Session, ams_schema: DatasetSchema, role: str, scope: str
+    conn: Connection, ams_schema: DatasetSchema, role: str, scope: str
 ) -> list[GrantParam]:
     """Returns all scopes that should be applied to the tables of a dataset.
 
@@ -304,7 +317,7 @@ def get_all_dataset_scopes(
                 if (
                     field.is_primary
                     and table.is_autoincrement
-                    and (sequence_name := _get_sequence_name(session, table_name, "id"))
+                    and (sequence_name := _get_sequence_name(conn, table_name, "id"))
                 ):
                     all_scopes.append(
                         GrantParam(
@@ -326,7 +339,7 @@ def get_all_dataset_scopes(
                     )
                 )
                 if table.is_autoincrement and (
-                    sequence_name := _get_sequence_name(session, table_name, "id")
+                    sequence_name := _get_sequence_name(conn, table_name, "id")
                 ):
                     all_scopes.append(
                         GrantParam(
@@ -341,7 +354,7 @@ def get_all_dataset_scopes(
 
 
 def set_dataset_read_permissions(
-    session: Session,
+    conn: Connection,
     pg_schema: str,
     ams_schema: DatasetSchema,
     role: str,
@@ -353,7 +366,7 @@ def set_dataset_read_permissions(
     """Sets read permissions for the indicated dataset.
 
     Args:
-        session: SQLAlchemy type session
+        conn: SQLAlchemy type connection
         pg_schema: schema in the postgres database
         ams_schema: the amsterdam schema that needs to be processed
         role: the role that needs the grants that are calculated from the schema
@@ -380,16 +393,16 @@ def set_dataset_read_permissions(
     """
     grantee = None if role == "AUTO" else role
     if create_roles and grantee:
-        _create_role_if_not_exists(session, grantee, dry_run=dry_run)
+        _create_role_if_not_exists(conn, grantee, dry_run=dry_run)
 
-    all_grants = get_all_dataset_scopes(session, ams_schema, role, scope)
+    all_grants = get_all_dataset_scopes(conn, ams_schema, role, scope)
     for grant_param in all_grants:
         # For global and specific columns:
         for _grantee in grant_param.grantees:
             if create_roles:
-                _create_role_if_not_exists(session, _grantee, dry_run=dry_run)
+                _create_role_if_not_exists(conn, _grantee, dry_run=dry_run)
             _execute_grant(
-                session,
+                conn,
                 grant(
                     grant_param.privileges,
                     type=grant_param.target_type,
@@ -404,7 +417,7 @@ def set_dataset_read_permissions(
 
 
 def set_additional_grants(
-    session: Session,
+    conn: Connection,
     pg_schema: str,
     dry_run: bool,
     additional_grants: tuple[str],
@@ -437,7 +450,7 @@ def set_additional_grants(
             raise  #  re-raise to trigger rollback
         for _grantee in grantees:
             _execute_grant(
-                session,
+                conn,
                 grant(
                     privileges,
                     PgObjectType.TABLE,
@@ -452,7 +465,7 @@ def set_additional_grants(
 
 
 def create_acl_from_schemas(
-    session: Session,
+    conn: Connection,
     pg_schema: str,
     schemas: DatasetSchema | dict[str, DatasetSchema],
     role: str,
@@ -477,19 +490,19 @@ def create_acl_from_schemas(
         if role == "AUTO":
             # All roles
             _revoke_all_privileges_from_read_and_write_roles(
-                session, pg_schema, revoke_dataset, dry_run=dry_run, echo=bool(verbose)
+                conn, pg_schema, revoke_dataset, dry_run=dry_run, echo=bool(verbose)
             )
         else:
             # Only for a single role
             _revoke_all_privileges_from_role(
-                session, pg_schema, role, revoke_dataset, dry_run=dry_run, echo=bool(verbose)
+                conn, pg_schema, role, revoke_dataset, dry_run=dry_run, echo=bool(verbose)
             )
 
     datasets = [schemas] if isinstance(schemas, DatasetSchema) else schemas.values()
     for dataset in datasets:
         if set_read_permissions:
             set_dataset_read_permissions(
-                session,
+                conn,
                 pg_schema,
                 dataset,
                 role,
@@ -501,12 +514,12 @@ def create_acl_from_schemas(
 
         if set_write_permissions:
             set_dataset_write_permissions(
-                session, pg_schema, dataset, dry_run, create_roles, echo=bool(verbose)
+                conn, pg_schema, dataset, dry_run, create_roles, echo=bool(verbose)
             )
 
 
 def _revoke_all_privileges_from_role(
-    session: Session,
+    conn: Connection,
     pg_schema: str,
     role: str,
     dataset: DatasetSchema | None = None,
@@ -537,11 +550,11 @@ def _revoke_all_privileges_from_role(
     if echo:
         logger.info("%s --> %s", status_msg, revoke_statement)
     if not dry_run:
-        session.execute(sql_statement)
+        conn.execute(sql_statement)
 
 
 def _revoke_all_privileges_from_read_and_write_roles(
-    session: Session,
+    conn: Connection,
     pg_schema: str,
     dataset: DatasetSchema | None = None,
     echo: bool = True,
@@ -554,8 +567,7 @@ def _revoke_all_privileges_from_read_and_write_roles(
     dataset.
     """
     status_msg = "Skipped" if dry_run else "Executed"
-    # with engine.begin() as connection:
-    result = session.execute(
+    result = conn.execute(
         text(
             r"""
             SELECT rolname
@@ -574,7 +586,7 @@ def _revoke_all_privileges_from_read_and_write_roles(
                     f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {rolname[0]}"
                 )
                 if table.is_autoincrement and (
-                    sequence_name := _get_sequence_name(session, table.db_name, "id")
+                    sequence_name := _get_sequence_name(conn, table.db_name, "id")
                 ):
                     revoke_statements.append(
                         f"REVOKE ALL PRIVILEGES ON SEQUENCE {pg_schema}.{sequence_name}"
@@ -602,11 +614,11 @@ def _revoke_all_privileges_from_read_and_write_roles(
         if echo:
             logger.info("%s --> %s", status_msg, revoke_statement)
         if not dry_run:
-            session.execute(revoke_block_statement)
+            conn.execute(text(revoke_block_statement))
 
 
 def _execute_grant(
-    session: Session, grant_statement: str, echo: bool = True, dry_run: bool = False
+    conn: Connection, grant_statement: str, echo: bool = True, dry_run: bool = False
 ) -> None:
     status_msg = "Skipped" if dry_run else "Executed"
     sql_statement = f"""
@@ -623,11 +635,11 @@ def _execute_grant(
     if echo:
         logger.info("%s --> %s", status_msg, grant_statement)
     if not dry_run:
-        session.execute(sql_statement)
+        conn.execute(text(sql_statement))
 
 
 def _create_role_if_not_exists(
-    session: Session, role: str, echo: bool = True, dry_run: bool = False
+    conn: Connection, role: str, echo: bool = True, dry_run: bool = False
 ) -> None:
     """Wrap the create role statement in an anonymous code block.
 
@@ -652,17 +664,17 @@ def _create_role_if_not_exists(
         if echo:
             logger.info("%s --> %s", status_msg, create_role_statement)
         if not dry_run:
-            session.execute(text(sql_statement))
+            conn.execute(text(sql_statement))
         existing_roles.add(role)
 
 
-def _get_sequence_name(session: Session, table_name: str, column: str) -> str | None:
+def _get_sequence_name(conn: Connection, table_name: str, column: str) -> str | None:
     key = (table_name, column)
     try:
         # Can't use lru_cache() as it caches 'session' too.
         return existing_sequences[key]
     except KeyError:
-        row = session.execute(
+        row = conn.execute(
             text("SELECT pg_get_serial_sequence(:table, :column)"),
             {"table": table_name, "column": column},
         ).first()
