@@ -10,7 +10,7 @@ from sqlalchemy import Column, MetaData, func, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.sql.elements import ClauseElement
 
-from schematools.exports import BaseExporter, enable_datetime_cast
+from schematools.exports import BaseExporter
 from schematools.naming import toCamelCase
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
@@ -81,7 +81,6 @@ def export_csvs(
     temporal_date: datetime | None = None,
 ):
     """Utility function to wrap the Exporter."""
-    enable_datetime_cast()
     exporter = CsvExporter(
         connection, dataset_schema, output, table_ids, scopes, size, temporal_date
     )
