@@ -260,6 +260,7 @@ def _get_basic_kwargs(field: DatasetFieldSchema) -> dict:
         "verbose_name": field.title,
         "help_text": field.description or "",  # also used by OpenAPI spec
         "db_column": field.db_name if field.db_name != field.python_name else None,
+        "db_comment": field.description or None,
     }
 
     if not field.is_primary and field.nm_relation is None:
