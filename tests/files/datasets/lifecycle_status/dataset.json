@@ -1,0 +1,21 @@
+{
+  "type": "dataset",
+  "id": "lifecycle_status",
+  "title": "Schema experimental lifecycleStatus Test",
+  "description": "Schema for unit testing that non-production versions don't have lifecycleStatus 'stable'",
+  "defaultVersion": "v0",
+  "versions": {
+    "v0": {
+      "status": "beschikbaar",
+      "version": "0.1.0",
+      "lifecycleStatus": "stable",
+      "tables": [
+        {
+          "id": "productiontable",
+          "$ref": "tables/v1"
+        }
+      ]
+    }
+  },
+  "publisher": "unknown"
+}

@@ -356,3 +356,25 @@ def test_production_version_tables(schema_loader) -> None:
     assert (
         "Dataset version (v1) cannot contain non-production table [tables/v0]" in errors[0].message
     )
+
+
+def test_production_version_experimental_tables(schema_loader) -> None:
+    dataset = schema_loader.get_dataset("experimental_tables")
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1
+    assert (
+        "Stable dataset experimental_tables (v1) cannot have tables with lifecycleStatus of 'experimental'."
+        in errors[0].message
+    )
+
+
+def test_check_lifecycle_status(schema_loader) -> None:
+    dataset = schema_loader.get_dataset("lifecycle_status")
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1
+    assert (
+        "Dataset version (v0) cannot have a lifecycleStatus of 'stable' while being a non-production version."
+        in errors[0].message
+    )
