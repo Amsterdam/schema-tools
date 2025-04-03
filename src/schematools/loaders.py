@@ -325,7 +325,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
 
     def get_publisher(self, publisher_id: str) -> dict[str, Publisher]:
         return Publisher.from_dict(
-            _read_json_path((self.root.parent / PUBLISHER_DIR / publisher_id).with_suffix(".json"))
+            read_json_path((self.root.parent / PUBLISHER_DIR / publisher_id).with_suffix(".json"))
         )
 
     def get_all_publishers(self) -> dict[str, Publisher]:
@@ -334,19 +334,19 @@ class _FileBasedSchemaLoader(SchemaLoader):
             if path.name in PUBLISHER_EXCLUDE_FILES:
                 continue
 
-            publisher = Publisher.from_dict(_read_json_path(path))
+            publisher = Publisher.from_dict(read_json_path(path))
             result[publisher.id] = publisher
 
         return result
 
     def get_scope(self, ref: str) -> Scope:
-        return Scope.from_dict(_read_json_path(self.root.parent / f"{ref}.json"))
+        return Scope.from_dict(read_json_path(self.root.parent / f"{ref}.json"))
 
     def get_all_scopes(self) -> dict[str, Scope]:
         result = {}
         for subdir in (self.root.parent / SCOPE_DIR).iterdir():
             for file in subdir.glob("*.json"):
-                scope = Scope.from_dict(_read_json_path(file))
+                scope = Scope.from_dict(read_json_path(file))
                 id = scope.db_name
                 if id in result:
                     raise DuplicateScopeId(f'Scope ID "{id}" is already used in another scope')
@@ -458,7 +458,7 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
                 f"Dataset file '{dataset_file}' does not exist in the schema repository"
             )
 
-        schema_json = _read_json_path(dataset_file)
+        schema_json = read_json_path(dataset_file)
         view_sql = _read_sql_path(dataset_file)
         return self._as_dataset(schema_json, view_sql, prefetch_related=prefetch_related)
 
@@ -469,7 +469,7 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         # In that case, it will find fewer datasets, but still resolve them from the true root.
         id_to_path = {}
         for path in self.schema_url.glob("**/dataset.json"):
-            file_json = _read_json_path(path)
+            file_json = read_json_path(path)
             if not isinstance(file_json, dict) or file_json.get("type") != "dataset":
                 continue
 
@@ -484,18 +484,18 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
 
     def _read_dataset(self, dataset_id):
         dataset_path = self.get_dataset_path(dataset_id)
-        return _read_json_path(self.root / dataset_path / "dataset.json")
+        return read_json_path(self.root / dataset_path / "dataset.json")
 
     def _read_table(self, dataset_id: str, table_ref: str) -> Json:
         dataset_path = self.get_dataset_path(dataset_id)
-        return _read_json_path(self.root / dataset_path / f"{table_ref}.json")
+        return read_json_path(self.root / dataset_path / f"{table_ref}.json")
 
     def _read_view(self, dataset_id: str) -> str:
         dataset_path = self.get_dataset_path(dataset_id)
         return _read_sql_path(self.root / dataset_path / "dataset.sql")
 
 
-def _read_json_path(dataset_file: Path) -> Json:
+def read_json_path(dataset_file: Path) -> Json:
     """Load JSON from a path."""
     try:
         with dataset_file.open() as stream:
@@ -647,7 +647,7 @@ class FileSystemProfileLoader(ProfileLoader):
 
     def get_profile(self, profile_id: str) -> ProfileSchema:
         """Load a specific profile by id."""
-        data = _read_json_path(self.profiles_url / f"{profile_id}.json")
+        data = read_json_path(self.profiles_url / f"{profile_id}.json")
         schema = ProfileSchema.from_dict(data)
         if self._loaded_callback is not None:
             self._loaded_callback(schema)
@@ -656,7 +656,7 @@ class FileSystemProfileLoader(ProfileLoader):
     def get_all_profiles(self) -> list[ProfileSchema]:
         """Load all profiles found in a folder"""
         return [
-            ProfileSchema.from_dict(_read_json_path(path))
+            ProfileSchema.from_dict(read_json_path(path))
             for path in self.profiles_url.glob("**/*.json")
             if path.name != "index.json"
         ]
