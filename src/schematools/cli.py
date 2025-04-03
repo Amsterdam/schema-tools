@@ -136,6 +136,7 @@ def main() -> None:
         exit(1)
 
 
+@click.version_option(package_name="amsterdam-schema-tools")
 @click.group()
 def schema() -> None:
     """Command line utility to work with Amsterdam Schema files."""
