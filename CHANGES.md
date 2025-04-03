@@ -1,3 +1,7 @@
+# 2025-04-03 (7.2.0)
+
+* Add lifecycleStatus to DatasetVersionSchema en DatasetTableSchema.
+
 # 2025-03-31 (7.1.2)
 
 * Removed the version name from Django model names to prevent issues in DSO-API. We will need

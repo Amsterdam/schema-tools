@@ -33,7 +33,7 @@ from urllib.parse import urlparse
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, DatasetTableSchema, DatasetVersionSchema
 
 
 @dataclass(frozen=True)
@@ -520,11 +520,11 @@ def _check_default_version(dataset: DatasetSchema) -> Iterator[str]:
                 )
 
 
-@_register_validator("production version")
+@_register_validator("production version tables")
 def _check_production_version_tables(dataset: DatasetSchema) -> Iterator[str]:
-    """Check that a production version (>= v1) contains no v0, alpha or beta tables."""
-    non_production_versions = ["alpha", "beta", "v0"]
-    version_regex = r"(v?(?P<major>\d+)(?:\.(?P<minor>\d+)(?:\.(?P<patch>\d+))?)?)|(alpha|beta)"
+    """Check that a production version (>= v1) contains no v0 tables."""
+    non_production_versions = ["v0"]
+    version_regex = r"(v?(?P<major>\d+)(?:\.(?P<minor>\d+)(?:\.(?P<patch>\d+))?)?)"
     for version_number, version in dataset.versions.items():
         if version_number in non_production_versions:
             continue
@@ -538,3 +538,37 @@ def _check_production_version_tables(dataset: DatasetSchema) -> Iterator[str]:
                         f"Dataset version ({version_number}) cannot contain non-production "
                         f"table [{table['$ref']}]"
                     )
+
+
+@_register_validator("stable version experimental tables")
+def _check_production_version_experimental_tables(dataset: DatasetSchema) -> Iterator[str]:
+    """Check that a stable dataset version contains no experimental tables."""
+    for version_number, version in dataset.versions.items():
+        if version.lifecycle_status == DatasetVersionSchema.LifecycleStatus.experimental:
+            continue
+
+        for table in version.tables:
+            # Don't validate inline tables, to allow backwards compatibility
+            if table.lifecycle_status == DatasetTableSchema.LifecycleStatus.experimental:
+                yield (
+                    f"Stable dataset {dataset.id} ({version_number}) cannot have tables with "
+                    f"lifecycleStatus of 'experimental'."
+                )
+
+
+@_register_validator("lifecycle status")
+def _check_lifecycle_status(dataset: DatasetSchema) -> Iterator[str]:
+    """
+    Check that a non production version (< v1) contains can't have a
+    lifecycle status of 'stable'.
+    """
+    non_production_versions = ["v0"]
+    for version_number, version in dataset.versions.items():
+        if (
+            version_number in non_production_versions
+            and version.lifecycle_status == DatasetVersionSchema.LifecycleStatus.stable
+        ):
+            yield (
+                f"Dataset version ({version_number}) cannot have a lifecycleStatus of "
+                f"'stable' while being a non-production version."
+            )

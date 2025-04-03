@@ -834,6 +834,12 @@ class DatasetVersionSchema(SchemaType):
     Amsterdam Schema V3.
     """
 
+    class LifecycleStatus(Enum):
+        """The allowed lifecycle status values according to the Amsterdam schema spec."""
+
+        stable = "stable"
+        experimental = "experimental"
+
     def __init__(
         self,
         data: dict,
@@ -841,6 +847,19 @@ class DatasetVersionSchema(SchemaType):
     ):
         self._parent_schema = parent_schema
         super().__init__(data)
+
+    @property
+    def lifecycle_status(self) -> DatasetVersionSchema.LifecycleStatus | None:
+        # Allow no value to provide backwards compatability
+        value = self.data.get("lifecycleStatus")
+        if not value:
+            return None
+        try:
+            return DatasetVersionSchema.LifecycleStatus[value]
+        except KeyError:
+            raise ParserError(
+                f"LifecycleStatus field contains an unknown value: {value}"
+            ) from None
 
     @property
     def status(self) -> DatasetSchema.Status:
@@ -937,6 +956,12 @@ class DatasetTableSchema(SchemaType):
     a human-readable abbreviation that fits inside the maximum database table name length.
     """
 
+    class LifecycleStatus(Enum):
+        """The allowed lifecycle status values according to the Amsterdam schema spec."""
+
+        stable = "stable"
+        experimental = "experimental"
+
     def __init__(
         self,
         *args: Any,
@@ -987,6 +1012,19 @@ class DatasetTableSchema(SchemaType):
         self._resolve_scope(data["schema"])
 
         return data
+
+    @property
+    def lifecycle_status(self) -> DatasetTableSchema.LifecycleStatus | None:
+        # Allow no value to provide backwards compatability
+        value = self.data.get("lifecycleStatus")
+        if not value:
+            return None
+        try:
+            return DatasetTableSchema.LifecycleStatus[value]
+        except KeyError:
+            raise ParserError(
+                f"LifecycleStatus field contains an unknown value: {value}"
+            ) from None
 
     @cached_property
     def qualified_id(self) -> str:
