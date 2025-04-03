@@ -1,3 +1,8 @@
+# 2025-04-03 (7.2.1)
+
+* Add validate-table command to CLI. This will be used in the amsterdam-schema repo to check
+  if breaking changes are introduced on the current branch.
+
 # 2025-04-03 (7.2.0)
 
 * Add lifecycleStatus to DatasetVersionSchema en DatasetTableSchema.

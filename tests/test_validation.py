@@ -10,10 +10,12 @@ from schematools import validation
 from schematools.permissions import PUBLIC_SCOPE
 from schematools.types import DatasetSchema
 from schematools.validation import (
+    PROPERTIES_INTRODUCING_BREAKING_CHANGES,
     _active_versions,
     _check_display,
     _check_maingeometry,
     _identifier_properties,
+    validate_table,
 )
 
 
@@ -378,3 +380,122 @@ def test_check_lifecycle_status(schema_loader) -> None:
         "Dataset version (v0) cannot have a lifecycleStatus of 'stable' while being a non-production version."
         in errors[0].message
     )
+
+
+@pytest.mark.parametrize(
+    "prev,curr,errors",
+    [
+        # No changes
+        ({"name": {"type": "string"}}, {"name": {"type": "string"}}, []),
+        # Deleted field
+        ({"name": {"type": "string"}}, {}, ["Column name would be deleted."]),
+        # Changed array item type
+        (
+            {"list": {"type": "array", "items": {"type": "string"}}},
+            {"list": {"type": "array", "items": {"type": "integer"}}},
+            ["Column list would change items.type."],
+        ),
+        # Changed object property.
+        (
+            {"object": {"type": "object", "properties": {"element": {"type": "string"}}}},
+            {"object": {"type": "object", "properties": {"element": {"type": "integer"}}}},
+            ["Column object would change element.type."],
+        ),
+        # Changed object property type within an array
+        (
+            {
+                "list": {
+                    "type": "array",
+                    "items": {"type": "object", "properties": {"element": {"type": "string"}}},
+                }
+            },
+            {
+                "list": {
+                    "type": "array",
+                    "items": {"type": "object", "properties": {"element": {"type": "integer"}}},
+                }
+            },
+            ["Column list would change items.element.type."],
+        ),
+        # Changed subproperty of a property of an object
+        (
+            {
+                "object": {
+                    "type": "object",
+                    "properties": {
+                        "element": {
+                            "type": "object",
+                            "properties": {"subelement": {"type": "string"}},
+                        }
+                    },
+                }
+            },
+            {
+                "object": {
+                    "type": "object",
+                    "properties": {
+                        "element": {
+                            "type": "object",
+                            "properties": {"subelement": {"type": "integer"}},
+                        }
+                    },
+                }
+            },
+            ["Column object would change element.subelement.type."],
+        ),
+        # Multiple breaking changes
+        (
+            {
+                "object": {
+                    "type": "object",
+                    "properties": {
+                        "element": {
+                            "type": "object",
+                            "properties": {
+                                "subelement": {"type": "string"},
+                                "subelement2": {"type": "string"},
+                            },
+                        }
+                    },
+                    "description": "Original description",
+                    "relation": "table1:object_1",
+                },
+                "id": {"type": "string"},
+                "deprecated_field": {"type": "string"},
+            },
+            {
+                "object": {
+                    "type": "object",
+                    "properties": {
+                        "element": {
+                            "type": "object",
+                            "properties": {"subelement": {"type": "integer"}},
+                        }
+                    },
+                    "description": "Description 2.0",
+                    "relation": "table2:object_2",
+                },
+                "id": {"type": "integer"},
+            },
+            [
+                "Column object would change relation.",
+                "Column object would change element.subelement.type.",
+                "Property element.subelement2 would be deleted from column object.",
+                "Column id would change type.",
+                "Column deprecated_field would be deleted.",
+            ],
+        ),
+    ]
+    + [
+        # All properties that should stay the same.
+        (
+            {"property": {prop: "string"}},
+            {"property": {prop: "integer"}},
+            [f"Column property would change {prop}."],
+        )
+        for prop in PROPERTIES_INTRODUCING_BREAKING_CHANGES
+    ],
+)
+def test_validate_table(prev, curr, errors):
+    table_errors = validate_table(prev, curr)
+    assert table_errors == errors

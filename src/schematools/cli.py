@@ -49,7 +49,7 @@ from schematools.importer.geojson import GeoJSONImporter
 from schematools.importer.ndjson import NDJSONImporter
 from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
-from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
+from schematools.loaders import FileSystemSchemaLoader, get_schema_loader, read_json_path
 from schematools.maps import create_mapfile
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.db import (
@@ -58,7 +58,7 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema, Publisher, Scope, SemVer
+from schematools.types import DatasetSchema, DatasetTableSchema, Publisher, Scope, SemVer
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
@@ -586,6 +586,59 @@ def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
         sys.exit(0)
     click.echo("Scopes are structurally invalid against all supplied metaschema versions")
     sys.exit(1)
+
+
+@schema.command()
+@click.argument(
+    "paths",
+    nargs=-1,
+)
+@click.option(
+    "--prefix",
+    default="previous",
+    help=("Prefix of the file that the files in the paths should be validated against."),
+)
+def validate_tables(paths: tuple[str], prefix: str):
+    """
+    Compares two versions of a table to ensure no breaking changes are introduced.
+    """
+    has_errors = False
+
+    for path in paths:
+        path_parts = path.split("/")
+        path_parts[-1] = f"{prefix}-{path_parts[-1]}"
+        previous_path = "/".join(path_parts)
+        previous = read_json_path(previous_path)
+        current = read_json_path(path)
+        # We can skip checks as long as the previous version was experimental.
+        if (
+            previous.get("lifecycleStatus")
+            == DatasetTableSchema.LifecycleStatus.experimental.value
+        ):
+            continue
+        try:
+            click.echo(f"Validating table {path}: ", nl=False)
+            previous_fields = previous["schema"]["properties"]
+            current_fields = current["schema"]["properties"]
+            table_errors = validation.validate_table(previous_fields, current_fields)
+
+            if len(table_errors) > 0:
+                has_errors = True
+                click.echo("FAIL")
+                for error in table_errors:
+                    click.echo(f"\t- {error}", err=True)
+            else:
+                click.echo("PASSED")
+        except KeyError:
+            has_errors = True
+            click.echo("FAIL")
+            click.echo("\t- Malformed json-file.")
+    if has_errors:
+        click.echo("Breaking changes detected. Validation failed.")
+        sys.exit(1)
+    else:
+        click.echo("All tables are backwards compatible against previous non-major versions.")
+        sys.exit(0)
 
 
 @schema.command()

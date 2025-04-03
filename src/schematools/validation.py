@@ -572,3 +572,84 @@ def _check_lifecycle_status(dataset: DatasetSchema) -> Iterator[str]:
                 f"Dataset version ({version_number}) cannot have a lifecycleStatus of "
                 f"'stable' while being a non-production version."
             )
+
+
+PROPERTIES_INTRODUCING_BREAKING_CHANGES = ["type", "$ref", "format", "relation", "enum"]
+
+
+def validate_table(
+    previous_fields: dict,
+    current_fields: dict,
+    parent_field: str | None = None,
+    object_path: str | None = None,
+) -> list[str]:
+    """Validates that the current version of the table does not introduce breaking changes.
+
+    We check:
+    1. whether a field has been deleted
+    2. whether any of the properties in `PROPERTIES_INTRODUCING_BREAKING_CHANGES` has changed
+
+    This works recursively for array items and object properties.
+
+    NB. This is not a registered validator that has been registered, as here we have to
+    compare fields from two versions of the same table.
+    """
+    table_errors = []
+    current_object_path = object_path
+    for previous_field_name, previous_field in previous_fields.items():
+        column_name = parent_field or previous_field_name
+
+        # check if field is deleted
+        if previous_field_name not in current_fields:
+            if parent_field:
+                table_errors.append(
+                    f"Property {object_path}.{previous_field_name} would be "
+                    f"deleted from column {column_name}."
+                )
+            else:
+                table_errors.append(f"Column {column_name} would be deleted.")
+            continue
+
+        current_field = current_fields[previous_field_name]
+
+        # check breaking changes in field properties
+        for prop in PROPERTIES_INTRODUCING_BREAKING_CHANGES:
+            if previous_field.get(prop) != current_field.get(prop):
+                if parent_field:
+                    current_object_path = (
+                        f"{object_path}.{previous_field_name}"
+                        if object_path
+                        else previous_field_name
+                    )
+                prop_name = f"{current_object_path}.{prop}" if current_object_path else prop
+                table_errors.append(f"Column {column_name} would change {prop_name}.")
+
+        # recursively check array items
+        if previous_field.get("type") == "array":
+            previous_array_items = {"items": previous_field.get("items")}
+            current_array_items = {"items": current_field.get("items")}
+            table_errors.extend(
+                validate_table(previous_array_items, current_array_items, column_name)
+            )
+
+        # recursively check object properties
+        if previous_field.get("type") == "object":
+            previous_object_properties = previous_field.get("properties")
+            current_object_properties = current_field.get("properties")
+            if previous_field_name != column_name:
+                object_path = (
+                    previous_field_name
+                    if object_path is None
+                    else f"{object_path}.{previous_field_name}"
+                )
+
+            table_errors.extend(
+                validate_table(
+                    previous_object_properties,
+                    current_object_properties,
+                    column_name,
+                    object_path,
+                )
+            )
+
+    return table_errors
