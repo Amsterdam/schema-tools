@@ -583,6 +583,17 @@ def validate_table(
     parent_field: str | None = None,
     object_path: str | None = None,
 ) -> list[str]:
+    """Validates that the current version of the table does not introduce breaking changes.
+
+    We check:
+    1. whether a field has been deleted
+    2. whether any of the properties in `PROPERTIES_INTRODUCING_BREAKING_CHANGES` has changed
+
+    This works recursively for array items and object properties.
+
+    NB. This is not a registered validator that has been registered, as here we have to
+    compare fields from two versions of the same table.
+    """
     table_errors = []
     current_object_path = object_path
     for previous_field_name, previous_field in previous_fields.items():
