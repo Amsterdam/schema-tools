@@ -495,8 +495,9 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
         return _read_sql_path(self.root / dataset_path / "dataset.sql")
 
 
-def read_json_path(dataset_file: Path) -> Json:
+def read_json_path(dataset_file: Path | str) -> Json:
     """Load JSON from a path."""
+    dataset_file = Path(dataset_file)  # Path can take both string and Path
     try:
         with dataset_file.open() as stream:
             try:
