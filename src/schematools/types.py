@@ -928,6 +928,14 @@ class DatasetTableSchema(SchemaType):
             self.get_field_by_id(field_ids[1]),
         )
 
+    @cached_property
+    def max_zoom(self) -> int:
+        return self.get("zoom", {"max": 30})["max"]
+
+    @cached_property
+    def min_zoom(self) -> int:
+        return self.get("zoom", {"min": 15})["min"]
+
     @property
     def description(self) -> str | None:
         """The description of the table as stated in the schema."""
