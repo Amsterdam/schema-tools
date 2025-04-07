@@ -1,3 +1,7 @@
+# 2025-04-07 (7.2.2rc1)
+
+* Fix bug in read_json_path.
+
 # 2025-04-03 (7.2.1)
 
 * Add validate-table command to CLI. This will be used in the amsterdam-schema repo to check
