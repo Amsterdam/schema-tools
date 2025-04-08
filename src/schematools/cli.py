@@ -49,7 +49,12 @@ from schematools.importer.geojson import GeoJSONImporter
 from schematools.importer.ndjson import NDJSONImporter
 from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
-from schematools.loaders import FileSystemSchemaLoader, get_schema_loader, read_json_path
+from schematools.loaders import (
+    FileSystemSchemaLoader,
+    get_profile_loader,
+    get_schema_loader,
+    read_json_path,
+)
 from schematools.maps import create_mapfile
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.db import (
@@ -58,7 +63,14 @@ from schematools.permissions.db import (
     revoke_permissions,
 )
 from schematools.provenance.create import ProvenanceIteration
-from schematools.types import DatasetSchema, DatasetTableSchema, Publisher, Scope, SemVer
+from schematools.types import (
+    DatasetSchema,
+    DatasetTableSchema,
+    ProfileSchema,
+    Publisher,
+    Scope,
+    SemVer,
+)
 
 # Configure a simple stdout logger for permissions output
 logger = logging.getLogger("schematools.permissions")
@@ -207,13 +219,6 @@ def permissions_revoke(db_url: str, role: str, verbose: int) -> None:
     help="Filename of local Profile. If specified, it will be used instead of profile-url",
 )
 @click.option(
-    "--pg_schema",
-    is_flag=False,
-    default="public",
-    show_default=True,
-    help="Postgres schema containing the data",
-)
-@click.option(
     "--auto",
     is_flag=True,
     default=False,
@@ -272,7 +277,6 @@ def permissions_apply(
     profile_url: str,
     schema_filename: str,
     profile_filename: str,
-    pg_schema: str,
     auto: bool,
     role: str,
     scope: str,
@@ -299,17 +303,14 @@ def permissions_apply(
     if schema_filename:
         loader = FileSystemSchemaLoader.from_file(schema_filename)
         dataset_schema = loader.get_dataset_from_file(schema_filename)
-        ams_schema = {dataset_schema.id: dataset_schema}
+        schemas = {dataset_schema.id: dataset_schema}
     else:
-        ams_schema = get_schema_loader(schema_url).get_all_datasets()
+        schemas = get_schema_loader(schema_url).get_all_datasets()
 
     if profile_filename:
-        profile = _schema_fetch_url_file(profile_filename)
-        profiles = {profile["name"]: profile}
+        profiles = [ProfileSchema.from_file(profile_filename)]
     else:
-        # Profiles not live yet, temporarilly commented out
-        # profiles = profile_defs_from_url(profiles_url=profile_url)
-        profiles = None
+        profiles = get_profile_loader(profile_url).get_all_profiles()
 
     if not (auto or (role and scope)):
         click.echo(
@@ -322,35 +323,18 @@ def permissions_apply(
     else:
         apply_schema_and_profile_permissions(
             engine,
-            pg_schema,
-            ams_schema,
+            schemas,
             profiles,
-            role,
-            scope,
-            set_read_permissions,
-            set_write_permissions,
-            dry_run,
-            create_roles,
-            revoke,
+            only_role=(None if role == "AUTO" else role),
+            only_scope=(None if scope == "ALL" else scope),
+            set_read_permissions=set_read_permissions,
+            set_write_permissions=set_write_permissions,
+            dry_run=dry_run,
+            create_roles=create_roles,
+            revoke=revoke,
             verbose=verbose,
             additional_grants=additional_grants,
         )
-
-
-def _schema_fetch_url_file(schema_url_file: str) -> dict[str, Any]:
-    """Return schemadata from URL or File."""
-    # XXX Does not work with datasets that have their tables split
-    # out into separate files. Should use _get_dataset_schema instead.
-
-    if not schema_url_file.startswith("http"):
-        with open(schema_url_file) as f:
-            schema_data = json.load(f)
-    else:
-        response = requests.get(schema_url_file, timeout=60)
-        response.raise_for_status()
-        schema_data = response.json()
-
-    return schema_data
 
 
 @schema.group()

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 
 import pytest
@@ -9,8 +8,11 @@ from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 
 from schematools.importer.ndjson import NDJSONImporter
-from schematools.permissions.db import apply_schema_and_profile_permissions
-from schematools.types import DatasetSchema, Scope
+from schematools.permissions.db import (
+    apply_profile_permissions,
+    apply_schema_and_profile_permissions,
+)
+from schematools.types import DatasetSchema, ProfileSchema, Scope
 
 
 # In test files we use a lot of non-existent scopes, so instead of writing scope
@@ -20,30 +22,29 @@ def patch_find_scope_by_id(monkeypatch):
     monkeypatch.setattr(DatasetSchema, "_find_scope_by_id", Scope.from_string)
 
 
+@pytest.fixture()
+def gebieden_profiles(profile_loader) -> list[ProfileSchema]:
+    return [profile_loader.get_profile("gebieden_test")]
+
+
 class TestReadPermissions:
-    def test_auto_permissions(self, here, engine, gebieden_schema_auth, dbsession):
+    def test_auto_permissions(self, engine, gebieden_schema_auth, gebieden_profiles, dbsession):
         """
         Prove that roles are automatically created for each scope in the schema
         LEVEL/A --> scope_level_a
         LEVEL/B --> scope_level_b
         LEVEL/C --> scope_level_c
         """
-        ndjson_path = here / "files" / "data" / "gebieden.ndjson"
         importer = NDJSONImporter(gebieden_schema_auth, engine)
         importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
         importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
-
-        # Setup schema and profile
-        ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
-        profile_path = here / "files" / "profiles" / "gebieden_test.json"
-        with open(profile_path) as f:
-            profile = json.load(f)
-        profiles = {profile["name"]: profile}
 
         # Apply the permissions from Schema and Profiles.
         apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True
+            engine,
+            gebieden_schema_auth,
+            gebieden_profiles,
+            create_roles=True,
         )
         _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten_v1")
         _check_select_permission_granted(
@@ -53,7 +54,64 @@ class TestReadPermissions:
             engine, "scope_level_c", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
 
-    def test_auto_permissions_with_scopes(self, here, engine, gebieden_schema_scopes, dbsession):
+    def test_all_profile_permissions(
+        self,
+        engine,
+        profile_loader,
+        verblijfsobjecten_schema,
+        brk_schema,
+        brp_schema,
+        gebieden_schema_scopes,
+        parkeervakken_schema,
+        gebieden_schema_auth,
+        caplog,
+    ):
+        """Prove that the profiles are properly included in the grants."""
+        all_schemas = {
+            schema.id: schema
+            for schema in (
+                verblijfsobjecten_schema,
+                gebieden_schema_scopes,
+                brk_schema,
+                brp_schema,
+                parkeervakken_schema,
+            )
+        }
+        all_profiles = profile_loader.get_all_profiles()
+
+        for schema in all_schemas.values():
+            importer = NDJSONImporter(schema, engine)
+            for table in schema.get_tables(include_nested=True, include_through=True):
+                importer.generate_db_objects(table.id, truncate=True, ind_extra_index=False)
+                importer.generate_db_objects(table.id, truncate=True, ind_extra_index=False)
+
+        # Apply the permissions from profiles alone.
+        with (
+            caplog.at_level(logging.INFO, logger="schematools.permissions.db"),
+            engine.connect() as conn,
+        ):
+            apply_profile_permissions(
+                conn,
+                all_profiles,
+                all_schemas,
+                create_roles=True,
+                verbose=1,
+            )
+
+        grants = _filter_grant_statements(caplog)
+        assert grants == [
+            "GRANT SELECT ON SEQUENCE public.parkeervakken_parkeervakken_regimes_v1_id_seq TO scope_fp_md",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_v1 TO scope_brk_encoded",
+            "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_v1 TO scope_brk_rid",
+            'GRANT SELECT ON TABLE public.brp_ingeschrevenpersonen_v1 TO "scope_brp_rname.filtered"',
+            "GRANT SELECT ON TABLE public.gebieden_bouwblokken_v1 TO scope_fp_md",
+            "GRANT SELECT ON TABLE public.parkeervakken_parkeervakken_regimes_v1 TO scope_fp_md",
+            "GRANT SELECT ON TABLE public.parkeervakken_parkeervakken_v1 TO scope_fp_md",
+        ]
+
+    def test_auto_permissions_with_scopes(
+        self, engine, gebieden_schema_scopes, gebieden_profiles, dbsession
+    ):
         """
         Prove that roles are automatically created for each Scope objects.
 
@@ -61,22 +119,16 @@ class TestReadPermissions:
         Using Scope objects in the scopes/HARRY folder on dataset, table, and field level.
         Ensure we can still use auth strings in the same schema.
         """
-        ndjson_path = here / "files" / "data" / "gebieden.ndjson"
         importer = NDJSONImporter(gebieden_schema_scopes, engine)
         importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
         importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
-
-        # Setup schema and profile
-        ams_schema = {gebieden_schema_scopes.id: gebieden_schema_scopes}
-        profile_path = here / "files" / "profiles" / "gebieden_test.json"
-        with open(profile_path) as f:
-            profile = json.load(f)
-        profiles = {profile["name"]: profile}
 
         # Apply the permissions from Schema and Profiles.
         apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True
+            engine,
+            gebieden_schema_scopes,
+            gebieden_profiles,
+            create_roles=True,
         )
         _check_select_permission_granted(engine, "scope_harry_one", "gebieden_buurten_v1")
         _check_select_permission_granted(
@@ -94,9 +146,7 @@ class TestReadPermissions:
             "ligt_in_buurt_id, ligt_in_buurt_loose_id",
         )
 
-    def test_nm_relations_permissions(
-        self, here, engine, kadastraleobjecten_schema, dbsession, caplog
-    ):
+    def test_nm_relations_permissions(self, engine, kadastraleobjecten_schema, dbsession, caplog):
         importer = NDJSONImporter(kadastraleobjecten_schema, engine)
         importer.generate_db_objects("kadastraleobjecten", truncate=True, ind_extra_index=False)
 
@@ -119,19 +169,18 @@ class TestReadPermissions:
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
             apply_schema_and_profile_permissions(
                 engine,
-                "public",
                 ams_schema,
-                {},
-                "openbaar",
-                "OPENBAAR",
+                None,
+                only_role="openbaar",
+                only_scope="OPENBAAR",
                 create_roles=True,
                 verbose=1,
             )
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, {}, "brk_rsn", "BRK/RSN", verbose=1
+                engine, ams_schema, None, only_role="brk_rsn", only_scope="BRK/RSN", verbose=1
             )
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, {}, "brk_ro", "BRK/RO", verbose=1
+                engine, ams_schema, None, only_role="brk_ro", only_scope="BRK/RO", verbose=1
             )
 
         grants = _filter_grant_statements(caplog)
@@ -186,9 +235,7 @@ class TestReadPermissions:
             engine, "brk_rsn", "brk_kadastraleobjecten_is_ontstaan_uit_kadastraalobject_v1"
         )
 
-    def test_brk_permissions(
-        self, here, engine, brk_schema_without_bag_relations, dbsession, caplog
-    ):
+    def test_brk_permissions(self, engine, brk_schema_without_bag_relations, dbsession, caplog):
         """Prove that a dataset with many nested tables get the proper permissions."""
         importer = NDJSONImporter(brk_schema_without_bag_relations, engine)
         for table in brk_schema_without_bag_relations.get_tables():
@@ -203,11 +250,8 @@ class TestReadPermissions:
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
             apply_schema_and_profile_permissions(
                 engine,
-                "public",
                 ams_schema,
-                {},
-                "AUTO",
-                "ALL",
+                None,
                 create_roles=True,
                 verbose=1,
             )
@@ -274,7 +318,9 @@ class TestReadPermissions:
             "GRANT USAGE ON SEQUENCE public.brk_stukdelen_is_bron_voor_zakelijk_recht_v1_id_seq TO write_brk",
         ]
 
-    def test_openbaar_permissions(self, here, engine, afval_schema, dbsession, caplog):
+    def test_openbaar_permissions(
+        self, engine, afval_schema, gebieden_profiles, dbsession, caplog
+    ):
         """
         Prove that the default auth scope is "OPENBAAR".
         """
@@ -282,13 +328,6 @@ class TestReadPermissions:
         importer = NDJSONImporter(afval_schema, engine)
         importer.generate_db_objects("containers", truncate=True, ind_extra_index=False)
         importer.generate_db_objects("clusters", truncate=True, ind_extra_index=False)
-
-        # Setup schema and profile
-        ams_schema = {afval_schema.id: afval_schema}
-        profile_path = here / "files" / "profiles" / "gebieden_test.json"
-        with open(profile_path) as f:
-            profile = json.load(f)
-        profiles = {profile["name"]: profile}
 
         # Create postgres roles
         _create_role(engine, "openbaar")
@@ -301,20 +340,18 @@ class TestReadPermissions:
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
             apply_schema_and_profile_permissions(
                 engine=engine,
-                pg_schema="public",
-                ams_schema=ams_schema,
-                profiles=profiles,
-                role="openbaar",
-                scope="OPENBAAR",
+                schemas=afval_schema,
+                profiles=gebieden_profiles,
+                only_role="openbaar",
+                only_scope="OPENBAAR",
                 create_roles=True,
             )
             apply_schema_and_profile_permissions(
                 engine=engine,
-                pg_schema="public",
-                ams_schema=ams_schema,
-                profiles=profiles,
-                role="bag_r",
-                scope="BAG/R",
+                schemas=afval_schema,
+                profiles=gebieden_profiles,
+                only_role="bag_r",
+                only_scope="BAG/R",
                 create_roles=True,
                 verbose=1,
             )
@@ -331,7 +368,9 @@ class TestReadPermissions:
         _check_select_permission_denied(engine, "bag_r", "afvalwegingen_containers_v1")
         _check_select_permission_granted(engine, "bag_r", "afvalwegingen_clusters_v1")
 
-    def test_interacting_permissions(self, here, engine, gebieden_schema_auth, dbsession):
+    def test_interacting_permissions(
+        self, engine, gebieden_schema_auth, gebieden_profiles, dbsession
+    ):
         """
         Prove that dataset, table, and field permissions are set
         according to the "OF-OF" Exclusief principle:
@@ -343,18 +382,9 @@ class TestReadPermissions:
         * Een user met scope LEVEL/C mag veld beginGeldigheid zien.
         """
 
-        ndjson_path = here / "files" / "data" / "gebieden.ndjson"
         importer = NDJSONImporter(gebieden_schema_auth, engine)
         importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
         importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
-
-        # Setup schema and profile
-        ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
-        profile_path = here / "files" / "profiles" / "gebieden_test.json"
-        with open(profile_path) as f:
-            profile = json.load(f)
-        profiles = {profile["name"]: profile}
 
         # Create postgres roles
         test_roles = ["level_a", "level_b", "level_c"]
@@ -369,13 +399,25 @@ class TestReadPermissions:
 
         # Apply the permissions from Schema and Profiles.
         apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_a", "LEVEL/A"
+            engine,
+            gebieden_schema_auth,
+            gebieden_profiles,
+            only_role="level_a",
+            only_scope="LEVEL/A",
         )
         apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_b", "LEVEL/B"
+            engine,
+            gebieden_schema_auth,
+            gebieden_profiles,
+            only_role="level_b",
+            only_scope="LEVEL/B",
         )
         apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, profiles, "level_c", "LEVEL/C"
+            engine,
+            gebieden_schema_auth,
+            gebieden_profiles,
+            only_role="level_c",
+            only_scope="LEVEL/C",
         )
 
         # Check if the read priviliges are correct
@@ -399,7 +441,7 @@ class TestReadPermissions:
         _check_select_permission_denied(engine, "level_c", "gebieden_buurten_v1")
 
     def test_auth_list_permissions(
-        self, here, engine, gebieden_schema_auth_list, dbsession, caplog
+        self, engine, gebieden_schema_auth_list, gebieden_profiles, dbsession, caplog
     ):
         """
         Prove that dataset, table, and field permissions are set,
@@ -412,19 +454,9 @@ class TestReadPermissions:
           behalve beginGeldigheid.
         * Een user met scope LEVEL/C1 of LEVEL/B2 mag veld beginGeldigheid zien.
         """
-
-        ndjson_path = here / "files" / "data" / "gebieden.ndjson"
         importer = NDJSONImporter(gebieden_schema_auth_list, engine)
         importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
         importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
-
-        # Setup schema and profile
-        ams_schema = {gebieden_schema_auth_list.id: gebieden_schema_auth_list}
-        profile_path = here / "files" / "profiles" / "gebieden_test.json"
-        with open(profile_path) as f:
-            profile = json.load(f)
-        profiles = {profile["name"]: profile}
 
         # Create postgres roles
         test_roles = [
@@ -447,7 +479,12 @@ class TestReadPermissions:
         # Apply the permissions from Schema and Profiles.
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, profiles, "level_a1", "LEVEL/A1", verbose=1
+                engine,
+                gebieden_schema_auth_list,
+                gebieden_profiles,
+                only_role="level_a1",
+                only_scope="LEVEL/A1",
+                verbose=1,
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
@@ -463,7 +500,12 @@ class TestReadPermissions:
             ]
 
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, profiles, "level_b1", "LEVEL/B1", verbose=1
+                engine,
+                gebieden_schema_auth_list,
+                gebieden_profiles,
+                only_role="level_b1",
+                only_scope="LEVEL/B1",
+                verbose=1,
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
@@ -478,7 +520,12 @@ class TestReadPermissions:
             ]
 
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, profiles, "level_c1", "LEVEL/C1", verbose=1
+                engine,
+                gebieden_schema_auth_list,
+                gebieden_profiles,
+                only_role="level_c1",
+                only_scope="LEVEL/C1",
+                verbose=1,
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
@@ -491,7 +538,12 @@ class TestReadPermissions:
             ]
 
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, profiles, "level_a2", "LEVEL/A2", verbose=1
+                engine,
+                gebieden_schema_auth_list,
+                gebieden_profiles,
+                only_role="level_a2",
+                only_scope="LEVEL/A2",
+                verbose=1,
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
@@ -507,7 +559,12 @@ class TestReadPermissions:
             ]
 
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, profiles, "level_b2", "LEVEL/B2", verbose=1
+                engine,
+                gebieden_schema_auth_list,
+                gebieden_profiles,
+                only_role="level_b2",
+                only_scope="LEVEL/B2",
+                verbose=1,
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
@@ -522,7 +579,12 @@ class TestReadPermissions:
             ]
 
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, profiles, "level_c2", "LEVEL/C2", verbose=1
+                engine,
+                gebieden_schema_auth_list,
+                gebieden_profiles,
+                only_role="level_c2",
+                only_scope="LEVEL/C2",
+                verbose=1,
             )
             grants = _filter_grant_statements(caplog)
             assert grants == [
@@ -583,7 +645,9 @@ class TestReadPermissions:
         )
         _check_truncate_permission_denied(engine, "level_b1", "gebieden_bouwblokken_v1")
 
-    def test_auto_create_roles(self, here, engine, gebieden_schema_auth, dbsession, caplog):
+    def test_auto_create_roles(
+        self, engine, gebieden_schema_auth, gebieden_profiles, dbsession, caplog
+    ):
         """
         Prove that dataset, table, and field permissions are set according,
         to the "OF-OF" Exclusief principle:
@@ -598,18 +662,9 @@ class TestReadPermissions:
         'scope_level_a', 'scope_level_b', en 'scope_level_c;
         """
 
-        ndjson_path = here / "files" / "data" / "gebieden.ndjson"
         importer = NDJSONImporter(gebieden_schema_auth, engine)
         importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
         importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
-
-        # Setup schema and profile
-        ams_schema = {gebieden_schema_auth.id: gebieden_schema_auth}
-        profile_path = here / "files" / "profiles" / "gebieden_test.json"
-        with open(profile_path) as f:
-            profile = json.load(f)
-        profiles = {profile["name"]: profile}
 
         # These tests commented out due to: Error when trying to teardown test databases
         # Roles may still exist from previous test run. Uncomment when fixed:
@@ -620,7 +675,11 @@ class TestReadPermissions:
         # Apply the permissions from Schema and Profiles.
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
             apply_schema_and_profile_permissions(
-                engine, "public", ams_schema, profiles, "AUTO", "ALL", create_roles=True, verbose=1
+                engine,
+                gebieden_schema_auth,
+                gebieden_profiles,
+                create_roles=True,
+                verbose=1,
             )
 
         grants = _filter_grant_statements(caplog)
@@ -712,17 +771,15 @@ class TestReadPermissions:
         )
 
     def test_single_dataset_permissions(
-        self, here, engine, gebieden_schema_auth, meetbouten_schema, dbsession
+        self, engine, gebieden_schema_auth, meetbouten_schema, dbsession
     ):
         """
         Prove when revoking grants on one dataset, other datasets are unaffected.
         """
 
         # dataset 1: gebieden
-        ndjson_path = here / "files" / "data" / "gebieden.ndjson"
         importer = NDJSONImporter(gebieden_schema_auth, engine)
         importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
         importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
         importer.generate_db_objects("wijken", truncate=True, ind_extra_index=False)
 
@@ -733,9 +790,7 @@ class TestReadPermissions:
         importer.generate_db_objects("referentiepunten", truncate=True, ind_extra_index=False)
 
         # Apply the permissions to gebieden
-        apply_schema_and_profile_permissions(
-            engine, "public", gebieden_schema_auth, None, "AUTO", "ALL", create_roles=True
-        )
+        apply_schema_and_profile_permissions(engine, gebieden_schema_auth, None, create_roles=True)
         # Check perms on gebieden
         _check_select_permission_granted(engine, "scope_level_a", "gebieden_buurten_v1")
         _check_select_permission_granted(
@@ -746,35 +801,28 @@ class TestReadPermissions:
         )
 
         # Apply the permissions to meetbouten
-        apply_schema_and_profile_permissions(
-            engine, "public", meetbouten_schema, None, "AUTO", "ALL", create_roles=True
-        )
+        apply_schema_and_profile_permissions(engine, meetbouten_schema, None, create_roles=True)
         # Check perms on meetbouten
         _check_select_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten_v1")
 
         # Revoke permissions for dataset gebieden and set grant again
         apply_schema_and_profile_permissions(
             engine,
-            pg_schema="public",
-            ams_schema=gebieden_schema_auth,
+            schemas=gebieden_schema_auth,
             profiles=None,
-            role="AUTO",
-            scope="ALL",
             create_roles=True,
             revoke=True,
         )
         # Check perms again on meetbouten
         _check_select_permission_granted(engine, "scope_openbaar", "meetbouten_meetbouten_v1")
 
-    def test_permissions_support_shortnames(self, here, engine, hr_schema_auth, dbsession, caplog):
+    def test_permissions_support_shortnames(self, engine, hr_schema_auth, dbsession, caplog):
         """
         Prove that table, and field permissions are set on the shortnamed field.
         """
 
-        ndjson_path = here / "files" / "data" / "hr_auth.ndjson"
         importer = NDJSONImporter(hr_schema_auth, engine)
         importer.generate_db_objects("sbiactiviteiten", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
 
         # Setup schema and profile
         ams_schema = {hr_schema_auth.id: hr_schema_auth}
@@ -783,21 +831,19 @@ class TestReadPermissions:
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
             apply_schema_and_profile_permissions(
                 engine,
-                "public",
                 ams_schema,
                 None,
-                "level_b",
-                "LEVEL/B",
+                only_role="level_b",
+                only_scope="LEVEL/B",
                 create_roles=True,
                 verbose=1,
             )
             apply_schema_and_profile_permissions(
                 engine,
-                "public",
                 ams_schema,
                 None,
-                "level_c",
-                "LEVEL/C",
+                only_role="level_c",
+                only_scope="LEVEL/C",
                 create_roles=True,
                 verbose=1,
             )
@@ -819,17 +865,14 @@ class TestReadPermissions:
 
 
 class TestWritePermissions:
-    def test_dataset_write_role(self, here, engine, gebieden_schema_auth):
+    def test_dataset_write_role(self, engine, gebieden_schema_auth):
         """
         Prove that a write role with name write_{dataset.id} is created with DML rights
         Check INSERT, UPDATE, DELETE, TRUNCATE permissions
         Check that for SELECT permissions you need an additional scope role.
         """
-
-        ndjson_path = here / "files" / "data" / "gebieden.ndjson"
         importer = NDJSONImporter(gebieden_schema_auth, engine)
         importer.generate_db_objects("bouwblokken", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
         importer.generate_db_objects("buurten", truncate=True, ind_extra_index=False)
 
         # Setup schema
@@ -842,11 +885,8 @@ class TestWritePermissions:
 
         apply_schema_and_profile_permissions(
             engine=engine,
-            pg_schema="public",
-            ams_schema=ams_schema,
+            schemas=ams_schema,
             profiles=None,
-            role="AUTO",
-            scope="ALL",
             set_read_permissions=True,
             set_write_permissions=True,
             create_roles=True,
@@ -899,7 +939,7 @@ class TestWritePermissions:
         # TRUNCATE is also allowed, even though the table is already empty by now
         _check_truncate_permission_granted(engine, "testuser", "gebieden_bouwblokken_v1")
 
-    def test_multiple_datasets_write_roles(self, here, engine, parkeervakken_schema, afval_schema):
+    def test_multiple_datasets_write_roles(self, engine, parkeervakken_schema, afval_schema):
         """
         Prove that the write_{dataset.id} roles only have DML rights for their associated
         dataset tables.
@@ -916,11 +956,8 @@ class TestWritePermissions:
 
         apply_schema_and_profile_permissions(
             engine=engine,
-            pg_schema="public",
-            ams_schema=ams_schema,
+            schemas=ams_schema,
             profiles=None,
-            role="AUTO",
-            scope="ALL",
             set_read_permissions=True,
             set_write_permissions=True,
             create_roles=True,
@@ -956,23 +993,18 @@ class TestWritePermissions:
             engine, "afval_tester", "parkeervakken_parkeervakken_v1", "id", "'abc'"
         )
 
-    def test_permissions_support_shortnames(self, here, engine, hr_schema_auth, dbsession):
+    def test_permissions_support_shortnames(self, engine, hr_schema_auth, dbsession):
         """
         Prove that table, and field permissions are set on the shortnamed field.
         """
-
-        ndjson_path = here / "files" / "data" / "hr_auth.ndjson"
         importer = NDJSONImporter(hr_schema_auth, engine)
         importer.generate_db_objects("sbiactiviteiten", truncate=True, ind_extra_index=False)
-        importer.load_file(ndjson_path)
 
         # Setup schema and profile
         ams_schema = {hr_schema_auth.id: hr_schema_auth}
 
         # Apply the permissions from Schema and Profiles.
-        apply_schema_and_profile_permissions(
-            engine, "public", ams_schema, None, "AUTO", "ALL", create_roles=True
-        )
+        apply_schema_and_profile_permissions(engine, ams_schema, None, create_roles=True)
 
         # Check if the write priviliges are correct
         _check_insert_permission_granted(
@@ -983,7 +1015,7 @@ class TestWritePermissions:
             "'berry','14641','15101051'",
         )
 
-    def test_setting_additional_grants(self, here, engine, meetbouten_schema, dbsession, caplog):
+    def test_setting_additional_grants(self, engine, meetbouten_schema, dbsession, caplog):
         """
         Prove that additional grants can be set using the extra argument.
         """
@@ -1001,11 +1033,8 @@ class TestWritePermissions:
         with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
             apply_schema_and_profile_permissions(
                 engine,
-                "public",
                 meetbouten_schema,
                 None,
-                "AUTO",
-                "ALL",
                 create_roles=True,
                 verbose=1,
                 additional_grants=("datasets_dataset:SELECT;scope_openbaar",),
@@ -1058,9 +1087,10 @@ def _check_select_permission_denied(engine, role, table, column="*"):
     """Check if role has no SELECT permission on table.
     Fail if role, table or column does not exist.
     """
-    with pytest.raises(
-        Exception, match=f"permission denied for table {table}"
-    ), engine.begin() as connection:
+    with (
+        pytest.raises(Exception, match=f"permission denied for table {table}"),
+        engine.begin() as connection,
+    ):
         connection.execute(text(f"SET ROLE {role}"))
         connection.execute(text(f"SELECT {column} FROM {table}"))
         connection.execute(text("RESET ROLE"))
