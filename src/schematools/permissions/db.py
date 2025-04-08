@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Any, cast
 
 from pg_grant import PgObjectType, parse_acl_item, query
-from pg_grant.sql import grant, revoke
+from pg_grant.sql import _Grant, grant, revoke
 from sqlalchemy import Connection, event, text
 from sqlalchemy.engine import Engine
 
-from schematools.permissions import PUBLIC_SCOPE  # type: ignore [attr-defined]
-from schematools.types import DatasetSchema, Scope
+from schematools.permissions import PUBLIC_SCOPE
+from schematools.types import (
+    DatasetFieldSchema,
+    DatasetSchema,
+    DatasetTableSchema,
+    PermissionLevel,
+    ProfileSchema,
+    Scope,
+)
 
 # Create a module-level logger, so calling code can
 # configure the logger, if needed.
@@ -20,6 +25,9 @@ logger = logging.getLogger(__name__)
 
 existing_roles = set()  # note: used as global cache!
 existing_sequences = {}
+
+PUBLIC_SCOPE_OBJECT = Scope({"id": PUBLIC_SCOPE})
+PUBLIC_SCOPES = {PUBLIC_SCOPE_OBJECT, PUBLIC_SCOPE}
 
 
 def introspect_permissions(engine: Engine, role: str) -> None:
@@ -70,11 +78,11 @@ def revoke_permissions(engine: Engine, role: str, verbose: int = 0) -> None:
 
 def apply_schema_and_profile_permissions(
     engine: Engine,
-    pg_schema: str,
-    ams_schema: DatasetSchema | dict[str, DatasetSchema],
-    profiles: dict[str, Any],
-    role: str,
-    scope: str,
+    schemas: DatasetSchema | dict[str, DatasetSchema],
+    profiles: list[ProfileSchema] | None,
+    *,
+    only_role: str | None = None,
+    only_scope: str | None = None,
     set_read_permissions: bool = True,
     set_write_permissions: bool = True,
     dry_run: bool = False,
@@ -83,159 +91,103 @@ def apply_schema_and_profile_permissions(
     verbose: int = 0,
     additional_grants: tuple[str] = (),
 ) -> None:
-    """Apply permissions for schema and profile."""
+    """Apply permissions for schema and profile.
+
+    Read permissions are granted to roles 'scope_X', where X are scopes found in Amsterdam Schema.
+    Write permissions are granted to roles 'write_Y', where Y are dataset ids,
+    for all tables belonging to the dataset.
+    Revoke old privileges before assigning new in case new privileges are more restrictive.
+    """
+    datasets = {schemas.id: schemas} if isinstance(schemas, DatasetSchema) else schemas
+
+    if verbose:
+        event.listen(engine, "after_cursor_execute", _after_cursor_execute)
+
     with engine.connect() as conn:
-
-        if verbose:
-
-            @event.listens_for(engine, "after_cursor_execute")
-            def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-                for notice in cursor.connection.notices:
-                    logger.info(notice.strip())
-
         try:
-            if ams_schema:
-                create_acl_from_schemas(
+            if datasets:
+                if revoke:
+                    # Remove all privileges first
+                    revoke_dataset = schemas if isinstance(schemas, DatasetSchema) else None
+                    revoke_schema_permissions(
+                        conn, revoke_dataset, only_role, dry_run, verbose=verbose
+                    )
+
+                # Apply privileges for all datasets, or the selected dataset.
+                apply_schema_permissions(
                     conn,
-                    pg_schema,
-                    ams_schema,
-                    role,
-                    scope,
+                    datasets,
+                    only_role,
+                    only_scope,
                     set_read_permissions,
                     set_write_permissions,
-                    dry_run,
-                    create_roles,
-                    revoke,
-                    verbose,
+                    dry_run=dry_run,
+                    create_roles=create_roles,
+                    verbose=verbose,
                 )
-            if profiles:
-                profile_list = cast(list[dict[str, Any]], profiles.values())
-                create_acl_from_profiles(engine, pg_schema, profile_list, role, scope, verbose)
+
+                if profiles:
+                    apply_profile_permissions(
+                        conn,
+                        profiles,
+                        datasets,
+                        only_role,
+                        only_scope,
+                        dry_run=dry_run,
+                        create_roles=create_roles,
+                        verbose=verbose,
+                    )
 
             if additional_grants:
-                set_additional_grants(conn, pg_schema, dry_run, additional_grants, bool(verbose))
+                apply_additional_grants(
+                    conn, additional_grants, dry_run=dry_run, create_roles=False, verbose=verbose
+                )
 
             conn.commit()
         except Exception:
             conn.rollback()
             logger.warning("Session rolled back")
             raise
-
-
-def create_acl_from_profiles(
-    engine: Engine,
-    pg_schema: str,
-    profile_list: list[dict[str, Any]],
-    role: str,
-    scope: str,
-    verbose: int = 0,
-) -> None:
-    """Create an ACL from profile list.
-
-    NOTE: Rudimentary, not ready for production!
-    """
-    with engine.connect() as conn:
-        acl_list = query.get_all_table_acls(conn, schema=pg_schema)
-    privileges = [
-        "SELECT",
-    ]
-    grantee = role
-
-    grant_statements = []
-    for profile in profile_list:
-        if scope in profile["scopes"]:
-            for dataset, _details in profile["schema_data"]["datasets"].items():
-                for item in acl_list:
-                    if item.name.startswith(dataset + "_"):
-                        grant_statements.append(
-                            grant(
-                                privileges,
-                                PgObjectType.TABLE,
-                                item.name,
-                                grantee,
-                                grant_option=False,
-                                schema=pg_schema,
-                            )
-                        )
-
-    with engine.begin() as conn:
-        for grant_statement in grant_statements:
+        finally:
             if verbose:
-                logger.info(grant_statement)
-            conn.execute(grant_statement)
+                event.remove(engine, "after_cursor_execute", _after_cursor_execute)
 
 
-def set_dataset_write_permissions(
-    conn: Connection,
-    pg_schema: str,
-    ams_schema: DatasetSchema,
-    dry_run: bool,
-    create_roles: bool,
-    echo: bool = False,
-) -> None:
+def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    """Report notices raised by the 'RAISE NOTICE' statements."""
+    for notice in cursor.connection.notices:
+        logger.info(notice.strip())
+
+
+def _collect_dataset_write_grants(conn: Connection, ams_schema: DatasetSchema) -> list[_Grant]:
     """Sets write permissions for the indicated dataset."""
     grantee = f"write_{ams_schema.db_name}"
-    if create_roles:
-        _create_role_if_not_exists(conn, grantee, dry_run=dry_run)
-
+    all_grants = []
     for table in ams_schema.get_tables(include_nested=True, include_through=True):
-        table_name = table.db_name
-        _execute_grant(
-            conn,
-            grant(
-                ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"],
-                PgObjectType.TABLE,
-                table_name,
-                grantee,
-                grant_option=False,
-                schema=pg_schema,
-            ),
-            echo=echo,
-            dry_run=dry_run,
-        )
-        if table.is_autoincrement and (
-            sequence_name := _get_sequence_name(conn, table_name, "id")
-        ):
-            # Get PostgreSQL generated sequence for 'id' column that Django added.
-            _execute_grant(
+        all_grants.extend(
+            _build_table_grants(
                 conn,
-                grant(
-                    ["USAGE"],
-                    PgObjectType.SEQUENCE,
-                    sequence_name,
-                    grantee,
-                    grant_option=False,
-                    schema=pg_schema,
-                ),
-                echo=echo,
-                dry_run=dry_run,
+                table,
+                privileges=["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES"],
+                grantees=[grantee],
             )
+        )
+    return all_grants
 
 
-@dataclass
-class GrantParam:
-    """Which object to give which permission.
-    This intermediate object is used to collect results before making
-    statements like ``GRANT SELECT ON <type> target TO <role>``.
-    """
-
-    privileges: list[str]
-    target_type: PgObjectType  # often PgObjectType.TABLE
-    target: str
-    grantees: list[str]
-
-
-def get_all_dataset_scopes(
-    conn: Connection, ams_schema: DatasetSchema, role: str, scope: str
-) -> list[GrantParam]:
+def _collect_dataset_grants(
+    conn: Connection,
+    dataset: DatasetSchema,
+    only_role: str | None = None,
+    only_scope: str | None = None,
+) -> list[_Grant]:
     """Returns all scopes that should be applied to the tables of a dataset.
 
     Args:
         session: the SQL Alchemy session; used for getting the sequence names
-        ams_schema: the amsterdam schema that needs to be processed
-        role: the role that needs the grants that are calculated from the schema
-            A special value `AUTO` can be used to apply grants for all scopes
-        scope: only return grants for a specific scope, value can be empty string ("")
+        dataset: the amsterdam schema that needs to be processed
+        only_role: only return grants for a specific role, none means all roles.
+        only_scope: only return grants for a specific scope, none means all scopes.
 
         The grants will be applied according to the configuration of the auth scopes
         in the amsterdam schema.
@@ -253,31 +205,18 @@ def get_all_dataset_scopes(
         the associated sub-table gets the grant `scope_bar`.
 
     Returns:
-        all_scopes (list): Contains a list of scopes with priviliges and grants:
+        all_scopes (list): Contains a list of scopes with privileges and grants:
 
         [
-            GrantParam(["SELECT"],           PgObjectType.TABLE, "table1", ["scope_openbaar"]),
-            GrantParam(["SELECT (columnA)"], PgObjectType.TABLE, "table2", ["scope_openbaar"]),
-            GrantParam(["SELECT (columnB)"], PgObjectType.TABLE, "table2", ["scope_A", "scope_B"]),
+            grant(["SELECT"],           PgObjectType.TABLE, "table1", "scope_openbaar"),
+            grant(["SELECT (columnA)"], PgObjectType.TABLE, "table2", "scope_openbaar"),
+            grant(["SELECT (columnB)"], PgObjectType.TABLE, "table2", "scope_A"),
+            grant(["SELECT (columnB)"], PgObjectType.TABLE, "table2", "scope_B"]),
         ]
     """
-
-    def _fetch_grantees(scopes: frozenset[str] | frozenset[Scope]) -> list[str]:
-        if role == "AUTO":
-            return [scope_to_role(_scope) for _scope in scopes]
-        elif any(s.id == scope if isinstance(s, Scope) else s == scope for s in scopes):
-            return [role]
-        else:
-            return []
-
-    all_scopes = []
-    dataset_scopes = ams_schema.scopes
-    PUBLIC_SCOPE_OBJECT = Scope({"id": PUBLIC_SCOPE})
-    public_scopes = {PUBLIC_SCOPE_OBJECT, PUBLIC_SCOPE}
-
-    for table in ams_schema.get_tables(include_nested=True, include_through=True):
-        table_name = table.db_name
-        table_scopes = (table.scopes - public_scopes) or dataset_scopes
+    grants = []
+    for table in dataset.get_tables(include_nested=True, include_through=True):
+        table_scopes = (table.scopes - PUBLIC_SCOPES) or dataset.scopes
         fields = [
             field
             for field in table.get_fields(include_subfields=True)
@@ -285,155 +224,169 @@ def get_all_dataset_scopes(
         ]
 
         # First process all fields, to know if any fields has a non-public scope
-        column_scopes = {}
-        for field in fields:
-            # Object type relations have subfields, in that case
-            # the auth scope on the relation is leading.
-            field_scopes = field.scopes - public_scopes
-            if field.is_subfield:
-                field_scopes = (field.parent_field.scopes - public_scopes) or field_scopes
-
-            if field_scopes:
-                column_scopes[field.db_name] = field_scopes
-
+        column_scopes = _get_column_level_scopes(fields)
         if column_scopes:
+            # When some fields have a specific scope,
+            # grant statements need to be generated for each individual field.
+            # After all, "GRANT SELECT ON 'table'" would bypass field-level access.
             for field in fields:
                 if field.nm_relation or field.is_nested_table:
                     # field is not in view when nm or nested
                     continue
 
-                column_name = field.db_name
-                grantees = _fetch_grantees(column_scopes.get(column_name, table_scopes))
-                all_scopes.append(
-                    GrantParam(
-                        # NB. space after SELECT is significant!
-                        privileges=[f"SELECT ({column_name})"],
-                        target_type=PgObjectType.TABLE,
-                        target=table_name,
-                        grantees=grantees,
-                    )
-                )
-                # Get PostgreSQL generated sequence for 'id' column that Django added.
-                if (
-                    field.is_primary
-                    and table.is_autoincrement
-                    and (sequence_name := _get_sequence_name(conn, table_name, "id"))
-                ):
-                    all_scopes.append(
-                        GrantParam(
-                            privileges=["SELECT"],
-                            target_type=PgObjectType.SEQUENCE,
-                            target=sequence_name,
-                            grantees=grantees,
-                        )
-                    )
+                # Column-level read permissions
+                scopes = column_scopes.get(field.db_name, table_scopes)
+                if grantees := _filter_grantees(scopes, only_role, only_scope):
+                    grants.extend(_build_field_grants(conn, field, grantees))
+        elif grantees := _filter_grantees(table_scopes, only_role, only_scope):
+            # Table-level read permissions
+            grants.extend(_build_table_grants(conn, table, ["SELECT"], grantees))
+
+    return grants
+
+
+def _collect_profile_grants(
+    conn: Connection,
+    profile: ProfileSchema,
+    datasets: dict[str, DatasetSchema],
+    only_role: str | None = None,
+    only_scope: str | None = None,
+) -> list[_Grant]:
+    """Tell which grants a profile should given.
+
+    Args:
+        conn: SQLAlchemy connection.
+        profile: The profile to calculate GRANT statements for
+        datasets: Associated datasets touched by the profile.
+        only_role: The role to filter grants by.
+        only_scope: The scope to filter grants by.
+    """
+    grants = []
+    grantees = _filter_grantees(profile.scopes, only_role=only_role, only_scope=only_scope)
+    if not grantees:
+        return []
+
+    for profile_dataset in profile.datasets.values():
+        dataset = datasets[profile_dataset.id]
+
+        if profile_dataset.permissions.level >= PermissionLevel.LETTERS:
+            # READ access on dataset level.
+            # Giving read access to a whole dataset.
+            for table in dataset.get_tables(include_nested=True, include_through=True):
+                grants.extend(_build_table_grants(conn, table, ["SELECT"], grantees))
         else:
-            if table_name not in all_scopes:
-                grantees = _fetch_grantees(table_scopes)
-                all_scopes.append(
-                    GrantParam(
-                        privileges=["SELECT"],
-                        target_type=PgObjectType.TABLE,
-                        target=table_name,
-                        grantees=grantees,
-                    )
+            dataset_tables = {table.id: table for table in dataset.tables}
+            for profile_table in profile_dataset.tables.values():
+                table = dataset_tables[profile_table.id]
+                table_grantees = (
+                    [f"{s}.filtered" for s in grantees]
+                    if profile_table.mandatory_filtersets
+                    else grantees
                 )
-                if table.is_autoincrement and (
-                    sequence_name := _get_sequence_name(conn, table_name, "id")
-                ):
-                    all_scopes.append(
-                        GrantParam(
-                            privileges=["SELECT"],
-                            target_type=PgObjectType.SEQUENCE,
-                            target=sequence_name,
-                            grantees=grantees,
-                        )
-                    )
 
-    return all_scopes
+                if profile_table.permissions:
+                    # READ access on table level.
+                    grants.extend(_build_table_grants(conn, table, ["SELECT"], table_grantees))
+                elif profile_table.fields:
+                    # READ access on field level.
+                    fields_by_name = {
+                        (f"{f.parent_field.id}.{f.id}" if f.parent_field is not None else f.id): f
+                        for f in table.get_fields(include_subfields=True)
+                    }
+
+                    for field_name, field_permissions in profile_table.fields.items():
+                        if field_permissions:  # sanity check
+                            grants.extend(
+                                _build_field_grants(
+                                    conn, fields_by_name[field_name], table_grantees
+                                )
+                            )
+    return grants
 
 
-def set_dataset_read_permissions(
+def _get_column_level_scopes(fields: list[DatasetFieldSchema]) -> dict[str, frozenset[Scope]]:
+    """Tell whether there are fields that have an explicit scope."""
+    column_scopes = {}
+    for field in fields:
+        # Object type relations have subfields, in that case
+        # the auth scope on the relation is leading.
+        field_scopes = field.scopes - PUBLIC_SCOPES
+        if field.is_subfield:
+            field_scopes = (field.parent_field.scopes - PUBLIC_SCOPES) or field_scopes
+
+        if field_scopes:
+            column_scopes[field.db_name] = field_scopes
+
+    return column_scopes
+
+
+def _build_table_grants(
     conn: Connection,
-    pg_schema: str,
-    ams_schema: DatasetSchema,
-    role: str,
-    scope: str,
-    dry_run: bool,
-    create_roles: bool,
-    echo: bool = False,
-) -> None:
-    """Sets read permissions for the indicated dataset.
+    table: DatasetTableSchema,
+    privileges: list[str],
+    grantees: list[str],
+) -> list[_Grant]:
+    """Build the SELECT grants for accessing a full table."""
+    grants = [
+        grant(
+            privileges,
+            type=PgObjectType.TABLE,
+            target=table.db_name,
+            grantee=grantee,
+            schema="public",
+        )
+        for grantee in grantees
+    ]
 
-    Args:
-        conn: SQLAlchemy type connection
-        pg_schema: schema in the postgres database
-        ams_schema: the amsterdam schema that needs to be processed
-        role: the role that needs the grants that are calculated from the schema
-            A special value `AUTO` can be used to apply grants for all scopes
-        scope: only apply grants for a specific scope, value can be empty string ("")
-        dry_run: do not apply the grants
-        create_roles: boolean indicating that if certain roles are not in the postgres db,
-            these roles need to be created.
-
-        The grants will be applied according to the configuration of the auth scopes
-        in the amsterdam schema.
-        If not auth scopes are defined, all tables get the `scope_openbaar` grant.
-        If only the dataset has as scope `foo`, alle tables get the `scope_foo` grant.
-        If a table has as scope `bar`, this overrules the dataset scope,
-        so this table gets the `scope_bar` grant.
-        If one or more fields have a scope, this scope overrules both the
-        dataset and the table scope. The other fields in the same table
-        get a `scope_openbaar` grant in that case.
-        If a 1-N relation field has a scope, the foreign key field get the associated
-        grant. In case this relation field is of type `object`` (e.g. for temporal fields),
-        the additional columns (usually identificatie/volgnummer postfixed) get the same grant.
-        If NM and nested relation fields (type `array` in the schema) have a scope `bar`
-        the associated sub-table gets the grant `scope_bar`.
-    """
-    grantee = None if role == "AUTO" else role
-    if create_roles and grantee:
-        _create_role_if_not_exists(conn, grantee, dry_run=dry_run)
-
-    all_grants = get_all_dataset_scopes(conn, ams_schema, role, scope)
-    for grant_param in all_grants:
-        # For global and specific columns:
-        for _grantee in grant_param.grantees:
-            if create_roles:
-                _create_role_if_not_exists(conn, _grantee, dry_run=dry_run)
-            _execute_grant(
-                conn,
-                grant(
-                    grant_param.privileges,
-                    type=grant_param.target_type,
-                    target=grant_param.target,
-                    grantee=_grantee,
-                    grant_option=False,
-                    schema=pg_schema,
-                ),
-                echo=echo,
-                dry_run=dry_run,
+    if sequence_name := _get_sequence_name(conn, table):
+        grants.extend(
+            grant(
+                ["USAGE" if "INSERT" in privileges else "SELECT"],
+                type=PgObjectType.SEQUENCE,
+                target=sequence_name,
+                grantee=grantee,
+                schema="public",
             )
+            for grantee in grantees
+        )
+    return grants
 
 
-def set_additional_grants(
-    conn: Connection,
-    pg_schema: str,
-    dry_run: bool,
-    additional_grants: tuple[str],
-    echo: bool = False,
-) -> None:
-    """Sets additional grants
+def _build_field_grants(
+    conn: Connection, field: DatasetFieldSchema, grantees: list[str]
+) -> list[_Grant]:
+    """Build the SELECT grants for accessing a field."""
+    table = field.table
+    grants = [
+        grant(
+            # NB. space after SELECT is significant!
+            privileges=[f"SELECT ({field.db_name})"],
+            type=PgObjectType.TABLE,
+            target=table.db_name,
+            grantee=grantee,
+            schema="public",
+        )
+        for grantee in grantees
+    ]
 
-    Args:
-        session: SQLAlchemy type session
-        pg_schema: schema in the postgres database
-        dry_run: do not apply the grants
-        additional_grants: tuple with the following structure:
-            <table_name>:<privilege_1>[,<privilege_n>]*;<grantee_1>[,grantee_n]*
-        echo: show output
-    """
+    # Get PostgreSQL generated sequence for 'id' column that Django added.
+    if field.is_primary and (sequence_name := _get_sequence_name(conn, table)):
+        grants.extend(
+            grant(
+                privileges=["SELECT"],
+                type=PgObjectType.SEQUENCE,
+                target=sequence_name,
+                grantee=grantee,
+                schema="public",
+            )
+            for grantee in grantees
+        )
+    return grants
 
+
+def _collect_additional_grants(additional_grants: tuple[str]) -> list[_Grant]:
+    """Parse the additional grants syntax into GRANT statements."""
+    all_grants = []
     for additional_grant in additional_grants:
         try:
             table_name, grant_params = additional_grant.split(":")
@@ -448,33 +401,30 @@ def set_additional_grants(
                 additional_grant,
             )
             raise  #  re-raise to trigger rollback
-        for _grantee in grantees:
-            _execute_grant(
-                conn,
-                grant(
-                    privileges,
-                    PgObjectType.TABLE,
-                    table_name,
-                    _grantee,
-                    grant_option=False,
-                    schema=pg_schema,
-                ),
-                echo=echo,
-                dry_run=dry_run,
+
+        all_grants.extend(
+            grant(
+                privileges,
+                PgObjectType.TABLE,
+                table_name,
+                _grantee,
+                schema="public",
             )
+            for _grantee in grantees
+        )
+
+    return all_grants
 
 
-def create_acl_from_schemas(
+def apply_schema_permissions(
     conn: Connection,
-    pg_schema: str,
-    schemas: DatasetSchema | dict[str, DatasetSchema],
-    role: str,
-    scope: str,
+    datasets: dict[str, DatasetSchema],
+    only_role: str | None,
+    only_scope: str | None,
     set_read_permissions: bool,
     set_write_permissions: bool,
     dry_run: bool,
-    create_roles: bool,
-    revoke: bool,
+    create_roles: bool = False,
     verbose: int = 0,
 ) -> None:
     """Create and set the ACL for automatically generated roles based on Amsterdam Schema.
@@ -484,171 +434,170 @@ def create_acl_from_schemas(
     for all tables belonging to the dataset.
     Revoke old privileges before assigning new in case new privileges are more restrictive.
     """
-    if revoke:
-        # For a single dataset, or all tables?
-        revoke_dataset = schemas if isinstance(schemas, DatasetSchema) else None
-        if role == "AUTO":
-            # All roles
-            _revoke_all_privileges_from_read_and_write_roles(
-                conn, pg_schema, revoke_dataset, dry_run=dry_run, echo=bool(verbose)
-            )
-        else:
-            # Only for a single role
-            _revoke_all_privileges_from_role(
-                conn, pg_schema, role, revoke_dataset, dry_run=dry_run, echo=bool(verbose)
-            )
-
-    datasets = [schemas] if isinstance(schemas, DatasetSchema) else schemas.values()
-    for dataset in datasets:
-        if set_read_permissions:
-            set_dataset_read_permissions(
-                conn,
-                pg_schema,
-                dataset,
-                role,
-                scope,
-                dry_run,
-                create_roles,
-                echo=bool(verbose),
-            )
-
+    for dataset in datasets.values():
+        all_grants = (
+            _collect_dataset_grants(conn, dataset, only_role=only_role, only_scope=only_scope)
+            if set_read_permissions
+            else []
+        )
         if set_write_permissions:
-            set_dataset_write_permissions(
-                conn, pg_schema, dataset, dry_run, create_roles, echo=bool(verbose)
-            )
+            all_grants.extend(_collect_dataset_write_grants(conn, dataset))
+
+        _execute_grants(
+            conn,
+            all_grants,
+            dry_run=dry_run,
+            create_roles=create_roles,
+            verbose=verbose,
+        )
 
 
-def _revoke_all_privileges_from_role(
+def apply_profile_permissions(
     conn: Connection,
-    pg_schema: str,
-    role: str,
-    dataset: DatasetSchema | None = None,
-    echo: bool = True,
+    profiles: list[ProfileSchema],
+    datasets: dict[str, DatasetSchema],
+    only_role: str | None = None,
+    only_scope: str | None = None,
     dry_run: bool = False,
+    create_roles: bool = False,
+    verbose: int = 0,
 ) -> None:
-    status_msg = "Skipped" if dry_run else "Executed"
-    if dataset:
-        # for a single dataset
-        revoke_statements = []
-        for table in dataset.tables:
-            revoke_statements.append(
-                f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {role}"
+    """Create an ACL from profile list."""
+    dataset_ids = set(datasets.keys())
+    profiles = [
+        p
+        for p in profiles
+        if dataset_ids.intersection(p.datasets.keys())
+        and only_scope is None
+        or only_scope in p.scopes
+    ]
+    if not profiles:
+        return
+
+    # Retrieve all grants for the profiles
+    all_grants = []
+    for profile in profiles:
+        all_grants.extend(
+            _collect_profile_grants(
+                conn, profile, datasets, only_role=only_role, only_scope=only_scope
             )
-        revoke_statement = ";".join(revoke_statements)
-    else:
-        revoke_statement = f"REVOKE ALL PRIVILEGES ON ALL TABLES IN {pg_schema} FROM {role}"
-    sql_statement = f"""
-        DO $$
-        BEGIN
-        f{revoke_statement};
-        EXCEPTION
-         WHEN undefined_object
-         THEN RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
-        END
-        $$
+        )
+
+    _execute_grants(conn, all_grants, dry_run=dry_run, create_roles=create_roles, verbose=verbose)
+
+
+def apply_additional_grants(
+    conn: Connection,
+    additional_grants: tuple[str],
+    dry_run: bool = False,
+    create_roles: bool = False,
+    verbose: int = 0,
+):
     """
-    if echo:
-        logger.info("%s --> %s", status_msg, revoke_statement)
-    if not dry_run:
-        conn.execute(sql_statement)
+    Parse manaully defined grants.
+
+    Args:
+        additional_grants: tuple with the following structure:
+            <table_name>:<privilege_1>[,<privilege_n>]*;<grantee_1>[,grantee_n]*
+    """
+    all_grants = _collect_additional_grants(additional_grants)
+    _execute_grants(conn, all_grants, dry_run=dry_run, create_roles=create_roles, verbose=verbose)
 
 
-def _revoke_all_privileges_from_read_and_write_roles(
+def revoke_schema_permissions(
     conn: Connection,
-    pg_schema: str,
-    dataset: DatasetSchema | None = None,
-    echo: bool = True,
+    only_dataset: DatasetSchema | None = None,
+    only_role: str | None = None,
     dry_run: bool = False,
-) -> None:
+    verbose: int = 1,
+):
     """Revoke all privileges that may have been previously granted.
 
     This is about grants to the scope_* and write_* roles.
     If dataset is provided, revoke only rights to the tables belonging to
     dataset.
     """
-    status_msg = "Skipped" if dry_run else "Executed"
-    result = conn.execute(
-        text(
-            r"""
-            SELECT rolname
-            FROM pg_roles
-            WHERE rolname LIKE 'scope\_%'
-               OR rolname LIKE 'write\_%'
-            """
-        )
-    )
-    for rolname in result:
-        if dataset:
-            # for a single dataset
-            revoke_statements = []
-            for table in dataset.tables:
-                revoke_statements.append(
-                    f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {rolname[0]}"
+    pg_schema = "public"
+    db_role_names = _get_all_role_names(conn) if only_role is None else [only_role]
+
+    revoke_statements = []
+    if only_dataset:
+        # for a single dataset
+        for table in only_dataset.tables:
+            revoke_statements.extend(
+                f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {role_name}"
+                for role_name in db_role_names
+            )
+            if sequence_name := _get_sequence_name(conn, table):
+                revoke_statements.extend(
+                    f"REVOKE ALL PRIVILEGES ON SEQUENCE {pg_schema}.{sequence_name}"
+                    f" FROM {role_name}"
+                    for role_name in db_role_names
                 )
-                if table.is_autoincrement and (
-                    sequence_name := _get_sequence_name(conn, table.db_name, "id")
-                ):
-                    revoke_statements.append(
-                        f"REVOKE ALL PRIVILEGES ON SEQUENCE {pg_schema}.{sequence_name}"
-                        f" FROM {rolname[0]}"
-                    )
-        else:
-            revoke_statements = [
-                f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {rolname[0]}",
-                f"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {pg_schema} FROM {rolname[0]}",
-            ]
+    else:
+        # For all datasets
+        revoke_statements = [
+            f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {role_name}"
+            for role_name in db_role_names
+        ] + [
+            f"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {pg_schema} FROM {role_name}"
+            for role_name in db_role_names
+        ]
 
-        revoke_statement = ";".join(revoke_statements)
-        revoke_block_statement = f"""
-            DO
-            $$
-                BEGIN
-                    {revoke_statement};
-                EXCEPTION
-                    WHEN insufficient_privilege THEN
-                        RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
-                END
-            $$
-        """
+    # Execute all for this role
+    for statement in revoke_statements:
+        _execute_grant(conn, statement, verbose=verbose, dry_run=dry_run)
 
-        if echo:
-            logger.info("%s --> %s", status_msg, revoke_statement)
-        if not dry_run:
-            conn.execute(text(revoke_block_statement))
+
+def _execute_grants(
+    conn,
+    all_grants: list[_Grant],
+    dry_run: bool,
+    create_roles: bool = False,
+    verbose: int = 0,
+) -> None:
+    """Apply the collected grant statements."""
+    for grant_statement in all_grants:
+        # For global and specific columns:
+        if create_roles:
+            _create_role_if_not_exists(
+                conn, grant_statement.grantee, verbose=verbose, dry_run=dry_run
+            )
+
+        _execute_grant(conn, grant_statement, verbose=verbose, dry_run=dry_run)
 
 
 def _execute_grant(
-    conn: Connection, grant_statement: str, echo: bool = True, dry_run: bool = False
+    conn: Connection, grant_statement: _Grant, verbose: int = 1, dry_run: bool = False
 ) -> None:
     status_msg = "Skipped" if dry_run else "Executed"
-    sql_statement = f"""
-        DO
-        $$
-            BEGIN
-                {grant_statement};
-            EXCEPTION
-              WHEN undefined_table THEN
-                RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
-            END
-        $$
-        """
-    if echo:
+    if verbose:
         logger.info("%s --> %s", status_msg, grant_statement)
     if not dry_run:
+        sql_statement = f"""
+            DO
+            $$
+                BEGIN
+                    {grant_statement};
+                EXCEPTION
+                  WHEN undefined_table THEN
+                    RAISE NOTICE '%, skipping', SQLERRM USING ERRCODE = SQLSTATE;
+                END
+            $$
+            """
         conn.execute(text(sql_statement))
 
 
 def _create_role_if_not_exists(
-    conn: Connection, role: str, echo: bool = True, dry_run: bool = False
+    conn: Connection, role: str, verbose: int = 1, dry_run: bool = False
 ) -> None:
     """Wrap the create role statement in an anonymous code block.
 
     Reason is to be able to catch exceptions.
     Don't break out of the session just because the role already exists
     """
-    status_msg = "Skipped" if dry_run else "Executed"
-    create_role_statement = f"CREATE ROLE {role}"
     if role not in existing_roles:
+        create_role_statement = f'CREATE ROLE "{role}"'
         sql_statement = f"""
             DO $$
             BEGIN
@@ -661,22 +610,28 @@ def _create_role_if_not_exists(
             END
             $$
         """
-        if echo:
+        if verbose:
+            status_msg = "Skipped" if dry_run else "Executed"
             logger.info("%s --> %s", status_msg, create_role_statement)
         if not dry_run:
             conn.execute(text(sql_statement))
         existing_roles.add(role)
 
 
-def _get_sequence_name(conn: Connection, table_name: str, column: str) -> str | None:
-    key = (table_name, column)
+def _get_sequence_name(conn: Connection, table: DatasetTableSchema) -> str | None:
+    """Find the autoincrement sequence of a table."""
+    if not table.is_autoincrement:
+        return None
+
+    column = table.identifier_fields[0].db_name  # always 1 field for autoincrement.
+    key = (table.db_name, column)
     try:
         # Can't use lru_cache() as it caches 'session' too.
         return existing_sequences[key]
     except KeyError:
         row = conn.execute(
             text("SELECT pg_get_serial_sequence(:table, :column)"),
-            {"table": table_name, "column": column},
+            {"table": table.db_name, "column": column},
         ).first()
         value = (
             row[0].replace("public.", "").replace('"', "")
@@ -684,12 +639,44 @@ def _get_sequence_name(conn: Connection, table_name: str, column: str) -> str | 
             else None
         )
         if not value:
-            logger.debug("No sequence found for %s.%s", table_name, column)
+            logger.debug("No sequence found for %s.%s", table.db_name, column)
         existing_sequences[key] = value
         return value
 
 
-def scope_to_role(scope: str | Scope) -> str:
+def _get_all_role_names(conn: Connection) -> list[str]:
+    """Find all roles currently used in the database."""
+    result = conn.execute(
+        text(
+            r"""
+            SELECT rolname
+            FROM pg_roles
+            WHERE rolname LIKE 'scope\_%'
+               OR rolname LIKE 'write\_%'
+            """
+        )
+    )
+    return [row[0] for row in result]
+
+
+def _filter_grantees(
+    scopes: frozenset[Scope] | frozenset[str], only_role: str | None, only_scope: str | None
+) -> list[str]:
+    """Determine which roles to assign for the scopes.
+    This limits the granted scopes to the limitations given by CLI parameters.
+
+    NOTE: The 'profiles' currently give a list of string scope names,
+    while the 'dataset' objects already reference Scope objects.
+    """
+    if only_role is None:
+        return [_scope_to_role(_scope) for _scope in scopes]
+    elif any(s.id == only_scope if isinstance(s, Scope) else s == only_scope for s in scopes):
+        return [only_role]
+    else:
+        return []
+
+
+def _scope_to_role(scope: Scope | str) -> str:
     """Return rolename for the postgres database."""
     id = scope.id if isinstance(scope, Scope) else scope
     return f"scope_{id.lower().replace('/', '_')}"

@@ -16,7 +16,10 @@
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "additionalProperties": false,
+        "identifier": ["id"],
+        "required": ["id", "schema", "burgerservicenummer"],
         "properties": {
+          "id": { "type": "integer" },
           "geslachtsaanduiding": { "type": "string" },
           "naam": {
             "type": "object",
@@ -85,8 +88,7 @@
             },
             "required": []
           }
-        },
-        "required": ["burgerservicenummer"]
+        }
       }
     }
   ],
