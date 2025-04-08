@@ -478,3 +478,15 @@ def test_extra_properties_of_relation_field_are_also_in_through_table(gebieden_s
     assert {"beginGeldigheid", "eindGeldigheid"} < fields_on_through_table[
         "ligtInBuurt"
     ].json_data()["properties"].keys()
+
+
+def test_table_zoom(gebieden_schema: DatasetSchema):
+    bouwblokken = gebieden_schema.get_table_by_id("bouwblokken")
+    buurten = gebieden_schema.get_table_by_id("buurten")
+
+    # bouwblokken has a zoom min and max set
+    assert bouwblokken.min_zoom == 20
+    assert bouwblokken.max_zoom == 28
+    # buurten has no zoom set, and therefore uses the defaults
+    assert buurten.min_zoom == 15
+    assert buurten.max_zoom == 30
