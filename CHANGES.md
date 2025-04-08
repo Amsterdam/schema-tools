@@ -1,3 +1,8 @@
+# 2025-04-08 (7.3.0)
+
+* Add min_zoom and max_zoom properties to the DatasetTableSchema.
+  This is used to determine when to show which fields in the MVT view.
+
 # 2025-04-07 (7.2.2)
 
 * Fix bug in read_json_path.
