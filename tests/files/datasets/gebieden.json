@@ -15,6 +15,10 @@
         "identifier": "volgnummer",
         "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
       },
+      "zoom": {
+        "min": 20,
+        "max": 28
+      },
       "schema": {
         "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
         "$schema": "http://json-schema.org/draft-07/schema#",

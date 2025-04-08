@@ -1,3 +1,8 @@
+# 2025-04-08 (6.6.0)
+
+* Add min_zoom and max_zoom properties to the DatasetTableSchema.
+  This is used to determine when to show which fields in the MVT view.
+
 # 2025-03-27 (6.5.4)
 
 * Removed the .json extension from index files, as this has been changed in amsterdam-schema
