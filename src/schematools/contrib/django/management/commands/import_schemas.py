@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from collections import deque
 from pathlib import Path
 
 from django.conf import settings
 from django.core.management import BaseCommand
 from django.db.models import Q
 
+from schematools.contrib.django.factories import schema_models_factory
+from schematools.contrib.django.management.commands.migration_helpers import migrate
 from schematools.contrib.django.models import Dataset
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
 from schematools.naming import to_snake_case
@@ -39,6 +42,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.dry_run = options["dry_run"]
+        self.verbosity = options["verbosity"]
+        self.schema_dependencies = deque()
+        current_datasets = {
+            Dataset.name_from_schema(ds.schema): ds for ds in Dataset.objects.all()
+        }
+
         if options["schema"]:
             schemas = self.get_schemas_from_files(options["schema"])
         else:
@@ -46,10 +55,32 @@ class Command(BaseCommand):
 
         # Contains unsaved Dataset objects if dry_run.
         updated_datasets = self._run_import(schemas)
-
         if not updated_datasets:
             self.stdout.write("No new datasets imported")
             return
+
+        # Loop over updated datasets and perform migrations.
+        for updated_dataset in updated_datasets:
+            current_dataset = current_datasets.get(
+                Dataset.name_from_schema(updated_dataset.schema)
+            )
+            if not current_dataset:  # New dataset
+                continue
+
+            real_apps = self._load_dependencies(updated_dataset.schema, updated_dataset)
+            for current_table in current_dataset.schema.tables:
+                updated_table = updated_dataset.schema.get_table_by_id(
+                    current_table.id, include_nested=False, include_through=False
+                )
+                migrate(
+                    self,
+                    current_dataset,
+                    updated_dataset,
+                    current_table,
+                    updated_table,
+                    real_apps,
+                    dry_run=self.dry_run,
+                )
 
         # Reasons for not creating tables directly are to manually configure the
         # "Datasets" model flags first. E.g. disable "enable_db".
@@ -104,7 +135,38 @@ class Command(BaseCommand):
         return loader.get_all_datasets()
 
     def _loaded_callback(self, schema: DatasetSchema):
+        """Track which schema's get loaded. This is also used for dependency tracking."""
         self.stdout.write(f"* Loaded {schema.id}")
+
+        self.schema_dependencies.append(schema)
+
+    def _load_dependencies(self, dataset_schema: DatasetSchema, dataset) -> list[str]:
+        """Make sure any dependencies are loaded.
+
+        Returns the list of "real app names", which tells Django migrations those apps
+        are not part of the project state, but can be found in the main app registry itself.
+        """
+        related_ids = dataset_schema.related_dataset_schema_ids
+        real_apps = []
+
+        # Load first, and this fills the cache.
+        for dataset_id in related_ids - {dataset_schema.id}:
+            dataset_schema.loader.get_dataset(dataset_id, prefetch_related=True)
+
+        # Turn any loaded schema into a model.
+        # And when a call to model_factory() triggers loading of more schemas,
+        # these are also picked up from the deque() collection object.
+        while self.schema_dependencies:
+            dependency_schema = self.schema_dependencies.popleft()
+            if dependency_schema.id == dataset_schema.id:
+                continue
+
+            if self.verbosity >= 2:
+                self.stdout.write(f"-- Building models for {dependency_schema.id}")
+            schema_models_factory(dataset)
+            real_apps.append(dependency_schema.id)
+
+        return real_apps
 
     def _run_import(self, dataset_schemas: dict[str, DatasetSchema]) -> list[Dataset]:
         datasets = []
