@@ -5,18 +5,12 @@ import tempfile
 from collections import deque
 from pathlib import Path
 
-from django.apps import apps
 from django.conf import settings
 from django.core.management import BaseCommand, CommandError, CommandParser
-from django.db import DEFAULT_DB_ALIAS, connections
-from django.db.backends.base.base import BaseDatabaseWrapper
-from django.db.migrations import Migration
-from django.db.migrations.autodetector import MigrationAutodetector
-from django.db.migrations.graph import MigrationGraph
-from django.db.migrations.questioner import InteractiveMigrationQuestioner
-from django.db.migrations.state import ModelState, ProjectState
+from django.db import DEFAULT_DB_ALIAS
 
-from schematools.contrib.django.factories import model_factory, schema_models_factory
+from schematools.contrib.django.factories import schema_models_factory
+from schematools.contrib.django.management.commands.migration_helpers import migrate
 from schematools.contrib.django.models import Dataset
 from schematools.exceptions import DatasetNotFound, DatasetTableNotFound
 from schematools.loaders import SchemaLoader, get_schema_loader
@@ -124,30 +118,16 @@ class Command(BaseCommand):
         real_apps = self._load_dependencies(dataset)
         dummy_dataset = self._get_dummy_dataset_model(dataset)
 
-        # Generate a full project state that incorporates the table versions
-        # The used Django migration-API calls were inspired by reading
-        # the 'manage.py makemigrations' and 'manage.py sqlmigrate' command changes.
-        base_state = self._get_base_project_state(dummy_dataset, table1.id, real_apps=real_apps)
-        state1 = self._get_versioned_project_state(base_state, dummy_dataset, table1)
-        state2 = self._get_versioned_project_state(base_state, dummy_dataset, table2)
-
-        # Clear any models from the app cache to avoid confusion
-        del apps.all_models[dataset.id]
-        del apps.app_configs[dataset.id]
-        apps.clear_cache()
-
-        # Let the migration engine perform its magic, similar to `manage.py makemigrations`:
-        migrations = self._get_migrations(state1, state2, app_name=dataset.id)
-        if not migrations:
-            self.stdout.write("No changes detected")
-            return
-
-        # Generate SQL per migration file, just like `manage.py sqlmigrate` does:
-        start_state = state1
-        connection = connections[options["database"]]
-        for _app, app_migrations in migrations.items():
-            for migration in app_migrations:
-                start_state = self._print_sql(connection, start_state, migration)
+        migrate(
+            self,
+            dummy_dataset,
+            dummy_dataset,  # In this case we can reuse the dummy dataset
+            table1,
+            table2,
+            real_apps=real_apps,
+            dry_run=True,  # We do not apply the migrations here, just show the SQL.
+            database=options["database"],
+        )
 
     def _load_table_from_checkout(
         self, dataset_id: str, table_id: str, tmpdir: str, version_ref: str
@@ -248,109 +228,3 @@ class Command(BaseCommand):
         dataset._dataset_collection = dataset_schema.loader
         dataset.__dict__["schema"] = dataset_schema
         return dataset
-
-    def _get_base_project_state(
-        self, dataset_model: Dataset, exclude_table: str, real_apps: list[str]
-    ) -> ProjectState:
-        """Generate the common/shared project state.
-
-        This includes all other models of the dataset, as those may be referenced by relations.
-        It excludes the versioned table, since that will differ.
-        """
-        if self.verbosity >= 2:
-            self.stdout.write(f"-- Building shared state for {dataset_model.name}")
-
-        project_state = ProjectState(real_apps=set(real_apps))
-
-        # Generate model states for all other tables in the dataset
-        for table in dataset_model.schema.get_tables(include_nested=True, include_through=True):
-            # Exclude the actual table that changes, including any nested/through tables.
-            if table.id == exclude_table or (
-                table.has_parent_table and table.parent_table.id == exclude_table
-            ):
-                continue
-
-            project_state.add_model(self._get_model_state(dataset_model, table))
-
-        return project_state
-
-    def _get_versioned_project_state(
-        self, base_state: ProjectState, dataset_model: Dataset, table: DatasetTableSchema
-    ) -> ProjectState:
-        """Generate the final project state.
-        This clones the base state, so other related models are only created once.
-        """
-        project_state = base_state.clone()
-        project_state.add_model(self._get_model_state(dataset_model, table))
-
-        # Add any nested tables and through tables,
-        # that are also part of this table schema.
-        for field in table.fields:
-            if (through_table := field.through_table) is not None:
-                project_state.add_model(self._get_model_state(dataset_model, through_table))
-            elif (nested_table := field.nested_table) is not None:
-                project_state.add_model(self._get_model_state(dataset_model, nested_table))
-
-        return project_state
-
-    def _get_model_state(
-        self, dataset_model: Dataset, table: DatasetTableSchema, managed=True
-    ) -> ModelState:
-        """Generate the model state for a table."""
-        # The migration-engine will only consider models that have "managed=True".
-        # This is turned off by default for the model_factory() logic,
-        # and needs to be overwritten here (patching model._meta and its original_attrs is nasty).
-        model_class = model_factory(dataset_model, table, meta_options={"managed": managed})
-
-        # Generate the model. exclude_rels=True because M2M-through tables are generated manually.
-        return PatchedModelState.from_model(model_class, exclude_rels=True)
-
-    def _get_migrations(
-        self, state1: ProjectState, state2: ProjectState, app_name: str
-    ) -> dict[str, list[Migration]]:
-        """Generate a migration object for the given table versions."""
-        detector = MigrationAutodetector(
-            from_state=state1,
-            to_state=state2,
-            questioner=InteractiveMigrationQuestioner(specified_apps=[app_name]),
-        )
-        # The dependency graph remains empty here, as we assume all other models are still
-        # in place. We only compare the changes between 2 models of the same table.
-        dependency_graph = MigrationGraph()
-        return detector.changes(
-            dependency_graph,
-            trim_to_apps=[app_name],
-            migration_name="dummy",
-        )
-
-    def _print_sql(
-        self, connection: BaseDatabaseWrapper, start_state: ProjectState, migration: Migration
-    ) -> ProjectState:
-        """Print the SQL statements for a migration"""
-        if self.verbosity >= 3:
-            self.stdout.write(f"-- Migration: {migration.name}")
-            for operation in migration.operations:
-                self.stdout.write(f"--   {operation}")
-
-        with connection.schema_editor(collect_sql=True, atomic=migration.atomic) as schema_editor:
-            try:
-                start_state = migration.apply(start_state, schema_editor, collect_sql=True)
-            except Exception:
-                # On crashes, still show the generated statements so far
-                self.stdout.write("\n".join(schema_editor.collected_sql))
-                raise
-
-        self.stdout.write("\n".join(schema_editor.collected_sql))
-        return start_state
-
-
-class PatchedModelState(ModelState):
-    """A workaround to avoid breaking migration rendering."""
-
-    def clone(self):
-        """Return an exact copy of this ModelState."""
-        # Workaround for Django issue. The fields get bound to a model during the first
-        # migration operation, which breaks reusing them in migrations.
-        # Quick fix is to deep-clone the fields too:
-        self.fields = {name: field.clone() for name, field in self.fields.items()}
-        return super().clone()
