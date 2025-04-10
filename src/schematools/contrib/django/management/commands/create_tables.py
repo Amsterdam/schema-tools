@@ -34,6 +34,7 @@ def create_tables(
     allow_unmanaged: bool = False,
     base_app_name: str | None = None,
     skip: list[str] | None = None,
+    dry_run: bool = False,
 ) -> None:  # noqa: C901
     """Create tables for all updated datasets.
     This is a separate function to allow easy reuse.
@@ -92,14 +93,20 @@ def create_tables(
                 command.stderr.write(f"  Skipping non-managed model: {model._meta.db_table}")
                 continue
 
-            try:
-                command.stdout.write(f"* Creating table {model._meta.db_table}")
-                with transaction.atomic():
-                    schema_editor.create_model(model)
-            except (DatabaseError, ValueError) as e:
-                command.stderr.write(f"  Tables not created: {e}")
-                if not re.search(r'relation "[^"]+" already exists', str(e)):
-                    errors += 1
+            if dry_run:
+                command.stdout.write(
+                    f"* Would create table {model._meta.db_table} if it doesn't exist"
+                )
+            else:
+                try:
+                    with transaction.atomic():
+                        schema_editor.create_model(model)
+                except (DatabaseError, ValueError) as e:
+                    command.stderr.write(f"  Cannot create table {model._meta.db_table}: {e}")
+                    if not re.search(r'relation "[^"]+" already exists', str(e)):
+                        errors += 1
+                else:
+                    command.stdout.write(f"* Creating table {model._meta.db_table}")
 
     if errors:
         raise CommandError("Not all tables could be created")
