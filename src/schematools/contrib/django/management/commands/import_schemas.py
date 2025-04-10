@@ -33,30 +33,35 @@ class Command(BaseCommand):
         parser.add_argument("--create-tables", dest="create_tables", action="store_true")
         parser.add_argument("--create-views", dest="create_views", action="store_true")
         parser.add_argument("--no-create-tables", dest="create_tables", action="store_false")
+        parser.add_argument("--dry-run", dest="dry_run", action="store_true")
         parser.set_defaults(create_tables=False)
         parser.set_defaults(create_views=False)
 
     def handle(self, *args, **options):
+        self.dry_run = options["dry_run"]
         if options["schema"]:
-            datasets = self.import_from_files(options["schema"])
+            schemas = self.get_schemas_from_files(options["schema"])
         else:
-            datasets = self.import_from_url(options["schema_url"])
+            schemas = self.get_schemas_from_url(options["schema_url"])
 
-        if not datasets:
+        # Contains unsaved Dataset objects if dry_run.
+        updated_datasets = self._run_import(schemas)
+
+        if not updated_datasets:
             self.stdout.write("No new datasets imported")
             return
 
         # Reasons for not creating tables directly are to manually configure the
         # "Datasets" model flags first. E.g. disable "enable_db".
         if options["create_tables"]:
-            create_tables(self, datasets, allow_unmanaged=True)
+            create_tables(self, updated_datasets, allow_unmanaged=True, dry_run=self.dry_run)
 
         if options["create_views"]:
-            create_views(self, datasets)
+            create_views(self, updated_datasets, dry_run=self.dry_run)
 
-    def import_from_files(self, schema_files) -> list[Dataset]:
+    def get_schemas_from_files(self, schema_files) -> dict[str, DatasetSchema]:
         """Import all schema definitions from the given files."""
-        datasets = []
+        schemas = {}
         shared_loaders = {}
 
         def _get_shared_loader(path):
@@ -75,7 +80,7 @@ class Command(BaseCommand):
                 # As intended, read all datasets
                 # The folder might be a sub path in the repository,
                 # in which case only a few datasets will be imported.
-                files = _get_shared_loader(file).get_all_datasets()
+                schemas.update(_get_shared_loader(file).get_all_datasets())
             else:
                 # Previous logic also allowed selecting a single file by name.
                 # This still needs to resolve the root to resolve relations,
@@ -88,24 +93,22 @@ class Command(BaseCommand):
                 if str(path) == ".":
                     path = dataset.id  # workaround for unit tests
 
-                files = {path: dataset}
+                schemas.update({path: dataset})
 
-            datasets.extend(self._run_import(files))
+        return schemas
 
-        return datasets
-
-    def import_from_url(self, schema_url) -> list[Dataset]:
+    def get_schemas_from_url(self, schema_url) -> dict[str, DatasetSchema]:
         """Import all schema definitions from a URL"""
         self.stdout.write(f"Loading schema from {schema_url}")
         loader = get_schema_loader(schema_url, loaded_callback=self._loaded_callback)
-        return self._run_import(loader.get_all_datasets())
+        return loader.get_all_datasets()
 
     def _loaded_callback(self, schema: DatasetSchema):
         self.stdout.write(f"* Loaded {schema.id}")
 
-    def _run_import(self, files: dict[str, DatasetSchema]) -> list[Dataset]:
+    def _run_import(self, dataset_schemas: dict[str, DatasetSchema]) -> list[Dataset]:
         datasets = []
-        for path, schema in files.items():
+        for path, schema in dataset_schemas.items():
             self.stdout.write(f"* Processing {schema.id}")
             dataset = self._import(schema, path)
             if dataset is not None:
@@ -125,7 +128,7 @@ class Command(BaseCommand):
                 )
             except Dataset.DoesNotExist:
                 # Give up, Create new dataset
-                dataset = Dataset.create_for_schema(schema, path)
+                dataset = Dataset.create_for_schema(schema, path, save=not self.dry_run)
                 self.stdout.write(f"  Created {schema.id}")
                 return dataset
 
@@ -133,8 +136,8 @@ class Command(BaseCommand):
         if dataset.is_default_version != schema.is_default_version:
             self.update_dataset_version(dataset, schema)
 
-        updated = dataset.save_for_schema(schema)
-        dataset.save_path(path)
+        updated = dataset.save_for_schema(schema, save=not self.dry_run)
+        dataset.save_path(path, save=not self.dry_run)
         return dataset if updated else None
 
     def update_dataset_version(self, dataset: Dataset, schema: DatasetSchema) -> None:
@@ -150,8 +153,8 @@ class Command(BaseCommand):
                 # Update current default dataset name to expected name.
                 if current_default.version:
                     current_default.name = to_snake_case(f"{schema.id}_{current_default.version}")
-
-                    current_default.save()
+                    if not self.dry_run:
+                        current_default.save()
 
         dataset.name = Dataset.name_from_schema(schema)
         dataset.is_default_version = schema.is_default_version
