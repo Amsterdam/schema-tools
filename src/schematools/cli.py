@@ -41,6 +41,7 @@ from schematools.exceptions import (
     SchemaObjectNotFound,
 )
 from schematools.exports.csv import export_csvs
+from schematools.exports.geojson import export_geojsons
 from schematools.exports.geopackage import export_geopackages
 from schematools.exports.jsonlines import export_jsonls
 from schematools.factories import tables_factory
@@ -1205,6 +1206,37 @@ def export_jsonls_for(
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     with engine.begin() as connection:
         export_jsonls(
+            connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size
+        )
+
+
+@export.command("geojson")
+@option_db_url
+@option_schema_url
+@argument_dataset_id
+@click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
+@click.option("--table-ids", "-t", multiple=True)
+@click.option(
+    "--scopes",
+    "-s",
+    multiple=True,
+    help="Scopes option has been disabled for now, only public data can be exported.",
+)
+@click.option("--size")
+def export_geojsons_for(
+    db_url: str,
+    schema_url: str,
+    dataset_id: str,
+    output: str,
+    table_ids: list[str],
+    scopes: list[str],
+    size: int,
+) -> None:
+    """Export GeoJSON files from postgres."""
+    engine = _get_engine(db_url)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
+    with engine.begin() as connection:
+        export_geojsons(
             connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size
         )
 

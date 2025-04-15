@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import text
 
 from schematools.exports.csv import export_csvs
+from schematools.exports.geojson import export_geojsons
 from schematools.exports.geopackage import export_geopackages
 from schematools.exports.jsonlines import export_jsonls
 from schematools.importer.ndjson import NDJSONImporter
@@ -80,3 +81,24 @@ def test_geopackage_export(here, engine, meetbouten_schema, dbsession, tmp_path)
     )
     res = cursor.fetchall()
     assert res == [(1, "10180001.1", "12", "De meetbout")]
+
+
+def test_geojson_export(here, engine, meetbouten_schema, dbsession, tmp_path):
+    """Prove that geojson export contains the correct content."""
+    _load_meetbouten_content(here, engine, meetbouten_schema)
+    export_geojsons(engine, meetbouten_schema, str(tmp_path), [], [], 1)
+    with open(tmp_path / "meetbouten_meetbouten_v1.geojson") as out_file:
+        result = orjson.loads(out_file.read())
+        feature = result["features"][0]
+        feature["geometry"]["coordinates"][1] = round(feature["geometry"]["coordinates"][1], 5)
+        feature["geometry"]["coordinates"][0] = round(feature["geometry"]["coordinates"][0], 5)
+        assert feature == {
+            "type": "Feature",
+            "properties": {
+                "identificatie": 1,
+                "ligtInBuurtId": "10180001.1",
+                "merkCode": "12",
+                "merkOmschrijving": "De meetbout",
+            },
+            "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
+        }
