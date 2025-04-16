@@ -121,7 +121,9 @@ class BaseExporter:
             if not columns:
                 continue
             with open(
-                self.base_dir / f"{table.db_name}.{self.extension}", "w", encoding="utf8"
+                self.base_dir / f"{table.db_name.replace("_v1", "")}.{self.extension}",
+                "w",
+                encoding="utf8",
             ) as file_handle:
                 self.write_rows(
                     file_handle,

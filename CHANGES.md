@@ -1,3 +1,7 @@
+# 2025-04-15 (7.4.0)
+
+* Added support to export datasets to GeoJSON
+
 # 2025-04-08 (7.3.0)
 
 * Add min_zoom and max_zoom properties to the DatasetTableSchema.
