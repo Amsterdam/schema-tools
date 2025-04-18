@@ -1,3 +1,10 @@
+# 2025-04-08 (7.4.0)
+
+* Update the import_schemas command so that it also patches the database, as we have added
+  CI-steps that ensure that no breaking changes are introduced before merging to main. A
+  --dry-run flag has been added as well, so that you can inspect the SQL that would be
+  executed before executing it.
+
 # 2025-04-08 (7.3.0)
 
 * Add min_zoom and max_zoom properties to the DatasetTableSchema.
