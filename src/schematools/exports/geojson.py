@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from decimal import Decimal
 from typing import IO, Any
 
-import jsonlines
 import orjson
 from geoalchemy2 import functions as func
 from sqlalchemy import Column, MetaData, select
@@ -12,30 +10,24 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.sql.elements import ClauseElement
 
 from schematools.exports import BaseExporter
-from schematools.exports.csv import DatasetFieldSchema, enable_datetime_cast
 from schematools.naming import toCamelCase
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
 metadata = MetaData()
 
 
 def _default(obj: Any) -> str:
-    if isinstance(obj, Decimal):
-        return str(obj)
+    if isinstance(obj, (bytes, bytearray)):
+        return obj.decode()
     raise TypeError
 
 
 def _dumps(obj: Any) -> str:
-    """Json serializer.
-
-    Unfortunately, orjson does not support Decimal serialization,
-    so we need this extra function.
-    """
     return orjson.dumps(obj, default=_default)
 
 
-class JsonLinesExporter(BaseExporter):  # noqa: D101
-    extension = "jsonl"
+class GeoJsonExporter(BaseExporter):
+    extension = "geojson"
 
     def geo_modifier(field: DatasetFieldSchema, column):
         if not field.is_geo:
@@ -47,21 +39,9 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
             return func.split_part(column, ".", 1).label(field.db_name)
         return column
 
-    # We do not use the iso for datetime here, because json notation handles this.
-
     processors = (geo_modifier, id_modifier)
 
-    def _get_row_modifier(self, table: DatasetTableSchema):
-        lookup = {}
-        for field in table.fields:
-            lookup[field.db_name] = (
-                (lambda v: orjson.loads(v) if v else v)
-                if field.is_geo or field.is_nested_object
-                else lambda v: v
-            )
-        return lookup
-
-    def write_rows(  # noqa: D102
+    def write_rows(
         self,
         file_handle: IO[str],
         table: DatasetTableSchema,
@@ -69,8 +49,7 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
         temporal_clause: ClauseElement | None,
         srid: str,
     ):
-        writer = jsonlines.Writer(file_handle, dumps=_dumps)
-        row_modifier = self._get_row_modifier(table)
+        features = []
         query = select(*columns)
         if temporal_clause is not None:
             query = query.where(temporal_clause)
@@ -80,11 +59,28 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
         with self.connection.engine.execution_options(yield_per=1000).connect() as conn:
             result = conn.execute(query)
             for partition in result.mappings().partitions():
-                for r in partition:
-                    writer.write({toCamelCase(k): row_modifier[k](v) for k, v in r.items()})
+                for row in partition:
+                    self._process_row(row, features)
+
+            geojson = {"type": "FeatureCollection", "features": features}
+            file_handle.write(_dumps(geojson).decode())
+
+    def _process_row(self, row, features):
+        """Process a single row and add it to features if it contains geometry."""
+        properties = {}
+        geometry = None
+        for k, v in row.items():
+            if isinstance(v, (str, bytes)) and v.startswith('{"type":'):
+                geometry = orjson.loads(v)
+            else:
+                properties[toCamelCase(k)] = v
+
+        if geometry:
+            feature = {"type": "Feature", "properties": properties, "geometry": geometry}
+            features.append(feature)
 
 
-def export_jsonls(
+def export_geojsons(
     connection: Connection,
     dataset_schema: DatasetSchema,
     output: str,
@@ -92,7 +88,5 @@ def export_jsonls(
     scopes: list[str],
     size: int,
 ):
-    """Utility function to wrap the Exporter."""
-    enable_datetime_cast()
-    exporter = JsonLinesExporter(connection, dataset_schema, output, table_ids, scopes, size)
+    exporter = GeoJsonExporter(connection, dataset_schema, output, table_ids, scopes, size)
     exporter.export_tables()
