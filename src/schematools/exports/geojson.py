@@ -56,23 +56,14 @@ class GeoJsonExporter(BaseExporter):
         if self.size is not None:
             query = query.limit(self.size)
 
-        # Handle both Engine and Connection objects
-        if hasattr(self.connection, "connect"):
-            # It's an Engine
-            with self.connection.connect() as conn:
-                result = conn.execute(query)
-                for partition in result.mappings().partitions():
-                    for row in partition:
-                        self._process_row(row, features)
-        else:
-            # It's already a Connection
-            result = self.connection.execute(query)
+        with self.connection.engine.execution_options(yield_per=1000).connect() as conn:
+            result = conn.execute(query)
             for partition in result.mappings().partitions():
                 for row in partition:
                     self._process_row(row, features)
 
-        geojson = {"type": "FeatureCollection", "features": features}
-        file_handle.write(_dumps(geojson).decode())
+            geojson = {"type": "FeatureCollection", "features": features}
+            file_handle.write(_dumps(geojson).decode())
 
     def _process_row(self, row, features):
         """Process a single row and add it to features if it contains geometry."""

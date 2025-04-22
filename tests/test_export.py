@@ -23,12 +23,13 @@ def _load_meetbouten_content(here, engine, meetbouten_schema):
 def test_csv_export(here, engine, meetbouten_schema, dbsession, tmp_path):
     """Prove that csv export contains the correct content."""
     _load_meetbouten_content(here, engine, meetbouten_schema)
-    export_csvs(engine, meetbouten_schema, str(tmp_path), [], [], 1)
-    with open(tmp_path / "meetbouten_meetbouten.csv") as out_file:
-        assert out_file.read() == (
-            "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie\n"
-            "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6)\n"
-        )
+    with engine.begin() as connection:
+        export_csvs(connection, meetbouten_schema, str(tmp_path), [], [], 1)
+        with open(tmp_path / "meetbouten_meetbouten.csv") as out_file:
+            assert out_file.read() == (
+                "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie\n"
+                "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6)\n"
+            )
 
 
 def test_csv_export_only_actual(here, engine, ggwgebieden_schema, dbsession, tmp_path):
@@ -37,28 +38,30 @@ def test_csv_export_only_actual(here, engine, ggwgebieden_schema, dbsession, tmp
     importer = NDJSONImporter(ggwgebieden_schema, engine)
     importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
     importer.load_file(ndjson_path)
-    export_csvs(engine, ggwgebieden_schema, str(tmp_path), [], [], 1)
-    with open(tmp_path / "ggwgebieden_ggwgebieden.csv") as out_file:
-        lines = out_file.readlines()
-        assert len(lines) == 2  # includes the headerline
-        assert lines[1].split(",")[0] == "2"  # volgnummer == 2
+    with engine.begin() as connection:
+        export_csvs(connection, ggwgebieden_schema, str(tmp_path), [], [], 1)
+        with open(tmp_path / "ggwgebieden_ggwgebieden.csv") as out_file:
+            lines = out_file.readlines()
+            assert len(lines) == 2  # includes the headerline
+            assert lines[1].split(",")[0] == "2"  # volgnummer == 2
 
 
 def test_jsonlines_export(here, engine, meetbouten_schema, dbsession, tmp_path):
     """Prove that jsonlines export contains the correct content."""
-    _load_meetbouten_content(here, engine, meetbouten_schema)
-    export_jsonls(engine, meetbouten_schema, str(tmp_path), [], [], 1)
-    with open(tmp_path / "meetbouten_meetbouten.jsonl") as out_file:
-        result = orjson.loads(out_file.read())
-        result["geometrie"]["coordinates"][1] = round(result["geometrie"]["coordinates"][1], 5)
-        result["geometrie"]["coordinates"][0] = round(result["geometrie"]["coordinates"][0], 5)
-        assert result == {
-            "identificatie": 1,
-            "ligtInBuurtId": "10180001.1",
-            "merkCode": "12",
-            "merkOmschrijving": "De meetbout",
-            "geometrie": {"type": "Point", "coordinates": [4.86497, 52.37055]},
-        }
+    with engine.begin() as connection:
+        _load_meetbouten_content(here, engine, meetbouten_schema)
+        export_jsonls(connection, meetbouten_schema, str(tmp_path), [], [], 1)
+        with open(tmp_path / "meetbouten_meetbouten.jsonl") as out_file:
+            result = orjson.loads(out_file.read())
+            result["geometrie"]["coordinates"][1] = round(result["geometrie"]["coordinates"][1], 5)
+            result["geometrie"]["coordinates"][0] = round(result["geometrie"]["coordinates"][0], 5)
+            assert result == {
+                "identificatie": 1,
+                "ligtInBuurtId": "10180001.1",
+                "merkCode": "12",
+                "merkOmschrijving": "De meetbout",
+                "geometrie": {"type": "Point", "coordinates": [4.86497, 52.37055]},
+            }
 
 
 # We have to skip this test, ogr2og2 is not available on github
@@ -85,20 +88,21 @@ def test_geopackage_export(here, engine, meetbouten_schema, dbsession, tmp_path)
 
 def test_geojson_export(here, engine, meetbouten_schema, dbsession, tmp_path):
     """Prove that geojson export contains the correct content."""
-    _load_meetbouten_content(here, engine, meetbouten_schema)
-    export_geojsons(engine, meetbouten_schema, str(tmp_path), [], [], 1)
-    with open(tmp_path / "meetbouten_meetbouten.geojson") as out_file:
-        result = orjson.loads(out_file.read())
-        feature = result["features"][0]
-        feature["geometry"]["coordinates"][1] = round(feature["geometry"]["coordinates"][1], 5)
-        feature["geometry"]["coordinates"][0] = round(feature["geometry"]["coordinates"][0], 5)
-        assert feature == {
-            "type": "Feature",
-            "properties": {
-                "identificatie": 1,
-                "ligtInBuurtId": "10180001.1",
-                "merkCode": "12",
-                "merkOmschrijving": "De meetbout",
-            },
-            "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
-        }
+    with engine.begin() as connection:
+        _load_meetbouten_content(here, engine, meetbouten_schema)
+        export_geojsons(connection, meetbouten_schema, str(tmp_path), [], [], 1)
+        with open(tmp_path / "meetbouten_meetbouten.geojson") as out_file:
+            result = orjson.loads(out_file.read())
+            feature = result["features"][0]
+            feature["geometry"]["coordinates"][1] = round(feature["geometry"]["coordinates"][1], 5)
+            feature["geometry"]["coordinates"][0] = round(feature["geometry"]["coordinates"][0], 5)
+            assert feature == {
+                "type": "Feature",
+                "properties": {
+                    "identificatie": 1,
+                    "ligtInBuurtId": "10180001.1",
+                    "merkCode": "12",
+                    "merkOmschrijving": "De meetbout",
+                },
+                "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
+            }

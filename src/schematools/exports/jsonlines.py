@@ -77,7 +77,7 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
         if self.size is not None:
             query = query.limit(self.size)
 
-        with self.connection.execution_options(yield_per=1000).connect() as conn:
+        with self.connection.engine.execution_options(yield_per=1000).connect() as conn:
             result = conn.execute(query)
             for partition in result.mappings().partitions():
                 for r in partition:
