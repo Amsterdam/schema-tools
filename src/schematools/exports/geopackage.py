@@ -5,8 +5,7 @@ from pathlib import Path
 
 from psycopg2 import sql
 
-from schematools.exports import _get_fields
-from schematools.types import DatasetSchema
+from schematools.types import _PUBLIC_SCOPE, DatasetSchema, DatasetTableSchema
 
 
 def export_geopackages(
@@ -58,3 +57,14 @@ def export_geopackages(
         os.system(  # noqa: S605  # nosec: B605
             command.format(output_path=output_path, db_url=db_url, sql=sql_stmt)  # noqa: S605
         )
+
+
+def _get_fields(dataset_schema: DatasetSchema, table: DatasetTableSchema, scopes: list[str]):
+    parent_scopes = set(dataset_schema.auth | table.auth) - {_PUBLIC_SCOPE}
+    for field in table.fields:
+        if field.is_array:
+            continue
+        if field.is_internal:
+            continue
+        if parent_scopes | set(field.auth) - {_PUBLIC_SCOPE} <= set(scopes):
+            yield field

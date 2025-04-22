@@ -80,6 +80,18 @@ class BaseExporter:
         )
         self.sa_tables = tables_factory(dataset_schema, metadata)
 
+    def _get_fields(
+        self, dataset_schema: DatasetSchema, table: DatasetTableSchema, scopes: list[str]
+    ):
+        parent_scopes = set(dataset_schema.auth | table.auth) - {_PUBLIC_SCOPE}
+        for field in table.fields:
+            if field.is_array and self.extension != "geojson":
+                continue
+            if field.is_internal:
+                continue
+            if parent_scopes | set(field.auth) - {_PUBLIC_SCOPE} <= set(scopes):
+                yield field
+
     def _get_column(self, sa_table: Table, field: DatasetFieldSchema) -> Column:
         column = getattr(sa_table.c, field.db_name)
         # apply all processors
@@ -89,7 +101,7 @@ class BaseExporter:
         return column
 
     def _get_columns(self, sa_table: Table, table: DatasetTableSchema) -> Iterable[Column]:
-        for field in _get_fields(self.dataset_schema, table, self.scopes):
+        for field in self._get_fields(self.dataset_schema, table, self.scopes):
             try:
                 yield self._get_column(sa_table, field)
             except AttributeError:
@@ -121,7 +133,7 @@ class BaseExporter:
             if not columns:
                 continue
             with open(
-                self.base_dir / f"{table.db_name.replace("_v1", "")}.{self.extension}",
+                self.base_dir / f"{table.db_name.replace('_v1', '')}.{self.extension}",
                 "w",
                 encoding="utf8",
             ) as file_handle:
@@ -142,14 +154,3 @@ class BaseExporter:
         srid: str,
     ):
         raise NotImplementedError
-
-
-def _get_fields(dataset_schema: DatasetSchema, table: DatasetTableSchema, scopes: list[str]):
-    parent_scopes = set(dataset_schema.auth | table.auth) - {_PUBLIC_SCOPE}
-    for field in table.fields:
-        if field.is_array:
-            continue
-        if field.is_internal:
-            continue
-        if parent_scopes | set(field.auth) - {_PUBLIC_SCOPE} <= set(scopes):
-            yield field
