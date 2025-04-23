@@ -106,7 +106,7 @@ def create_tables(
                     if not re.search(r'relation "[^"]+" already exists', str(e)):
                         errors += 1
                 else:
-                    command.stdout.write(f"* Creating table {model._meta.db_table}")
+                    command.stdout.write(f"* Created table {model._meta.db_table}")
 
     if errors:
         raise CommandError("Not all tables could be created")
