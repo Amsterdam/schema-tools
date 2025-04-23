@@ -575,6 +575,7 @@ def _check_lifecycle_status(dataset: DatasetSchema) -> Iterator[str]:
 
 
 PROPERTIES_INTRODUCING_BREAKING_CHANGES = ["type", "$ref", "format", "relation", "enum"]
+IGNORED_FIELDS = ["schema"]  # This is not a database column.
 
 
 def validate_table(
@@ -597,6 +598,9 @@ def validate_table(
     table_errors = []
     current_object_path = object_path
     for previous_field_name, previous_field in previous_fields.items():
+        if previous_field_name in IGNORED_FIELDS:
+            continue
+
         column_name = parent_field or previous_field_name
 
         # check if field is deleted
