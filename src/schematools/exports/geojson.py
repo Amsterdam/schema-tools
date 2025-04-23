@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from decimal import Decimal
 from typing import IO, Any
 
 import orjson
@@ -17,8 +18,8 @@ metadata = MetaData()
 
 
 def _default(obj: Any) -> str:
-    if isinstance(obj, (bytes, bytearray)):
-        return obj.decode()
+    if isinstance(obj, Decimal):
+        return str(obj)
     raise TypeError
 
 

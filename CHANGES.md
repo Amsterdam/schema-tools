@@ -1,4 +1,8 @@
-# 2025-04-08 (7.5.0)
+# 2025-04-23 (7.5.1)
+
+* Fixed bug in geojson exporter where decimals were not exported correctly.
+
+# 2025-04-23 (7.5.0)
 
 * Update the import_schemas command so that it also patches the database, as we have added
   CI-steps that ensure that no breaking changes are introduced before merging to main. A
