@@ -1,3 +1,7 @@
+# 2025-04-24 (7.5.3)
+
+* Fixed bug in geopackage exporter where coinnection objects was handled incorrectly
+
 # 2025-04-23 (7.5.2)
 
 * Ignore the table's `schema` property in table validation. This is a property that is not

@@ -31,7 +31,10 @@ def export_geopackages(
     """
 
     base_dir = Path(output)
-    db_url = connection.engine.url
+
+    # Handle both SQLAlchemy Engine and Connection objects
+    db_url = connection.engine.url if hasattr(connection, "engine") else connection.url
+
     tables = (
         dataset_schema.tables
         if not table_ids
