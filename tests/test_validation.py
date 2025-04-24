@@ -389,6 +389,20 @@ def test_check_lifecycle_status(schema_loader) -> None:
         ({"name": {"type": "string"}}, {"name": {"type": "string"}}, []),
         # Deleted field
         ({"name": {"type": "string"}}, {}, ["Column name would be deleted."]),
+        # Changed schema ref
+        (
+            {
+                "schema": {
+                    "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+                }
+            },
+            {
+                "schema": {
+                    "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+                }
+            },
+            [],
+        ),
         # Changed array item type
         (
             {"list": {"type": "array", "items": {"type": "string"}}},
