@@ -1,3 +1,8 @@
+# 2025-04-24 (7.5.4)
+
+* Increased performance of batch-validate cli command by instantiating the validators
+  only once. This is especially noticeable when many files are validated.
+
 # 2025-04-24 (7.5.3)
 
 * Fixed bug in geopackage exporter where coinnection objects was handled incorrectly
