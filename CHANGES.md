@@ -1,3 +1,7 @@
+# 2025-04-24 (7.5.4)
+
+* Fixed connection string issue in geopackage exporter
+
 # 2025-04-24 (7.5.3)
 
 * Fixed bug in geopackage exporter where coinnection objects was handled incorrectly
