@@ -676,6 +676,18 @@ def batch_validate(
         datasets_dir = datasets_dir.parents[up_tree_count]
 
     loader = FileSystemSchemaLoader(datasets_dir)
+    meta_schema_urls = [meta_schema_url]
+    if extra_meta_schema_url:
+        meta_schema_urls.append(extra_meta_schema_url)
+
+    validators = {}
+    for url in meta_schema_urls:
+        meta_schema_version = str(version_from_metaschema_url(url))
+        meta_schema = _fetch_json(url)
+        validator_class = jsonschema.validators.validator_for(meta_schema)
+        validator_class.check_schema(meta_schema)
+        validator = validator_class(meta_schema, format_checker=draft7_format_checker)
+        validators[meta_schema_version] = validator
 
     done = set()
     for schema_file in schema_files:
@@ -690,11 +702,7 @@ def batch_validate(
         if main_file in done:
             continue
 
-        meta_schema_urls = [meta_schema_url]
-        if extra_meta_schema_url:
-            meta_schema_urls.append(extra_meta_schema_url)
-        for url in meta_schema_urls:
-            meta_schema_version = version_from_metaschema_url(url)
+        for meta_schema_version in validators:
             click.echo(f"Validating {main_file} against {meta_schema_version}")
 
             try:
@@ -704,14 +712,10 @@ def batch_validate(
                 # No sense in continuing if we can't read the schema file.
                 break
 
-            meta_schema = _fetch_json(url)
-            try:
-                jsonschema.validate(
-                    instance=dataset.json_data(inline_tables=True, inline_publishers=False),
-                    schema=meta_schema,
-                    format_checker=draft7_format_checker,
-                )
-            except (jsonschema.ValidationError, jsonschema.SchemaError) as struct_error:
+            instance = dataset.json_data(inline_tables=True, inline_publishers=False)
+            validator = validators[meta_schema_version]
+            struct_error = jsonschema.exceptions.best_match(validator.iter_errors(instance))
+            if struct_error:
                 errors[schema_file][meta_schema_version].append(format_schema_error(struct_error))
 
             for sem_error in validation.run(dataset, main_file):
