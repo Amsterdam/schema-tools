@@ -1,3 +1,7 @@
+# 2025-04-24 (7.5.5)
+
+* Fixed connection string issue in geopackage exporter
+
 # 2025-04-24 (7.5.4)
 
 * Increased performance of batch-validate cli command by instantiating the validators

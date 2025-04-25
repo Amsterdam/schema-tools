@@ -32,17 +32,22 @@ def export_geopackages(
 
     base_dir = Path(output)
 
-    # Handle both SQLAlchemy Engine and Connection objects
-    db_url = connection.engine.url if hasattr(connection, "engine") else connection.url
+    pg_conn_str = (
+        f"host={connection.engine.url.host} "
+        f"port={connection.engine.url.port} "
+        f"dbname={connection.engine.url.database} "
+        f"user={connection.engine.url.username} "
+        f"password={connection.engine.url.password}"
+    )
 
     tables = (
         dataset_schema.tables
         if not table_ids
         else [dataset_schema.get_table_by_id(table_id) for table_id in table_ids]
     )
-    command = 'ogr2ogr -f "GPKG" {output_path} PG:"{db_url}" -sql "{sql}"'
+    command = 'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" -sql "{sql}"'
     for table in tables:
-        output_path = base_dir / f"{table.db_name}.gpkg"
+        output_path = base_dir / f"{table.db_name.replace('_v1', '')}.gpkg"
         field_names = sql.SQL(",").join(
             sql.Identifier(field.db_name)
             for field in _get_fields(dataset_schema, table, scopes)
@@ -58,7 +63,9 @@ def export_geopackages(
             query = f"{query} LIMIT {size}"
         sql_stmt = query.as_string(connection.connection.cursor())
         os.system(  # noqa: S605  # nosec: B605
-            command.format(output_path=output_path, db_url=db_url, sql=sql_stmt)  # noqa: S605
+            command.format(
+                output_path=output_path, pg_conn_str=pg_conn_str, sql=sql_stmt
+            )  # noqa: S605
         )
 
 
