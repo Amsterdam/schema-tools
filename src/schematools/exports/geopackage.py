@@ -57,7 +57,6 @@ def export_geopackages(
         if not field_names.seq:
             continue
 
-        # Stream results using cursor.copy_expert
         table_name = sql.Identifier(table.db_name)
         query = sql.SQL("SELECT {field_names} from {table_name}").format(
             field_names=field_names, table_name=table_name
@@ -65,7 +64,6 @@ def export_geopackages(
         if size is not None:
             query = sql.SQL("{query} LIMIT {size}").format(query=query, size=sql.Literal(size))
 
-        # Use COPY to pipe data directly to ogr2ogr
         copy_sql = sql.SQL("COPY ({query}) TO STDOUT").format(query=query)
 
         with connection.connection.cursor() as cursor:
