@@ -50,21 +50,43 @@ class GeoJsonExporter(BaseExporter):
         temporal_clause: ClauseElement | None,
         srid: str,
     ):
-        features = []
         query = select(*columns)
         if temporal_clause is not None:
             query = query.where(temporal_clause)
         if self.size is not None:
             query = query.limit(self.size)
 
-        with self.connection.engine.execution_options(yield_per=1000).connect() as conn:
-            result = conn.execute(query)
-            for partition in result.mappings().partitions():
-                for row in partition:
-                    self._process_row(row, features)
+        # Write header
+        file_handle.write('{"type": "FeatureCollection", "features": [')
 
-            geojson = {"type": "FeatureCollection", "features": features}
-            file_handle.write(_dumps(geojson).decode())
+        first_feature = True
+        with self.connection.execution_options(stream_results=True, max_row_buffer=1000).execute(
+            query
+        ) as result:
+            for partition in result.partitions(size=1000):
+                for row in partition:
+                    if not first_feature:
+                        file_handle.write(",")
+                    else:
+                        first_feature = False
+
+                    properties = {}
+                    geometry = None
+                    for k, v in row.items():
+                        if isinstance(v, (str, bytes)) and v.startswith('{"type":'):
+                            geometry = orjson.loads(v)
+                        else:
+                            properties[toCamelCase(k)] = v
+
+                    if geometry:
+                        feature = {
+                            "type": "Feature",
+                            "properties": properties,
+                            "geometry": geometry,
+                        }
+                        file_handle.write(_dumps(feature).decode())
+
+        file_handle.write("]}")
 
     def _process_row(self, row, features):
         """Process a single row and add it to features if it contains geometry."""
