@@ -56,37 +56,54 @@ class GeoJsonExporter(BaseExporter):
         if self.size is not None:
             query = query.limit(self.size)
 
-        # Write header
-        file_handle.write('{"type": "FeatureCollection", "features": [')
+        try:
+            # Write header
+            file_handle.write('{"type": "FeatureCollection", "features": [')
 
-        first_feature = True
-        with self.connection.execution_options(stream_results=True, max_row_buffer=1000).execute(
-            query
-        ) as result:
-            for partition in result.mappings().partitions(size=1000):
-                for row in partition:
-                    if not first_feature:
-                        file_handle.write(",")
-                    else:
-                        first_feature = False
+            first_feature = True
+            with self.connection.execution_options(
+                stream_results=True, max_row_buffer=1000
+            ).execute(query) as result:
+                for partition in result.mappings().partitions(size=1000):
+                    for row in partition:
+                        try:
+                            properties = {}
+                            geometry = None
+                            for k, v in row.items():
+                                if isinstance(v, (str, bytes)) and v.startswith('{"type":'):
+                                    try:
+                                        geometry = orjson.loads(v)
+                                        if (
+                                            not isinstance(geometry, dict)
+                                            or "type" not in geometry
+                                        ):
+                                            continue  # Skip invalid geometry
+                                    except orjson.JSONDecodeError:
+                                        continue  # Skip invalid JSON
+                                else:
+                                    properties[toCamelCase(k)] = v
 
-                    properties = {}
-                    geometry = None
-                    for k, v in row.items():
-                        if isinstance(v, (str, bytes)) and v.startswith('{"type":'):
-                            geometry = orjson.loads(v)
-                        else:
-                            properties[toCamelCase(k)] = v
+                            if geometry:
+                                feature = {
+                                    "type": "Feature",
+                                    "properties": properties,
+                                    "geometry": geometry,
+                                }
+                                try:
+                                    serialized_feature = _dumps(feature).decode()
+                                    # Only write comma and feature if serialization succeeded
+                                    if not first_feature:
+                                        file_handle.write(",")
+                                    file_handle.write(serialized_feature)
+                                    first_feature = False
+                                except (TypeError, UnicodeDecodeError):
+                                    continue  # Skip features that can't be serialized
+                        except OSError:
+                            raise  # Re-raise file writing errors
 
-                    if geometry:
-                        feature = {
-                            "type": "Feature",
-                            "properties": properties,
-                            "geometry": geometry,
-                        }
-                        file_handle.write(_dumps(feature).decode())
-
-        file_handle.write("]}")
+            file_handle.write("]}")
+        except OSError as e:
+            raise OSError(f"Failed to write GeoJSON file: {e!s}") from e
 
     def _process_row(self, row, features):
         """Process a single row and add it to features if it contains geometry."""
