@@ -627,6 +627,15 @@ def validate_tables(paths: tuple[str], prefix: str):
         sys.exit(0)
 
 
+# These errors are valid, but the tables already exist in the database, so we ignore them.
+IGNORED_ERRORS = [
+    "[repetitive identifiers] table name 'parkeerzonesUitzondering' "
+    "should not start with 'parkeerzones'",
+    "'raster_10' does not match '^[a-z][A-Za-z]*[0-9]*$'",
+    "'raster_100' does not match '^[a-z][A-Za-z]*[0-9]*$'",
+]
+
+
 @schema.command()
 @click.argument("meta_schema_url")
 @click.argument("schema_files", nargs=-1)
@@ -715,11 +724,12 @@ def batch_validate(
             instance = dataset.json_data(inline_tables=True, inline_publishers=False)
             validator = validators[meta_schema_version]
             struct_error = jsonschema.exceptions.best_match(validator.iter_errors(instance))
-            if struct_error:
+            if struct_error and struct_error.message not in IGNORED_ERRORS:
                 errors[schema_file][meta_schema_version].append(format_schema_error(struct_error))
 
             for sem_error in validation.run(dataset, main_file):
-                errors[schema_file][meta_schema_version].append(str(sem_error))
+                if str(sem_error) not in IGNORED_ERRORS:
+                    errors[schema_file][meta_schema_version].append(str(sem_error))
 
             if not errors[schema_file][meta_schema_version]:
                 click.echo(f"{schema_file} is valid against meta schema {meta_schema_version}")
