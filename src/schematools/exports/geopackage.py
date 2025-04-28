@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from io import StringIO
 from pathlib import Path
 
 from psycopg2 import sql
@@ -45,7 +46,7 @@ def export_geopackages(
         if not table_ids
         else [dataset_schema.get_table_by_id(table_id) for table_id in table_ids]
     )
-    command = 'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" -sql "{sql}"'
+
     for table in tables:
         output_path = base_dir / f"{table.db_name.replace('_v1', '')}.gpkg"
         field_names = sql.SQL(",").join(
@@ -55,17 +56,22 @@ def export_geopackages(
         )
         if not field_names.seq:
             continue
+
         table_name = sql.Identifier(table.db_name)
         query = sql.SQL("SELECT {field_names} from {table_name}").format(
             field_names=field_names, table_name=table_name
         )
         if size is not None:
-            query = f"{query} LIMIT {size}"
-        sql_stmt = query.as_string(connection.connection.cursor())
+            query = sql.SQL("{query} LIMIT {size}").format(query=query, size=sql.Literal(size))
+
+        copy_sql = sql.SQL("COPY ({query}) TO STDOUT").format(query=query)
+
+        with connection.connection.cursor() as cursor:
+            cursor.copy_expert(copy_sql, StringIO())
+            sql_stmt = query.as_string(cursor)
+
         os.system(  # noqa: S605  # nosec: B605
-            command.format(
-                output_path=output_path, pg_conn_str=pg_conn_str, sql=sql_stmt
-            )  # noqa: S605
+            f'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" -sql "{sql_stmt}"'
         )
 
 

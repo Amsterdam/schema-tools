@@ -44,7 +44,7 @@ class CsvExporter(BaseExporter):  # noqa: D101
 
     processors = (geo_modifier, id_modifier, datetime_modifier)
 
-    def write_rows(  # noqa: D102
+    def write_rows(
         self,
         file_handle: IO[str],
         table: DatasetTableSchema,
@@ -52,21 +52,23 @@ class CsvExporter(BaseExporter):  # noqa: D101
         temporal_clause: ClauseElement | None,
         srid: str,
     ):
-
         field_names = [c.name for c in columns]
         writer = csv.DictWriter(file_handle, field_names, extrasaction="ignore")
         # Use capitalize() on headers, because csv export does the same
         writer.writerow({fn: toCamelCase(fn).capitalize() for fn in field_names})
+
         query = select(*columns)
         if temporal_clause is not None:
             query = query.where(temporal_clause)
         if self.size is not None:
             query = query.limit(self.size)
-        with self.connection.engine.execution_options(yield_per=1000).connect() as conn:
-            result = conn.execute(query)
-            for partition in result.mappings().partitions():
-                for r in partition:
-                    writer.writerow(r)
+
+        # Use server-side cursor with small batches
+        with self.connection.execution_options(stream_results=True, max_row_buffer=1000).execute(
+            query
+        ) as result:
+            for partition in result.mappings().partitions(size=1000):
+                writer.writerows(partition)
 
 
 def export_csvs(
