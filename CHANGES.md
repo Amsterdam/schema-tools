@@ -1,3 +1,7 @@
+# 2025-04-24 (7.5.6)
+
+* Ignore some errors in batch_validate due to existing db structure.
+
 # 2025-04-24 (7.5.5)
 
 * Fixed connection string issue in geopackage exporter
