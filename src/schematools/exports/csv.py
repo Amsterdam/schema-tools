@@ -52,11 +52,11 @@ class CsvExporter(BaseExporter):  # noqa: D101
         temporal_clause: ClauseElement | None,
         srid: str,
     ):
-
         field_names = [c.name for c in columns]
         writer = csv.DictWriter(file_handle, field_names, extrasaction="ignore")
         # Use capitalize() on headers, because csv export does the same
         writer.writerow({fn: toCamelCase(fn).capitalize() for fn in field_names})
+
         query = select(*columns)
         if temporal_clause is not None:
             query = query.where(temporal_clause)
@@ -67,7 +67,7 @@ class CsvExporter(BaseExporter):  # noqa: D101
         with self.connection.execution_options(stream_results=True, max_row_buffer=1000).execute(
             query
         ) as result:
-            for partition in result.partitions(size=1000):
+            for partition in result.mappings().partitions(size=1000):
                 writer.writerows(partition)
 
 

@@ -63,7 +63,7 @@ class GeoJsonExporter(BaseExporter):
         with self.connection.execution_options(stream_results=True, max_row_buffer=1000).execute(
             query
         ) as result:
-            for partition in result.partitions(size=1000):
+            for partition in result.mappings().partitions(size=1000):
                 for row in partition:
                     if not first_feature:
                         file_handle.write(",")

@@ -1,3 +1,7 @@
+# 2025-04-28 (7.6.0)
+
+* Optimized export functions for memory usage.
+
 # 2025-04-24 (7.5.6)
 
 * Ignore some errors in batch_validate due to existing db structure.
