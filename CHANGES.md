@@ -1,3 +1,6 @@
+# 2025-04-30 (7.6.3)
+* Ensure all roles are created, not just the ones that have grants associated with them.
+
 # 2025-04-29 (7.6.2)
 
 * Confirm version before migrating in import_schemas.
