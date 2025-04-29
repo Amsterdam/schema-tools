@@ -22,7 +22,7 @@ def test_remove_schema_and_tables(here):
         gebieden_json_path,
     ]
 
-    call_command("import_schemas", *args, create_tables=True)
+    call_command("import_schemas", *args, create_tables=True, dry_run=False)
     assert models.Dataset.objects.count() == 4
     assert models.DatasetTable.objects.count() == 13
 

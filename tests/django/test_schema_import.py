@@ -12,7 +12,7 @@ def test_import_schema(here):
     """Prove that dataset schema gets imported correctly"""
     hr_json_path = here / "files/datasets/hr.json"
     args = [hr_json_path]
-    call_command("import_schemas", *args)
+    call_command("import_schemas", *args, dry_run=False)
     assert models.Dataset.objects.count() == 1
     assert models.Dataset.objects.first().name == "hr"
     assert models.DatasetTable.objects.count() == 4
@@ -26,8 +26,8 @@ def test_import_schema_twice(here):
     gebieden = here / "files/datasets/gebieden.json"
     hr_json_path = here / "files/datasets/hr.json"
     args = [hr_json_path, verblijfsobjecten, gebieden]
-    call_command("import_schemas", *args)
-    call_command("import_schemas", *args)
+    call_command("import_schemas", *args, dry_run=False)
+    call_command("import_schemas", *args, dry_run=False)
     assert models.Dataset.objects.count() == 3
     assert models.Dataset.objects.get(name="hr") is not None
 
@@ -45,6 +45,7 @@ def test_import_schema_update_runs_migrations(here):
         hr_json_path,
         create_tables=1,
         create_views=1,
+        dry_run=False,
     )
     activiteiten_table = models.DatasetTable.objects.get(name="maatschappelijkeactiviteiten")
     with connection.cursor() as cursor:
@@ -61,7 +62,14 @@ def test_import_schema_update_runs_migrations(here):
         assert "activiteit_type" not in columns
 
     updated_hr_json_path = here / "files/datasets/hr_updated.json"
-    call_command("import_schemas", updated_hr_json_path, gebieden, verblijfsobjecten, verbosity=3)
+    call_command(
+        "import_schemas",
+        updated_hr_json_path,
+        gebieden,
+        verblijfsobjecten,
+        verbosity=3,
+        dry_run=False,
+    )
     activiteiten_table = models.DatasetTable.objects.get(name="maatschappelijkeactiviteiten")
     with connection.cursor() as cursor:
         cursor.execute(
@@ -90,6 +98,7 @@ def test_import_schema_update_has_dry_run(here, capsys):
         hr_json_path,
         create_tables=1,
         create_views=1,
+        dry_run=False,
     )
     updated_hr_json_path = here / "files/datasets/hr_updated.json"
     call_command("import_schemas", updated_hr_json_path, gebieden, verblijfsobjecten, "--dry-run")
@@ -124,7 +133,7 @@ def test_import_schema_enables_and_disables_api_based_on_status(here):
     hr_json_path = here / "files/datasets/hr.json"
     woonplaatsen_json_path = here / "files/datasets/woonplaatsen.json"
     args = [hr_json_path, woonplaatsen_json_path]
-    call_command("import_schemas", *args)
+    call_command("import_schemas", *args, dry_run=False)
     assert models.Dataset.objects.count() == 2
     assert models.Dataset.objects.get(name="hr").enable_api is True
     assert models.Dataset.objects.get(name="woonplaatsen").enable_api is False

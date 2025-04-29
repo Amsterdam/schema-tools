@@ -1,3 +1,8 @@
+# 2025-04-28 (7.6.1)
+
+* Made dry run flag true by default in import schemas. Added --execute flag
+  to make execution explicit.
+
 # 2025-04-28 (7.6.0)
 
 * Optimized export functions for memory usage.
