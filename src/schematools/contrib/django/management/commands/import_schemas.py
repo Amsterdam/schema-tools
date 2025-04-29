@@ -74,15 +74,16 @@ class Command(BaseCommand):
                 updated_table = updated_dataset.schema.get_table_by_id(
                     current_table.id, include_nested=False, include_through=False
                 )
-                migrate(
-                    self,
-                    current_dataset,
-                    updated_dataset,
-                    current_table,
-                    updated_table,
-                    real_apps,
-                    dry_run=self.dry_run,
-                )
+                if current_table.version.vmajor == updated_table.version.vmajor:
+                    migrate(
+                        self,
+                        current_dataset,
+                        updated_dataset,
+                        current_table,
+                        updated_table,
+                        real_apps,
+                        dry_run=self.dry_run,
+                    )
 
         # Reasons for not creating tables directly are to manually configure the
         # "Datasets" model flags first. E.g. disable "enable_db".

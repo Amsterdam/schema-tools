@@ -1,3 +1,7 @@
+# 2025-04-29 (7.6.2)
+
+* Confirm version before migrating in import_schemas.
+
 # 2025-04-28 (7.6.1)
 
 * Made dry run flag true by default in import schemas. Added --execute flag
