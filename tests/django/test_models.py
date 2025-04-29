@@ -113,7 +113,10 @@ def test_model_factory_n_m_relations(gebieden_dataset, meetbouten_dataset):
 def test_model_factory_pk_with_relation(here, aardgasverbruik_dataset):
     """Prove that primary keys with relations are supported."""
     call_command(
-        "import_schemas", here / "files/datasets/aardgasverbruik.json", create_tables=True
+        "import_schemas",
+        here / "files/datasets/aardgasverbruik.json",
+        create_tables=True,
+        dry_run=False,
     )
     MraLiander, PostcodeRangeModel = schema_models_factory(
         aardgasverbruik_dataset, base_app_name="dso_api.dynamic_api"
@@ -374,7 +377,12 @@ def test_temporal_subfields_are_skipped(verblijfsobjecten_dataset):
 
 @pytest.mark.django_db
 def test_non_composite_string_identifiers_use_slash_constraints(parkeervakken_dataset, here):
-    call_command("import_schemas", here / "files/datasets/parkeervakken.json", create_tables=True)
+    call_command(
+        "import_schemas",
+        here / "files/datasets/parkeervakken.json",
+        create_tables=True,
+        dry_run=False,
+    )
     model_dict = {
         cls._meta.model_name: cls
         for cls in schema_models_factory(
