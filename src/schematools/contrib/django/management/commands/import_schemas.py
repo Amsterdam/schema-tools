@@ -37,8 +37,10 @@ class Command(BaseCommand):
         parser.add_argument("--create-views", dest="create_views", action="store_true")
         parser.add_argument("--no-create-tables", dest="create_tables", action="store_false")
         parser.add_argument("--dry-run", dest="dry_run", action="store_true")
+        parser.add_argument("--execute", dest="dry_run", action="store_false")
         parser.set_defaults(create_tables=False)
         parser.set_defaults(create_views=False)
+        parser.set_defaults(dry_run=True)
 
     def handle(self, *args, **options):
         self.dry_run = options["dry_run"]
