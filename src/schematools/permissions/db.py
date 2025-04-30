@@ -90,6 +90,7 @@ def apply_schema_and_profile_permissions(
     revoke: bool = False,
     verbose: int = 0,
     additional_grants: tuple[str] = (),
+    all_scopes: list[Scope] | None = None,
 ) -> None:
     """Apply permissions for schema and profile.
 
@@ -112,6 +113,12 @@ def apply_schema_and_profile_permissions(
                     revoke_schema_permissions(
                         conn, revoke_dataset, only_role, dry_run, verbose=verbose
                     )
+
+                if create_roles:
+                    for scope in all_scopes or []:
+                        _create_role_if_not_exists(
+                            conn, _scope_to_role(scope), verbose=verbose, dry_run=dry_run
+                        )
 
                 # Apply privileges for all datasets, or the selected dataset.
                 apply_schema_permissions(

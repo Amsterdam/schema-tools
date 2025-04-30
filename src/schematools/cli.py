@@ -305,8 +305,11 @@ def permissions_apply(
         loader = FileSystemSchemaLoader.from_file(schema_filename)
         dataset_schema = loader.get_dataset_from_file(schema_filename)
         schemas = {dataset_schema.id: dataset_schema}
+        scopes = loader.get_all_scopes()
     else:
-        schemas = get_schema_loader(schema_url).get_all_datasets()
+        loader = get_schema_loader(schema_url)
+        schemas = loader.get_all_datasets()
+        scopes = loader.get_all_scopes()
 
     if profile_filename:
         profiles = [ProfileSchema.from_file(profile_filename)]
@@ -335,6 +338,7 @@ def permissions_apply(
             revoke=revoke,
             verbose=verbose,
             additional_grants=additional_grants,
+            all_scopes=scopes,
         )
 
 
