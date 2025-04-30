@@ -54,6 +54,19 @@ class TestReadPermissions:
             engine, "scope_level_c", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
 
+    def test_roles_created(self, engine, gebieden_schema_auth):
+        scope = Scope.from_string("certain_role")
+        scope2 = Scope.from_string("another_role")
+        apply_schema_and_profile_permissions(
+            engine,
+            gebieden_schema_auth,
+            profiles=[],
+            create_roles=True,
+            all_scopes=[scope, scope2],
+        )
+        _check_role_exists(engine, "scope_certain_role")
+        _check_role_exists(engine, "scope_another_role")
+
     def test_all_profile_permissions(
         self,
         engine,
@@ -1073,6 +1086,14 @@ def _create_role(engine, role):
     except ProgrammingError as e:
         if not isinstance(e.orig, DuplicateObject):
             raise
+
+
+def _check_role_exists(engine, role):
+    """Check if role does not exist"""
+    with engine.begin() as connection:
+        result = connection.execute(text(f"SELECT rolname FROM pg_roles WHERE rolname='{role}'"))
+        rows = list(result)
+        assert len(rows) == 1
 
 
 def _check_role_does_not_exist(engine, role):
