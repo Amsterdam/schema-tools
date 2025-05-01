@@ -104,6 +104,7 @@ def apply_schema_and_profile_permissions(
     if verbose:
         event.listen(engine, "after_cursor_execute", _after_cursor_execute)
 
+    logger.info("Applying Permissions")
     with engine.connect() as conn:
         try:
             if datasets:
@@ -115,6 +116,9 @@ def apply_schema_and_profile_permissions(
                     )
 
                 if create_roles:
+                    if not all_scopes:
+                        logger.warning("Loader did not find any scopes!")
+
                     for scope in all_scopes.values() or []:
                         _create_role_if_not_exists(
                             conn, _scope_to_role(scope), verbose=verbose, dry_run=dry_run
