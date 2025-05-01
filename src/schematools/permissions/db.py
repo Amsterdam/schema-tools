@@ -90,7 +90,7 @@ def apply_schema_and_profile_permissions(
     revoke: bool = False,
     verbose: int = 0,
     additional_grants: tuple[str] = (),
-    all_scopes: list[Scope] | None = None,
+    all_scopes: dict[str, Scope] | None = None,
 ) -> None:
     """Apply permissions for schema and profile.
 
@@ -104,6 +104,7 @@ def apply_schema_and_profile_permissions(
     if verbose:
         event.listen(engine, "after_cursor_execute", _after_cursor_execute)
 
+    logger.info("Applying Permissions")
     with engine.connect() as conn:
         try:
             if datasets:
@@ -115,10 +116,13 @@ def apply_schema_and_profile_permissions(
                     )
 
                 if create_roles:
-                    for scope in all_scopes or []:
-                        _create_role_if_not_exists(
-                            conn, _scope_to_role(scope), verbose=verbose, dry_run=dry_run
-                        )
+                    if not all_scopes:
+                        logger.warning("Loader did not find any scopes!")
+                    else:
+                        for scope in all_scopes.values():
+                            _create_role_if_not_exists(
+                                conn, _scope_to_role(scope), verbose=verbose, dry_run=dry_run
+                            )
 
                 # Apply privileges for all datasets, or the selected dataset.
                 apply_schema_permissions(
