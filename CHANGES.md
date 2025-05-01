@@ -1,4 +1,9 @@
+# 2025-05-01 (7.6.4)
+
+* Fix type mismatch bug and add logging in permissions apply.
+
 # 2025-04-30 (7.6.3)
+
 * Ensure all roles are created, not just the ones that have grants associated with them.
 
 # 2025-04-29 (7.6.2)
