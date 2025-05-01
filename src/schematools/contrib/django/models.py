@@ -156,7 +156,7 @@ class Dataset(models.Model):
     name = models.CharField(_("Name"), unique=True, max_length=50)
     schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
     view_data = models.TextField(_("View SQL"), blank=True, null=True)
-    version = models.CharField(_("Schema Version"), blank=True, null=True, max_length=250)
+    version = models.CharField(_("Dataset Version"), blank=True, null=True, max_length=250)
     is_default_version = models.BooleanField(_("Default version"), default=False)
 
     # Settings for publishing the schema:
@@ -173,6 +173,7 @@ class Dataset(models.Model):
         ordering = ("ordering", "name")
         verbose_name = _("Dataset")
         verbose_name_plural = _("Datasets")
+        constraints = [models.UniqueConstraint(fields=["name", "version"], name="name_version")]
 
     def __str__(self):
         return self.name
@@ -364,7 +365,7 @@ class DatasetTable(models.Model):
     This table can be read by the 'geosearch' project to locate all our tables and data sources.
     """
 
-    dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="tables")
+    datasets = models.ManyToManyField(Dataset)
     name = models.CharField(max_length=100)
     version = models.TextField(default=SemVer("1.0.0"))
 
@@ -372,7 +373,7 @@ class DatasetTable(models.Model):
     auth = models.CharField(max_length=250, blank=True, null=True)
     enable_export = models.BooleanField(default=False)
     enable_geosearch = models.BooleanField(default=True)
-    db_table = models.CharField(max_length=100)
+    db_table = models.CharField(max_length=100, unique=True)
     display_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
@@ -383,9 +384,6 @@ class DatasetTable(models.Model):
         ordering = ("name",)
         verbose_name = _("Dataset Table")
         verbose_name_plural = _("Dataset Tables")
-        unique_together = [
-            ("dataset", "name"),
-        ]
 
     def __str__(self):
         return self.name
