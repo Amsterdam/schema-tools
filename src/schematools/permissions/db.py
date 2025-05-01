@@ -90,7 +90,7 @@ def apply_schema_and_profile_permissions(
     revoke: bool = False,
     verbose: int = 0,
     additional_grants: tuple[str] = (),
-    all_scopes: list[Scope] | None = None,
+    all_scopes: dict[str, Scope] | None = None,
 ) -> None:
     """Apply permissions for schema and profile.
 
@@ -115,7 +115,7 @@ def apply_schema_and_profile_permissions(
                     )
 
                 if create_roles:
-                    for scope in all_scopes or []:
+                    for scope in all_scopes.values() or []:
                         _create_role_if_not_exists(
                             conn, _scope_to_role(scope), verbose=verbose, dry_run=dry_run
                         )
