@@ -118,11 +118,11 @@ def apply_schema_and_profile_permissions(
                 if create_roles:
                     if not all_scopes:
                         logger.warning("Loader did not find any scopes!")
-
-                    for scope in all_scopes.values() or []:
-                        _create_role_if_not_exists(
-                            conn, _scope_to_role(scope), verbose=verbose, dry_run=dry_run
-                        )
+                    else:
+                        for scope in all_scopes.values():
+                            _create_role_if_not_exists(
+                                conn, _scope_to_role(scope), verbose=verbose, dry_run=dry_run
+                            )
 
                 # Apply privileges for all datasets, or the selected dataset.
                 apply_schema_permissions(
