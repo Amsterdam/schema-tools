@@ -368,13 +368,19 @@ class DatasetSchema(SchemaType):
         data["status"] = self.status.value
 
         if inline_tables:
-            table_data = [t.json_data(inline_scopes=inline_scopes) for t in self.tables]
             # Support both v2 and v3 metaschema for now, this duplication can be removed
             # once the DSO-API uses the tables from a DatasetVersionSchema instead of
             # a DatasetSchema
-            data["tables"] = table_data
             if "versions" in data:
-                data["versions"][self.default_version]["tables"] = table_data
+                for version_number, version in self.versions.items():
+                    tables = version.get_tables()
+                    data["versions"][version_number]["tables"] = [
+                        t.json_data(inline_scopes=inline_scopes) for t in tables
+                    ]
+                data["tables"] = data["versions"][self.default_version]["tables"]
+            else:
+                table_data = [t.json_data(inline_scopes=inline_scopes) for t in self.tables]
+                data["tables"] = table_data
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
         if inline_scopes:
