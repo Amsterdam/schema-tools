@@ -578,6 +578,19 @@ class DatasetSchema(SchemaType):
         publisher_id = raw_publisher["$ref"].split("/")[-1]
         return self.loader.get_publisher(publisher_id)
 
+    def get_all_tables(
+        self, include_nested: bool = False, include_through: bool = False
+    ) -> list[DatasetTableSchema]:
+        tables = {}
+        for _, version in self.versions.items():
+            version_tables = version.get_tables(
+                include_nested=include_nested, include_through=include_through
+            )
+            for table in version_tables:
+                if table.db_name not in tables:
+                    tables[table.db_name] = table
+        return tables.values()
+
     def get_tables(
         self,
         version: str | None = None,

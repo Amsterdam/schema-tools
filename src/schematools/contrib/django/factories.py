@@ -121,7 +121,7 @@ def schema_models_factory(
             base_app_name=base_app_name,
             base_model=base_model,
         )
-        for table in dataset.schema.get_tables(include_nested=True, include_through=True)
+        for table in dataset.schema.get_all_tables(include_nested=True, include_through=True)
         if tables is None or table.id in tables
     ]
 
@@ -134,7 +134,7 @@ def schema_model_mockers_factory(
     """Generate Django model mockers from the data of the schema."""
     return [
         model_mocker_factory(dataset=dataset, table_schema=table, base_app_name=base_app_name)
-        for table in dataset.schema.get_tables(include_nested=True, include_through=True)
+        for table in dataset.schema.get_all_tables(include_nested=True, include_through=True)
         if tables is None or table.id in tables
     ]
 
