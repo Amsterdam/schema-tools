@@ -5,14 +5,14 @@ import logging
 
 from schematools.contrib.django.models import Dataset
 from schematools.exceptions import DatasetNotFound
-from schematools.loaders import CachedSchemaLoader, SchemaLoader
+from schematools.loaders import CachedSchemaLoader
 from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema, DatasetTableSchema
 
 logger = logging.getLogger(__name__)
 
 
-class DatabaseSchemaLoader(SchemaLoader):
+class DatabaseSchemaLoader(CachedSchemaLoader):
     """A schema loader that retrieves datasets that are imported into the Django database.
 
     When objects are directly retrieved using ``Dataset.objects.get()``,
@@ -23,11 +23,8 @@ class DatabaseSchemaLoader(SchemaLoader):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # A collection of all instances that were retrieved using this loader.
-        # This shared (and cached) instance makes sure datasets can retrieve their relations.
-        self.dataset_collection = CachedSchemaLoader(self)
 
-    def get_all_datasets(self, enable_db=None) -> dict[str, DatasetSchema]:
+    def _get_all_datasets(self, enable_db=None) -> dict[str, DatasetSchema]:
         """Retrieve all datasets from the database storage"""
         queryset = Dataset.objects.all()
         if enable_db is not None:
@@ -40,7 +37,7 @@ class DatabaseSchemaLoader(SchemaLoader):
             )
         }
 
-    def get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
+    def _get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
         """Retrieve a single dataset from the database storage."""
         queryset = Dataset.objects.filter(name=to_snake_case(dataset_id))
         try:
@@ -54,10 +51,8 @@ class DatabaseSchemaLoader(SchemaLoader):
 
     def _as_dataset(self, schema_data: str, view_sql: str | None = None) -> DatasetSchema:
         """Convert the retrieved schema into a real object that can resolve its relations."""
-        return DatasetSchema(
-            json.loads(schema_data), view_sql, dataset_collection=self.dataset_collection
-        )
+        return DatasetSchema(json.loads(schema_data), view_sql, loader=self)
 
-    def get_table(self, dataset: DatasetSchema, table_ref) -> DatasetTableSchema:
+    def _get_table(self, dataset: DatasetSchema, table_ref) -> DatasetTableSchema:
         """Datasets have their tables inlined, so there is no need to support this either."""
         raise NotImplementedError("DatabaseSchemaLoader don't support versioned tables")

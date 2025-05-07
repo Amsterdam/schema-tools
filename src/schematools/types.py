@@ -307,7 +307,7 @@ class DatasetSchema(SchemaType):
         self,
         data: dict,
         view_sql: str | None = None,
-        dataset_collection: CachedSchemaLoader | None = None,
+        loader: CachedSchemaLoader | None = None,
     ) -> None:
         """When initializing a datasets, a cache of related datasets
         can be added (at classlevel). Thus, we are able to get (temporal) info
@@ -316,7 +316,7 @@ class DatasetSchema(SchemaType):
         Args:
             data: The JSON data from the file.
             view_sql: The SQL to create the view for this dataset.
-            dataset_collection: The shared collection that the dataset should become part of.
+            loader: The shared collection that the dataset should become part of.
                                 This is used to resolve relations between different datasets.
         """
         if data.get("type") != "dataset" and (
@@ -328,9 +328,9 @@ class DatasetSchema(SchemaType):
 
         super().__init__(data)
 
-        self._loader = dataset_collection
-        if dataset_collection is not None:
-            dataset_collection.add_dataset(self)  # done early for self-references
+        self._loader = loader
+        if loader is not None:
+            loader.add_dataset(self)  # done early for self-references
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self['id']}>"
@@ -345,10 +345,10 @@ class DatasetSchema(SchemaType):
 
     @classmethod
     def from_dict(
-        cls, obj: dict[str, Any], dataset_collection: CachedSchemaLoader | None = None
+        cls, obj: dict[str, Any], loader: CachedSchemaLoader | None = None
     ) -> DatasetSchema:
         """Parses given dict and validates the given schema."""
-        return cls(obj, dataset_collection=dataset_collection)
+        return cls(obj, loader=loader)
 
     def json(
         self,
@@ -1242,10 +1242,6 @@ class DatasetTableSchema(SchemaType):
         """Tell which fields can be used as display field."""
         display = self["schema"].get("display")
         return self.get_field_by_id(display) if display else None
-
-    def get_dataset_schema(self, dataset_id: str) -> DatasetSchema | None:
-        """Return the associated parent datasetschema for this table."""
-        return self.dataset._get_dataset_schema(dataset_id) if self.dataset is not None else None
 
     @cached_property
     def temporal(self) -> Temporal | None:

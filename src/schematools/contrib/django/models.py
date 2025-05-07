@@ -179,7 +179,7 @@ class Dataset(models.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._dataset_collection = None
+        self._loader = None
 
         # The check makes sure that deferred fields are not checked for changes,
         # nor that creating the model
@@ -234,7 +234,7 @@ class Dataset(models.Model):
             enable_api=cls.has_api_enabled(schema),
             enable_db=enable_db,
         )
-        obj._dataset_collection = schema.loader  # retain collection on saving
+        obj._loader = schema.loader  # retain collection on saving
         if save:
             obj.save()
         obj.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
@@ -256,7 +256,7 @@ class Dataset(models.Model):
         self.view_data = schema.get_view_sql()
         self.auth = " ".join(schema.auth)
         self.enable_api = Dataset.has_api_enabled(schema)
-        self._dataset_collection = schema.loader  # retain collection on saving
+        self._loader = schema.loader  # retain collection on saving
 
         changed = self.schema_data_changed()
         if changed and save:
@@ -309,18 +309,18 @@ class Dataset(models.Model):
     @cached_property
     def schema(self) -> DatasetSchema:
         """Provide access to the schema data."""
-        # The _dataset_collection value is filled by the queryset,
+        # The _loader value is filled by the queryset,
         # so any object that is fetched by same the queryset uses the same shared cache.
-        return self.get_schema(dataset_collection=self._dataset_collection)
+        return self.get_schema(loader=self._loader)
 
-    def get_schema(self, dataset_collection: CachedSchemaLoader) -> DatasetSchema:
+    def get_schema(self, loader: CachedSchemaLoader) -> DatasetSchema:
         """Extract the schema data from this model, and connect it with a dataset collection."""
         if not self.schema_data:
             raise RuntimeError("Dataset.schema_data is empty")
 
         return DatasetSchema.from_dict(
             json.loads(self.schema_data),
-            dataset_collection=dataset_collection,
+            loader=loader,
         )
 
     @cached_property

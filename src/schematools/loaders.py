@@ -45,47 +45,47 @@ __all__ = (
 class SchemaLoader:
     """Interface that defines what a schema loader should provide."""
 
-    def get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
+    def _get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
         """Gets a dataset for dataset_id."""
         raise NotImplementedError
 
-    def get_table(self, dataset: DatasetSchema, table_ref: str) -> DatasetTableSchema:
+    def _get_table(self, dataset: DatasetSchema, table_ref: str) -> DatasetTableSchema:
         """Retrieves a versioned table by reference"""
         raise NotImplementedError
 
-    def get_view(self, dataset: DatasetSchema, table_ref: str) -> str:
+    def _get_view(self, dataset: DatasetSchema, table_ref: str) -> str:
         """Retrieves a view by reference"""
         raise NotImplementedError
 
-    def get_dataset_path(self, dataset_id: str) -> str:
+    def _get_dataset_path(self, dataset_id: str) -> str:
         """Find the relative path of a dataset within the location"""
         raise NotImplementedError
 
-    def get_all_datasets(self) -> dict[str, DatasetSchema]:
+    def _get_all_datasets(self) -> dict[str, DatasetSchema]:
         """Gets all datasets from the schema_url location.
 
         The return value maps dataset paths (foo/bar) to schema's.
         """
         raise NotImplementedError
 
-    def get_all_publishers(self) -> dict[str, Publisher]:
+    def _get_all_publishers(self) -> dict[str, Publisher]:
         """Get all publishers from the schema location
 
         The return value maps pulisher ids to Publisher objects.
         """
         raise NotImplementedError
 
-    def get_all_scopes(self) -> dict[str, Scope]:
+    def _get_all_scopes(self) -> dict[str, Scope]:
         """Get all scopes from the schema location
 
         The return value maps scope ids to Scope objects.
         """
         raise NotImplementedError
 
-    def get_publisher(self, publisher_id: str) -> dict[str, Publisher]:
+    def _get_publisher(self, publisher_id: str) -> Publisher:
         raise NotImplementedError
 
-    def get_scope(self, ref: str) -> Scope:
+    def _get_scope(self, ref: str) -> Scope:
         raise NotImplementedError
 
 
@@ -102,11 +102,10 @@ class ProfileLoader:
 class CachedSchemaLoader(SchemaLoader):
     """Base class for a loader that caches the results."""
 
-    def __init__(self, loader: SchemaLoader | None):
+    def __init__(self):
         """Initialize the cache.
         When the loader is not defined, this acts as a simple cache.
         """
-        self._loader = loader
         self._cache: dict[str, DatasetSchema] = {}
         self._publisher_cache: dict[str, Publisher] = {}
         self._scopes_cache: dict[str, Scope] = {}
@@ -128,10 +127,7 @@ class CachedSchemaLoader(SchemaLoader):
         self._table_cache.clear()
 
     def get_dataset_path(self, dataset_id) -> str:
-        # loader already caches that:
-        if self._loader is None:
-            raise RuntimeError("This dataset collection can't retrieve new datasets")
-        return self._loader.get_dataset_path(dataset_id)
+        return self._get_dataset_path(dataset_id)
 
     def get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
         """Gets a dataset by id from the cache.
@@ -144,9 +140,7 @@ class CachedSchemaLoader(SchemaLoader):
         try:
             return self._cache[dataset_id]
         except KeyError:
-            if self._loader is None:
-                raise RuntimeError("This dataset collection can't retrieve new datasets") from None
-            dataset = self._loader.get_dataset(dataset_id, prefetch_related=prefetch_related)
+            dataset = self._get_dataset(dataset_id, prefetch_related=prefetch_related)
             self.add_dataset(dataset)
             return dataset
 
@@ -155,24 +149,14 @@ class CachedSchemaLoader(SchemaLoader):
         try:
             return self._table_cache[key]
         except KeyError:
-            pass  # avoid raising exceptions from another exception
-
-        if self._loader is None:
-            raise RuntimeError("This dataset collection can't retrieve new datasets")
-
-        table = self._loader.get_table(dataset, table_ref)
-        self._table_cache[key] = table
-        return table
+            table = self._get_table(dataset, table_ref)
+            self._table_cache[key] = table
+            return table
 
     def get_all_datasets(self) -> dict[str, DatasetSchema]:
         """Load all datasets, and fill the cache"""
         if not self._has_all:
-            if self._loader is None:
-                raise RuntimeError("This dataset collection can't retrieve new datasets")
-
-            self._cache = {
-                schema.id: schema for schema in self._loader.get_all_datasets().values()
-            }
+            self._cache = {schema.id: schema for schema in self._get_all_datasets().values()}
             self._has_all = True
 
         return self._cache
@@ -181,17 +165,14 @@ class CachedSchemaLoader(SchemaLoader):
         if (publisher := self._publisher_cache.get(publisher_id)) is not None:
             return publisher
 
-        publisher = self._loader.get_publisher(publisher_id)
+        publisher = self._get_publisher(publisher_id)
         self._publisher_cache[publisher.id] = publisher
         return publisher
 
     def get_all_publishers(self) -> dict[str, Publisher]:
         """Load all publishers, and fill the cache"""
         if not self._has_all_publishers:
-            if self._loader is None:
-                raise RuntimeError("This dataset collection can't retrieve new publishers")
-
-            self._publisher_cache = self._loader.get_all_publishers()
+            self._publisher_cache = self._get_all_publishers()
             self._has_all_publishers = True
 
         return self._publisher_cache
@@ -201,23 +182,20 @@ class CachedSchemaLoader(SchemaLoader):
         if (scope := self._scopes_cache.get(id)) is not None:
             return scope
 
-        scope = self._loader.get_scope(ref)
+        scope = self._get_scope(ref)
         self._scopes_cache[scope.id] = scope
         return scope
 
     def get_all_scopes(self) -> dict[str, Scope]:
         """Load all scopes, and fill the cache"""
         if not self._has_all_scopes:
-            if self._loader is None:
-                raise RuntimeError("This dataset collection can't retrieve new scopes")
-
-            self._scopes_cache = self._loader.get_all_scopes()
+            self._scopes_cache = self._get_all_scopes()
             self._has_all_scopes = True
 
         return self._scopes_cache
 
 
-class _FileBasedSchemaLoader(SchemaLoader):
+class _FileBasedSchemaLoader(CachedSchemaLoader):
     """Common logic for any schema loader that works with files (URLs or paths)"""
 
     def __init__(
@@ -226,10 +204,8 @@ class _FileBasedSchemaLoader(SchemaLoader):
         *,
         loaded_callback: Callable[[DatasetSchema], None] | None = None,
     ):
-        # All the datasets loaded by this instance should be collected
-        # into this single cached instance, so no duplicate instances are loaded.
+        super().__init__()
         self.schema_url = schema_url
-        self.dataset_collection = CachedSchemaLoader(self)
         self._loaded_callback = loaded_callback
 
     def __repr__(self):
@@ -258,7 +234,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
     def _read_table(self, dataset_id: str, table_ref: str) -> Json:
         raise NotImplementedError
 
-    def get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
+    def _get_dataset(self, dataset_id: str, prefetch_related: bool = False) -> DatasetSchema:
         """Gets a dataset from the filesystem for dataset_id."""
         schema_json = self._read_dataset(dataset_id)
         view_sql = self._read_view(dataset_id)
@@ -268,9 +244,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
         self, schema_json: dict, view_sql: str | None = None, prefetch_related: bool = False
     ) -> DatasetSchema:
         """Convert the read JSON into a real object that can resolve its relations."""
-        dataset_schema = DatasetSchema(
-            schema_json, view_sql, dataset_collection=self.dataset_collection
-        )
+        dataset_schema = DatasetSchema(schema_json, view_sql, loader=self)
 
         if self._loaded_callback is not None:
             self._loaded_callback(dataset_schema)
@@ -281,11 +255,11 @@ class _FileBasedSchemaLoader(SchemaLoader):
             # Make sure the related datasets are read.
             for dataset_id in dataset_schema.related_dataset_schema_ids:
                 if dataset_id != schema_json["id"]:  # skip self-references to local tables
-                    self.dataset_collection.get_dataset(dataset_id, prefetch_related=True)
+                    self.get_dataset(dataset_id, prefetch_related=True)
 
         return dataset_schema
 
-    def get_dataset_path(self, dataset_id) -> str:
+    def _get_dataset_path(self, dataset_id) -> str:
         """Find the relative path for a dataset."""
         try:
             # Since datasets are related, a cache is constructed.
@@ -296,7 +270,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
                 f"Dataset '{dataset_id}' not found in '{self.schema_url}'."
             ) from None
 
-    def get_table(self, dataset: DatasetSchema, table_ref: str) -> DatasetTableSchema:
+    def _get_table(self, dataset: DatasetSchema, table_ref: str) -> DatasetTableSchema:
         """Load a versioned table from the location."""
         try:
             table_json = self._read_table(dataset.id, table_ref)
@@ -312,7 +286,7 @@ class _FileBasedSchemaLoader(SchemaLoader):
             ) from e
         return DatasetTableSchema(table_json, parent_schema=dataset)
 
-    def get_all_datasets(self) -> dict[str, DatasetSchema]:
+    def _get_all_datasets(self) -> dict[str, DatasetSchema]:
         """Gets all datasets from the filesystem based on the `self.schema_url` path.
         Returns a dictionary of relative paths and their schema.
         """
@@ -323,12 +297,12 @@ class _FileBasedSchemaLoader(SchemaLoader):
             datasets[dataset_path] = dataset
         return datasets
 
-    def get_publisher(self, publisher_id: str) -> dict[str, Publisher]:
+    def _get_publisher(self, publisher_id: str) -> Publisher:
         return Publisher.from_dict(
             read_json_path((self.root.parent / PUBLISHER_DIR / publisher_id).with_suffix(".json"))
         )
 
-    def get_all_publishers(self) -> dict[str, Publisher]:
+    def _get_all_publishers(self) -> dict[str, Publisher]:
         result = {}
         for path in (self.root.parent / PUBLISHER_DIR).glob("*.json"):
             if path.name in PUBLISHER_EXCLUDE_FILES:
@@ -339,10 +313,10 @@ class _FileBasedSchemaLoader(SchemaLoader):
 
         return result
 
-    def get_scope(self, ref: str) -> Scope:
+    def _get_scope(self, ref: str) -> Scope:
         return Scope.from_dict(read_json_path(self.root.parent / f"{ref}.json"))
 
-    def get_all_scopes(self) -> dict[str, Scope]:
+    def _get_all_scopes(self) -> dict[str, Scope]:
         result = {}
         for subdir in (self.root.parent / SCOPE_DIR).iterdir():
             for file in subdir.glob("*.json"):
@@ -385,10 +359,6 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
             # In case the real root can't be found (typically in unit tests with random layouts),
             # assume the given folder should be treated as the root folder.
             self.root = schema_url
-
-        # All the datasets loaded by this instance will be collected
-        # into a single cached version, so no duplicate instances are loaded.
-        self._dataset_collection = CachedSchemaLoader(self)
 
     @classmethod
     def from_file(cls, dataset_file: Path | str, **kwargs):
@@ -574,15 +544,15 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
             loaded_callback=loaded_callback,
         )
 
-    def get_all_datasets(self) -> dict[str, DatasetSchema]:
+    def _get_all_datasets(self) -> dict[str, DatasetSchema]:
         """Gets all datasets from a web url based on the `self.schema_url` path."""
         with self._persistent_connection():
-            return super().get_all_datasets()
+            return super()._get_all_datasets()
 
-    def get_dataset(self, dataset_id: str, prefetch_related: bool = True) -> DatasetSchema:
+    def _get_dataset(self, dataset_id: str, prefetch_related: bool = True) -> DatasetSchema:
         """Retrieve a dataset and its contents with a single connection."""
         with self._persistent_connection():
-            return super().get_dataset(dataset_id, prefetch_related=prefetch_related)
+            return super()._get_dataset(dataset_id, prefetch_related=prefetch_related)
 
     def _read_index(self) -> dict[str, str]:
         return dict(self._read_json_url(self.schema_url / "index"))
@@ -605,11 +575,11 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
     def _get_scopes_url(self) -> URL:
         return URL(self.schema_url.rpartition("/datasets")[0]) / SCOPE_DIR
 
-    def get_publisher(self, publisher_id: str) -> Publisher:
+    def _get_publisher(self, publisher_id: str) -> Publisher:
         url = self._get_publisher_url()
         return Publisher.from_dict(self._read_json_url(url / publisher_id))
 
-    def get_all_publishers(self) -> dict[str, Publisher]:
+    def _get_all_publishers(self) -> dict[str, Publisher]:
         url = self._get_publisher_url()
         index = self._read_json_url(url / "index")
         result = {}
@@ -618,11 +588,11 @@ class URLSchemaLoader(_SharedConnectionMixin, _FileBasedSchemaLoader):
 
         return result
 
-    def get_scope(self, ref: str) -> Scope:
+    def _get_scope(self, ref: str) -> Scope:
         base_url = URL(self.schema_url.rpartition("/datasets")[0])
         return Scope.from_dict(self._read_json_url(base_url / ref))
 
-    def get_all_scopes(self) -> dict[str, Scope]:
+    def _get_all_scopes(self) -> dict[str, Scope]:
         url = self._get_scopes_url()
         index: dict[str, list[str]] = self._read_json_url(url / "index")
         result = {}
