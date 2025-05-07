@@ -9,12 +9,12 @@ class DatasetIterable(ModelIterable):
         super().__init__(*args, **kwargs)
         from .loaders import DatabaseSchemaLoader
 
-        self._dataset_collection = DatabaseSchemaLoader().dataset_collection
+        self._loader = DatabaseSchemaLoader()
 
     def __iter__(self):
         """Inject a shared dataset collection with the results of this queryset."""
         for obj in super().__iter__():
-            obj._dataset_collection = self._dataset_collection
+            obj._loader = self._loader
             yield obj
 
 

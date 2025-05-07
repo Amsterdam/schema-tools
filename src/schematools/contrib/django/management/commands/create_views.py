@@ -107,7 +107,7 @@ def create_views(
     command.stdout.write("Creating views")
 
     # Because datasets are related, we need to 'prewarm'
-    # the datasets cache (the DatasetSchema.dataset_collection)
+    # the datasets cache (encapsulated in the DatasetSchema.loader)
     # by accessing the `Dataset.schema` attribute.
     for dataset in datasets:
         dataset.schema  # noqa: B018

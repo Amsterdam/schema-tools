@@ -225,6 +225,6 @@ class Command(BaseCommand):
         )
         # Hack the same logic that Dataset.create_for_schema() does
         # without actually creating a database object.
-        dataset._dataset_collection = dataset_schema.loader
+        dataset._loader = dataset_schema.loader
         dataset.__dict__["schema"] = dataset_schema
         return dataset

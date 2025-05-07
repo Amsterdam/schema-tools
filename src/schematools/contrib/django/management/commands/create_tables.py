@@ -47,7 +47,7 @@ def create_tables(
     to_be_skipped = set(skip if skip is not None else [])
 
     # Because datasets are related, we need to 'prewarm'
-    # the datasets cache (the DatasetSchema.dataset_collection)
+    # the datasets cache (the DatasetSchema.loader)
     # by accessing the `Dataset.schema` attribute.
     for dataset in datasets:
         dataset.schema  # noqa: B018

@@ -162,7 +162,7 @@ def test_identifier_properties(schema_loader) -> None:
     assert list(_identifier_properties(dataset)) == []  # no validation errors
 
 
-def test_active_versions(schema_loader) -> None:
+def test_active_version_id(schema_loader) -> None:
     dataset = schema_loader.get_dataset("gebieden_sep_tables")
     table_versions = dataset.table_versions["bouwblokken"]
     table_versions.id = "BOUWBLOKKEN"
@@ -170,12 +170,16 @@ def test_active_versions(schema_loader) -> None:
     assert error
     assert "does not match with id" in error.message
 
+
+def test_active_versions_version(schema_loader) -> None:
     dataset = schema_loader.get_dataset("gebieden_sep_tables")
     dataset["tables"][0]["activeVersions"] = {"9.8.1": "bouwblokken/v1.0.0"}
     error = next(validation.run(dataset))
     assert error
     assert "does not match with version" in error.message
 
+
+def test_active_versions_happy_path(schema_loader) -> None:
     dataset = schema_loader.get_dataset("gebieden_sep_tables")
     assert list(_active_versions(dataset)) == []  # no validation errors
 
