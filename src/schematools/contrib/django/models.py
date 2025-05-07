@@ -347,7 +347,10 @@ class Dataset(models.Model):
         )
 
     def create_models(
-        self, base_app_name: str | None = None, base_model: type[M] = DynamicModel
+        self,
+        base_app_name: str | None = None,
+        base_model: type[M] = DynamicModel,
+        include_versioned_tables: bool = False,
     ) -> list[type[M]]:
         """Extract the models found in the schema"""
         from schematools.contrib.django.factories import schema_models_factory
@@ -355,7 +358,12 @@ class Dataset(models.Model):
         if not self.enable_db:
             return []
         else:
-            return schema_models_factory(self, base_app_name=base_app_name, base_model=base_model)
+            return schema_models_factory(
+                self,
+                base_app_name=base_app_name,
+                base_model=base_model,
+                include_versioned_tables=include_versioned_tables,
+            )
 
 
 class DatasetTable(models.Model):
