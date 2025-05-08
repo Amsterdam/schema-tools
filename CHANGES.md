@@ -1,3 +1,7 @@
+# 2025-05-08 (7.7.1)
+
+* Fix datasets path in validate schemas
+
 # 2025-05-08 (7.7.0)
 
 * Create tables for all versions of a dataset.

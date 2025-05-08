@@ -671,7 +671,7 @@ def batch_validate(
     errors: defaultdict[str, defaultdict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
 
     # Find the root "datasets" directory.
-    datasets_dir = Path(os.path.commonpath(schema_files)).absolute().resolve()
+    datasets_dir = Path(schema_files[0]).absolute().resolve()
     path_parts = datasets_dir.parts
 
     # Bail out if there is no `datasets` directory
@@ -684,9 +684,7 @@ def batch_validate(
     # This could be needed if we are only checking one dataset,
     # because in that case datasets_dir is initially the full path to
     # the `dataset.json` file.
-    up_tree_count = len(path_parts) - 2 - datasets_idx
-    if up_tree_count > 0:
-        datasets_dir = datasets_dir.parents[up_tree_count]
+    datasets_dir = Path(*path_parts[: datasets_idx + 1])
 
     loader = FileSystemSchemaLoader(datasets_dir)
     meta_schema_urls = [meta_schema_url]
