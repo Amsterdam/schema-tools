@@ -446,8 +446,8 @@ def test_schema_json_data_can_inline_scopes(schema_loader):
     json_data = schema.json_data(inline_tables=True, inline_publishers=True, inline_scopes=True)
 
     _assert_scopes_are_resolved(json_data)
-    _assert_scopes_are_resolved(json_data["tables"][0])
-    _assert_scopes_are_resolved(json_data["tables"][0]["schema"])
+    _assert_scopes_are_resolved(json_data["versions"]["v1"]["tables"][0])
+    _assert_scopes_are_resolved(json_data["versions"]["v1"]["tables"][0]["schema"])
 
 
 def test_repr_broken_schema():

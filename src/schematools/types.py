@@ -10,7 +10,7 @@ import re
 import sys
 import typing
 from collections import UserDict
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator
 from enum import Enum
 from functools import cached_property, total_ordering
 from re import Pattern
@@ -319,9 +319,7 @@ class DatasetSchema(SchemaType):
             loader: The shared collection that the dataset should become part of.
                                 This is used to resolve relations between different datasets.
         """
-        if data.get("type") != "dataset" and (
-            not isinstance(data.get("tables"), list) or not isinstance(data.get("versions"), dict)
-        ):
+        if data.get("type") != "dataset" and not isinstance(data.get("versions"), dict):
             raise ValueError("Invalid Amsterdam Dataset schema file")
 
         self.view_sql = view_sql if view_sql is not None else None
@@ -368,19 +366,12 @@ class DatasetSchema(SchemaType):
         data["status"] = self.status.value
 
         if inline_tables:
-            # Support both v2 and v3 metaschema for now, this duplication can be removed
-            # once the DSO-API uses the tables from a DatasetVersionSchema instead of
-            # a DatasetSchema
-            if "versions" in data:
-                for version_number, version in self.versions.items():
-                    tables = version.get_tables()
-                    data["versions"][version_number]["tables"] = [
-                        t.json_data(inline_scopes=inline_scopes) for t in tables
-                    ]
-                data["tables"] = data["versions"][self.default_version]["tables"]
-            else:
-                table_data = [t.json_data(inline_scopes=inline_scopes) for t in self.tables]
-                data["tables"] = table_data
+            # Inline the tables in each version.
+            for version_number, version in self.versions.items():
+                tables = version.get_tables()
+                data["versions"][version_number]["tables"] = [
+                    t.json_data(inline_scopes=inline_scopes) for t in tables
+                ]
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
         if inline_scopes:
@@ -514,16 +505,9 @@ class DatasetSchema(SchemaType):
     @cached_property
     def versions(self) -> dict[str, DatasetVersionSchema]:
         """Access the versions within the file."""
-        if not self.get("versions"):
-            version_dict = {
-                "status": DatasetSchema.Status.beschikbaar.value,
-                "version": "1.0.0",
-                "tables": self.get("tables"),
-            }
-            return {self.default_version: DatasetVersionSchema(version_dict, parent_schema=self)}
         return {
             version_number: DatasetVersionSchema(version, parent_schema=self)
-            for version_number, version in self.get("versions").items()
+            for version_number, version in self.get("versions", {}).items()
         }
 
     def get_version(self, version) -> DatasetVersionSchema:
@@ -543,22 +527,9 @@ class DatasetSchema(SchemaType):
         return version.get_tables()
 
     @cached_property
-    def table_versions(self) -> dict[str, TableVersions]:
+    def table_ids(self) -> list[str]:
         """Access different versions of the table, as mentioned in the dataset file."""
-        if not self.get("tables"):
-            # V3 of the Amsterdam Meta Schema does not support activeVersions on tables
-            # Will be deprecated once we're fully transitioned to V3
-            return {}
-        return {
-            table_json["id"]: TableVersions(
-                table_id=table_json["id"],
-                default_version=table_json["$ref"],
-                version_paths=table_json["activeVersions"],
-                parent_dataset=self,
-            )
-            for table_json in self["tables"]
-            if "$ref" in table_json
-        }
+        return [table["id"] for version in self.get("versions") for table in version["tables"]]
 
     @cached_property
     def publisher(self) -> Publisher | None:
@@ -1537,48 +1508,6 @@ def _name_join(*parts):
 def _name_join_count(*parts):
     """Counts the number of underscores that _name_join inserts."""
     return len(list(filter(None, parts)))
-
-
-class TableVersions(Mapping[str, DatasetTableSchema]):
-    """Lazy evaluated dict that provides access to other table versions."""
-
-    def __init__(
-        self,
-        table_id: str,
-        default_version: str,
-        version_paths: dict[str, str],
-        parent_dataset: DatasetSchema,
-    ):
-        self.id = table_id
-        self._default_version = default_version
-        self._version_paths = version_paths
-        self._parent_dataset = parent_dataset
-
-    def __getitem__(self, version) -> DatasetTableSchema:
-        if version == self._default_version:
-            # Take the same table object from the dataset. Avoid loading a new object
-            return self._parent_dataset.get_table_by_id(
-                self.id, include_nested=False, include_through=False
-            )
-
-        table_path = self._version_paths[version]
-        table = self._parent_dataset.loader.get_table(self._parent_dataset, table_path)
-        if table.id != self.id:
-            raise RuntimeError(
-                f"Referenced table '{table_path}' does not match with id '{self.id}'!"
-            )
-        if table["version"] != version:
-            raise RuntimeError(
-                f"Referenced table '{table_path}' version does not match with version '{version}!"
-            )
-
-        return table
-
-    def __iter__(self):
-        return iter(self._version_paths)
-
-    def __len__(self):
-        return len(self._version_paths)
 
 
 class DatasetFieldSchema(JsonDict):
