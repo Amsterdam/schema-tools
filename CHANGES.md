@@ -1,7 +1,13 @@
+# 2025-05-08 (7.7.0)
+
+* Create tables for all versions of a dataset.
+
 # 2025-05-08 (7.6.4)
+
 * Remove ALTER COLUMN statements from generated migrations, to prevent issues with our views.
 
 # 2025-04-30 (7.6.3)
+
 * Ensure all roles are created, not just the ones that have grants associated with them.
 
 # 2025-04-29 (7.6.2)
