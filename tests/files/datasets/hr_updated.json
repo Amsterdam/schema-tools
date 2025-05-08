@@ -2,116 +2,153 @@
   "type": "dataset",
   "id": "hr",
   "title": "hr",
-  "status": "beschikbaar",
-  "version": "0.0.1",
   "crs": "EPSG:28992",
   "auth": "HR/R",
-  "tables": [
-    {
-      "id": "maatschappelijkeactiviteiten",
-      "shortname": "activiteiten",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/hr/maatschappelijke_activiteiten.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": "kvknummer",
-        "required": ["schema", "kvknummer"],
-        "display": "kvknummer",
-        "properties": {
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "0.0.1",
+      "tables": [
+        {
+          "id": "maatschappelijkeactiviteiten",
+          "shortname": "activiteiten",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "kvknummer": {
-            "type": "string",
-            "description": "Betreft het identificerende gegeven voor de Maatschappelijke Activiteit, het KvK-nummer."
-          },
-          "heeftSbiActiviteitenVoorMaatschappelijkeActiviteit": {
-            "type": "array",
-            "shortname": "sbiMaatschappelijk",
-            "items": {
-              "type": "object",
-              "properties": { "bronwaarde": { "type": "integer" } }
-            },
-            "description": "De omschrijving van de activiteiten die de maatschappelijke activiteit uitoefent."
-          },
-          "heeftSbiActiviteitenVoorOnderneming": {
-            "shortname": "sbiVoorActiviteit",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": { "sbiActiviteitNummer": { "type": "integer" } }
-            },
-            "relation": "hr:sbiactiviteiten",
-            "description": "De omschrijving van de activiteiten die de onderneming uitoefent."
-          },
-          "wordtUitgeoefendInCommercieleVestiging": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": { "bronwaarde": { "type": "integer" } }
-            },
-            "$comment": "relation hr:vestigingen",
-            "description": "Een vestiging is gebouw of een complex van gebouwen waar duurzame uitoefening van activiteiten van een Onderneming of Rechtspersoon plaatsvindt."
-          },
-          "heeftEenRelatieMetVerblijfsobject": {
-            "type": "array",
-            "shortname": "verblijfsobjecten",
-            "items": {
-              "type": "object",
-              "properties": {
-                "identificatie": { "type": "string" },
-                "volgnummer": { "type": "integer" }
-              }
-            },
-            "relation": "verblijfsobjecten:verblijfsobjecten",
-            "description": "Relatie naar verblijfsobject",
-            "$comment": "This is a fictional relation, added for testing purposes"
-          },
-          "isGevestigdInVerblijfsobject": {
+            "$id": "https://github.com/Amsterdam/schemas/hr/maatschappelijke_activiteiten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
-            "shortname": "gevestigdIn",
+            "additionalProperties": false,
+            "identifier": "kvknummer",
+            "required": [
+              "schema",
+              "kvknummer"
+            ],
+            "display": "kvknummer",
             "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" },
-              "beginGeldigheid": { "type": "string", "format": "date-time" }
-            },
-            "relation": "verblijfsobjecten:verblijfsobjecten",
-            "description": "Relatie naar verblijfsobject",
-            "$comment": "This is a fictional relation, added for testing purposes"
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "kvknummer": {
+                "type": "string",
+                "description": "Betreft het identificerende gegeven voor de Maatschappelijke Activiteit, het KvK-nummer."
+              },
+              "heeftSbiActiviteitenVoorMaatschappelijkeActiviteit": {
+                "type": "array",
+                "shortname": "sbiMaatschappelijk",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bronwaarde": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "description": "De omschrijving van de activiteiten die de maatschappelijke activiteit uitoefent."
+              },
+              "heeftSbiActiviteitenVoorOnderneming": {
+                "shortname": "sbiVoorActiviteit",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sbiActiviteitNummer": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "relation": "hr:sbiactiviteiten",
+                "description": "De omschrijving van de activiteiten die de onderneming uitoefent."
+              },
+              "wordtUitgeoefendInCommercieleVestiging": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bronwaarde": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "$comment": "relation hr:vestigingen",
+                "description": "Een vestiging is gebouw of een complex van gebouwen waar duurzame uitoefening van activiteiten van een Onderneming of Rechtspersoon plaatsvindt."
+              },
+              "heeftEenRelatieMetVerblijfsobject": {
+                "type": "array",
+                "shortname": "verblijfsobjecten",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "identificatie": {
+                      "type": "string"
+                    },
+                    "volgnummer": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "relation": "verblijfsobjecten:verblijfsobjecten",
+                "description": "Relatie naar verblijfsobject",
+                "$comment": "This is a fictional relation, added for testing purposes"
+              },
+              "isGevestigdInVerblijfsobject": {
+                "type": "object",
+                "shortname": "gevestigdIn",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  },
+                  "beginGeldigheid": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "relation": "verblijfsobjecten:verblijfsobjecten",
+                "description": "Relatie naar verblijfsobject",
+                "$comment": "This is a fictional relation, added for testing purposes"
+              },
+              "activiteitType": {
+                "type": "string"
+              }
+            }
           },
-          "activiteitType": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "id": "sbiactiviteiten",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/hr/sbiactiviteiten.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": "sbiActiviteitNummer",
-        "required": ["schema", "sbiActiviteitNummer"],
-        "display": "sbiActiviteitNummer",
-        "properties": {
+          "lifecycleStatus": "stable"
+        },
+        {
+          "id": "sbiactiviteiten",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$id": "https://github.com/Amsterdam/schemas/hr/sbiactiviteiten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "sbiActiviteitNummer",
+            "required": [
+              "schema",
+              "sbiActiviteitNummer"
+            ],
+            "display": "sbiActiviteitNummer",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "sbiActiviteitNummer": {
+                "type": "string",
+                "shortname": "sbiActNr",
+                "description": "Samenstelling van KvK-nummer en/of Vestigingsnummer of {BSN- of RSIN-nummer}"
+              }
+            }
           },
-          "sbiActiviteitNummer": {
-            "type": "string",
-            "shortname": "sbiActNr",
-            "description": "Samenstelling van KvK-nummer en/of Vestigingsnummer of {BSN- of RSIN-nummer}"
-          }
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ],
-  "publisher": "unknown"
+  }
 }

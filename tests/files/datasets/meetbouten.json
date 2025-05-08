@@ -1,119 +1,157 @@
 {
   "id": "meetbouten",
   "type": "dataset",
-  "status": "beschikbaar",
-  "version": "2.0.0",
   "default_version": "2.0.0",
   "crs": "EPSG:28992",
-  "tables": [
-    {
-      "id": "meetbouten",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["identificatie", "schema"],
-        "identifier": ["identificatie"],
-        "mainGeometry": "geometrie",
-        "properties": {
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "2.0.0",
+      "tables": [
+        {
+          "id": "meetbouten",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "identificatie": { "type": "integer" },
-          "ligtInBuurt": {
-            "relation": "gebieden:buurten",
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "identificatie",
+              "schema"
+            ],
+            "identifier": [
+              "identificatie"
+            ],
+            "mainGeometry": "geometrie",
             "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" },
-              "beginGeldigheid": { "type": "string", "format": "date" },
-              "eindGeldigheid": { "type": "string", "format": "date" }
-            },
-            "description": "De buurt waarbinnen de meetbout ligt"
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "integer"
+              },
+              "ligtInBuurt": {
+                "relation": "gebieden:buurten",
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  },
+                  "beginGeldigheid": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "eindGeldigheid": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                },
+                "description": "De buurt waarbinnen de meetbout ligt"
+              },
+              "merkCode": {
+                "type": "string",
+                "description": "Merk code",
+                "provenance": "$.merk.code"
+              },
+              "merkOmschrijving": {
+                "type": "string",
+                "description": "Merk omschrijving",
+                "provenance": "$.merk.omschrijving"
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Point.json",
+                "description": "Geometrie"
+              }
+            }
           },
-          "merkCode": {
-            "type": "string",
-            "description": "Merk code",
-            "provenance": "$.merk.code"
-          },
-          "merkOmschrijving": {
-            "type": "string",
-            "description": "Merk omschrijving",
-            "provenance": "$.merk.omschrijving"
-          },
-          "geometrie": {
-            "$ref": "https://geojson.org/schema/Point.json",
-            "description": "Geometrie"
-          }
-        }
-      }
-    },
-    {
-      "id": "metingen",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/meetbouten/metingen.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": ["identificatie"],
-        "required": ["schema", "identificatie"],
-        "display": "identificatie",
-        "properties": {
+          "lifecycleStatus": "stable"
+        },
+        {
+          "id": "metingen",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$id": "https://github.com/Amsterdam/schemas/meetbouten/metingen.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "identificatie"
+            ],
+            "required": [
+              "schema",
+              "identificatie"
+            ],
+            "display": "identificatie",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie voor dit object"
+              },
+              "hoortbijmeetbout": {
+                "type": "string",
+                "relation": "meetbouten:meetbouten",
+                "description": "De meetbout waarop de meting is gedaan"
+              },
+              "refereertaanreferentiepunten": {
+                "relation": "meetbouten:referentiepunten",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "identificatie": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "description": "De referentiepunten waar de metingen aan worden opgehangen"
+              }
+            }
           },
-          "identificatie": {
-            "type": "string",
-            "description": "Unieke identificatie voor dit object"
-          },
-          "hoortbijmeetbout": {
-            "type": "string",
-            "relation": "meetbouten:meetbouten",
-            "description": "De meetbout waarop de meting is gedaan"
-          },
-          "refereertaanreferentiepunten": {
-            "relation": "meetbouten:referentiepunten",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": { "identificatie": { "type": "string" } }
-            },
-            "description": "De referentiepunten waar de metingen aan worden opgehangen"
-          }
-        }
-      }
-    },
-    {
-      "id": "referentiepunten",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/meetbouten/referentiepunten.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": "identificatie",
-        "required": ["schema", "id"],
-        "display": "id",
-        "properties": {
+          "lifecycleStatus": "stable"
+        },
+        {
+          "id": "referentiepunten",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$id": "https://github.com/Amsterdam/schemas/meetbouten/referentiepunten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "identificatie",
+            "required": [
+              "schema",
+              "id"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "string",
+                "description": "Unieke identificatie voor dit object"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van de meting"
+              }
+            }
           },
-          "id": {
-            "type": "string",
-            "description": "Unieke identificatie voor dit object"
-          },
-          "identificatie": {
-            "type": "string",
-            "description": "Unieke identificatie van de meting"
-          }
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ],
-  "publisher": "unknown"
+  }
 }

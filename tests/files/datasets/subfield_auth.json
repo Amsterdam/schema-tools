@@ -3,53 +3,71 @@
   "type": "dataset",
   "description": "Dataset with auth on an field with subfields",
   "license": "public",
-  "status": "niet_beschikbaar",
-  "version": "1.2.3",
   "publisher": "us",
   "owner": "us",
   "authorizationGrantor": "us",
   "crs": "EPSG:28992",
-  "tables": [
-    {
-      "id": "base",
-      "type": "table",
-      "title": "Base",
-      "version": "1.2.4",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": ["id"],
-        "required": ["schema", "id"],
-        "display": "title",
-        "properties": {
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "niet_beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "1.2.3",
+      "tables": [
+        {
+          "id": "base",
+          "type": "table",
+          "title": "Base",
+          "version": "1.2.4",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "id": {
-            "auth": ["BASE/ID"],
-            "reasonsNonPublic": ["nader te bepalen"],
-            "type": "integer",
-            "description": "Unieke aanduiding van het record."
-          },
-          "title": {
-            "type": "string",
-            "description": "Titel van het record."
-          },
-          "soortCultuurOnbebouwd": {
-            "auth": ["BRK/RO"],
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "id"
+            ],
+            "required": [
+              "schema",
+              "id"
+            ],
+            "display": "title",
             "properties": {
-              "code": {
-                "type": "string"
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
               },
-              "omschrijving": {
-                "type": "string"
+              "id": {
+                "auth": [
+                  "BASE/ID"
+                ],
+                "reasonsNonPublic": [
+                  "nader te bepalen"
+                ],
+                "type": "integer",
+                "description": "Unieke aanduiding van het record."
+              },
+              "title": {
+                "type": "string",
+                "description": "Titel van het record."
+              },
+              "soortCultuurOnbebouwd": {
+                "auth": [
+                  "BRK/RO"
+                ],
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "omschrijving": {
+                    "type": "string"
+                  }
+                }
               }
             }
-          }
+          },
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ]
+  }
 }
