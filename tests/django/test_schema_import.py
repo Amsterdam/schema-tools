@@ -123,6 +123,26 @@ def test_import_schema_update_has_dry_run(here, capsys):
     )
 
 
+@pytest.mark.django_db()
+def test_import_schema_does_not_alter_column(here, capsys):
+    """Prove that ALTER COLUMN statements are filtered from generated SQL"""
+    gebieden = here / "files/datasets/gebieden.json"
+    call_command(
+        "import_schemas",
+        gebieden,
+        create_tables=1,
+        create_views=1,
+        dry_run=False,
+    )
+    updated_gebieden_json_path = here / "files/datasets/gebieden_updated_comment.json"
+    call_command("import_schemas", updated_gebieden_json_path, "--dry-run")
+    captured = capsys.readouterr()
+    assert (
+        """ALTER TABLE "gebieden_bouwblokken_v1" ALTER COLUMN "identificatie" TYPE varchar;"""
+        not in captured.out
+    )
+
+
 @pytest.mark.django_db
 def test_import_schema_enables_and_disables_api_based_on_status(here):
     """Prove that the enable_api flag is set at schema import time based on

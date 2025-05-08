@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from django.apps import apps
 from django.core.management import BaseCommand
 from django.db import DEFAULT_DB_ALIAS, connections
@@ -152,15 +154,31 @@ def execute_migration(
             start_state = migration.apply(start_state, schema_editor, collect_sql=True)
         except Exception:
             # On crashes, still show the generated statements so far
-            command.stdout.write("\n".join(schema_editor.collected_sql))
+            command.stdout.write(
+                "\n".join(_filter_alter_type_statements(schema_editor.collected_sql))
+            )
             raise
+
+        # Filter out ALTER COLUMN statements
+        collected_sql = _filter_alter_type_statements(schema_editor.collected_sql)
+
         if dry_run:
             command.stdout.write("-- DRY RUN - the following would be executed:")
-            command.stdout.write("\n".join(schema_editor.collected_sql))
+            command.stdout.write("\n".join(collected_sql))
         else:
             schema_editor.collect_sql = False
-            schema_editor.execute("\n".join(schema_editor.collected_sql))
+            schema_editor.execute("\n".join(collected_sql))
     return start_state
+
+
+def _filter_alter_type_statements(sql: list) -> list:
+    """Filter ALTER TYPE statements from the generated SQL since this causes issues
+    with our views. This function can be removed once we either:
+        - Drop our views before running the ALTER TYPE statements and recreate them
+        - Patch the migration logic in Django to not create an ALTER TYPE statement when
+          adding or changing a db_comment
+    """
+    return [s for s in sql if not re.search(r"ALTER COLUMN.+TYPE", s)]
 
 
 class PatchedModelState(ModelState):
