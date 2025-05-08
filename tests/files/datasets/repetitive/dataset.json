@@ -1,16 +1,48 @@
 {
   "id": "repetitive",
   "type": "dataset",
-  "status": "beschikbaar",
   "title": "Title",
-  "version": "1.0.0",
-  "tables": [
-    {
-      "id": "repetitiveTable",
-      "$ref": "repetitiveTable/v1.0.0",
-      "activeVersions": {
-        "1.0.0": "repetitiveTable/v1.0.0"
-      }
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "repetitiveTable",
+          "title": "Title",
+          "type": "table",
+          "version": "1.0.0",
+          "lifecycleStatus": "stable",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "id"
+            ],
+            "required": [
+              "id",
+              "schema"
+            ],
+            "display": "id",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "Container-ID"
+              },
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "repetitiveTableField": {
+                "type": "string",
+                "description": "repetitive.repetitiveTable.repetitiveTableField"
+              }
+            }
+          }
+        }
+      ]
     }
-  ]
+  }
 }
