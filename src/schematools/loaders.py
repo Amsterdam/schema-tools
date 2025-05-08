@@ -250,8 +250,6 @@ class _FileBasedSchemaLoader(CachedSchemaLoader):
             self._loaded_callback(dataset_schema)
 
         if prefetch_related:
-            dataset_schema.tables  # noqa: B018, ensure versioned tables are prefetched
-
             # Make sure the related datasets are read.
             for dataset_id in dataset_schema.related_dataset_schema_ids:
                 if dataset_id != schema_json["id"]:  # skip self-references to local tables

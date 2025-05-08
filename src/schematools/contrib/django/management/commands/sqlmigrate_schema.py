@@ -166,7 +166,7 @@ class Command(BaseCommand):
             if not self._has_versioned_table(dataset, table_id):
                 # Better error message if the table doesn't exist at all.
                 # No need to use get_table_by_id() as that also loads other tables.
-                available = "', '".join(dataset.table_versions.keys())
+                available = "', '".join(dataset.table_ids)
                 raise CommandError(
                     f"Dataset '{dataset.id}' has no versioned table named '{table_id}', "
                     f"available are: '{available}'"
@@ -214,9 +214,7 @@ class Command(BaseCommand):
         # that means unnecessary loading of unrelated tables. Yet the same snake-case logic
         # needs to be applied that get_table_by_id() also does.
         snaked_table_id = to_snake_case(table_id)
-        return any(
-            to_snake_case(table_id) == snaked_table_id for table_id in dataset.table_versions
-        )
+        return any(to_snake_case(table_id) == snaked_table_id for table_id in dataset.table_ids)
 
     def _get_dummy_dataset_model(self, dataset_schema: DatasetSchema) -> Dataset:
         """Generate a dummy "Dataset" object because model_factory() needs this."""

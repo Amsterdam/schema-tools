@@ -11,7 +11,6 @@ from schematools.permissions import PUBLIC_SCOPE
 from schematools.types import DatasetSchema
 from schematools.validation import (
     PROPERTIES_INTRODUCING_BREAKING_CHANGES,
-    _active_versions,
     _check_display,
     _check_maingeometry,
     _identifier_properties,
@@ -162,28 +161,6 @@ def test_identifier_properties(schema_loader) -> None:
     assert list(_identifier_properties(dataset)) == []  # no validation errors
 
 
-def test_active_version_id(schema_loader) -> None:
-    dataset = schema_loader.get_dataset("gebieden_sep_tables")
-    table_versions = dataset.table_versions["bouwblokken"]
-    table_versions.id = "BOUWBLOKKEN"
-    error = next(validation.run(dataset))
-    assert error
-    assert "does not match with id" in error.message
-
-
-def test_active_versions_version(schema_loader) -> None:
-    dataset = schema_loader.get_dataset("gebieden_sep_tables")
-    dataset["tables"][0]["activeVersions"] = {"9.8.1": "bouwblokken/v1.0.0"}
-    error = next(validation.run(dataset))
-    assert error
-    assert "does not match with version" in error.message
-
-
-def test_active_versions_happy_path(schema_loader) -> None:
-    dataset = schema_loader.get_dataset("gebieden_sep_tables")
-    assert list(_active_versions(dataset)) == []  # no validation errors
-
-
 def test_main_geometry(schema_loader, gebieden_schema) -> None:
     dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     assert list(_check_maingeometry(dataset)) == []
@@ -242,7 +219,7 @@ def test_rel_auth_dataset_public(schema_loader) -> None:
 def test_rel_auth_table(here: Path) -> None:
     with (here / "files/datasets/rel_auth.json").open() as f:
         dataset_json = json.load(f)
-    table = next(t for t in dataset_json["tables"] if t["id"] == "base")
+    table = next(t for t in dataset_json["versions"]["v1"]["tables"] if t["id"] == "base")
     table["auth"] = ["HAMMERTIME"]
     table["reasonsNonPublic"] = ["U can't touch this"]
     dataset = DatasetSchema.from_dict(dataset_json)
@@ -255,7 +232,7 @@ def test_rel_auth_table(here: Path) -> None:
 def test_rel_auth_field(here: Path) -> None:
     with (here / "files/datasets/rel_auth.json").open() as f:
         dataset_json = json.load(f)
-    table = next(t for t in dataset_json["tables"] if t["id"] == "base")
+    table = next(t for t in dataset_json["versions"]["v1"]["tables"] if t["id"] == "base")
     field = table["schema"]["properties"]["stop"]
     field["auth"] = ["HAMMERTIME"]
 
@@ -300,7 +277,9 @@ def test_reasons_non_public_exists(here: Path, schema_loader) -> None:
 
     # Test no error is given when a reason is present
     dataset_json = json.load((here / "files/datasets/hr_auth.json").open())
-    dataset_json["tables"][0]["reasonsNonPublic"] = ["5.1 1c: Bevat persoonsgegevens"]
+    dataset_json["versions"]["v1"]["tables"][0]["reasonsNonPublic"] = [
+        "5.1 1c: Bevat persoonsgegevens"
+    ]
     dataset = DatasetSchema.from_dict(dataset_json)
     dataset["auth"] = [PUBLIC_SCOPE]
     errors = list(validation.run(dataset))
@@ -317,12 +296,12 @@ def test_reasons_non_public_value(schema_loader) -> None:
     assert "not allowed in ReasonsNonPublic property of dataset hr." in errors[0].message
 
     # Test no error is given for the placeholder value in a dataset with status != beschikbaar.
-    dataset["status"] = "niet_beschikbaar"
+    dataset.versions["v1"]["status"] = "niet_beschikbaar"
     errors = list(validation.run(dataset))
     assert len(errors) == 0
 
     # Test no error is given for other values of reasonsNonPublic
-    dataset["status"] = "beschikbaar"
+    dataset.versions["v1"]["status"] = "beschikbaar"
     dataset["reasonsNonPublic"] = ["5.1 1c: Bevat persoonsgegevens"]
     errors = list(validation.run(dataset))
     assert len(errors) == 0
