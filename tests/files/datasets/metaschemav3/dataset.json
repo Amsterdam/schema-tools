@@ -2,6 +2,7 @@
   "id": "metaschema3",
   "type": "dataset",
   "status": "beschikbaar",
+  "publisher": "unknown",
   "defaultVersion": "v1",
   "versions": {
     "v0": {

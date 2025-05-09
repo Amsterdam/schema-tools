@@ -404,6 +404,11 @@ def woningbouwplannen_schema(schema_loader, gebieden_schema) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("woningbouwplannen.json")
 
 
+@pytest.fixture
+def metaschemav3_schema(schema_loader, gebieden_schema) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("metaschemav3/dataset.json")
+
+
 @pytest.fixture()
 def profile_loader(here) -> FileSystemProfileLoader:
     return FileSystemProfileLoader(here / "files/profiles")
