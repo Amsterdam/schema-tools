@@ -56,7 +56,11 @@ def create_tables(
         if not dataset.enable_db or dataset.name in to_be_skipped:
             continue  # in case create_tables() is called by import_schemas
 
-        models.extend(schema_models_factory(dataset, base_app_name=base_app_name))
+        models.extend(
+            schema_models_factory(
+                dataset, base_app_name=base_app_name, include_versioned_tables=True
+            )
+        )
 
     # Grouping multiple versions of same model by table name
     models_by_table = defaultdict(list)
