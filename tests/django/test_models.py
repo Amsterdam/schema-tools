@@ -87,6 +87,20 @@ def test_model_factory_table_name_default_version(afval_schema):
 
 
 @pytest.mark.django_db
+def test_model_factory_versioned_tables(metaschemav3_dataset):
+    """Prove that versioned tables can be created"""
+    table_names = [
+        cls._meta.db_table
+        for cls in schema_models_factory(
+            metaschemav3_dataset,
+            base_app_name="dso_api.dynamic_api",
+            include_versioned_tables=True,
+        )
+    ]
+    assert table_names == ["metaschema_3_table_v0", "metaschema_3_table_v1"]
+
+
+@pytest.mark.django_db
 def test_model_factory_relations(afval_dataset):
     """Prove that relations between models can be resolved"""
     models = {

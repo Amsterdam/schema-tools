@@ -134,3 +134,9 @@ def verblijfsobjecten_dataset(verblijfsobjecten_schema: DatasetSchema) -> Datase
 def woningbouwplannen_dataset(woningbouwplannen_schema: DatasetSchema) -> Dataset:
     """Create Woning Bouw Plannen dataset."""
     return Dataset.create_for_schema(woningbouwplannen_schema)
+
+
+@pytest.fixture
+def metaschemav3_dataset(metaschemav3_schema: DatasetSchema) -> Dataset:
+    """Create Metaschema v3 dataset."""
+    return Dataset.create_for_schema(metaschemav3_schema)
