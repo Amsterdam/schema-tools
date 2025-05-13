@@ -156,8 +156,7 @@ class Dataset(models.Model):
     name = models.CharField(_("Name"), unique=True, max_length=50)
     schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
     view_data = models.TextField(_("View SQL"), blank=True, null=True)
-    version = models.CharField(_("Schema Version"), blank=True, null=True, max_length=250)
-    is_default_version = models.BooleanField(_("Default version"), default=False)
+    default_version = models.CharField(_("Default version"), default="v1")
 
     # Settings for publishing the schema:
     enable_api = models.BooleanField(default=True)
@@ -366,6 +365,21 @@ class Dataset(models.Model):
             )
 
 
+class DatasetVersion(models.Model):
+    STATUS_EXPERIMENTAL = "E"
+    STATUS_STABLE = "S"
+
+    dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="versions")
+    version = models.CharField(default="v1", max_length=3)
+    lifecycle_status = models.CharField(
+        choices=((STATUS_EXPERIMENTAL, "experimental"), (STATUS_STABLE, "stable")),
+        default=STATUS_EXPERIMENTAL,
+    )
+
+    def __str__(self):
+        return f"{self.dataset.name}_{self.version}"
+
+
 class DatasetTable(models.Model):
     """Exposed metadata per schema.
 
@@ -373,6 +387,7 @@ class DatasetTable(models.Model):
     """
 
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="tables")
+    dataset_versions = models.ManyToManyField(DatasetVersion, related_name="tables")
     name = models.CharField(max_length=100)
     version = models.TextField(default=SemVer("1.0.0"))
 
@@ -380,7 +395,7 @@ class DatasetTable(models.Model):
     auth = models.CharField(max_length=250, blank=True, null=True)
     enable_export = models.BooleanField(default=False)
     enable_geosearch = models.BooleanField(default=True)
-    db_table = models.CharField(max_length=100)
+    db_table = models.CharField(max_length=100, unique=True)
     display_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
@@ -392,7 +407,7 @@ class DatasetTable(models.Model):
         verbose_name = _("Dataset Table")
         verbose_name_plural = _("Dataset Tables")
         unique_together = [
-            ("dataset", "name"),
+            ("dataset", "name", "version"),
         ]
 
     def __str__(self):
