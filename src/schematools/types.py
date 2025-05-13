@@ -424,21 +424,9 @@ class DatasetSchema(SchemaType):
         return self.get("license")
 
     @property
-    def version(self) -> str:
-        """Dataset Schema version."""
-        return self.get("version", None)
-
-    @property
     def default_version(self) -> str:
         """Default version for this schema."""
         return self.get("defaultVersion", "v1")
-
-    @property
-    def is_default_version(self) -> bool:
-        """Is this Default Dataset version.
-        Always returns True, in order to stay backwards compatible.
-        """
-        return True
 
     def _resolve_scope(self, auth):
         """Auth may contain a reference to a scope, or a list of such references.
@@ -506,7 +494,7 @@ class DatasetSchema(SchemaType):
     def versions(self) -> dict[str, DatasetVersionSchema]:
         """Access the versions within the file."""
         return {
-            version_number: DatasetVersionSchema(version, parent_schema=self)
+            version_number: DatasetVersionSchema(version, version_number, parent_schema=self)
             for version_number, version in self.get("versions", {}).items()
         }
 
@@ -519,6 +507,15 @@ class DatasetSchema(SchemaType):
                 f"Version {version} not found in dataset. "
                 f"Available versions are {list(self.versions)}"
             ) from None
+
+    @property
+    def has_an_available_version(self) -> bool:
+        """Whether the Dataset has an available version which should be exposed on the API."""
+        # TODO: use the lifecycleStatus once it has an `unavailable` status.
+        for _, version in self.versions.items():
+            if version.status == DatasetSchema.Status.beschikbaar:
+                return True
+        return False
 
     @property
     def tables(self) -> list[DatasetTableSchema]:
@@ -833,8 +830,10 @@ class DatasetVersionSchema(SchemaType):
     def __init__(
         self,
         data: dict,
+        version_number: str,
         parent_schema: DatasetSchema,
     ):
+        self.version = version_number
         self._parent_schema = parent_schema
         super().__init__(data)
 
@@ -842,8 +841,6 @@ class DatasetVersionSchema(SchemaType):
     def lifecycle_status(self) -> DatasetVersionSchema.LifecycleStatus | None:
         # Allow no value to provide backwards compatability
         value = self.data.get("lifecycleStatus")
-        if not value:
-            return None
         try:
             return DatasetVersionSchema.LifecycleStatus[value]
         except KeyError:
