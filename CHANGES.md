@@ -1,3 +1,12 @@
+# 2025-05-13 (8.0.0-rc1)
+
+* Ensure schematools can handle metaschema v3:
+  * Create DB entries for the versions of a dataset on their own model, link tables.
+  * Save the table schemas of all versions on a dataset.
+  * Update tests so they conform to the metaschema v3 structure.
+* Refactor the loader so that CachedSchemaLoader is extended rather than added as
+  attribute on other loaders.
+
 # 2025-05-08 (7.7.2)
 
 * Add flag to schema_model_factory to create all tables. This way we can use it in create_tables, but
