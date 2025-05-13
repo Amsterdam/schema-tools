@@ -7,6 +7,7 @@
   "versions": {
     "v1": {
       "status": "beschikbaar",
+      "lifecycleStatus": "stable",
       "version": "1.0.0",
       "tables": [
         {

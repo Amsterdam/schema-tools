@@ -76,7 +76,7 @@ def create_tables(
             # - model is managed (not by default)
             # - user overrides this (e.g. developer)
             # - create table for latest version of this dataset group
-            model = max(models_group, key=lambda model: model._dataset.version)
+            model = max(models_group, key=lambda model: model._table_schema.version)
 
             is_view = False
 

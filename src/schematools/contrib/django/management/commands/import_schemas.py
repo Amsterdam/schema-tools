@@ -5,13 +5,11 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management import BaseCommand
-from django.db.models import Q
 
 from schematools.contrib.django.factories import schema_models_factory
 from schematools.contrib.django.management.commands.migration_helpers import migrate
 from schematools.contrib.django.models import Dataset
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
-from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema
 
 from .create_tables import create_tables
@@ -185,41 +183,14 @@ class Command(BaseCommand):
         """Import a single dataset schema."""
         try:
             dataset = Dataset.objects.get(name=Dataset.name_from_schema(schema))
-        except Dataset.DoesNotExist:
-            try:
-                # try getting default dataset by name and version
-                dataset = Dataset.objects.filter(Q(version=None) | Q(version=schema.version)).get(
-                    name=to_snake_case(schema.id)
-                )
-            except Dataset.DoesNotExist:
-                # Give up, Create new dataset
-                dataset = Dataset.create_for_schema(schema, path, save=not self.dry_run)
-                self.stdout.write(f"  Created {schema.id}")
+            updated = dataset.save_for_schema(schema, path, save=not self.dry_run)
+            if updated:
+                self.stdout.write(f"  Updated {schema.id}")
                 return dataset
+        except Dataset.DoesNotExist:
+            # Create new dataset
+            dataset = Dataset.create_for_schema(schema, path, save=not self.dry_run)
+            self.stdout.write(f"  Created {schema.id}")
+            return dataset
 
-        self.stdout.write(f"  Updated {schema.id}")
-        if dataset.is_default_version != schema.is_default_version:
-            self.update_dataset_version(dataset, schema)
-
-        updated = dataset.save_for_schema(schema, save=not self.dry_run)
-        dataset.save_path(path, save=not self.dry_run)
-        return dataset if updated else None
-
-    def update_dataset_version(self, dataset: Dataset, schema: DatasetSchema) -> None:
-        """
-        Perform dataset version update, including changes to dataset tables.
-        """
-        if not dataset.is_default_version and schema.is_default_version:
-            try:
-                current_default = Dataset.objects.get(name=Dataset.name_from_schema(schema))
-            except Dataset.DoesNotExist:
-                pass
-            else:
-                # Update current default dataset name to expected name.
-                if current_default.version:
-                    current_default.name = to_snake_case(f"{schema.id}_{current_default.version}")
-                    if not self.dry_run:
-                        current_default.save()
-
-        dataset.name = Dataset.name_from_schema(schema)
-        dataset.is_default_version = schema.is_default_version
+        return None
