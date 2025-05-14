@@ -297,18 +297,20 @@ class Dataset(models.Model):
             existing_models[removed_name].delete()
 
         # Create/update versions
-        for vnumber, version in self.schema.versions.items():
+        for vmajor, version in self.schema.versions.items():
             try:
-                version_instance = DatasetVersion.objects.get(dataset=self, version=vnumber)
-                version_instance.lifecycle_status = version.lifecycle_status.value
+                version_instance = DatasetVersion.objects.get(dataset=self, version=vmajor)
+            except DatasetVersion.DoesNotExist:
+                version_instance = DatasetVersion.create_for_schema(version, dataset=self)
+            else:
+                version_instance.lifecycle_status = DatasetVersion.LifecycleStatus[
+                    version.lifecycle_status.value.upper()
+                ]
                 version_instance.save()
                 # Remove tables that are no longer in the version.
                 for table in version_instance.tables.all():
                     if table.db_table not in existing_models:
                         version_instance.tables.remove(table)
-
-            except DatasetVersion.DoesNotExist:
-                version_instance = DatasetVersion.create_for_schema(version, dataset=self)
 
             # Add all tables to the version (duplicates are ignored).
             version_instance.tables.add(
@@ -366,14 +368,15 @@ class Dataset(models.Model):
 
 
 class DatasetVersion(models.Model):
-    STATUS_EXPERIMENTAL = "E"
-    STATUS_STABLE = "S"
+    class LifecycleStatus(models.TextChoices):
+        EXPERIMENTAL = "E", "experimental"
+        STABLE = "S", "stable"
 
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="versions")
     version = models.CharField(default="v1", max_length=3)
     lifecycle_status = models.CharField(
-        choices=((STATUS_EXPERIMENTAL, "experimental"), (STATUS_STABLE, "stable")),
-        default=STATUS_EXPERIMENTAL,
+        choices=LifecycleStatus.choices,
+        default=LifecycleStatus.EXPERIMENTAL,
     )
 
     def __str__(self):
@@ -382,11 +385,16 @@ class DatasetVersion(models.Model):
     @classmethod
     def create_for_schema(cls, version_schema: DatasetVersionSchema, dataset: Dataset | None):
         if dataset is None:
-            dataset = Dataset.objects.get(name=to_snake_case(version_schema.schema.id))
+            try:
+                dataset = Dataset.objects.get(name=to_snake_case(version_schema.schema.id))
+            except Dataset.DoesNotExist as e:
+                raise RuntimeError(
+                    f"Dataset '{to_snake_case(version_schema.schema.id)}' not found!"
+                ) from e
         obj = cls(
             dataset=dataset,
             version=version_schema.version,
-            lifecycle_status=version_schema.lifecycle_status.value,
+            lifecycle_status=cls.LifecycleStatus[version_schema.lifecycle_status.value.upper()],
         )
         obj.save()
         return obj

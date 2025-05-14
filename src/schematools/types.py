@@ -367,9 +367,9 @@ class DatasetSchema(SchemaType):
 
         if inline_tables:
             # Inline the tables in each version.
-            for version_number, version in self.versions.items():
+            for vmajor, version in self.versions.items():
                 tables = version.get_tables()
-                data["versions"][version_number]["tables"] = [
+                data["versions"][vmajor]["tables"] = [
                     t.json_data(inline_scopes=inline_scopes) for t in tables
                 ]
         if inline_publishers and self.publisher is not None:
@@ -494,8 +494,8 @@ class DatasetSchema(SchemaType):
     def versions(self) -> dict[str, DatasetVersionSchema]:
         """Access the versions within the file."""
         return {
-            version_number: DatasetVersionSchema(version, version_number, parent_schema=self)
-            for version_number, version in self.get("versions", {}).items()
+            vmajor: DatasetVersionSchema(version, vmajor, parent_schema=self)
+            for vmajor, version in self.get("versions", {}).items()
         }
 
     def get_version(self, version) -> DatasetVersionSchema:
@@ -526,7 +526,9 @@ class DatasetSchema(SchemaType):
     @cached_property
     def table_ids(self) -> list[str]:
         """Access different versions of the table, as mentioned in the dataset file."""
-        return [table["id"] for version in self.get("versions") for table in version["tables"]]
+        return list(
+            {table["id"] for version in self.get("versions") for table in version["tables"]}
+        )
 
     @cached_property
     def publisher(self) -> Publisher | None:
@@ -830,10 +832,10 @@ class DatasetVersionSchema(SchemaType):
     def __init__(
         self,
         data: dict,
-        version_number: str,
+        vmajor: str,
         parent_schema: DatasetSchema,
     ):
-        self.version = version_number
+        self.version = vmajor
         self._parent_schema = parent_schema
         super().__init__(data)
 
