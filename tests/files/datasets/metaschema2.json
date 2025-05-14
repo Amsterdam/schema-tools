@@ -1,8 +1,6 @@
 {
   "id": "metaschema2",
   "type": "dataset",
-  "status": "beschikbaar",
-  "version": "2.0.0",
   "default_version": "2.0.0",
   "crs": "EPSG:28992",
   "publisher": {
@@ -11,66 +9,75 @@
   "auth": {
     "$ref": "scopes/HARRY/harryscope1"
   },
-  "tables": [
-    {
-      "id": "tabelleke",
-      "type": "table",
-      "version": "1.0.0",
-      "auth": {
-        "$ref": "scopes/HARRY/harryscope2"
-      },
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/tabelleke/referentiepunten.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": "identificatie",
-        "required": [
-          "schema",
-          "id"
-        ],
-        "display": "id",
-        "properties": {
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "2.0.0",
+      "tables": [
+        {
+          "id": "tabelleke",
+          "type": "table",
+          "version": "1.0.0",
+          "auth": {
+            "$ref": "scopes/HARRY/harryscope2"
+          },
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "id": {
-            "auth": [
-              {
-                "$ref": "scopes/HARRY/harryscope1"
-              },
-              {
-                "$ref": "scopes/HARRY/harryscope2"
-              }
-            ],
-            "type": "string",
-            "description": "Unieke identificatie voor dit object"
-          },
-          "identificatie": {
-            "auth": {
-              "$ref": "scopes/HARRY/harryscope3"
-            },
-            "type": "string",
-            "description": "Unieke identificatie van de meting"
-          },
-          "genest_veld": {
+            "$id": "https://github.com/Amsterdam/schemas/tabelleke/referentiepunten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
+            "additionalProperties": false,
+            "identifier": "identificatie",
+            "required": [
+              "schema",
+              "id"
+            ],
+            "display": "id",
             "properties": {
-              "geheim_veld": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "auth": [
+                  {
+                    "$ref": "scopes/HARRY/harryscope1"
+                  },
+                  {
+                    "$ref": "scopes/HARRY/harryscope2"
+                  }
+                ],
                 "type": "string",
+                "description": "Unieke identificatie voor dit object"
+              },
+              "identificatie": {
                 "auth": {
                   "$ref": "scopes/HARRY/harryscope3"
-                }
+                },
+                "type": "string",
+                "description": "Unieke identificatie van de meting"
               },
-              "gewoon_veld": {
-                "type": "string"
+              "genest_veld": {
+                "type": "object",
+                "properties": {
+                  "geheim_veld": {
+                    "type": "string",
+                    "auth": {
+                      "$ref": "scopes/HARRY/harryscope3"
+                    }
+                  },
+                  "gewoon_veld": {
+                    "type": "string"
+                  }
+                },
+                "relation": "gebieden:buurten",
+                "description": "De buurt waar het bouwblok in ligt."
               }
-            },
-            "relation": "gebieden:buurten",
-            "description": "De buurt waar het bouwblok in ligt."
-          }
+            }
+          },
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ]
+  }
 }

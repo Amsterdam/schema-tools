@@ -238,10 +238,8 @@ def afval_schema_json(here: Path) -> Json:
 
 @pytest.fixture()
 def schema_loader(here) -> FileSystemSchemaLoader:
-    """A single schema loader instance that is shared by a single test run.
-    This also means all fixtures of a single test share the same dataset_collection,
-    as this schema loader assigns that to each loaded dataset.
-    """
+    """A schema loader instance. Since this is cached, reloading the schema will not necessarily
+    reload the data."""
     return FileSystemSchemaLoader(here / "files/datasets")
 
 

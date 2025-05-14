@@ -289,38 +289,6 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
                 )
 
 
-@_register_validator("active versions")
-def _active_versions(dataset: DatasetSchema) -> Iterator[str]:
-    """Validate activeVersions and table identifiers in referenced tables."""
-    # The current Amsterdam Meta Schema does not allow for inline definitions of multiple
-    # active tables versions. In addition :class:`DatasetSchema`'s
-    # :property:`~DatasetSchema.tables` property and :meth:~DatasetSchema.get_tables` method
-    # still assume that there will always be one and only one version. The part of
-    # :class:`DatasetSchema` that has gained some knowledge of multiple active versions is
-    # its internal representation with the addition of the :class:`TableVersions` class.
-    # Hence it is the internal representation that we use for this validation.
-    #
-    # This obviously is a stop gap. Ideally we have a more, arguably, sensible definition of
-    # multiple active version in the Amsterdam Meta Schema (eg an inline definition). When
-    # we do, we are in a position to restructure our abstraction (eg :class:`DatasetSchema`,
-    # etc) more definitely. And as a result can rely on those abstractions for our
-    # validation instead of some internal representation.
-    for table_versions in dataset.table_versions.values():
-        for version in table_versions:
-            try:
-                # Runtime checking already happens on retrieval of the tables,
-                # so this validation check only tests whether that would happen.
-                table_versions[version]
-            except RuntimeError as e:
-                yield str(e)
-
-        # See if default version exists
-        try:
-            table_versions[table_versions._default_version]
-        except SchemaObjectNotFound as e:
-            yield str(e)
-
-
 @_register_validator("mainGeometry")
 def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:
@@ -473,7 +441,11 @@ def _reasons_non_public_exists(dataset: DatasetSchema) -> Iterator[str]:
 def _reasons_non_public_value(dataset: DatasetSchema) -> Iterator[str]:
     """A reasonsNonPublic field in a published dataset should not contain a placeholder."""
     placeholder_value = "nader te bepalen"
-    if dataset.data.get("status") != "beschikbaar":
+    versions = dataset.versions.values()
+    any_version_available = any(
+        version.status == DatasetSchema.Status.beschikbaar for version in versions
+    )
+    if not any_version_available:
         return
     if placeholder_value in dataset.data.get("reasonsNonPublic", []):
         yield (

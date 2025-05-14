@@ -30,6 +30,7 @@ from schematools.types import (
     DatasetFieldSchema,
     DatasetSchema,
     DatasetTableSchema,
+    DatasetVersionSchema,
     ProfileSchema,
     SemVer,
 )
@@ -156,8 +157,7 @@ class Dataset(models.Model):
     name = models.CharField(_("Name"), unique=True, max_length=50)
     schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
     view_data = models.TextField(_("View SQL"), blank=True, null=True)
-    version = models.CharField(_("Schema Version"), blank=True, null=True, max_length=250)
-    is_default_version = models.BooleanField(_("Default version"), default=False)
+    default_version = models.CharField(_("Default version"), default="v1")
 
     # Settings for publishing the schema:
     enable_api = models.BooleanField(default=True)
@@ -179,7 +179,7 @@ class Dataset(models.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._dataset_collection = None
+        self._loader = None
 
         # The check makes sure that deferred fields are not checked for changes,
         # nor that creating the model
@@ -204,10 +204,7 @@ class Dataset(models.Model):
     @classmethod
     def name_from_schema(cls, schema: DatasetSchema) -> str:
         """Generate dataset name from schema"""
-        name = to_snake_case(schema.id)
-        if schema.version and not schema.is_default_version:
-            name = to_snake_case(f"{name}_{schema.version}")
-        return name
+        return to_snake_case(schema.id)
 
     @classmethod
     def create_for_schema(
@@ -229,44 +226,40 @@ class Dataset(models.Model):
             view_data=schema.get_view_sql(),
             auth=" ".join(schema.auth),
             path=path,
-            version=schema.version,
-            is_default_version=schema.is_default_version,
-            enable_api=cls.has_api_enabled(schema),
+            default_version=schema.default_version,
+            enable_api=schema.has_an_available_version,
             enable_db=enable_db,
         )
-        obj._dataset_collection = schema.loader  # retain collection on saving
+        obj._loader = schema.loader  # retain collection on saving
         if save:
             obj.save()
         obj.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
         return obj
 
-    def save_path(self, path: str, save: bool = True) -> bool:
-        """Update this model with new path"""
-        if path_changed := self.path != path:
-            self.path = path
-            if save:
-                self.save(update_fields=["path"])
-        return path_changed
-
-    def save_for_schema(self, schema: DatasetSchema, save: bool = True):
+    def save_for_schema(self, schema: DatasetSchema, path: str, save: bool = True) -> bool:
         """Update this model with schema data"""
         self.schema_data = schema.json(
             inline_tables=True, inline_publishers=True, inline_scopes=True
         )
         self.view_data = schema.get_view_sql()
         self.auth = " ".join(schema.auth)
-        self.enable_api = Dataset.has_api_enabled(schema)
-        self._dataset_collection = schema.loader  # retain collection on saving
+        self.default_version = schema.default_version
+        self.enable_api = schema.has_an_available_version
 
-        changed = self.schema_data_changed()
+        changed = self.schema_data_changed() or self.path != path
+
+        self.path = path
+        self._loader = schema.loader  # retain collection on saving
+
         if changed and save:
             self.save(
                 update_fields=[
                     "schema_data",
                     "view_data",
                     "auth",
-                    "is_default_version",
+                    "default_version",
                     "enable_api",
+                    "path",
                 ]
             )
 
@@ -281,19 +274,18 @@ class Dataset(models.Model):
             # no schema stored -> no tables
             if self._old_schema_data:
                 self.tables.all().delete()
+                self.versions.all().delete()
             return
 
-        new_definitions = {
-            to_snake_case(t.id): t for t in self.schema.get_tables(include_nested=True)
-        }
+        new_definitions = {t.db_name: t for t in self.schema.get_all_tables(include_nested=True)}
         new_names = set(new_definitions.keys())
-        existing_models = {t.name: t for t in self.tables.all()}
+        existing_models = {t.db_table: t for t in self.tables.all()}
         existing_names = set(existing_models.keys())
 
         # Create models for newly added tables
         for added_name in new_names - existing_names:
             table = new_definitions[added_name]
-            DatasetTable.create_for_schema(self, table)
+            existing_models[added_name] = DatasetTable.create_for_schema(self, table)
 
         # Update models for updated tables
         for changed_name in existing_names & new_names:
@@ -304,40 +296,49 @@ class Dataset(models.Model):
         for removed_name in existing_names - new_names:
             existing_models[removed_name].delete()
 
+        # Create/update versions
+        for vmajor, version in self.schema.versions.items():
+            try:
+                version_instance = DatasetVersion.objects.get(dataset=self, version=vmajor)
+            except DatasetVersion.DoesNotExist:
+                version_instance = DatasetVersion.create_for_schema(version, dataset=self)
+            else:
+                version_instance.lifecycle_status = DatasetVersion.LifecycleStatus[
+                    version.lifecycle_status.value.upper()
+                ]
+                version_instance.save()
+                # Remove tables that are no longer in the version.
+                for table in version_instance.tables.all():
+                    if table.db_table not in existing_models:
+                        version_instance.tables.remove(table)
+
+            # Add all tables to the version (duplicates are ignored).
+            version_instance.tables.add(
+                *(existing_models[table.db_name] for table in version.tables)
+            )
+
     save_schema_tables.alters_data = True
 
     @cached_property
     def schema(self) -> DatasetSchema:
         """Provide access to the schema data."""
-        # The _dataset_collection value is filled by the queryset,
+        # The _loader value is filled by the queryset,
         # so any object that is fetched by same the queryset uses the same shared cache.
-        return self.get_schema(dataset_collection=self._dataset_collection)
+        return self.get_schema(loader=self._loader)
 
-    def get_schema(self, dataset_collection: CachedSchemaLoader) -> DatasetSchema:
+    def get_schema(self, loader: CachedSchemaLoader) -> DatasetSchema:
         """Extract the schema data from this model, and connect it with a dataset collection."""
         if not self.schema_data:
             raise RuntimeError("Dataset.schema_data is empty")
 
         return DatasetSchema.from_dict(
             json.loads(self.schema_data),
-            dataset_collection=dataset_collection,
+            loader=loader,
         )
 
     @cached_property
     def has_geometry_fields(self) -> bool:
         return any(table.has_geometry_fields for table in self.schema.tables)
-
-    @classmethod
-    def has_api_enabled(cls, schema: DatasetSchema) -> bool:
-        dataset_status = schema.status
-        if dataset_status == DatasetSchema.Status.beschikbaar:
-            return True
-        elif dataset_status == DatasetSchema.Status.niet_beschikbaar:
-            return False
-
-        raise ValueError(
-            f"Cannot determine whether to enable REST api based on given status: {dataset_status}"
-        )
 
     def schema_data_changed(self):
         """Check whether the schema_data attribute changed"""
@@ -347,7 +348,10 @@ class Dataset(models.Model):
         )
 
     def create_models(
-        self, base_app_name: str | None = None, base_model: type[M] = DynamicModel
+        self,
+        base_app_name: str | None = None,
+        base_model: type[M] = DynamicModel,
+        include_versioned_tables: bool = False,
     ) -> list[type[M]]:
         """Extract the models found in the schema"""
         from schematools.contrib.django.factories import schema_models_factory
@@ -355,7 +359,45 @@ class Dataset(models.Model):
         if not self.enable_db:
             return []
         else:
-            return schema_models_factory(self, base_app_name=base_app_name, base_model=base_model)
+            return schema_models_factory(
+                self,
+                base_app_name=base_app_name,
+                base_model=base_model,
+                include_versioned_tables=include_versioned_tables,
+            )
+
+
+class DatasetVersion(models.Model):
+    class LifecycleStatus(models.TextChoices):
+        EXPERIMENTAL = "E", "experimental"
+        STABLE = "S", "stable"
+
+    dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="versions")
+    version = models.CharField(default="v1", max_length=3)
+    lifecycle_status = models.CharField(
+        choices=LifecycleStatus.choices,
+        default=LifecycleStatus.EXPERIMENTAL,
+    )
+
+    def __str__(self):
+        return f"{self.dataset.name}_{self.version}"
+
+    @classmethod
+    def create_for_schema(cls, version_schema: DatasetVersionSchema, dataset: Dataset | None):
+        if dataset is None:
+            try:
+                dataset = Dataset.objects.get(name=to_snake_case(version_schema.schema.id))
+            except Dataset.DoesNotExist as e:
+                raise RuntimeError(
+                    f"Dataset '{to_snake_case(version_schema.schema.id)}' not found!"
+                ) from e
+        obj = cls(
+            dataset=dataset,
+            version=version_schema.version,
+            lifecycle_status=cls.LifecycleStatus[version_schema.lifecycle_status.value.upper()],
+        )
+        obj.save()
+        return obj
 
 
 class DatasetTable(models.Model):
@@ -365,6 +407,7 @@ class DatasetTable(models.Model):
     """
 
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="tables")
+    dataset_versions = models.ManyToManyField(DatasetVersion, related_name="tables")
     name = models.CharField(max_length=100)
     version = models.TextField(default=SemVer("1.0.0"))
 
@@ -372,7 +415,7 @@ class DatasetTable(models.Model):
     auth = models.CharField(max_length=250, blank=True, null=True)
     enable_export = models.BooleanField(default=False)
     enable_geosearch = models.BooleanField(default=True)
-    db_table = models.CharField(max_length=100)
+    db_table = models.CharField(max_length=100, unique=True)
     display_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field = models.CharField(max_length=50, null=True, blank=True)
     geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
@@ -384,7 +427,7 @@ class DatasetTable(models.Model):
         verbose_name = _("Dataset Table")
         verbose_name_plural = _("Dataset Tables")
         unique_together = [
-            ("dataset", "name"),
+            ("dataset", "name", "version"),
         ]
 
     def __str__(self):
@@ -428,6 +471,7 @@ class DatasetTable(models.Model):
         display_field = table_schema.display_field
         self.name = to_snake_case(table_schema.id)
         self.db_table = table_schema.db_name
+        self.version = table_schema.version
         self.auth = " ".join(table_schema.auth)
         self.display_field = display_field.db_name if display_field is not None else None
         self.geometry_field, self.geometry_field_type = self._get_geometry_field(table_schema)

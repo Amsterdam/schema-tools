@@ -6,417 +6,532 @@
   "version": "0.0.1",
   "identifier": "identificatie",
   "crs": "EPSG:28992",
-  "tables": [
-    {
-      "id": "bouwblokken",
-      "type": "table",
-      "version": "1.0.1",
-      "temporal": {
-        "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
-      },
-      "zoom": {
-        "min": 20,
-        "max": 28
-      },
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "mainGeometry": "geometrie",
-        "identifier": ["identificatie", "volgnummer"],
-        "required": ["schema", "identificatie", "volgnummer"],
-        "display": "id",
-        "properties": {
-          "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "identificatie": {
-            "type": "string",
-            "description": "Unieke identificatie van het object. Gewijzigd voor db_comment."
-          },
-          "volgnummer": {
-            "type": "integer",
-            "description": "Uniek volgnummer van de toestand van het object."
-          },
-          "registratiedatum": {
-            "type": "string",
-            "format": "date-time",
-            "description": "De datum waarop de toestand is geregistreerd."
-          },
-          "code": {
-            "type": "string",
-            "description": "Officiële code van het object."
-          },
-          "beginGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
-          },
-          "eindGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is komen te vervallen."
-          },
-          "ligtInBuurt": {
-            "type": "object",
-            "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" },
-              "beginGeldigheid": { "type": "string", "format": "date" },
-              "eindGeldigheid": { "type": "string", "format": "date" }
-            },
-            "relation": "gebieden:buurten",
-            "description": "De buurt waar het bouwblok in ligt."
-          },
-          "ligtInBuurtMetTeLangeNaam": {
-            "shortname": "lgtInBrt",
-            "type": "object",
-            "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" }
-            },
-            "relation": "gebieden:buurten",
-            "description": "De buurt waar het bouwblok in ligt."
-          },
-          "geometrie": {
-            "$ref": "https://geojson.org/schema/Geometry.json",
-            "description": "Geometrische beschrijving van een object."
-          }
-        }
-      }
-    },
-    {
-      "id": "buurten",
-      "type": "table",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
       "version": "1.0.0",
-      "temporal": {
-        "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
-      },
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "mainGeometry": "geometrie",
-        "identifier": ["identificatie", "volgnummer"],
-        "required": ["schema", "identificatie", "volgnummer"],
-        "display": "id",
-        "properties": {
+      "tables": [
+        {
+          "id": "bouwblokken",
+          "type": "table",
+          "version": "1.0.1",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "zoom": {
+            "min": 20,
+            "max": 28
+          },
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "volgnummer": {
-            "type": "integer",
-            "description": "Uniek volgnummer van de toestand van het object."
-          },
-          "registratiedatum": {
-            "type": "string",
-            "format": "date-time",
-            "description": "De datum waarop de toestand is geregistreerd."
-          },
-          "identificatie": {
-            "type": "string",
-            "description": "Unieke identificatie van het object."
-          },
-          "naam": {
-            "type": "string",
-            "description": "De naam van het object."
-          },
-          "code": {
-            "type": "string",
-            "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
-          },
-          "beginGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
-          },
-          "eindGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is komen te vervallen."
-          },
-          "documentdatum": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
-          },
-          "documentnummer": {
-            "type": "string",
-            "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
-          },
-          "cbsCode": {
-            "type": "string",
-            "description": "De CBS-code van het object."
-          },
-          "ligtInWijk": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/bouwblokken.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
             "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" }
-            },
-            "relation": "gebieden:wijken",
-            "description": "De wijk waar de buurt in ligt."
-          },
-          "geometrie": {
-            "$ref": "https://geojson.org/schema/Geometry.json",
-            "description": "Geometrische beschrijving van een object."
-          }
-        }
-      }
-    },
-    {
-      "id": "wijken",
-      "type": "table",
-      "version": "1.0.0",
-      "temporal": {
-        "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
-      },
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "mainGeometry": "geometrie",
-        "identifier": ["identificatie", "volgnummer"],
-        "required": ["schema", "identificatie", "volgnummer"],
-        "display": "id",
-        "properties": {
-          "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "identificatie": {
-            "type": "string",
-            "description": "Unieke identificatie van het object."
-          },
-          "volgnummer": {
-            "type": "integer",
-            "description": "Uniek volgnummer van de toestand van het object."
-          },
-          "registratiedatum": {
-            "type": "string",
-            "format": "date-time",
-            "description": "De datum waarop de toestand is geregistreerd."
-          },
-          "naam": {
-            "type": "string",
-            "description": "De naam van het object."
-          },
-          "code": {
-            "type": "string",
-            "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
-          },
-          "beginGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
-          },
-          "eindGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is komen te vervallen."
-          },
-          "documentdatum": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
-          },
-          "documentnummer": {
-            "type": "string",
-            "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
-          },
-          "cbsCode": {
-            "type": "string",
-            "description": "De CBS-code van het object."
-          },
-          "ligtInStadsdeel": {
-            "type": "object",
-            "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" },
-              "beginGeldigheid": { "type": "string", "format": "date-time" },
-              "eindGeldigheid": { "type": "string", "format": "date-time" }
-            },
-            "relation": "gebieden:stadsdelen",
-            "description": "Het stadsdeel waar de wijk in ligt."
-          },
-          "geometrie": {
-            "$ref": "https://geojson.org/schema/Geometry.json",
-            "description": "Geometrische beschrijving van een object."
-          }
-        }
-      }
-    },
-    {
-      "id": "stadsdelen",
-      "type": "table",
-      "version": "1.0.0",
-      "temporal": {
-        "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
-      },
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/gebieden/stadsdelen.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "mainGeometry": "geometrie",
-        "identifier": ["identificatie", "volgnummer"],
-        "required": ["schema", "identificatie", "volgnummer"],
-        "display": "id",
-        "properties": {
-          "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "identificatie": {
-            "type": "string",
-            "description": "Unieke identificatie van het object."
-          },
-          "volgnummer": {
-            "type": "integer",
-            "description": "Uniek volgnummer van de toestand van het object."
-          },
-          "registratiedatum": {
-            "type": "string",
-            "format": "date-time",
-            "description": "De datum waarop de toestand is geregistreerd."
-          },
-          "naam": {
-            "type": "string",
-            "description": "De naam van het object."
-          },
-          "code": {
-            "type": "string",
-            "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
-          },
-          "beginGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
-          },
-          "eindGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is komen te vervallen."
-          },
-          "documentdatum": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
-          },
-          "documentnummer": {
-            "type": "string",
-            "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
-          },
-          "ligtInGemeente": {
-            "type": "string",
-            "$comment": "relation brk:gemeentes *stringify*",
-            "description": "De gemeente waar het stadsdeel in ligt."
-          },
-          "geometrie": {
-            "$ref": "https://geojson.org/schema/Geometry.json",
-            "description": "Geometrische beschrijving van een object."
-          }
-        }
-      }
-    },
-    {
-      "id": "ggwgebieden",
-      "type": "table",
-      "version": "1.0.0",
-      "temporal": {
-        "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
-      },
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/gebieden/ggwgebieden.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "mainGeometry": "geometrie",
-        "identifier": ["identificatie", "volgnummer"],
-        "required": ["schema", "identificatie", "volgnummer"],
-        "display": "id",
-        "properties": {
-          "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "identificatie": {
-            "type": "string",
-            "description": "Unieke identificatie van het object."
-          },
-          "volgnummer": {
-            "type": "integer",
-            "description": "Uniek volgnummer van de toestand van het object."
-          },
-          "registratiedatum": {
-            "type": "string",
-            "format": "date-time",
-            "description": "De datum waarop de toestand is geregistreerd."
-          },
-          "naam": {
-            "type": "string",
-            "description": "De naam van het object."
-          },
-          "code": {
-            "type": "string",
-            "description": "De code van het object."
-          },
-          "beginGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is gecreëerd."
-          },
-          "eindGeldigheid": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het object is komen te vervallen."
-          },
-          "documentdatum": {
-            "type": "string",
-            "format": "date",
-            "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
-          },
-          "documentnummer": {
-            "type": "string",
-            "description": "Unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
-          },
-          "ligtInStadsdeel": {
-            "type": "object",
-            "properties": {
-              "identificatie": { "type": "string" },
-              "volgnummer": { "type": "integer" },
-              "beginGeldigheid": { "type": "string", "format": "date-time" },
-              "eindGeldigheid": { "type": "string", "format": "date-time" }
-            },
-            "relation": "gebieden:stadsdelen",
-            "description": "Het stadsdeel waar het ggwgebied in ligt."
-          },
-          "bestaatUitBuurten": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "identificatie": { "type": "string" },
-                "volgnummer": { "type": "integer" },
-                "beginGeldigheid": { "type": "string", "format": "date" },
-                "eindGeldigheid": { "type": "string", "format": "date" }
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object. Gewijzigd voor db_comment."
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "registratiedatum": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de toestand is geregistreerd."
+              },
+              "code": {
+                "type": "string",
+                "description": "Officiële code van het object."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is gecreëerd."
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is komen te vervallen."
+              },
+              "ligtInBuurt": {
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  },
+                  "beginGeldigheid": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "eindGeldigheid": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                },
+                "relation": "gebieden:buurten",
+                "description": "De buurt waar het bouwblok in ligt."
+              },
+              "ligtInBuurtMetTeLangeNaam": {
+                "shortname": "lgtInBrt",
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  }
+                },
+                "relation": "gebieden:buurten",
+                "description": "De buurt waar het bouwblok in ligt."
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Geometry.json",
+                "description": "Geometrische beschrijving van een object."
               }
-            },
-            "relation": "gebieden:buurten",
-            "description": "De buurten waaruit het object bestaat."
+            }
+          }
+        },
+        {
+          "id": "buurten",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
           },
-          "geometrie": {
-            "$ref": "https://geojson.org/schema/Geometry.json",
-            "description": "Geometrische beschrijving van een object."
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "registratiedatum": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de toestand is geregistreerd."
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object."
+              },
+              "naam": {
+                "type": "string",
+                "description": "De naam van het object."
+              },
+              "code": {
+                "type": "string",
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is gecreëerd."
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is komen te vervallen."
+              },
+              "documentdatum": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "documentnummer": {
+                "type": "string",
+                "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "cbsCode": {
+                "type": "string",
+                "description": "De CBS-code van het object."
+              },
+              "ligtInWijk": {
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  }
+                },
+                "relation": "gebieden:wijken",
+                "description": "De wijk waar de buurt in ligt."
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Geometry.json",
+                "description": "Geometrische beschrijving van een object."
+              }
+            }
+          }
+        },
+        {
+          "id": "wijken",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object."
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "registratiedatum": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de toestand is geregistreerd."
+              },
+              "naam": {
+                "type": "string",
+                "description": "De naam van het object."
+              },
+              "code": {
+                "type": "string",
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is gecreëerd."
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is komen te vervallen."
+              },
+              "documentdatum": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "documentnummer": {
+                "type": "string",
+                "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "cbsCode": {
+                "type": "string",
+                "description": "De CBS-code van het object."
+              },
+              "ligtInStadsdeel": {
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  },
+                  "beginGeldigheid": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "eindGeldigheid": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "relation": "gebieden:stadsdelen",
+                "description": "Het stadsdeel waar de wijk in ligt."
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Geometry.json",
+                "description": "Geometrische beschrijving van een object."
+              }
+            }
+          }
+        },
+        {
+          "id": "stadsdelen",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/stadsdelen.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object."
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "registratiedatum": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de toestand is geregistreerd."
+              },
+              "naam": {
+                "type": "string",
+                "description": "De naam van het object."
+              },
+              "code": {
+                "type": "string",
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is gecreëerd."
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is komen te vervallen."
+              },
+              "documentdatum": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "documentnummer": {
+                "type": "string",
+                "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "ligtInGemeente": {
+                "type": "string",
+                "$comment": "relation brk:gemeentes *stringify*",
+                "description": "De gemeente waar het stadsdeel in ligt."
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Geometry.json",
+                "description": "Geometrische beschrijving van een object."
+              }
+            }
+          }
+        },
+        {
+          "id": "ggwgebieden",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/ggwgebieden.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object."
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "registratiedatum": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de toestand is geregistreerd."
+              },
+              "naam": {
+                "type": "string",
+                "description": "De naam van het object."
+              },
+              "code": {
+                "type": "string",
+                "description": "De code van het object."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is gecreëerd."
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is komen te vervallen."
+              },
+              "documentdatum": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "documentnummer": {
+                "type": "string",
+                "description": "Unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "ligtInStadsdeel": {
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  },
+                  "beginGeldigheid": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "eindGeldigheid": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "relation": "gebieden:stadsdelen",
+                "description": "Het stadsdeel waar het ggwgebied in ligt."
+              },
+              "bestaatUitBuurten": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "identificatie": {
+                      "type": "string"
+                    },
+                    "volgnummer": {
+                      "type": "integer"
+                    },
+                    "beginGeldigheid": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "eindGeldigheid": {
+                      "type": "string",
+                      "format": "date"
+                    }
+                  }
+                },
+                "relation": "gebieden:buurten",
+                "description": "De buurten waaruit het object bestaat."
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Geometry.json",
+                "description": "Geometrische beschrijving van een object."
+              }
+            }
           }
         }
-      }
+      ]
     }
-  ],
+  },
   "publisher": "unknown"
 }

@@ -2,115 +2,122 @@
   "type": "dataset",
   "id": "bag",
   "title": "bag",
-  "status": "niet_beschikbaar",
-  "version": "0.0.1",
   "crs": "EPSG:28992",
   "identifier": "identificatie",
-  "tables": [
-    {
-      "id": "verblijfsobjecten",
-      "type": "table",
-      "version": "1.0.0",
-      "temporal": {
-        "identifier": "volgnummer",
-        "dimensions": {
-          "geldigOp": [
-            "beginGeldigheid",
-            "eindGeldigheid"
-          ]
-        }
-      },
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/bag/verblijfsobjecten.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "mainGeometry": "geometrie",
-        "identifier": [
-          "identificatie",
-          "volgnummer"
-        ],
-        "required": [
-          "schema",
-          "identificatie",
-          "volgnummer"
-        ],
-        "display": "identificatie",
-        "properties": {
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "niet_beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "0.0.1",
+      "tables": [
+        {
+          "id": "verblijfsobjecten",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "identificatie": {
-            "type": "string",
-            "description": "Landelijke identificerende sleutel."
-          },
-          "volgnummer": {
-            "type": "integer",
-            "description": "Uniek volgnummer van de toestand van het object."
-          },
-          "beginGeldigheid": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "eindGeldigheid": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "ligtInBuurt": {
+            "$id": "https://github.com/Amsterdam/schemas/bag/verblijfsobjecten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "identificatie",
             "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
               "identificatie": {
-                "type": "string"
+                "type": "string",
+                "description": "Landelijke identificerende sleutel."
               },
               "volgnummer": {
-                "type": "integer"
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
               },
               "beginGeldigheid": {
                 "type": "string",
-                "format": "date"
+                "format": "date-time"
               },
               "eindGeldigheid": {
                 "type": "string",
-                "format": "date"
-              }
-            },
-            "relation": "gebieden:buurten",
-            "description": "Buurt waarin het verblijfsobject ligt."
-          },
-          "gebruiksdoel": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "type": "string",
-                  "description": "Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject, zoals dit door de overheid als zodanig is toegestaan. code"
+                "format": "date-time"
+              },
+              "ligtInBuurt": {
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  },
+                  "beginGeldigheid": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "eindGeldigheid": {
+                    "type": "string",
+                    "format": "date"
+                  }
                 },
-                "omschrijving": {
-                  "type": "string",
-                  "description": "Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject, zoals dit door de overheid als zodanig is toegestaan. omschrijving"
+                "relation": "gebieden:buurten",
+                "description": "Buurt waarin het verblijfsobject ligt."
+              },
+              "gebruiksdoel": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject, zoals dit door de overheid als zodanig is toegestaan. code"
+                    },
+                    "omschrijving": {
+                      "type": "string",
+                      "description": "Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject, zoals dit door de overheid als zodanig is toegestaan. omschrijving"
+                    }
+                  }
                 }
+              },
+              "toegang": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "omschrijving": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "description": "Plaats waar zich de toegang tot het verblijfsobject bevindt."
               }
             }
           },
-          "toegang": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "type": "string"
-                },
-                "omschrijving": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "Plaats waar zich de toegang tot het verblijfsobject bevindt."
-          }
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ],
-  "publisher": "unknown"
+  }
 }

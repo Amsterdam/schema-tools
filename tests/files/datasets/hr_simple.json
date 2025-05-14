@@ -2,94 +2,102 @@
   "type": "dataset",
   "id": "hr",
   "title": "handelsregister",
-  "status": "beschikbaar",
-  "version": "2.0.0",
   "crs": "EPSG:28992",
   "owner": "Gemeente Amsterdam",
   "creator": "Kamer van Koophandel",
   "publisher": "Datateam Basis- en Kernregistraties",
   "auth": "HR/R",
-  "tables": [
-    {
-      "id": "maatschappelijkeactiviteiten",
-      "type": "table",
-      "version": "2.7.0",
-      "shortname": "Mac",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": [
-          "kvknummer"
-        ],
-        "required": [
-          "schema",
-          "kvknummer"
-        ],
-        "display": "kvknummer",
-        "properties": {
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "2.0.0",
+      "tables": [
+        {
+          "id": "maatschappelijkeactiviteiten",
+          "type": "table",
+          "version": "2.7.0",
+          "shortname": "Mac",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.3.0#/definitions/schema"
-          },
-          "kvknummer": {
-            "type": "string",
-            "description": "Betreft het identificerende gegeven voor de Maatschappelijke Activiteit"
-          },
-          "emailAdressen": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "emailAdres": {
-                  "type": "string",
-                  "description": "e-mailadres waarop de ondernemer gemaild kan worden"
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "kvknummer"
+            ],
+            "required": [
+              "schema",
+              "kvknummer"
+            ],
+            "display": "kvknummer",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "kvknummer": {
+                "type": "string",
+                "description": "Betreft het identificerende gegeven voor de Maatschappelijke Activiteit"
+              },
+              "emailAdressen": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "emailAdres": {
+                      "type": "string",
+                      "description": "e-mailadres waarop de ondernemer gemaild kan worden"
+                    }
+                  }
                 }
+              },
+              "heeftHoofdvestiging": {
+                "type": "object",
+                "properties": {
+                  "vestigingsnummer": {
+                    "type": "string"
+                  },
+                  "extrafield": {
+                    "type": "integer"
+                  }
+                },
+                "relation": "hr:vestigingen",
+                "description": "vestiging die als hoofdvestiging wordt gebruikt."
               }
             }
           },
-          "heeftHoofdvestiging": {
-            "type": "object",
-            "properties": {
-              "vestigingsnummer": {
-                "type": "string"
-              },
-              "extrafield": {
-                "type": "integer"
-              }
-            },
-            "relation": "hr:vestigingen",
-            "description": "vestiging die als hoofdvestiging wordt gebruikt."
-          }
-        }
-      }
-    },
-    {
-      "id": "vestigingen",
-      "type": "table",
-      "version": "2.4.0",
-      "shortname": "Ves",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": [
-          "vestigingsnummer"
-        ],
-        "required": [
-          "schema",
-          "vestigingsnummer"
-        ],
-        "display": "vestigingsnummer",
-        "properties": {
+          "lifecycleStatus": "stable"
+        },
+        {
+          "id": "vestigingen",
+          "type": "table",
+          "version": "2.4.0",
+          "shortname": "Ves",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.3.0#/definitions/schema"
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "vestigingsnummer"
+            ],
+            "required": [
+              "schema",
+              "vestigingsnummer"
+            ],
+            "display": "vestigingsnummer",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "vestigingsnummer": {
+                "type": "string",
+                "description": "Identificatie voor de vestiging"
+              }
+            }
           },
-          "vestigingsnummer": {
-            "type": "string",
-            "description": "Identificatie voor de vestiging"
-          }
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ]
+  }
 }

@@ -2,44 +2,56 @@
   "type": "dataset",
   "id": "hr",
   "title": "hr",
-  "status": "beschikbaar",
-  "version": "0.0.1",
   "crs": "EPSG:28992",
   "auth": "HR/R",
-  "tables": [
-    {
-      "id": "sbiactiviteiten",
-      "type": "table",
-      "version": "1.0.0",
-      "shortname": "sbiAc",
-      "auth": "LEVEL/B",
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/hr/sbiactiviteiten.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": "identifier",
-        "required": ["schema", "sbiActiviteitNummer"],
-        "display": "identifier",
-        "properties": {
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "0.0.1",
+      "tables": [
+        {
+          "id": "sbiactiviteiten",
+          "type": "table",
+          "version": "1.0.0",
+          "shortname": "sbiAc",
+          "auth": "LEVEL/B",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$id": "https://github.com/Amsterdam/schemas/hr/sbiactiviteiten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "identifier",
+            "required": [
+              "schema",
+              "sbiActiviteitNummer"
+            ],
+            "display": "identifier",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identifier": {
+                "type": "string"
+              },
+              "sbiActiviteitNummer": {
+                "type": "string",
+                "description": "Samenstelling van KvK-nummer en/of Vestigingsnummer of {BSN- of RSIN-nummer}",
+                "shortname": "sbiAcNo",
+                "auth": "LEVEL/C"
+              },
+              "sbiActiviteitNaam": {
+                "type": "string",
+                "description": "name",
+                "shortname": "sbiAcNaam"
+              }
+            }
           },
-          "identifier": { "type": "string" },
-          "sbiActiviteitNummer": {
-            "type": "string",
-            "description": "Samenstelling van KvK-nummer en/of Vestigingsnummer of {BSN- of RSIN-nummer}",
-            "shortname": "sbiAcNo",
-            "auth": "LEVEL/C"
-          },
-          "sbiActiviteitNaam": {
-            "type": "string",
-            "description": "name",
-            "shortname": "sbiAcNaam"
-          }
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ],
-  "publisher": "unknown"
+  }
 }

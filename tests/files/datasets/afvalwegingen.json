@@ -1,14 +1,16 @@
 {
   "id": "afvalwegingen",
   "type": "dataset",
-  "status": "beschikbaar",
   "authorizationGrantor": "Deze gegevensset wordt onderhouden voor uitvoering van taken betreffende het inzamelen van huishoudelijk afval. De juridische basis is de Wet Milieubeheer, Hoofdstuk 10. Afvalstoffen.",
-  "theme": ["Wonen", "duurzaamheid en milieu", "Ruimte en Topografie"],
+  "theme": [
+    "Wonen",
+    "duurzaamheid en milieu",
+    "Ruimte en Topografie"
+  ],
   "homepage": "https://data.amsterdam.nl",
   "owner": "Gemeente Amsterdam, Stadswerken",
   "dateModified": "2020-01-13",
   "spatialDescription": "Gemeente Amsterdam",
-  "version": "2",
   "title": "Onder- en bovengrondse Afvalcontainers en putten (2)",
   "language": "Nederlands",
   "dateCreated": "2020-01-13",
@@ -18,264 +20,296 @@
   "publisher": "OIS",
   "description": "Alle locaties van de actieve onder- en bovengronds afvalcontainers en betonputten van de Gemeente Amsterdam. De locaties worden dagelijks bijgewerkt en bevatten de fracties Rest, Papier, Glas, Textiel en Plastic. Naast de objectinformatie zijn ook de weeggegevens beschikbaar.",
   "crs": "EPSG:28992",
-  "tables": [
-    {
-      "id": "containers",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": ["id"],
-        "required": ["id", "schema"],
-        "display": "id",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Container-ID"
-          },
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "2",
+      "tables": [
+        {
+          "id": "containers",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "id"
+            ],
+            "required": [
+              "id",
+              "schema"
+            ],
+            "display": "id",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "Container-ID"
+              },
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "cluster": {
+                "type": "string",
+                "relation": "afvalwegingen:clusters",
+                "description": "Cluster-ID"
+              },
+              "serienummer": {
+                "type": "string",
+                "description": "Serienummer van container"
+              },
+              "eigenaar id": {
+                "type": "string",
+                "description": "Eigenaar-ID"
+              },
+              "eigenaar naam": {
+                "type": "string",
+                "description": "Naam van eigenaar"
+              },
+              "status": {
+                "type": "string",
+                "description": "Status"
+              },
+              "afvalfractie": {
+                "type": "string",
+                "description": "Afvalfractie",
+                "enum": [
+                  "Rest",
+                  "Glas",
+                  "Papier",
+                  "Plastic",
+                  "Textiel"
+                ]
+              },
+              "datum creatie": {
+                "type": "string",
+                "format": "date",
+                "description": "Datum aangemaakt"
+              },
+              "datum plaatsing": {
+                "type": "string",
+                "format": "date",
+                "description": "Datum plaatsing"
+              },
+              "datum operationeel": {
+                "type": "string",
+                "format": "date",
+                "description": "Datum operationeel"
+              },
+              "datum aflopen garantie": {
+                "type": "string",
+                "format": "date",
+                "description": "Datum aflopen garantie"
+              },
+              "datum oplevering": {
+                "type": "string",
+                "format": "date",
+                "description": "Datum oplevering"
+              },
+              "containerlocatie id": {
+                "type": "string",
+                "description": "Locatie-ID van container"
+              },
+              "geometry": {
+                "$ref": "https://geojson.org/schema/Point.json",
+                "description": "Geometrie"
+              },
+              "containertype": {
+                "type": "string",
+                "relation": "afvalwegingen:containertypes",
+                "description": "Containertype-ID"
+              }
+            }
           },
-          "cluster": {
-            "type": "string",
-            "relation": "afvalwegingen:clusters",
-            "description": "Cluster-ID"
-          },
-          "serienummer": {
-            "type": "string",
-            "description": "Serienummer van container"
-          },
-          "eigenaar id": {
-            "type": "string",
-            "description": "Eigenaar-ID"
-          },
-          "eigenaar naam": {
-            "type": "string",
-            "description": "Naam van eigenaar"
-          },
-          "status": {
-            "type": "string",
-            "description": "Status"
-          },
-          "afvalfractie": {
-            "type": "string",
-            "description": "Afvalfractie",
-            "enum": ["Rest", "Glas", "Papier", "Plastic", "Textiel"]
-          },
-          "datum creatie": {
-            "type": "string",
-            "format": "date",
-            "description": "Datum aangemaakt"
-          },
-          "datum plaatsing": {
-            "type": "string",
-            "format": "date",
-            "description": "Datum plaatsing"
-          },
-          "datum operationeel": {
-            "type": "string",
-            "format": "date",
-            "description": "Datum operationeel"
-          },
-          "datum aflopen garantie": {
-            "type": "string",
-            "format": "date",
-            "description": "Datum aflopen garantie"
-          },
-          "datum oplevering": {
-            "type": "string",
-            "format": "date",
-            "description": "Datum oplevering"
-          },
-          "containerlocatie id": {
-            "type": "string",
-            "description": "Locatie-ID van container"
-          },
-          "geometry": {
-            "$ref": "https://geojson.org/schema/Point.json",
-            "description": "Geometrie"
-          },
-          "containertype": {
-            "type": "string",
-            "relation": "afvalwegingen:containertypes",
-            "description": "Containertype-ID"
-          }
-        }
-      }
-    },
-    {
-      "id": "clusters",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["id", "schema"],
-        "display": "id",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
+          "lifecycleStatus": "stable"
+        },
+        {
+          "id": "clusters",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "schema"
+            ],
+            "display": "id",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "subcluster indicatie": {
+                "type": "boolean",
+                "description": "Subcluster"
+              },
+              "geometry": {
+                "$ref": "https://geojson.org/schema/Point.json",
+                "description": "Geometrie"
+              },
+              "datum opvoer cluster": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Datum opvoer cluster"
+              },
+              "datum wijziging": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Datum wijziging"
+              },
+              "datum ontstaan cluster": {
+                "type": "string",
+                "format": "date",
+                "description": "Datum onstaan cluster"
+              },
+              "datum einde cluster": {
+                "type": "string",
+                "format": "date",
+                "description": "Datum einde cluster"
+              },
+              "status": {
+                "type": "string",
+                "description": "Status"
+              },
+              "bagHoofdadresVerblijfsobject": {
+                "type": "string",
+                "relation": "verblijfsobjecten:verblijfsobjecten"
+              }
+            }
           },
-          "subcluster indicatie": {
-            "type": "boolean",
-            "description": "Subcluster"
-          },
-          "geometry": {
-            "$ref": "https://geojson.org/schema/Point.json",
-            "description": "Geometrie"
-          },
-          "datum opvoer cluster": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Datum opvoer cluster"
-          },
-          "datum wijziging": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Datum wijziging"
-          },
-          "datum ontstaan cluster": {
-            "type": "string",
-            "format": "date",
-            "description": "Datum onstaan cluster"
-          },
-          "datum einde cluster": {
-            "type": "string",
-            "format": "date",
-            "description": "Datum einde cluster"
-          },
-          "status": {
-            "type": "string",
-            "description": "Status"
-          },
-          "bagHoofdadresVerblijfsobject": {
-            "type": "string",
-            "relation": "verblijfsobjecten:verblijfsobjecten"
-          }
-        }
-      }
-    },
-    {
-      "id": "wegingen",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["id", "schema"],
-        "display": "id",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Weging-ID"
-          },
+          "lifecycleStatus": "stable"
+        },
+        {
+          "id": "wegingen",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "schema"
+            ],
+            "display": "id",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Weging-ID"
+              },
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "cluster": {
+                "type": "string",
+                "relation": "afvalwegingen:clusters",
+                "description": "Cluster-ID"
+              },
+              "weegsysteem id": {
+                "type": "string",
+                "description": "Weegsysteem-ID"
+              },
+              "weegsysteem omschrijving": {
+                "type": "string",
+                "description": "Omschrijving van weegsysteem"
+              },
+              "volgnummer": {
+                "type": "string",
+                "description": "Volgnummer"
+              },
+              "tijdstip": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Tijdstip"
+              },
+              "welvaartslocatienummer": {
+                "type": "string",
+                "description": "Welvaartslocatienummer"
+              },
+              "fractiecode": {
+                "type": "string",
+                "description": "Fractiecode"
+              },
+              "fractie omschrijving": {
+                "type": "string",
+                "description": "Omschrijving fractie"
+              },
+              "eerste weging": {
+                "type": "number",
+                "description": "Eerste weging"
+              },
+              "tweede weging": {
+                "type": "number",
+                "description": "Tweede weging"
+              },
+              "netto gewicht": {
+                "type": "number",
+                "unit": "kg",
+                "description": "Netto gewicht"
+              },
+              "geometry": {
+                "$ref": "https://geojson.org/schema/Point.json",
+                "description": "Geometrie"
+              },
+              "bediening code": {
+                "type": "string",
+                "description": "Code bediening"
+              },
+              "bediening omschrijving": {
+                "type": "string",
+                "description": "Omschrijving bediening"
+              }
+            }
           },
-          "cluster": {
-            "type": "string",
-            "relation": "afvalwegingen:clusters",
-            "description": "Cluster-ID"
-          },
-          "weegsysteem id": {
-            "type": "string",
-            "description": "Weegsysteem-ID"
-          },
-          "weegsysteem omschrijving": {
-            "type": "string",
-            "description": "Omschrijving van weegsysteem"
-          },
-          "volgnummer": {
-            "type": "string",
-            "description": "Volgnummer"
-          },
-          "tijdstip": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Tijdstip"
-          },
-          "welvaartslocatienummer": {
-            "type": "string",
-            "description": "Welvaartslocatienummer"
-          },
-          "fractiecode": {
-            "type": "string",
-            "description": "Fractiecode"
-          },
-          "fractie omschrijving": {
-            "type": "string",
-            "description": "Omschrijving fractie"
-          },
-          "eerste weging": {
-            "type": "number",
-            "description": "Eerste weging"
-          },
-          "tweede weging": {
-            "type": "number",
-            "description": "Tweede weging"
-          },
-          "netto gewicht": {
-            "type": "number",
-            "unit": "kg",
-            "description": "Netto gewicht"
-          },
-          "geometry": {
-            "$ref": "https://geojson.org/schema/Point.json",
-            "description": "Geometrie"
-          },
-          "bediening code": {
-            "type": "string",
-            "description": "Code bediening"
-          },
-          "bediening omschrijving": {
-            "type": "string",
-            "description": "Omschrijving bediening"
-          }
-        }
-      }
-    },
-    {
-      "id": "containertypes",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["id", "schema"],
-        "display": "naam",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
+          "lifecycleStatus": "stable"
+        },
+        {
+          "id": "containertypes",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "schema"
+            ],
+            "display": "naam",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "naam": {
+                "type": "string",
+                "description": "Naam"
+              },
+              "volume": {
+                "type": "number",
+                "description": "Volume",
+                "unit": "m3",
+                "minimum": 5,
+                "maximum": 12
+              },
+              "gewicht": {
+                "type": "string",
+                "description": "Gewicht",
+                "unit": "kg"
+              }
+            }
           },
-          "naam": {
-            "type": "string",
-            "description": "Naam"
-          },
-          "volume": {
-            "type": "number",
-            "description": "Volume",
-            "unit": "m3",
-            "minimum": 5,
-            "maximum": 12
-          },
-          "gewicht": {
-            "type": "string",
-            "description": "Gewicht",
-            "unit": "kg"
-          }
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ]
+  }
 }

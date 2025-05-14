@@ -14,44 +14,48 @@ def test_index_creation(engine, db_schema):
         "type": "dataset",
         "id": "test",
         "title": "test table",
-        "status": "beschikbaar",
         "description": "test table",
-        "version": "0.0.1",
         "crs": "EPSG:28992",
-        "tables": [
-            {
-                "id": "test",
-                "type": "table",
-                "version": "1.0.0",
-                "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
-                    "type": "object",
-                    "additionalProperties": "false",
-                    "required": ["schema", "id"],
-                    "display": "id",
-                    "identifier": ["col1", "col2"],
-                    "properties": {
+        "versions": {
+            "v1": {
+                "version": "0.0.1",
+                "status": "beschikbaar",
+                "tables": [
+                    {
+                        "id": "test",
+                        "type": "table",
+                        "version": "1.0.0",
                         "schema": {
-                            "$ref": (
-                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
-                                "#/definitions/schema"
-                            )
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "type": "object",
+                            "additionalProperties": "false",
+                            "required": ["schema", "id"],
+                            "display": "id",
+                            "identifier": ["col1", "col2"],
+                            "properties": {
+                                "schema": {
+                                    "$ref": (
+                                        "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                        "#/definitions/schema"
+                                    )
+                                },
+                                "id": {"type": "integer"},
+                                "geometry": {"$ref": "https://geojson.org/schema/Geometry.json"},
+                                "col1": {"type": "string"},
+                                "col2": {"type": "string"},
+                                "col3": {"type": "string"},
+                            },
                         },
-                        "id": {"type": "integer"},
-                        "geometry": {"$ref": "https://geojson.org/schema/Geometry.json"},
-                        "col1": {"type": "string"},
-                        "col2": {"type": "string"},
-                        "col3": {"type": "string"},
-                    },
-                },
+                    }
+                ],
             }
-        ],
+        },
     }
 
     dataset_schema = DatasetSchema.from_dict(test_data)
     index_names = set()
 
-    for table in test_data["tables"]:
+    for table in test_data["versions"]["v1"]["tables"]:
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
         importer.generate_db_objects(table["id"], ind_tables=True, ind_extra_index=True)
@@ -79,93 +83,99 @@ def test_index_troughtables_creation(engine, db_schema):
         "is_default_version": "true",
         "crs": "EPSG:28992",
         "identifier": "identificatie",
-        "tables": [
-            {
-                "id": "test_1",
-                "type": "table",
-                "version": "1.0.0",
-                "temporal": {
-                    "identifier": "volgnummer",
-                    "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
-                },
-                "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
-                    "type": "object",
-                    "identifier": ["identificatie", "volgnummer"],
-                    "required": ["schema", "id", "identificatie", "volgnummer"],
-                    "display": "id",
-                    "properties": {
-                        "schema": {
-                            "$ref": (
-                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
-                                "#/definitions/schema"
-                            )
+        "versions": {
+            "v1": {
+                "version": "0.0.1",
+                "status": "beschikbaar",
+                "tables": [
+                    {
+                        "id": "test_1",
+                        "type": "table",
+                        "version": "1.0.0",
+                        "temporal": {
+                            "identifier": "volgnummer",
+                            "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
                         },
-                        "identificatie": {"type": "string"},
-                        "volgnummer": {"type": "integer"},
-                        "beginGeldigheid": {"type": "string", "format": "date-time"},
-                        "eindGeldigheid": {"type": "string", "format": "date-time"},
-                        "heeftOnderzoeken": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "identificatie": {"type": "string"},
-                                    "volgnummer": {"type": "integer"},
+                        "schema": {
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "type": "object",
+                            "identifier": ["identificatie", "volgnummer"],
+                            "required": ["schema", "id", "identificatie", "volgnummer"],
+                            "display": "id",
+                            "properties": {
+                                "schema": {
+                                    "$ref": (
+                                        "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                        "#/definitions/schema"
+                                    )
+                                },
+                                "identificatie": {"type": "string"},
+                                "volgnummer": {"type": "integer"},
+                                "beginGeldigheid": {"type": "string", "format": "date-time"},
+                                "eindGeldigheid": {"type": "string", "format": "date-time"},
+                                "heeftOnderzoeken": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "identificatie": {"type": "string"},
+                                            "volgnummer": {"type": "integer"},
+                                        },
+                                    },
+                                    "relation": "test:test_2",
+                                },
+                                "some_random_name": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "identificatie": {"type": "string"},
+                                            "volgnummer": {"type": "integer"},
+                                        },
+                                    },
+                                    "relation": "test:test_2",
                                 },
                             },
-                            "relation": "test:test_2",
-                        },
-                        "some_random_name": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "identificatie": {"type": "string"},
-                                    "volgnummer": {"type": "integer"},
-                                },
-                            },
-                            "relation": "test:test_2",
+                            "mainGeometry": "geometrie",
                         },
                     },
-                    "mainGeometry": "geometrie",
-                },
-            },
-            {
-                "id": "test_2",
-                "type": "table",
-                "version": "1.0.0",
-                "temporal": {
-                    "identifier": "volgnummer",
-                    "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
-                },
-                "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
-                    "type": "object",
-                    "identifier": ["identificatie", "volgnummer"],
-                    "required": ["schema", "id", "identificatie", "volgnummer"],
-                    "display": "id",
-                    "properties": {
+                    {
+                        "id": "test_2",
+                        "type": "table",
+                        "version": "1.0.0",
+                        "temporal": {
+                            "identifier": "volgnummer",
+                            "dimensions": {"geldigOp": ["beginGeldigheid", "eindGeldigheid"]},
+                        },
                         "schema": {
-                            "$ref": (
-                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
-                                "#/definitions/schema"
-                            )
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "type": "object",
+                            "identifier": ["identificatie", "volgnummer"],
+                            "required": ["schema", "id", "identificatie", "volgnummer"],
+                            "display": "id",
+                            "properties": {
+                                "schema": {
+                                    "$ref": (
+                                        "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                        "#/definitions/schema"
+                                    )
+                                },
+                                "identificatie": {"type": "string"},
+                                "volgnummer": {"type": "integer"},
+                                "beginGeldigheid": {"type": "string", "format": "date-time"},
+                                "eindGeldigheid": {"type": "string", "format": "date-time"},
+                            },
                         },
-                        "identificatie": {"type": "string"},
-                        "volgnummer": {"type": "integer"},
-                        "beginGeldigheid": {"type": "string", "format": "date-time"},
-                        "eindGeldigheid": {"type": "string", "format": "date-time"},
                     },
-                },
+                ],
             },
-        ],
+        },
     }
 
     dataset_schema = DatasetSchema(test_data)
     indexes_names = set()
 
-    for table in test_data["tables"]:
+    for table in test_data["versions"]["v1"]["tables"]:
         importer = BaseImporter(dataset_schema, engine)
         # the generate_table and create index
         importer.generate_db_objects(
@@ -200,53 +210,59 @@ def test_fk_index_creation(engine, db_schema):
         "description": "test table",
         "version": "0.0.1",
         "crs": "EPSG:28992",
-        "tables": [
-            {
-                "id": "parent_test",
-                "type": "table",
-                "version": "1.0.0",
-                "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
-                    "type": "object",
-                    "additionalProperties": "false",
-                    "required": ["schema", "id"],
-                    "identifier": "id",
-                    "properties": {
+        "versions": {
+            "v1": {
+                "version": "0.0.1",
+                "status": "beschikbaar",
+                "tables": [
+                    {
+                        "id": "parent_test",
+                        "type": "table",
+                        "version": "1.0.0",
                         "schema": {
-                            "$ref": (
-                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
-                                "#/definitions/schema"
-                            )
-                        },
-                        "id": {"type": "string"},
-                    },
-                },
-            },
-            {
-                "id": "child_test",
-                "type": "table",
-                "version": "1.0.0",
-                "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
-                    "type": "object",
-                    "additionalProperties": "false",
-                    "required": ["schema"],
-                    "properties": {
-                        "schema": {
-                            "$ref": (
-                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
-                                "#/definitions/schema"
-                            )
-                        },
-                        "id": {"type": "string"},
-                        "fkColumnReference": {
-                            "type": "string",
-                            "relation": "test:parent_test",
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "type": "object",
+                            "additionalProperties": "false",
+                            "required": ["schema", "id"],
+                            "identifier": "id",
+                            "properties": {
+                                "schema": {
+                                    "$ref": (
+                                        "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                        "#/definitions/schema"
+                                    )
+                                },
+                                "id": {"type": "string"},
+                            },
                         },
                     },
-                },
-            },
-        ],
+                    {
+                        "id": "child_test",
+                        "type": "table",
+                        "version": "1.0.0",
+                        "schema": {
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "type": "object",
+                            "additionalProperties": "false",
+                            "required": ["schema"],
+                            "properties": {
+                                "schema": {
+                                    "$ref": (
+                                        "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                        "#/definitions/schema"
+                                    )
+                                },
+                                "id": {"type": "string"},
+                                "fkColumnReference": {
+                                    "type": "string",
+                                    "relation": "test:parent_test",
+                                },
+                            },
+                        },
+                    },
+                ],
+            }
+        },
     }
 
     dataset_schema = DatasetSchema(test_data)
@@ -280,53 +296,59 @@ def test_size_of_index_name(engine, db_schema):
         "description": "test table",
         "version": "0.0.1",
         "crs": "EPSG:28992",
-        "tables": [
-            {
-                "id": "parent_test_size",
-                "type": "table",
-                "version": "1.0.0",
-                "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
-                    "type": "object",
-                    "additionalProperties": "false",
-                    "required": ["schema", "id"],
-                    "identifier": "id",
-                    "properties": {
+        "versions": {
+            "v1": {
+                "version": "0.0.1",
+                "status": "beschikbaar",
+                "tables": [
+                    {
+                        "id": "parent_test_size",
+                        "type": "table",
+                        "version": "1.0.0",
                         "schema": {
-                            "$ref": (
-                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
-                                "#/definitions/schema"
-                            )
-                        },
-                        "id": {"type": "string"},
-                    },
-                },
-            },
-            {
-                "id": "child_test_size",
-                "type": "table",
-                "version": "1.0.0",
-                "schema": {
-                    "$schema": "http://json-schema.org/draft-07/schema#",
-                    "type": "object",
-                    "additionalProperties": "false",
-                    "required": ["schema"],
-                    "properties": {
-                        "schema": {
-                            "$ref": (
-                                "https://schemas.data.amsterdam.nl/schema@v1.1.1"
-                                "#/definitions/schema"
-                            )
-                        },
-                        "id": {"type": "string"},
-                        "fkColumnReferenceWithAReallyLongRidiculousNameThatMustBeShortend": {
-                            "type": "string",
-                            "relation": "test:parent_test_size",
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "type": "object",
+                            "additionalProperties": "false",
+                            "required": ["schema", "id"],
+                            "identifier": "id",
+                            "properties": {
+                                "schema": {
+                                    "$ref": (
+                                        "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                        "#/definitions/schema"
+                                    )
+                                },
+                                "id": {"type": "string"},
+                            },
                         },
                     },
-                },
-            },
-        ],
+                    {
+                        "id": "child_test_size",
+                        "type": "table",
+                        "version": "1.0.0",
+                        "schema": {
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "type": "object",
+                            "additionalProperties": "false",
+                            "required": ["schema"],
+                            "properties": {
+                                "schema": {
+                                    "$ref": (
+                                        "https://schemas.data.amsterdam.nl/schema@v1.1.1"
+                                        "#/definitions/schema"
+                                    )
+                                },
+                                "id": {"type": "string"},
+                                "fkColumnReferenceWithAReallyLongRidiculousNameThatMustBeShortend": {
+                                    "type": "string",
+                                    "relation": "test:parent_test_size",
+                                },
+                            },
+                        },
+                    },
+                ],
+            }
+        },
     }
 
     data = test_data

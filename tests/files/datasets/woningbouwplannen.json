@@ -3,70 +3,86 @@
   "id": "woningbouwplannen",
   "title": "Woningbouwplannen en Strategische ruimtes",
   "description": "Deze dataset bevat de gegevens over de te realiseren woningen in Amsterdam.",
-  "status": "beschikbaar",
-  "version": "0.0.1",
   "crs": "EPSG:28992",
-  "tables": [
-    {
-      "id": "woningbouwplan",
-      "type": "table",
-      "version": "1.0.0",
-      "provenance": "wbw_woningbouwplan",
-      "title": "Woningbouwplan",
-      "description": "De aantallen vormen de planvoorraad. Dit zijn niet de aantallen die definitief worden gerealiseerd. Ervaring leert dat een deel van de planvoorraad wordt opgeschoven. Niet alle woningbouw initiatieven doorlopen de verschillende plaberumfasen. Met name kleinere particuliere projecten worden in de regel pas toegevoegd aan de monitor zodra er een intentieovereenkomst of afsprakenbrief is getekend.",
-      "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "id",
-        "additionalProperties": false,
-        "required": ["schema", "id"],
-        "mainGeometry": "geometrie",
-        "display": "id",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "Unieke id van het object",
-            "provenance": "wbw_woningbouwplan_id"
-          },
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "0.0.1",
+      "tables": [
+        {
+          "id": "woningbouwplan",
+          "type": "table",
+          "version": "1.0.0",
+          "provenance": "wbw_woningbouwplan",
+          "title": "Woningbouwplan",
+          "description": "De aantallen vormen de planvoorraad. Dit zijn niet de aantallen die definitief worden gerealiseerd. Ervaring leert dat een deel van de planvoorraad wordt opgeschoven. Niet alle woningbouw initiatieven doorlopen de verschillende plaberumfasen. Met name kleinere particuliere projecten worden in de regel pas toegevoegd aan de monitor zodra er een intentieovereenkomst of afsprakenbrief is getekend.",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "id",
+            "additionalProperties": false,
+            "required": [
+              "schema",
+              "id"
+            ],
+            "mainGeometry": "geometrie",
+            "display": "id",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "Unieke id van het object",
+                "provenance": "wbw_woningbouwplan_id"
+              },
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "projectnaam": {
+                "type": "string",
+                "description": "Naam van het project"
+              },
+              "avarageSalesPrice": {
+                "type": "number",
+                "multipleOf": 0.0001,
+                "description": "Gemiddelde verkoopprijs (test)"
+              },
+              "avarageSalesPriceIncorrect": {
+                "type": "number",
+                "multipleOf": 9.111,
+                "description": "Gemiddelde verkoopprijs (test)"
+              },
+              "avarageSalesPriceIncorrectZero": {
+                "type": "number",
+                "multipleOf": 0.0,
+                "description": "Gemiddelde verkoopprijs (test)"
+              },
+              "buurten": {
+                "type": "array",
+                "relation": "gebieden:buurten",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "description": "Buurten waarin het woningbouwplan ligt"
+              },
+              "buurtenAsScalar": {
+                "type": "array",
+                "relation": "gebieden:buurten",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Buurten waarin het woningbouwplan ligt, simply as scalar"
+              }
+            }
           },
-          "projectnaam": {
-            "type": "string",
-            "description": "Naam van het project"
-          },
-          "avarageSalesPrice": {
-            "type": "number",
-            "multipleOf": 0.0001,
-            "description": "Gemiddelde verkoopprijs (test)"
-          },
-          "avarageSalesPriceIncorrect": {
-            "type": "number",
-            "multipleOf": 9.111,
-            "description": "Gemiddelde verkoopprijs (test)"
-          },
-          "avarageSalesPriceIncorrectZero": {
-            "type": "number",
-            "multipleOf": 0.0,
-            "description": "Gemiddelde verkoopprijs (test)"
-          },
-          "buurten": {
-            "type": "array",
-            "relation": "gebieden:buurten",
-            "items": {
-              "type": "object",
-              "properties": { "id": { "type": "string" } }
-            },
-            "description": "Buurten waarin het woningbouwplan ligt"
-          },
-          "buurtenAsScalar": {
-            "type": "array",
-            "relation": "gebieden:buurten",
-            "items": { "type": "string" },
-            "description": "Buurten waarin het woningbouwplan ligt, simply as scalar"
-          }
+          "lifecycleStatus": "stable"
         }
-      }
+      ]
     }
-  ],
-  "publisher": "unknown"
+  }
 }
