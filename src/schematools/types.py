@@ -978,6 +978,9 @@ class DatasetTableSchema(SchemaType):
     def __eq__(self, other):
         return isinstance(other, DatasetTableSchema) and self.db_name == other.db_name
 
+    def __hash__(self):
+        return hash(self.db_name)
+
     def _resolve_scope(self, element):
         if "$ref" in element.get("auth", {}):
             element["auth"] = self.schema.loader.get_scope(element["auth"]["$ref"]).json_data()
