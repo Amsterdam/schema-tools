@@ -222,6 +222,9 @@ def model_factory(
             **fields,
             "__doc__": table_schema.description or "",
             "_dataset": dataset,
+            "_dataset_versions": [
+                v.version for v in dataset.schema.versions.values() if table_schema in v.tables
+            ],
             "_table_schema": table_schema,
             "_dataset_schema": dataset_schema,
             "_display_field": (display_field.python_name if display_field is not None else None),
