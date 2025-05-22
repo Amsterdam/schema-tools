@@ -5,6 +5,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management import BaseCommand
+from django.db import transaction
 
 from schematools.contrib.django.factories import schema_models_factory
 from schematools.contrib.django.management.commands.migration_helpers import migrate
@@ -53,43 +54,44 @@ class Command(BaseCommand):
         else:
             schemas = self.get_schemas_from_url(options["schema_url"])
 
-        # Contains unsaved Dataset objects if dry_run.
-        updated_datasets = self._run_import(schemas)
-        if not updated_datasets:
-            self.stdout.write("No new datasets imported")
-            return
+        with transaction.atomic():
+            # Contains unsaved Dataset objects if dry_run.
+            updated_datasets = self._run_import(schemas)
+            if not updated_datasets:
+                self.stdout.write("No new datasets imported")
+                return
 
-        # Loop over updated datasets and perform migrations.
-        for updated_dataset in updated_datasets:
-            current_dataset = current_datasets.get(
-                Dataset.name_from_schema(updated_dataset.schema)
-            )
-            if not current_dataset:  # New dataset
-                continue
-
-            real_apps = self._load_dependencies(updated_dataset.schema, updated_dataset)
-            for current_table in current_dataset.schema.tables:
-                updated_table = updated_dataset.schema.get_table_by_id(
-                    current_table.id, include_nested=False, include_through=False
+            # Loop over updated datasets and perform migrations.
+            for updated_dataset in updated_datasets:
+                current_dataset = current_datasets.get(
+                    Dataset.name_from_schema(updated_dataset.schema)
                 )
-                if current_table.version.vmajor == updated_table.version.vmajor:
-                    migrate(
-                        self,
-                        current_dataset,
-                        updated_dataset,
-                        current_table,
-                        updated_table,
-                        real_apps,
-                        dry_run=self.dry_run,
+                if not current_dataset:  # New dataset
+                    continue
+
+                real_apps = self._load_dependencies(updated_dataset.schema, updated_dataset)
+                for current_table in current_dataset.schema.tables:
+                    updated_table = updated_dataset.schema.get_table_by_id(
+                        current_table.id, include_nested=False, include_through=False
                     )
+                    if current_table.version.vmajor == updated_table.version.vmajor:
+                        migrate(
+                            self,
+                            current_dataset,
+                            updated_dataset,
+                            current_table,
+                            updated_table,
+                            real_apps,
+                            dry_run=self.dry_run,
+                        )
 
-        # Reasons for not creating tables directly are to manually configure the
-        # "Datasets" model flags first. E.g. disable "enable_db".
-        if options["create_tables"]:
-            create_tables(self, updated_datasets, allow_unmanaged=True, dry_run=self.dry_run)
+            # Reasons for not creating tables directly are to manually configure the
+            # "Datasets" model flags first. E.g. disable "enable_db".
+            if options["create_tables"]:
+                create_tables(self, updated_datasets, allow_unmanaged=True, dry_run=self.dry_run)
 
-        if options["create_views"]:
-            create_views(self, updated_datasets, dry_run=self.dry_run)
+            if options["create_views"]:
+                create_views(self, updated_datasets, dry_run=self.dry_run)
 
     def get_schemas_from_files(self, schema_files) -> dict[str, DatasetSchema]:
         """Import all schema definitions from the given files."""

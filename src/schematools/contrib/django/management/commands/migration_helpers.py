@@ -162,6 +162,11 @@ def execute_migration(
         # Filter out ALTER COLUMN statements
         collected_sql = _filter_alter_type_statements(schema_editor.collected_sql)
 
+        # If we've only got comments left, skip this migration
+        if all(statement.startswith("--") for statement in collected_sql):
+            command.stdout.write("-- No actual SQL statements generated, skipping this migration")
+            return start_state
+
         if dry_run:
             command.stdout.write("-- DRY RUN - the following would be executed:")
             command.stdout.write("\n".join(collected_sql))
