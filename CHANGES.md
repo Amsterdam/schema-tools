@@ -1,3 +1,7 @@
+# 2025-05-08 (7.7.3)
+
+* Make import schemas atomic and fix empty migrations.
+
 # 2025-05-08 (7.7.2)
 
 * Add flag to schema_model_factory to create all tables. This way we can use it in create_tables, but
