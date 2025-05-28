@@ -1,3 +1,8 @@
+# 2025-05-28 (8.0.0-rc4)
+
+* Inline all tables in a migration, so that when DSO starts up, the versioned
+  datasets have all necessary data in the database.
+
 # 2025-05-08 (8.0.0-rc3)
 
 * Make import schemas atomic and fix empty migrations.
