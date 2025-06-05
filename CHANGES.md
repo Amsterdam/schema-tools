@@ -1,3 +1,8 @@
+# 2025-06-05 (8.0.0-rc5)
+
+* Create a DjangoModelFactory class that keeps track of the version, so relations are resolved
+  correctly for each version.
+
 # 2025-05-28 (8.0.0-rc4)
 
 * Inline all tables in a migration, so that when DSO starts up, the versioned
