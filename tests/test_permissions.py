@@ -113,6 +113,10 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
+            'CREATE ROLE "scope_brk_encoded"',
+            'CREATE ROLE "scope_brk_rid"',
+            'CREATE ROLE "scope_brp_rname.filtered"',
+            'CREATE ROLE "scope_fp_md"',
             "GRANT SELECT ON SEQUENCE public.parkeervakken_parkeervakken_regimes_v1_id_seq TO scope_fp_md",
             "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_v1 TO scope_brk_encoded",
             "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_v1 TO scope_brk_rid",
@@ -198,6 +202,7 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
+            'CREATE ROLE "write_brk"',
             "GRANT SELECT (begin_geldigheid) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
             "GRANT SELECT (eind_geldigheid) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
             "GRANT SELECT (id) ON TABLE public.brk_kadastraleobjecten_v1 TO brk_rsn",
@@ -271,6 +276,7 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
+            'CREATE ROLE "scope_brk_rsn"',
             "GRANT SELECT ON SEQUENCE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_pers_id_seq TO scope_brk_rsn",
             "GRANT SELECT ON SEQUENCE public.brk_aantekeningenrechten_heeft_betrokken_persoon_v1_id_seq TO scope_brk_rsn",
             "GRANT SELECT ON SEQUENCE public.brk_aantekeningenrechten_is_gbsd_op_sdl_v1_id_seq TO scope_brk_rsn",
@@ -371,6 +377,7 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
+            'CREATE ROLE "bag_r"',
             "GRANT SELECT ON TABLE public.afvalwegingen_clusters_v1 TO bag_r",
             "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_clusters_v1 TO write_afvalwegingen",
             "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_containers_v1 TO write_afvalwegingen",
@@ -863,6 +870,9 @@ class TestReadPermissions:
 
         grants = _filter_grant_statements(caplog)
         assert grants == [
+            'CREATE ROLE "level_b"',
+            'CREATE ROLE "level_c"',
+            'CREATE ROLE "write_hr"',
             "GRANT SELECT (identifier) ON TABLE public.hr_sbi_ac_v1 TO level_b",
             "GRANT SELECT (sbi_ac_naam) ON TABLE public.hr_sbi_ac_v1 TO level_b",
             "GRANT SELECT (sbi_ac_no) ON TABLE public.hr_sbi_ac_v1 TO level_c",
@@ -1221,7 +1231,7 @@ def _filter_grant_statements(caplog):
         m.replace("Executed --> ", "")
         for m in caplog.messages
         # Be specific in what is excluded, so unexpected notices can be detected.
-        if not m.endswith('" already exists, skipping') and ("CREATE ROLE" not in m)
+        if not m.endswith('" already exists, skipping')
     )
 
     # Writes are seen multple times, because they use a single role.
