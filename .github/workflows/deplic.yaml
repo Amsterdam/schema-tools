@@ -2,6 +2,9 @@
 # or incompatible with MPL.
 
 name: Check licenses of dependencies
+permissions:
+  contents: read
+  pull-requests: write
 
 on:
   pull_request:
