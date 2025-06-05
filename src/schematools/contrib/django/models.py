@@ -354,17 +354,18 @@ class Dataset(models.Model):
         include_versioned_tables: bool = False,
     ) -> list[type[M]]:
         """Extract the models found in the schema"""
-        from schematools.contrib.django.factories import schema_models_factory
-
         if not self.enable_db:
             return []
         else:
-            return schema_models_factory(
+            # Prevent circular import
+            from schematools.contrib.django.factories import DjangoModelFactory
+
+            factory = DjangoModelFactory(
                 self,
                 base_app_name=base_app_name,
                 base_model=base_model,
-                include_versioned_tables=include_versioned_tables,
             )
+            return factory.build_models()
 
 
 class DatasetVersion(models.Model):
