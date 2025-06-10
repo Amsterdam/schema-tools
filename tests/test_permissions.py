@@ -114,9 +114,13 @@ class TestReadPermissions:
         grants = _filter_grant_statements(caplog)
         assert grants == [
             'CREATE ROLE "scope_brk_encoded"',
+            'CREATE ROLE "scope_brk_encoded.filtered" IN ROLE "scope_brk_encoded"',
             'CREATE ROLE "scope_brk_rid"',
-            'CREATE ROLE "scope_brp_rname.filtered"',
+            'CREATE ROLE "scope_brk_rid.filtered" IN ROLE "scope_brk_rid"',
+            'CREATE ROLE "scope_brp_rname"',
+            'CREATE ROLE "scope_brp_rname.filtered" IN ROLE "scope_brp_rname"',
             'CREATE ROLE "scope_fp_md"',
+            'CREATE ROLE "scope_fp_md.filtered" IN ROLE "scope_fp_md"',
             "GRANT SELECT ON SEQUENCE public.parkeervakken_parkeervakken_regimes_v1_id_seq TO scope_fp_md",
             "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_v1 TO scope_brk_encoded",
             "GRANT SELECT ON TABLE public.brk_kadastraleobjecten_v1 TO scope_brk_rid",
@@ -277,6 +281,7 @@ class TestReadPermissions:
         grants = _filter_grant_statements(caplog)
         assert grants == [
             'CREATE ROLE "scope_brk_rsn"',
+            'CREATE ROLE "scope_brk_rsn.filtered" IN ROLE "scope_brk_rsn"',
             "GRANT SELECT ON SEQUENCE public.brk_aantekeningenkadastraleobjecten_heeft_betrokken_pers_id_seq TO scope_brk_rsn",
             "GRANT SELECT ON SEQUENCE public.brk_aantekeningenrechten_heeft_betrokken_persoon_v1_id_seq TO scope_brk_rsn",
             "GRANT SELECT ON SEQUENCE public.brk_aantekeningenrechten_is_gbsd_op_sdl_v1_id_seq TO scope_brk_rsn",
@@ -378,6 +383,7 @@ class TestReadPermissions:
         grants = _filter_grant_statements(caplog)
         assert grants == [
             'CREATE ROLE "bag_r"',
+            'CREATE ROLE "bag_r.filtered" IN ROLE "bag_r"',
             "GRANT SELECT ON TABLE public.afvalwegingen_clusters_v1 TO bag_r",
             "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_clusters_v1 TO write_afvalwegingen",
             "GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE public.afvalwegingen_containers_v1 TO write_afvalwegingen",
@@ -385,8 +391,10 @@ class TestReadPermissions:
 
         _check_select_permission_granted(engine, "openbaar", "afvalwegingen_containers_v1")
         _check_select_permission_denied(engine, "openbaar", "afvalwegingen_clusters_v1")
-        _check_select_permission_denied(engine, "bag_r", "afvalwegingen_containers_v1")
-        _check_select_permission_granted(engine, "bag_r", "afvalwegingen_clusters_v1")
+
+        for bag_r_role in ("bag_r", "bag_r.filtered"):
+            _check_select_permission_denied(engine, bag_r_role, "afvalwegingen_containers_v1")
+            _check_select_permission_granted(engine, bag_r_role, "afvalwegingen_clusters_v1")
 
     def test_interacting_permissions(
         self, engine, gebieden_schema_auth, gebieden_profiles, dbsession
@@ -871,7 +879,9 @@ class TestReadPermissions:
         grants = _filter_grant_statements(caplog)
         assert grants == [
             'CREATE ROLE "level_b"',
+            'CREATE ROLE "level_b.filtered" IN ROLE "level_b"',
             'CREATE ROLE "level_c"',
+            'CREATE ROLE "level_c.filtered" IN ROLE "level_c"',
             'CREATE ROLE "write_hr"',
             "GRANT SELECT (identifier) ON TABLE public.hr_sbi_ac_v1 TO level_b",
             "GRANT SELECT (sbi_ac_naam) ON TABLE public.hr_sbi_ac_v1 TO level_b",
@@ -881,10 +891,13 @@ class TestReadPermissions:
         ]
 
         # Check if the read priviliges are correct
-        _check_select_permission_granted(engine, "level_b", "hr_sbi_ac_v1", "sbi_ac_naam")
-        _check_select_permission_denied(engine, "level_b", "hr_sbi_ac_v1", "sbi_ac_no")
-        _check_select_permission_denied(engine, "level_c", "hr_sbi_ac_v1", "sbi_ac_naam")
-        _check_select_permission_granted(engine, "level_c", "hr_sbi_ac_v1", "sbi_ac_no")
+        for level_b_role in ("level_b", "level_b.filtered"):
+            _check_select_permission_granted(engine, level_b_role, "hr_sbi_ac_v1", "sbi_ac_naam")
+            _check_select_permission_denied(engine, level_b_role, "hr_sbi_ac_v1", "sbi_ac_no")
+
+        for level_c_role in ("level_c", "level_c.filtered"):
+            _check_select_permission_denied(engine, level_c_role, "hr_sbi_ac_v1", "sbi_ac_naam")
+            _check_select_permission_granted(engine, level_c_role, "hr_sbi_ac_v1", "sbi_ac_no")
 
 
 class TestWritePermissions:
@@ -1122,7 +1135,7 @@ def _check_select_permission_denied(engine, role, table, column="*"):
         pytest.raises(Exception, match=f"permission denied for table {table}"),
         engine.begin() as connection,
     ):
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         connection.execute(text(f"SELECT {column} FROM {table}"))
         connection.execute(text("RESET ROLE"))
 
@@ -1132,7 +1145,7 @@ def _check_select_permission_granted(engine, role, table, column="*"):
     Fail if role, table or column does not exist.
     """
     with engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         result = connection.execute(text(f"SELECT {column} FROM {table}"))
         connection.execute(text("RESET ROLE"))
     assert result
@@ -1143,7 +1156,7 @@ def _check_insert_permission_granted(engine, role, table, column, value):
     Fail if role, table or column does not exist, or value mismatches in datatype.
     """
     with engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         result = connection.execute(text(f"INSERT INTO {table} ({column}) VALUES ({value})"))
         connection.execute(text("RESET ROLE"))
     assert result
@@ -1154,7 +1167,7 @@ def _check_insert_permission_denied(engine, role, table, column, value):
     Fail if role, table or column does not exist.
     """
     with pytest.raises(Exception) as e_info, engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         connection.execute(text(f"INSERT INTO {table} ({column}) VALUES ({value})"))
         connection.execute(text("RESET ROLE"))
     assert f"permission denied for table {table}" in str(e_info)
@@ -1165,7 +1178,7 @@ def _check_update_permission_granted(engine, role, table, column, value, conditi
     Fail if role, table or column does not exist, or value mismatches in datatype.
     """
     with engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         result = connection.execute(
             text(f"UPDATE {table} SET {column} =  {value} WHERE {condition}")
         )
@@ -1178,7 +1191,7 @@ def _check_update_permission_denied(engine, role, table, column, value, conditio
     Fail if role, table or column does not exist, or value mismatches in datatype.
     """
     with pytest.raises(Exception) as e_info, engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         connection.execute(text(f"UPDATE {table} SET {column} =  {value} WHERE {condition}"))
         connection.execute(text("RESET ROLE"))
     assert f"permission denied for table {table}" in str(e_info)
@@ -1188,7 +1201,7 @@ def _check_delete_permission_granted(engine, role, table, condition):
     """Check if role has DELETE permission on table.
     Fail if role, table or column does not exist, or value mismatches in datatype."""
     with engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         result = connection.execute(text(f"DELETE FROM {table} WHERE {condition}"))  # noqa: S608
         connection.execute(text("RESET ROLE"))
     assert result
@@ -1198,7 +1211,7 @@ def _check_delete_permission_denied(engine, role, table, condition):
     """Check if role has no DELETE permission on table.
     Fail if role, table or column does not exist, or value mismatches in datatype."""
     with pytest.raises(Exception) as e_info, engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         connection.execute(text(f"DELETE FROM {table} WHERE {condition}"))  # noqa: S608
         connection.execute(text("RESET ROLE"))
     assert f"permission denied for table {table}" in str(e_info)
@@ -1209,7 +1222,7 @@ def _check_truncate_permission_granted(engine, role, table):
     Fail if role or table does not exist.
     """
     with engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         result = connection.execute(text(f"TRUNCATE {table}"))
         connection.execute(text("RESET ROLE"))
     assert result
@@ -1220,7 +1233,7 @@ def _check_truncate_permission_denied(engine, role, table):
     Fail if role or table does not exist.
     """
     with pytest.raises(Exception) as e_info, engine.begin() as connection:
-        connection.execute(text(f"SET ROLE {role}"))
+        connection.execute(text(f'SET ROLE "{role}"'))
         connection.execute(text(f"TRUNCATE {table}"))
         connection.execute(text("RESET ROLE"))
     assert f"permission denied for table {table}" in str(e_info)
