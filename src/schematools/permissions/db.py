@@ -532,22 +532,22 @@ def revoke_schema_permissions(
         # for a single dataset
         for table in only_dataset.tables:
             revoke_statements.extend(
-                f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {role_name}"
+                f'REVOKE ALL PRIVILEGES ON "{pg_schema}.{table.db_name}" FROM "{role_name}"'
                 for role_name in db_role_names
             )
             if sequence_name := _get_sequence_name(conn, table):
                 revoke_statements.extend(
-                    f"REVOKE ALL PRIVILEGES ON SEQUENCE {pg_schema}.{sequence_name}"
-                    f" FROM {role_name}"
+                    f'REVOKE ALL PRIVILEGES ON SEQUENCE "{pg_schema}.{sequence_name}"'
+                    f' FROM "{role_name}"'
                     for role_name in db_role_names
                 )
     else:
         # For all datasets
         revoke_statements = [
-            f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {role_name}"
+            f'REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM "{role_name}"'
             for role_name in db_role_names
         ] + [
-            f"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {pg_schema} FROM {role_name}"
+            f'REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {pg_schema} FROM "{role_name}"'
             for role_name in db_role_names
         ]
 
@@ -567,9 +567,25 @@ def _execute_grants(
     for grant_statement in all_grants:
         # For global and specific columns:
         if create_roles:
-            _create_role_if_not_exists(
-                conn, grant_statement.grantee, verbose=verbose, dry_run=dry_run
-            )
+            role = grant_statement.grantee
+            if "UPDATE" in grant_statement.privileges or role.startswith("write_"):
+                # Write users don't need .filtered
+                _create_role_if_not_exists(conn, role, verbose=verbose, dry_run=dry_run)
+            else:
+                # Make sure both the regular and ".filtered" variant exists.
+                # Users with direct connection to the database only inherit from the regular roles.
+                # The DSO-API code can switch to the .filtered version,
+                # which grants extra access to tables that have mandatoryFilterSets.
+                if role.endswith(".filtered"):
+                    app_role = role
+                    role = role[: -len(".filtered")]
+                else:
+                    app_role = f"{role}.filtered"
+
+                _create_role_if_not_exists(conn, role, verbose=verbose, dry_run=dry_run)
+                _create_role_if_not_exists(
+                    conn, app_role, inherits=role, verbose=verbose, dry_run=dry_run
+                )
 
         _execute_grant(conn, grant_statement, verbose=verbose, dry_run=dry_run)
 
@@ -596,7 +612,11 @@ def _execute_grant(
 
 
 def _create_role_if_not_exists(
-    conn: Connection, role: str, verbose: int = 1, dry_run: bool = False
+    conn: Connection,
+    role: str,
+    inherits: str | None = None,
+    verbose: int = 1,
+    dry_run: bool = False,
 ) -> None:
     """Wrap the create role statement in an anonymous code block.
 
@@ -605,6 +625,12 @@ def _create_role_if_not_exists(
     """
     if role not in existing_roles:
         create_role_statement = f'CREATE ROLE "{role}"'
+        if inherits:
+            # PostgreSQL note, there are 2 syntax versions:
+            # - "CREATE ROLE child IN ROLE parent" - this adds a member.
+            # - "CREATE ROLE parent ROLE child"    - this declares a group, with initial members.
+            create_role_statement = f'{create_role_statement} IN ROLE "{inherits}"'
+
         sql_statement = f"""
             DO $$
             BEGIN
