@@ -532,22 +532,22 @@ def revoke_schema_permissions(
         # for a single dataset
         for table in only_dataset.tables:
             revoke_statements.extend(
-                f"REVOKE ALL PRIVILEGES ON {pg_schema}.{table.db_name} FROM {role_name}"
+                f'REVOKE ALL PRIVILEGES ON "{pg_schema}.{table.db_name}" FROM "{role_name}"'
                 for role_name in db_role_names
             )
             if sequence_name := _get_sequence_name(conn, table):
                 revoke_statements.extend(
-                    f"REVOKE ALL PRIVILEGES ON SEQUENCE {pg_schema}.{sequence_name}"
-                    f" FROM {role_name}"
+                    f'REVOKE ALL PRIVILEGES ON SEQUENCE "{pg_schema}.{sequence_name}"'
+                    f' FROM "{role_name}"'
                     for role_name in db_role_names
                 )
     else:
         # For all datasets
         revoke_statements = [
-            f"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM {role_name}"
+            f'REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA {pg_schema} FROM "{role_name}"'
             for role_name in db_role_names
         ] + [
-            f"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {pg_schema} FROM {role_name}"
+            f'REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {pg_schema} FROM "{role_name}"'
             for role_name in db_role_names
         ]
 
