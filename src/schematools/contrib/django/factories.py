@@ -126,7 +126,8 @@ class DjangoModelFactory:
         self.base_model = base_model
         self.base_app_name = base_app_name
         self.models = []
-        self._current_version: str | None = None
+        # Set _current_version to default in case we directly call `build_model()`
+        self._current_version: str = self.schema.default_version
 
     def build_models(self) -> list[type[M]]:
         """Main entrypoint, creates a list of django models for a dataset.
@@ -144,7 +145,7 @@ class DjangoModelFactory:
         self, table_schema: DatasetTableSchema, meta_options: dict[str, Any] | None = None
     ) -> type[M]:
         """Generate a Django model class from a JSON Schema definition."""
-        app_label = self.schema.id
+        app_label = self.get_app_label(self.schema)
         module_name = f"{self.base_app_name}.{app_label}.models"
         is_temporal = table_schema.is_temporal
         display_field = table_schema.display_field
@@ -174,10 +175,14 @@ class DjangoModelFactory:
             if field.is_primary and field.type == "string":
                 # To make sure OneToOneField relations also support the '__contains' lookup,
                 # that lookup type is registered with this field class in apps.py.
+                table_name = (
+                    f"{self.schema.db_name}_{self._current_version}_"
+                    f"{table_schema.db_name_variant(with_dataset_prefix=False)}_{field.db_name}"
+                )
                 constraints.append(
                     CheckConstraint(
                         check=~Q(**{f"{model_field.name}__contains": "/"}),
-                        name=f"{table_schema.db_name}_{self._current_version}_{field.db_name}_not_contains_slash",
+                        name=f"{table_name}_not_contains_slash",
                     )
                 )
 
@@ -224,22 +229,21 @@ class DjangoModelFactory:
         return model_class
 
     def get_model_name(self, table_schema: DatasetTableSchema) -> str:
-        """Returns model name for this table.
+        """Returns model name for this table."""
+        # Using table_schema.python_name gives UpperCamelCased names, the old format is kept here.
+        # This also keeps model names more readable and recognizable/linkable with db table names.
+        return to_snake_case(table_schema.id)
+
+    def get_app_label(self, schema: DatasetSchema) -> str:
+        """Construct the versioned app_label.
 
         In case of relations, this will use the _current_version if the dataset matches,
         otherwise we use the default version of the target dataset.
-
-        NB: The version suffix is the dataset version, not the table version. This is
-        currently this way, because using it as a prefix prevents OpenAPI from detecting
-        the paths in a dataset.
         """
-        # Using table_schema.python_name gives UpperCamelCased names, the old format is kept here.
-        # This also keeps model names more readable and recognizable/linkable with db table names.
-        model_name = to_snake_case(table_schema.id)
-        if table_schema.schema.id == self.schema.id:
-            return f"{model_name}_{self._current_version}"
+        if schema == self.schema:
+            return f"{schema.id}_{self._current_version}"
         else:
-            return f"{model_name}_{table_schema.schema.default_version}"
+            return f"{schema.id}_{schema.default_version}"
 
     def _model_field_factory(self, field: DatasetFieldSchema) -> models.Field:
         """Construct the Django model field for a schema field."""
@@ -312,7 +316,10 @@ class DjangoModelFactory:
         """
         to_field = self._get_fk_to_field(field)
         kwargs = {
-            "to": f"{field.related_table.dataset.id}.{self.get_model_name(field.related_table)}",
+            "to": (
+                f"{self.get_app_label(field.related_table.dataset)}."
+                f"{self.get_model_name(field.related_table)}"
+            ),
             **self._get_basic_kwargs(field),
             "on_delete": models.CASCADE if field.required else models.SET_NULL,
             "db_column": field.db_name,
@@ -441,10 +448,16 @@ class DjangoModelFactory:
             related_name = f"rev_{field.table.python_name}_{field.python_name}+"
 
         kwargs = {
-            "to": f"{field.related_table.dataset.id}.{self.get_model_name(field.related_table)}",
+            "to": (
+                f"{self.get_app_label(field.related_table.dataset)}."
+                f"{self.get_model_name(field.related_table)}"
+            ),
             **self._get_basic_kwargs(field),
             "related_name": related_name,
-            "through": f"{through_table.dataset.id}.{self.get_model_name(through_table)}",
+            "through": (
+                f"{self.get_app_label(through_table.dataset)}."
+                f"{self.get_model_name(through_table)}"
+            ),
             "through_fields": through_fields,
         }
 
