@@ -1,3 +1,7 @@
+# 2025-05-08 (7.8.0)
+
+* Update psycopg2 to psycopg3.
+
 # 2025-05-08 (7.7.3)
 
 * Make import schemas atomic and fix empty migrations.
