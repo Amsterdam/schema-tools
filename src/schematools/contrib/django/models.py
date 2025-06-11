@@ -1,6 +1,7 @@
 """The Django models for Amsterdam Schema data.
 
-When models are generated with :func:`~schematools.contrib.django.factories.model_factory`,
+When models are generated with
+:func:`~schematools.contrib.django.factories.DjangoModelFactory.build_model()`,
 they all inherit from :class:`~schematools.contrib.django.models.DynamicModel` to have
 a common interface.
 
@@ -101,7 +102,7 @@ class DynamicModel(models.Model):
             model_field = model_field.remote_field
 
         try:
-            # This internal property is assigned by model_factory()
+            # This internal property is assigned by DjangoModelFactory.build_model()
             return model_field.field_schema
         except AttributeError:
             # Easier to ask for forgiveness than permission;

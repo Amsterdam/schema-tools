@@ -116,8 +116,8 @@ class Command(BaseCommand):
         self.stdout.write(f'    """{doc}"""\n\n')
 
     def write_dynamic_model_attrs(self, model: type[DynamicModel]) -> None:
-        """Write the attributes defined by model_factory() for completeness."""
-        self.stdout.write("    # Set by model_factory()\n")
+        """Write the attributes defined by DjangoModelFactory.build_model()for completeness."""
+        self.stdout.write("    # Set by DjangoModelFactory.build_model()\n")
         self.stdout.write(f"    # _dataset = {model._dataset!r}\n")
         self.stdout.write(f"    # _table_schema = {model._table_schema}\n")
         self.stdout.write(f"    _display_field = {model._display_field!r}\n")
