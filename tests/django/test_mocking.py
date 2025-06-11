@@ -6,15 +6,12 @@ from collections import defaultdict
 import pytest
 
 from schematools.contrib.django.db import create_tables
-from schematools.contrib.django.factories import (
-    get_model_name,
-    schema_model_mockers_factory,
-    schema_models_factory,
-)
+from schematools.contrib.django.factories import schema_model_mockers_factory
 from schematools.contrib.django.faker import get_field_factory
 from schematools.contrib.django.faker.create import create_data_for
 from schematools.contrib.django.faker.relate import relate_datasets
 from schematools.naming import to_snake_case
+from tests.django.utils import get_models
 
 
 @pytest.mark.django_db
@@ -24,10 +21,10 @@ def test_mocking_creates_data(gebieden_schema, gebieden_dataset):
     create_data_for(gebieden_dataset, size=size)
 
     table_schemas = {
-        get_model_name(t): t for t in gebieden_schema.get_tables(include_through=True)
+        to_snake_case(t.id): t for t in gebieden_schema.get_tables(include_through=True)
     }
     models = {}
-    for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
+    for cls in get_models(gebieden_dataset):
         models[cls._meta.model_name] = cls
 
     for model in models.values():
@@ -48,7 +45,7 @@ def test_mocking_take_min_max_into_account(
     create_data_for(afvalwegingen_dataset, size=30)
 
     models = {}
-    for cls in schema_models_factory(afvalwegingen_dataset, base_app_name="dso_api.dynamic_api"):
+    for cls in get_models(afvalwegingen_dataset):
         models[cls._meta.model_name] = cls
 
     assert models["containertypes"].objects.filter(volume__gt=12, volume__lt=5).count() == 0
@@ -75,7 +72,7 @@ def test_mocking_add_ids_for_relations(
         create_tables(dataset)
         for cls in schema_model_mockers_factory(dataset, base_app_name="dso_api.dynamic_api"):
             cls.create_batch(5)
-        for cls in schema_models_factory(dataset, base_app_name="dso_api.dynamic_api"):
+        for cls in get_models(dataset):
             models[dataset.name][cls._meta.model_name] = cls
 
     # The relations should be filled with None values
@@ -126,12 +123,7 @@ def test_mocking_uses_enum(
     for mocker in mockers:
         mocker.create_batch(5)
 
-    models = {
-        cls._meta.model_name: cls
-        for cls in schema_models_factory(
-            afvalwegingen_dataset, base_app_name="dso_api.dynamic_api"
-        )
-    }
+    models = {cls._meta.model_name: cls for cls in get_models(afvalwegingen_dataset)}
     mocked_fractie_codes = {o.afvalfractie for o in models["containers"].objects.all()}
     all_fractie_codes = {"Rest", "Glas", "Papier", "Plastic", "Textiel"}
     assert all_fractie_codes >= mocked_fractie_codes and mocked_fractie_codes
@@ -147,7 +139,7 @@ def test_mocking_add_temporal_fields_for_1n_relations(
     create_tables(gebieden_dataset)
     for cls in schema_model_mockers_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
         cls.create_batch(5)
-    for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
+    for cls in get_models(gebieden_dataset):
         models[cls._meta.model_name] = cls
 
     relate_datasets(gebieden_dataset)
@@ -174,12 +166,7 @@ def test_mocking_adds_nm_relations(
     for mocker in mockers:
         mocker.create_batch(20)
 
-    models = {
-        cls._meta.model_name: cls
-        for cls in schema_models_factory(
-            kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
-        )
-    }
+    models = {cls._meta.model_name: cls for cls in get_models(kadastraleobjecten_dataset)}
 
     relate_datasets(kadastraleobjecten_dataset)
 
@@ -217,7 +204,7 @@ def test_mocking_with_shortname_on_relation(gebieden_dataset, gebieden_schema):
     create_data_for(gebieden_dataset, size=10)
 
     models = {}
-    for cls in schema_models_factory(gebieden_dataset, base_app_name="dso_api.dynamic_api"):
+    for cls in get_models(gebieden_dataset):
         models[cls._meta.model_name] = cls
 
     fields = {f.name: f for f in models["bouwblokken"]._meta.get_fields()}
@@ -277,12 +264,7 @@ def test_mocking_fills_nested_objects(
     for mocker in mockers:
         mocker.create()
 
-    models = {
-        cls._meta.model_name: cls
-        for cls in schema_models_factory(
-            kadastraleobjecten_dataset, base_app_name="dso_api.dynamic_api"
-        )
-    }
+    models = {cls._meta.model_name: cls for cls in get_models(kadastraleobjecten_dataset)}
 
     kad_obj = models["kadastraleobjecten"].objects.first()
     # Random value in `soort_grootte` should be a valid json string.
