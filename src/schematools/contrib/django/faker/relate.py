@@ -5,7 +5,7 @@ import random
 from collections import defaultdict
 from typing import Any
 
-from schematools.contrib.django.factories import schema_models_factory
+from schematools.contrib.django.factories import DjangoModelFactory
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetTableSchema
 
@@ -52,7 +52,9 @@ def relate_datasets(*datasets: Dataset) -> None:
         if not dataset.enable_db:
             logger.warning("Skipping `%s`, `enable_db` is False", dataset.name)
             continue
-        for cls in schema_models_factory(dataset, base_app_name="dso_api.dynamic_api"):
+
+        factory = DjangoModelFactory(dataset)
+        for cls in factory.build_models():
             models[dataset.name][cls._meta.model_name] = cls
 
     for dataset in datasets:

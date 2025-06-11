@@ -12,7 +12,7 @@ from django.db.migrations.graph import MigrationGraph
 from django.db.migrations.questioner import InteractiveMigrationQuestioner
 from django.db.migrations.state import ModelState, ProjectState
 
-from schematools.contrib.django.factories import model_factory
+from schematools.contrib.django.factories import DjangoModelFactory
 from schematools.contrib.django.models import Dataset
 from schematools.types import DatasetTableSchema
 
@@ -42,14 +42,20 @@ def migrate(
     updated_state = get_versioned_project_state(base_state, updated_dataset, updated_table)
 
     # Clear any models from the app cache to avoid confusion
-    del apps.all_models[current_dataset.schema.id]
-    del apps.app_configs[current_dataset.schema.id]
+    for vmajor in current_dataset.schema.versions:
+        app_label = f"{current_dataset.schema.id}_{vmajor}"
+        del apps.all_models[app_label]
+        del apps.app_configs[app_label]
     apps.clear_cache()
 
     start_state = current_state
 
     # Let the migration engine perform its magic, similar to `manage.py makemigrations`:
-    migrations = get_migrations(current_state, updated_state, app_name=current_dataset.schema.id)
+    migrations = get_migrations(
+        current_state,
+        updated_state,
+        app_name=f"{current_dataset.schema.id}_{current_dataset.schema.default_version}",
+    )
     if not migrations:
         command.stdout.write(f"  No changes detected for table {current_table.id}")
         return start_state
@@ -113,9 +119,10 @@ def get_versioned_project_state(
 def get_model_state(dataset_model: Dataset, table: DatasetTableSchema, managed=True) -> ModelState:
     """Generate the model state for a table."""
     # The migration-engine will only consider models that have "managed=True".
-    # This is turned off by default for the model_factory() logic,
+    # This is turned off by default for the DjangoModelFactory.build_model() logic,
     # and needs to be overwritten here (patching model._meta and its original_attrs is nasty).
-    model_class = model_factory(dataset_model, table, meta_options={"managed": managed})
+    factory = DjangoModelFactory(dataset_model)
+    model_class = factory.build_model(table, meta_options={"managed": managed})
 
     # Generate the model. exclude_rels=True because M2M-through tables are generated manually.
     return PatchedModelState.from_model(model_class, exclude_rels=True)
