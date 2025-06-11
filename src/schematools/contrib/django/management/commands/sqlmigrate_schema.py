@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.management import BaseCommand, CommandError, CommandParser
 from django.db import DEFAULT_DB_ALIAS
 
-from schematools.contrib.django.factories import schema_models_factory
+from schematools.contrib.django.factories import DjangoModelFactory
 from schematools.contrib.django.management.commands.migration_helpers import migrate
 from schematools.contrib.django.models import Dataset
 from schematools.exceptions import DatasetNotFound, DatasetTableNotFound
@@ -194,7 +194,7 @@ class Command(BaseCommand):
             self.loader.get_dataset(dataset_id, prefetch_related=True)
 
         # Turn any loaded schema into a model.
-        # And when a call to model_factory() triggers loading of more schemas,
+        # And when a call to DjangoModelFactory.build_model() triggers loading of more schemas,
         # these are also picked up from the deque() collection object.
         while self.schema_dependencies:
             dataset_schema = self.schema_dependencies.popleft()
@@ -203,7 +203,7 @@ class Command(BaseCommand):
 
             if self.verbosity >= 2:
                 self.stdout.write(f"-- Building models for {dataset_schema.id}")
-            schema_models_factory(self._get_dummy_dataset_model(dataset_schema))
+            DjangoModelFactory(self._get_dummy_dataset_model(dataset_schema)).build_models()
             real_apps.append(dataset_schema.id)
 
         return real_apps
@@ -217,7 +217,9 @@ class Command(BaseCommand):
         return any(to_snake_case(table_id) == snaked_table_id for table_id in dataset.table_ids)
 
     def _get_dummy_dataset_model(self, dataset_schema: DatasetSchema) -> Dataset:
-        """Generate a dummy "Dataset" object because model_factory() needs this."""
+        """Generate a dummy "Dataset" object because DjangoModelFactory.build_model()
+        needs this.
+        """
         dataset = Dataset(
             name=dataset_schema.id, schema_data=dataset_schema.json(inline_tables=True)
         )

@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.management import BaseCommand
 from django.db import transaction
 
-from schematools.contrib.django.factories import schema_models_factory
+from schematools.contrib.django.factories import DjangoModelFactory
 from schematools.contrib.django.management.commands.migration_helpers import migrate
 from schematools.contrib.django.models import Dataset
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
@@ -157,7 +157,7 @@ class Command(BaseCommand):
             dataset_schema.loader.get_dataset(dataset_id, prefetch_related=True)
 
         # Turn any loaded schema into a model.
-        # And when a call to model_factory() triggers loading of more schemas,
+        # And when a call to DjangoModelFactory.build_model() triggers loading of more schemas,
         # these are also picked up from the deque() collection object.
         while self.schema_dependencies:
             dependency_schema = self.schema_dependencies.popleft()
@@ -166,8 +166,10 @@ class Command(BaseCommand):
 
             if self.verbosity >= 2:
                 self.stdout.write(f"-- Building models for {dependency_schema.id}")
-            schema_models_factory(dataset)
-            real_apps.append(dependency_schema.id)
+            DjangoModelFactory(dataset).build_models()
+            real_apps.extend(
+                [f"{dependency_schema.id}_{vmajor}" for vmajor in dependency_schema.versions]
+            )
 
         return real_apps
 

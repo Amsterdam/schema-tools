@@ -852,17 +852,18 @@ def model_mocker_factory(
 ) -> type[DynamicModelMocker]:
     """Generate a Django model mocker class from a JSON Schema definition."""
     dataset_schema = dataset.schema
-    app_label = f"{dataset_schema.id}"
+    app_label = f"{dataset_schema.id}_{dataset_schema.default_version}"
     base_app_name = base_app_name or "dso_api.dynamic_api"
 
-    # Bootstrap for the model_factory is implemented in the DynamicRouter, so on startup
-    # of the DSO-API. We have no desire to bootstrap the DynamicModelMocker for DSO runtime,
-    # just in the test suite and in the relevant management commands. As the DynamicModelMocker
-    # wraps around the DynamicModel, we must initiate it here to feed to the DjangoModelFactory
-    # Meta class:
+    # Bootstrap for the DjangoModelFactory.build_model() is implemented in the DynamicRouter, so
+    # on startup of the DSO-API. We have no desire to bootstrap the DynamicModelMocker for DSO
+    # runtime, just in the test suite and in the relevant management commands. As the
+    # DynamicModelMocker wraps around the DynamicModel, we must initiate it here to feed to the
+    # DjangoModelFactory=Meta class:
     # https://factoryboy.readthedocs.io/en/stable/orms.html#the-djangomodelfactory-subclass.
     # register the model.
-    model_factory(dataset, table_schema, base_app_name=base_app_name)
+    factory = DjangoModelFactory(dataset)
+    factory.build_model(table_schema)
 
     # Generate fields
     fields = _get_mock_fields(table_schema)
@@ -872,7 +873,7 @@ def model_mocker_factory(
         "Meta",
         (),
         {
-            "model": f"{app_label}.{get_model_name(table_schema)}",
+            "model": f"{app_label}.{factory.get_model_name(table_schema)}",
             "database": "default",
         },
     )
@@ -883,7 +884,7 @@ def model_mocker_factory(
     params_cls = type("Params", (), {"table_schema": table_schema})
 
     return type(
-        f"{get_model_name(table_schema)}_factory",
+        f"{factory.get_model_name(table_schema)}_factory",
         (DynamicModelMocker,),
         {
             **fields,
