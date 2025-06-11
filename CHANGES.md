@@ -1,3 +1,8 @@
+# 2025-06-05 (8.0.0-rc6)
+
+* Change DjangoModelFactory class so that the dataset version is part of the app_label.
+* Remove dependency on old model_factory and schema_models_factory
+
 # 2025-06-05 (8.0.0-rc5)
 
 * Create a DjangoModelFactory class that keeps track of the version, so relations are resolved
@@ -28,7 +33,7 @@
 
 # 2025-05-08 (7.7.2)
 
-* Add flag to schema_model_factory to create all tables. This way we can use it in create_tables, but
+* Add flag to schema_models_factory to create all tables. This way we can use it in create_tables, but
   not break the DSO-API.
 
 # 2025-05-08 (7.7.1)
