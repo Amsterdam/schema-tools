@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.db import connection
 
 from schematools.contrib.django import models
-from schematools.contrib.django.factories import model_factory
+from schematools.contrib.django.factories import DjangoModelFactory
 
 
 @pytest.mark.django_db
@@ -36,10 +36,10 @@ def test_remove_schema_and_tables(here):
             "db_table", flat=True
         )
     )
-
     for ds in models.Dataset.objects.all():
+        factory = DjangoModelFactory(ds)
         for table_schema in ds.schema.tables:
-            assert model_factory(ds, table_schema).objects.count() == 0
+            assert factory.build_model(table_schema).objects.count() == 0
 
     call_command("remove_schemas", "afvalwegingen", drop_tables=True)
 
