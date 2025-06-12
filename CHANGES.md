@@ -1,4 +1,9 @@
-# 2025-06-05 (8.0.0-rc6)
+# 2025-06-12 (8.0.0-rc7)
+
+* Bugfix in the import schemas flow, where we tried to clear cache that didn't exist, causing
+  errors.
+
+# 2025-06-11 (8.0.0-rc6)
 
 * Change DjangoModelFactory class so that the dataset version is part of the app_label.
 * Remove dependency on old model_factory and schema_models_factory
