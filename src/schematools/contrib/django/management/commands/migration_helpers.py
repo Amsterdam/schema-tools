@@ -44,8 +44,10 @@ def migrate(
     # Clear any models from the app cache to avoid confusion
     for vmajor in current_dataset.schema.versions:
         app_label = f"{current_dataset.schema.id}_{vmajor}"
-        del apps.all_models[app_label]
-        del apps.app_configs[app_label]
+        if app_label in apps.all_models:
+            del apps.all_models[app_label]
+        if app_label in apps.app_configs:
+            del apps.app_configs[app_label]
     apps.clear_cache()
 
     start_state = current_state
