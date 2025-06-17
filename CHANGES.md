@@ -1,3 +1,21 @@
+# 2025-06-17 (8.0.0)
+
+This new major release incorporates a few significant changes:
+
+* Versioned datasets
+  * Each dataset can have multiple versions available at the same time, along with
+    their relations. Relations outside of their own dataset will resolve to the default
+    version of the target database.
+  * Refactor of the CachedSchemaLoader and the consolidation of the model factory into
+    a class that can stay version-aware.
+  * Note: this is not backwards compatible, as it introduces some changes in the
+    structure of the database.
+* Upgrade psycopg2 to psycopg3
+* Mandatory Filtersets which help to be more fine-grained in authentication, ensuring
+  users cannot get a whole dataset, but must fill in some fields. Data on a need-to-know
+  basis is thereby better protected.
+
+
 # 2025-06-12 (8.0.0-rc7)
 
 * Bugfix in the import schemas flow, where we tried to clear cache that didn't exist, causing
