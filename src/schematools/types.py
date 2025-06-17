@@ -504,7 +504,7 @@ class DatasetSchema(SchemaType):
             return self.versions[version]
         except KeyError:
             raise DatasetVersionNotFound(
-                f"Version {version} not found in dataset. "
+                f"Version {version} not found in dataset {self.id}. "
                 f"Available versions are {list(self.versions)}"
             ) from None
 
