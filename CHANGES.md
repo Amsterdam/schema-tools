@@ -1,3 +1,8 @@
+# 2025-06-17 (8.1.0)
+
+* Add validation for stable datasets. Only new tables can be added to a stable dataset,
+  removing or changing a table will result in an error.
+
 # 2025-06-17 (8.0.0)
 
 This new major release incorporates a few significant changes:
