@@ -546,6 +546,37 @@ def _check_lifecycle_status(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
+def validate_dataset(
+    previous_tables: list[dict[str, str]],
+    current_tables: list[dict[str, str]],
+) -> list[str]:
+    """Validates that the current version of a stable dataset does not introduce breaking changes.
+
+    We check:
+    1. wheter an existing tables is removed
+    2. whether an existing table is changed to another version
+
+    NB. This is not a registered validator that has been registered, as here we have to
+    compare tables from two versions of the same dataset.
+    """
+    dataset_errors = []
+    for previous_table in previous_tables:
+        if previous_table["id"] not in [t["id"] for t in current_tables]:
+            dataset_errors.append(f"Table {previous_table['id']} has been removed.")
+            continue
+
+        current_table = next(
+            (table for table in current_tables if table["id"] == previous_table["id"]), None
+        )
+        if previous_table["$ref"] != current_table["$ref"]:
+            dataset_errors.append(
+                f"Table {previous_table['id']} has changed version. Previous version: "
+                f"{previous_table['$ref']}, current version: {current_table['$ref']}."
+            )
+
+    return dataset_errors
+
+
 PROPERTIES_INTRODUCING_BREAKING_CHANGES = ["type", "$ref", "format", "relation", "enum"]
 IGNORED_FIELDS = ["schema"]  # This is not a database column.
 

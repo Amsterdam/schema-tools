@@ -14,6 +14,7 @@ from schematools.validation import (
     _check_display,
     _check_maingeometry,
     _identifier_properties,
+    validate_dataset,
     validate_table,
 )
 
@@ -363,6 +364,47 @@ def test_check_lifecycle_status(schema_loader) -> None:
         "Dataset version (v0) cannot have a lifecycleStatus of 'stable' while being a non-production version."
         in errors[0].message
     )
+
+
+@pytest.mark.parametrize(
+    "prev,curr,errors",
+    [
+        # No changes
+        ([{"id": "table", "$ref": "table/v1"}], [{"id": "table", "$ref": "table/v1"}], []),
+        # Added table
+        (
+            [{"id": "table", "$ref": "table/v1"}],
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
+            [],
+        ),
+        # Removed table
+        (
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
+            [{"id": "table", "$ref": "table/v1"}],
+            ["Table table2 has been removed."],
+        ),
+        # Changed table version
+        (
+            [{"id": "table", "$ref": "table/v1"}],
+            [{"id": "table", "$ref": "table/v2"}],
+            [
+                "Table table has changed version. Previous version: table/v1, current version: table/v2."
+            ],
+        ),
+        # Multiple errors
+        (
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
+            [{"id": "table", "$ref": "table/v2"}],
+            [
+                "Table table has changed version. Previous version: table/v1, current version: table/v2.",
+                "Table table2 has been removed.",
+            ],
+        ),
+    ],
+)
+def test_validate_dataset(prev, curr, errors):
+    table_errors = validate_dataset(prev, curr)
+    assert table_errors == errors
 
 
 @pytest.mark.parametrize(
