@@ -1,6 +1,11 @@
-# 2025-06-18 (8.0.1)
+# 2025-06-18 (8.1.1)
 
 * Bugfix: fix path for nested datasets.
+
+# 2025-06-17 (8.1.0)
+
+* Add validation for stable datasets. Only new tables can be added to a stable dataset,
+  removing or changing a table will result in an error.
 
 # 2025-06-17 (8.0.0)
 

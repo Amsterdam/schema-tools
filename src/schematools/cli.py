@@ -461,6 +461,60 @@ def validate(
     sys.exit(exit_status)
 
 
+@schema.command()
+@click.argument(
+    "paths",
+    nargs=-1,
+)
+@click.option(
+    "--prefix",
+    default="previous",
+    help=("Prefix of the file that the files in the paths should be validated against."),
+)
+def validate_datasets(paths: tuple[str], prefix: str):
+    """
+    Compares two versions of a dataset to ensure no tables are changed on a stable dataset.
+    """
+    has_errors = False
+
+    for path in paths:
+        path_parts = path.split("/")
+        path_parts[-1] = f"{prefix}-{path_parts[-1]}"
+        previous_path = "/".join(path_parts)
+        previous = read_json_path(previous_path)
+        current = read_json_path(path)
+        for vmajor, current_version in current.get("versions").items():
+            try:
+                previous_version = previous["versions"][vmajor]
+            except KeyError:
+                click.echo("Dataset has no previous version")
+                continue
+            # We can skip checks as long as the previous version was experimental.
+            if (
+                previous_version["lifecycleStatus"]
+                == DatasetTableSchema.LifecycleStatus.experimental.value
+            ):
+                continue
+
+            click.echo("Validating stable dataset for changes. Only additions are allowed.")
+
+            dataset_errors = validation.validate_dataset(
+                previous_version["tables"], current_version["tables"]
+            )
+            if len(dataset_errors) > 0:
+                has_errors = True
+                click.echo("FAIL")
+                for error in dataset_errors:
+                    click.echo(f"\t- {error}", err=True)
+
+    if has_errors:
+        click.echo("Breaking changes detected. Validation failed.")
+        sys.exit(1)
+    else:
+        click.echo("No breaking changes introduced in stable datasets.")
+        sys.exit(0)
+
+
 def version_from_metaschema_url(url: str) -> SemVer:  # noqa: D103
     return SemVer(url.rpartition("@")[2])
 
