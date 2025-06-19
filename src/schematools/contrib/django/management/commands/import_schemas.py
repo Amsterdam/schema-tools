@@ -115,6 +115,7 @@ class Command(BaseCommand):
                 # The folder might be a sub path in the repository,
                 # in which case only a few datasets will be imported.
                 schemas.update(_get_shared_loader(file).get_all_datasets())
+                self.loader = _get_shared_loader(file)
             else:
                 # Previous logic also allowed selecting a single file by name.
                 # This still needs to resolve the root to resolve relations,
@@ -128,14 +129,14 @@ class Command(BaseCommand):
                     path = dataset.id  # workaround for unit tests
 
                 schemas.update({path: dataset})
-
+                self.loader = _get_shared_loader(root)
         return schemas
 
     def get_schemas_from_url(self, schema_url) -> dict[str, DatasetSchema]:
         """Import all schema definitions from a URL"""
         self.stdout.write(f"Loading schema from {schema_url}")
-        loader = get_schema_loader(schema_url, loaded_callback=self._loaded_callback)
-        return loader.get_all_datasets()
+        self.loader = get_schema_loader(schema_url, loaded_callback=self._loaded_callback)
+        return self.loader.get_all_datasets()
 
     def _loaded_callback(self, schema: DatasetSchema):
         """Track which schema's get loaded. This is also used for dependency tracking."""
@@ -175,7 +176,8 @@ class Command(BaseCommand):
 
     def _run_import(self, dataset_schemas: dict[str, DatasetSchema]) -> list[Dataset]:
         datasets = []
-        for path, schema in dataset_schemas.items():
+        for id, schema in dataset_schemas.items():
+            path = self.loader._get_dataset_path(id)
             self.stdout.write(f"* Processing {schema.id}")
             dataset = self._import(schema, path)
             if dataset is not None:
