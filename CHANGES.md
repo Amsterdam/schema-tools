@@ -1,3 +1,7 @@
+# 2025-06-18 (8.0.1)
+
+* Bugfix: fix path for nested datasets.
+
 # 2025-06-17 (8.0.0)
 
 This new major release incorporates a few significant changes:
