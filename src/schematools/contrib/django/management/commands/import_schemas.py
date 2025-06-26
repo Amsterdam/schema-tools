@@ -7,11 +7,12 @@ from django.conf import settings
 from django.core.management import BaseCommand
 from django.db import transaction
 
+from schematools import validation
 from schematools.contrib.django.factories import DjangoModelFactory
-from schematools.contrib.django.management.commands.migration_helpers import migrate
+from schematools.contrib.django.management.commands.migration_helpers import drop_table, migrate
 from schematools.contrib.django.models import Dataset
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
-from schematools.types import DatasetSchema
+from schematools.types import DatasetSchema, DatasetTableSchema
 
 from .create_tables import create_tables
 from .create_views import create_views
@@ -75,6 +76,31 @@ class Command(BaseCommand):
                         current_table.id, include_nested=False, include_through=False
                     )
                     if current_table.version.vmajor == updated_table.version.vmajor:
+                        # If the table is experimental and there are breaking changes to the table,
+                        # drop the table
+                        if (
+                            current_table.lifecycle_status
+                            == DatasetTableSchema.LifecycleStatus.experimental
+                        ):
+                            previous_fields = current_table.json_data()["schema"]["properties"]
+                            next_fields = updated_table.json_data()["schema"]["properties"]
+                            table_errors = validation.validate_table(previous_fields, next_fields)
+                            if len(table_errors) > 0:
+                                if not options["create_tables"]:
+                                    self.stdout.write(
+                                        "Not dropping table, as create_tables is set to false."
+                                    )
+                                elif self.dry_run:
+                                    self.stdout.write(
+                                        f"Would drop and replace table {current_table.db_name}."
+                                    )
+                                else:
+                                    # drop the table and rely on create_tables to create it again.
+                                    drop_table(current_table.db_name)
+                                # do not migrate in this case.
+                                continue
+
+                        # Migrate the table, no breaking changes
                         migrate(
                             self,
                             current_dataset,
