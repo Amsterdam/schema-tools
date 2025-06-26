@@ -1,3 +1,8 @@
+# 2025-06-26 (8.2.0)
+
+* Drop and replace experimental tables in import if and only if they contain breaking changes
+* Fixed argument type bug which resulted in wrong scopes in db.
+
 # 2025-06-25 (8.1.2)
 
 * Bugfix: Ensure .filtered roles are available for all scopes.
