@@ -76,7 +76,7 @@ def drop_table(table_id):
     """Drop a database table."""
     connection = connections[DEFAULT_DB_ALIAS]
     with connection.schema_editor() as schema_editor:
-        schema_editor.execute(f"DROP TABLE {table_id};")
+        schema_editor.execute(f"DROP TABLE IF EXISTS {table_id};")
 
 
 def get_base_project_state(

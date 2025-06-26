@@ -237,3 +237,25 @@ def test_import_schema_doesnt_drop_experimental_table_with_non_breaking_change_d
         """ALTER TABLE "experimental_experimentaltable_v1" ADD COLUMN "another" bigint NULL;"""
         in captured.out
     )
+
+
+@pytest.mark.django_db
+def test_import_schema_drop_experimental_table_with_m2m_also_drops_through_table(here, capsys):
+    original = here / "files/datasets/experimental/original_m2m.json"
+    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    assert models.Dataset.objects.count() == 1
+
+    # There's a through table
+    with connection.cursor() as cursor:
+        cursor.execute("""SELECT table_name FROM information_schema.tables""")
+        tables = [col for row in cursor.fetchall() for col in row]
+        assert "experimental_experimentaltable_ligt_in_other_table_v1" in tables
+
+    updated = here / "files/datasets/experimental/removed_field_m2m.json"
+    call_command("import_schemas", updated, dry_run=False, create_tables=1)
+
+    # Through table has been deleted
+    with connection.cursor() as cursor:
+        cursor.execute("""SELECT table_name FROM information_schema.tables""")
+        tables = [col for row in cursor.fetchall() for col in row]
+        assert "experimental_experimentaltable_ligt_in_other_table_v1" not in tables
