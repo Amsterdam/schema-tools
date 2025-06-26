@@ -157,3 +157,83 @@ def test_import_schema_enables_and_disables_api_based_on_status(here):
     assert models.Dataset.objects.count() == 2
     assert models.Dataset.objects.get(name="hr").enable_api is True
     assert models.Dataset.objects.get(name="woonplaatsen").enable_api is False
+
+
+@pytest.mark.django_db
+def test_import_schema_drops_experimental_table_with_breaking_change(here):
+    original = here / "files/datasets/experimental/original.json"
+    call_command("import_schemas", original, dry_run=False, create_tables=1)
+
+    assert models.Dataset.objects.count() == 1
+    table = models.DatasetTable.objects.get(name="experimentaltable")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""SELECT
+                column_name
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table.db_table}'
+            """
+        )
+        columns = [col for row in cursor.fetchall() for col in row]
+        assert "other" in columns
+
+    updated = here / "files/datasets/experimental/removed_field.json"
+    call_command("import_schemas", updated, dry_run=False, create_tables=1)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""SELECT
+                column_name
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table.db_table}'
+            """
+        )
+        columns = [col for row in cursor.fetchall() for col in row]
+        assert "other" not in columns
+
+
+@pytest.mark.django_db
+def test_import_schema_drops_experimental_table_with_breaking_change_no_create_tables(
+    here, capsys
+):
+    original = here / "files/datasets/experimental/original.json"
+    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    assert models.Dataset.objects.count() == 1
+
+    updated = here / "files/datasets/experimental/removed_field.json"
+    call_command("import_schemas", updated, dry_run=False, create_tables=False)
+    captured = capsys.readouterr()
+    assert """Not dropping table, as create_tables is set to false.""" in captured.out
+
+
+@pytest.mark.django_db
+def test_import_schema_drops_experimental_table_with_breaking_change_dry_run(here, capsys):
+    original = here / "files/datasets/experimental/original.json"
+    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    assert models.Dataset.objects.count() == 1
+
+    updated = here / "files/datasets/experimental/removed_field.json"
+    call_command("import_schemas", updated, dry_run=True, create_tables=1)
+    captured = capsys.readouterr()
+    assert """Would drop and replace table experimental_experimentaltable_v1.""" in captured.out
+
+
+@pytest.mark.django_db
+def test_import_schema_doesnt_drop_experimental_table_with_non_breaking_change_dry_run(
+    here, capsys
+):
+    original = here / "files/datasets/experimental/original.json"
+    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    assert models.Dataset.objects.count() == 1
+
+    updated = here / "files/datasets/experimental/new_field.json"
+    call_command("import_schemas", updated, dry_run=True, create_tables=1)
+    captured = capsys.readouterr()
+    assert (
+        """ALTER TABLE "experimental_experimentaltable_v1" ADD COLUMN "another" bigint NULL;"""
+        in captured.out
+    )
