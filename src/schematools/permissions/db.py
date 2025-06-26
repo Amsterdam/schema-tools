@@ -116,8 +116,11 @@ def apply_schema_and_profile_permissions(
 
                 if create_roles:
                     for scope in all_scopes or []:
+                        role = _scope_to_role(scope)
+                        filtered_role = f"{role}.filtered"
+                        _create_role_if_not_exists(conn, role, verbose=verbose, dry_run=dry_run)
                         _create_role_if_not_exists(
-                            conn, _scope_to_role(scope), verbose=verbose, dry_run=dry_run
+                            conn, filtered_role, inherits=role, verbose=verbose, dry_run=dry_run
                         )
 
                 # Apply privileges for all datasets, or the selected dataset.
