@@ -305,11 +305,11 @@ def permissions_apply(
         loader = FileSystemSchemaLoader.from_file(schema_filename)
         dataset_schema = loader.get_dataset_from_file(schema_filename)
         schemas = {dataset_schema.id: dataset_schema}
-        scopes = loader.get_all_scopes()
+        scopes = loader.get_all_scopes().values()
     else:
         loader = get_schema_loader(schema_url)
         schemas = loader.get_all_datasets()
-        scopes = loader.get_all_scopes()
+        scopes = loader.get_all_scopes().values()
 
     if profile_filename:
         profiles = [ProfileSchema.from_file(profile_filename)]
