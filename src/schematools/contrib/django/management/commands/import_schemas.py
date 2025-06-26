@@ -96,6 +96,9 @@ class Command(BaseCommand):
                                     )
                                 else:
                                     # drop the table and rely on create_tables to create it again.
+                                    for field in current_table.fields:
+                                        if through_table := field.through_table:
+                                            drop_table(through_table.db_name)
                                     drop_table(current_table.db_name)
                                 # do not migrate in this case.
                                 continue
