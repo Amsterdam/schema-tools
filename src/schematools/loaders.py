@@ -662,7 +662,7 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
         return profiles
 
 
-def get_schema_loader(schema_url: URL | str | None = None, **kwargs) -> SchemaLoader:
+def get_schema_loader(schema_url: URL | str | None = None, **kwargs) -> CachedSchemaLoader:
     """Initialize the schema loader based on the given location.
 
     schema_url:
