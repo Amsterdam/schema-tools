@@ -72,6 +72,13 @@ def migrate(
     return start_state
 
 
+def drop_table(table_id):
+    """Drop a database table."""
+    connection = connections[DEFAULT_DB_ALIAS]
+    with connection.schema_editor() as schema_editor:
+        schema_editor.execute(f"DROP TABLE {table_id};")
+
+
 def get_base_project_state(
     command: BaseCommand, dataset_model: Dataset, exclude_table: str, real_apps: list[str]
 ) -> ProjectState:
