@@ -1,3 +1,7 @@
+# 2025-06-25 (8.1.2)
+
+* Bugfix: Ensure .filtered roles are available for all scopes.
+
 # 2025-06-18 (8.1.1)
 
 * Bugfix: fix path for nested datasets.
