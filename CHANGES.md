@@ -1,3 +1,7 @@
+# 2025-06-30 (8.2.1)
+
+* Bugfix: URLProfileLoader called a possibly non-existent callback. Added check.
+
 # 2025-06-26 (8.2.0)
 
 * Drop and replace experimental tables in import if and only if they contain breaking changes
