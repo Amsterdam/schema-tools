@@ -649,7 +649,8 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
     def get_profile(self, profile_id: str) -> ProfileSchema:
         data = self._read_json_url(self.profiles_url / f"{profile_id}.json")
         schema = ProfileSchema.from_dict(data)
-        self._loaded_callback(schema)
+        if self._loaded_callback is not None:
+            self._loaded_callback(schema)
         return schema
 
     def get_all_profiles(self) -> list[ProfileSchema]:
