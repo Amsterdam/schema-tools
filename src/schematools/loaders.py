@@ -21,6 +21,7 @@ from schematools import (
 from schematools.exceptions import (
     DatasetNotFound,
     DatasetTableNotFound,
+    DuplicateProfileId,
     DuplicateScopeId,
     SchemaObjectNotFound,
 )
@@ -646,8 +647,8 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
         )
         self._loaded_callback = loaded_callback
 
-    def get_profile(self, profile_id: str) -> ProfileSchema:
-        data = self._read_json_url(self.profiles_url / f"{profile_id}.json")
+    def get_profile(self, datateam, profile_id: str) -> ProfileSchema:
+        data = self._read_json_url(self.profiles_url / datateam / f"{profile_id}.json")
         schema = ProfileSchema.from_dict(data)
         if self._loaded_callback is not None:
             self._loaded_callback(schema)
@@ -656,10 +657,17 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
     def get_all_profiles(self) -> list[ProfileSchema]:
         profiles = []
         with self._persistent_connection():
-            index = self._read_json_url(self.profiles_url / "index")
-            for name in index:
-                profiles.append(self.get_profile(name))
-
+            index: dict[str, list[str]] = self._read_json_url(self.profiles_url / "index")
+            seen = []
+            for datateam, profile_list in index.items():
+                for name in profile_list:
+                    profile = self.get_profile(datateam, name)
+                    if profile.id in seen:
+                        raise DuplicateProfileId(
+                            f'Profile ID "{profile.id} is already used in another profile'
+                        )
+                    seen.append(profile.id)
+                    profiles.append(profile)
         return profiles
 
 

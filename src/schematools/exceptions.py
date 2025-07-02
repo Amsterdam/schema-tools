@@ -43,6 +43,10 @@ class DuplicateScopeId(ValueError):
     """The ID is already used in another scope."""
 
 
+class DuplicateProfileId(ValueError):
+    """The ID is already used for another profile."""
+
+
 class ScopeNotFound(SchemaObjectNotFound):
     """The scope could not be found."""
 
