@@ -664,7 +664,7 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
                     profile = self.get_profile(datateam, name)
                     if profile.id in seen:
                         raise DuplicateProfileId(
-                            f'Profile ID "{profile.id} is already used in another profile'
+                            f'Profile ID "{profile.id}" is already used in another profile'
                         )
                     seen.append(profile.id)
                     profiles.append(profile)
