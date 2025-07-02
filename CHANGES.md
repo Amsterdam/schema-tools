@@ -1,3 +1,8 @@
+# 2025-07-02 (8.2.2)
+
+* We now handle profiles a little bit different, as the structure of the index file has been
+  nested by team.
+
 # 2025-06-30 (8.2.1)
 
 * Bugfix: URLProfileLoader called a possibly non-existent callback. Added check.
