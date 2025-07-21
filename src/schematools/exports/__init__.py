@@ -62,7 +62,7 @@ class BaseExporter:
     ):
         parent_scopes = set(dataset_schema.auth | table.auth) - {_PUBLIC_SCOPE}
         for field in table.fields:
-            if field.is_array and self.extension != "geojson":
+            if field.is_array and not (self.extension == "geojson" or self.extension == "jsonl"):
                 continue
             if field.is_internal:
                 continue
