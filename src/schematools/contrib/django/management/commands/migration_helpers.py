@@ -177,6 +177,8 @@ def execute_migration(
 
         # Filter out ALTER COLUMN statements
         collected_sql = _filter_alter_type_statements(schema_editor.collected_sql)
+        # Escape % signs
+        collected_sql = _escape_comment_statements(collected_sql)
 
         # If we've only got comments left, skip this migration
         if all(statement.startswith("--") for statement in collected_sql):
@@ -200,6 +202,13 @@ def _filter_alter_type_statements(sql: list) -> list:
           adding or changing a db_comment
     """
     return [s for s in sql if not re.search(r"ALTER COLUMN.+TYPE", s)]
+
+
+def _escape_comment_statements(sql: list) -> list:
+    """Escape percent signs in comments from the generated SQL since this causes issues
+    when executing this on the database.
+    """
+    return [s.replace("%", "%%") if re.search(r"COMMENT.+", s) else s for s in sql]
 
 
 class PatchedModelState(ModelState):
