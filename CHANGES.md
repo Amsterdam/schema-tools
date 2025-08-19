@@ -1,3 +1,7 @@
+# 2025-08-19 (8.2.3)
+
+* Escape percent sign in database comments
+
 # 2025-07-02 (8.2.2)
 
 * We now handle profiles a little bit different, as the structure of the index file has been
