@@ -18,7 +18,6 @@ directory of schemas denoted by the `SCHEMA_URL` environment variable or the
 will try to load the schema for `mydataset` from
 `myschemas/mydataset/dataset.json`.
 
-
 ## Generate amsterdam schema from existing database tables
 
 The --prefix argument controls whether table prefixes are removed in the
@@ -47,7 +46,6 @@ To convert from relational tables back to jsonschema:
 
     schema show schema <id of dataset>
 
-
 ## Generating amsterdam schema from existing GeoJSON files
 
 The following command can be used to inspect and import the GeoJSON files:
@@ -65,7 +63,6 @@ It is also possible to read GOB events from a batch file with line-separeted eve
 
     schema import events <path-to-dataset> <path-to-file-with-events>
 
-
 ## Export datasets
 
 Datasets can be exported to different file formats. Currently supported are geopackage,
@@ -75,7 +72,6 @@ csv and jsonlines. The command for exporting the dataset tables is:
 
 The command has several command-line options that can be used. Documentations about these
 flags can be shown using the `--help` options.
-
 
 ## Schema Tools as a pre-commit hook
 
@@ -124,8 +120,8 @@ schema-tools, make sure one of the commit increments the version number in
   ``git checkout master && git fetch origin && git merge --ff-only origin/master``;
 * tag the release X.Y.Z with ``git tag -a vX.Y.Z -m "Bump to vX.Y.Z"``;
 * push the tag to GitHub with ``git push origin --tags``;
-* release to PyPI: ``make upload`` (requires the PyPI secret).
-
+* release to PyPI: ``make upload``. This requires the PyPI secret, which you should then have available in your ``~/.pypirc``,
+  ([instructions](https://packaging.python.org/en/latest/specifications/pypirc/#using-a-pypi-token)).
 
 ## Mocking data
 
