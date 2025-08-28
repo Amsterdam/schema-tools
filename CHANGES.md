@@ -1,3 +1,7 @@
+# 2025-08-28 (8.3.0)
+
+* Validation for shortnames and abbreviated field names
+
 # 2025-08-19 (8.2.3)
 
 * Escape percent sign in database comments

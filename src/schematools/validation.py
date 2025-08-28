@@ -213,6 +213,54 @@ def _postgres_identifier_length(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
+@_register_validator("PostgreSQL duplicate shortnames")
+def _postgres_duplicate_shortnames(dataset: DatasetSchema) -> Iterator[str]:
+    """
+    A shortname can be set for fieldnames.
+    These shortnames should however not be identical.
+    """
+
+    for table in dataset.get_tables(include_nested=True, include_through=True):
+        shortnames = {}
+        for field in table.get_fields():
+            if field.has_shortname:
+                if field.shortname in shortnames:
+                    shortnames[field.shortname].append(field.id)
+                else:
+                    shortnames[field.shortname] = [field.id]
+
+        for name, fields in shortnames.items():
+            if len(fields) > 1:
+                field_names = ",".join(fields)
+                yield (f"Duplicate shortname '{name}' found for field: '{field_names}'")
+
+
+@_register_validator("PostgreSQL duplicate abbreviated fieldnames")
+def _postgres_duplicate_abbreviated_fieldnames(dataset: DatasetSchema) -> Iterator[str]:
+    """Validate inferred PostgreSQL field names are not the same after being cut to 63 characters.
+
+    PostgreSQL has a maximum length for identifiers such as field names.
+    A shortname can be set such that identifiers are not exceeding this limit.
+    Ensure that we do not have identical identifiers.
+    """
+
+    for table in dataset.get_tables(include_nested=True, include_through=True):
+        fieldnames = {}
+        for field in table.get_fields():
+            if not field.has_shortname:
+                field_name = field.id
+                trimmed_name = field_name[:MAX_TABLE_NAME_LENGTH]
+                if trimmed_name in fieldnames:
+                    fieldnames[trimmed_name].append(field_name)
+                else:
+                    fieldnames[trimmed_name] = [field_name]
+
+        for fields in fieldnames.values():
+            if len(fields) > 1:
+                names = "', '".join(fields)
+                yield (f"Fields '{names}' share the same first 63 characters. Add a shortname.")
+
+
 @_register_validator("repetitive identifiers")
 def _repetitive_naming(dataset: DatasetSchema) -> Iterator[str]:
     """Identifier names should not repeat enclosing dataset/table names.
