@@ -160,7 +160,23 @@ def test_postgres_duplicate_shortnames(schema_loader) -> None:
     assert error.validator_name == "PostgreSQL duplicate shortnames"
     assert error.message == "Duplicate shortname 'sameName' found for field: 'veld1,veld2'"
 
-    dataset = schema_loader.get_dataset_from_file("stadsdelen.json")
+
+def test_postgres_duplicate_abbreviated_fieldnames(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("abbreviated_fieldnames.json")
+
+    error = next(validation.run(dataset))
+    assert error
+    assert error.validator_name == "PostgreSQL duplicate abbreviated fieldnames"
+    assert (
+        error.message
+        == "Fields 'eenVestigingIsGebouwOfEenComplexGebouwenDuurzameUitoefeningActiviteitenOndernemingRechtspersoon',"
+        " 'eenVestigingIsGebouwOfEenComplexGebouwenDuurzameUitoefeningActiviteitenOndernemingRechtspersoon2' share "
+        "the same first 63 characters. Add a shortname."
+    )
+
+
+def test_postgres_duplicate_abbreviated_fieldnames_with_shortname(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("abbreviated_fieldnames_with_shortname.json")
     assert list(validation.run(dataset)) == []  # no validation errors
 
 
