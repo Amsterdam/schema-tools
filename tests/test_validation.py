@@ -152,6 +152,18 @@ def test_postgres_identifier_length(schema_loader) -> None:
     assert list(validation.run(dataset)) == []  # no validation errors
 
 
+def test_postgres_duplicate_shortnames(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("duplicate_shortnames.json")
+
+    error = next(validation.run(dataset))
+    assert error
+    assert error.validator_name == "PostgreSQL duplicate shortnames"
+    assert error.message == "Duplicate shortname 'sameName' found for field: 'veld1,veld2'"
+
+    dataset = schema_loader.get_dataset_from_file("stadsdelen.json")
+    assert list(validation.run(dataset)) == []  # no validation errors
+
+
 def test_identifier_properties(schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("identifier_ref.json")
     error = next(validation.run(dataset))

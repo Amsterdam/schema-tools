@@ -213,6 +213,29 @@ def _postgres_identifier_length(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
+@_register_validator("PostgreSQL duplicate shortnames")
+def _postgres_duplicate_shortnames(dataset: DatasetSchema) -> Iterator[str]:
+    """Validate inferred PostgreSQL table names are not the same after being cut to 63 characters.
+
+    PostgreSQL has a maximum length for identifiers such as table names.
+    A shortname can be set such that identifiers are not exceeding this limit.
+    Those shortnames should however not be identical.
+    """
+
+    for table in dataset.get_tables(include_nested=True, include_through=True):
+        shortnames = {}
+        for field in table.get_fields():
+            if field.has_shortname:
+                if field.shortname in shortnames:
+                    shortnames[field.shortname].append(field.id)
+                else:
+                    shortnames[field.shortname] = [field.id]
+
+        for name, fields in shortnames.items():
+            if len(fields) > 1:
+                yield (f"Duplicate shortname '{name}' found for field: '{",".join(fields)}'")
+
+
 @_register_validator("repetitive identifiers")
 def _repetitive_naming(dataset: DatasetSchema) -> Iterator[str]:
     """Identifier names should not repeat enclosing dataset/table names.
