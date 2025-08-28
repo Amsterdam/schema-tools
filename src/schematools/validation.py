@@ -231,7 +231,8 @@ def _postgres_duplicate_shortnames(dataset: DatasetSchema) -> Iterator[str]:
 
         for name, fields in shortnames.items():
             if len(fields) > 1:
-                yield (f"Duplicate shortname '{name}' found for field: '{",".join(fields)}'")
+                field_names = ",".join(fields)
+                yield (f"Duplicate shortname '{name}' found for field: '{field_names}'")
 
 
 @_register_validator("PostgreSQL duplicate abbreviated fieldnames")
@@ -256,10 +257,8 @@ def _postgres_duplicate_abbreviated_fieldnames(dataset: DatasetSchema) -> Iterat
 
         for fields in fieldnames.values():
             if len(fields) > 1:
-                yield (
-                    f"Fields '{"', '".join(fields)}' share the same first 63 characters. "
-                    "Add a shortname."
-                )
+                names = "', '".join(fields)
+                yield (f"Fields '{names}' share the same first 63 characters. Add a shortname.")
 
 
 @_register_validator("repetitive identifiers")
