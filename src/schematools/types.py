@@ -589,12 +589,14 @@ class DatasetSchema(SchemaType):
         include_nested: bool = True,
         include_through: bool = True,
     ) -> DatasetTableSchema:
-        """Get table by id. Kept in place for backwards compatibility, but uses the
-        specified (or default) version."""
-        version = version if version else self.default_version
-        version_schema = self.get_version(version)
-        return version_schema.get_table_by_id(
-            table_id, include_nested=include_nested, include_through=include_through
+        """Get table by id. Kept in place for backwards compatibility, can find tables in
+        all versions."""
+        return next(
+            table
+            for table in self.get_all_tables(
+                include_nested=include_nested, include_through=include_through
+            )
+            if to_snake_case(table.id) == to_snake_case(table_id)
         )
 
     @property

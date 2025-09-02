@@ -178,7 +178,7 @@ def _collect_dataset_write_grants(conn: Connection, ams_schema: DatasetSchema) -
     """Sets write permissions for the indicated dataset."""
     grantee = f"write_{ams_schema.db_name}"
     all_grants = []
-    for table in ams_schema.get_tables(include_nested=True, include_through=True):
+    for table in ams_schema.get_all_tables(include_nested=True, include_through=True):
         all_grants.extend(
             _build_table_grants(
                 conn,
@@ -230,7 +230,7 @@ def _collect_dataset_grants(
         ]
     """
     grants = []
-    for table in dataset.get_tables(include_nested=True, include_through=True):
+    for table in dataset.get_all_tables(include_nested=True, include_through=True):
         table_scopes = (table.scopes - PUBLIC_SCOPES) or dataset.scopes
         fields = [
             field
@@ -287,7 +287,7 @@ def _collect_profile_grants(
         if profile_dataset.permissions.level >= PermissionLevel.LETTERS:
             # READ access on dataset level.
             # Giving read access to a whole dataset.
-            for table in dataset.get_tables(include_nested=True, include_through=True):
+            for table in dataset.get_all_tables(include_nested=True, include_through=True):
                 grants.extend(_build_table_grants(conn, table, ["SELECT"], grantees))
         else:
             dataset_tables = {table.id: table for table in dataset.tables}
