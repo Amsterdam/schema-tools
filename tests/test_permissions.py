@@ -468,6 +468,36 @@ class TestReadPermissions:
         )
         _check_select_permission_denied(engine, "level_c", "gebieden_buurten_v1")
 
+    def test_check_all_versions_get_permissions(self, engine, schema_loader, dbsession) -> None:
+        """Ensure that permissions are applied to both stable and experimental versions
+        of a dataset."""
+        dataset = schema_loader.get_dataset_from_file("auth_on_multiple_versions.json")
+        importer = NDJSONImporter(dataset, engine)
+        importer.generate_db_objects(
+            "productiontable",
+            truncate=True,
+            ind_tables=True,
+            ind_extra_index=False,
+        )
+        importer.generate_db_objects(
+            "experimentaltable",
+            truncate=True,
+            ind_tables=True,
+            ind_extra_index=False,
+        )
+
+        _create_role(engine, "scope_fp_mdw")
+        _create_role(engine, "write_dataset")
+
+        for table in ["dataset_productiontable_v1", "dataset_experimentaltable_v1"]:
+            _check_select_permission_denied(engine, "scope_fp_mdw", table)
+
+        apply_schema_and_profile_permissions(engine, dataset, [])
+
+        for table in ["dataset_productiontable_v1", "dataset_experimentaltable_v1"]:
+            _check_select_permission_granted(engine, "scope_fp_mdw", table)
+            _check_insert_permission_granted(engine, "write_dataset", table, "id", "'a3be'")
+
     def test_auth_list_permissions(
         self, engine, gebieden_schema_auth_list, gebieden_profiles, dbsession, caplog
     ):

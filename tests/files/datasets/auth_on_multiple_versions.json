@@ -1,0 +1,74 @@
+{
+  "type": "dataset",
+  "id": "dataset",
+  "title": "Schema defaultVersion Validation Test",
+  "description": "Schema for unit testing defaultVersion",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "productiontable",
+          "title": "Table to test production versions table with auth",
+          "type": "table",
+          "version": "1.0.0",
+          "auth": "FP/MDW",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "identifier": "id",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "schema"],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3#/definitions/schema"
+              },
+              "id": {
+                "title": "id",
+                "type": "string",
+                "description": "Unieke identificatie"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "v2": {
+      "status": "niet_beschikbaar",
+      "lifecycleStatus": "experimental",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "experimentaltable",
+          "title": "Table to test non production versions table auth",
+          "type": "table",
+          "version": "1.0.0",
+          "auth": "FP/MDW",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "identifier": "id",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "schema"],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3#/definitions/schema"
+              },
+              "id": {
+                "title": "id",
+                "type": "string",
+                "description": "Unieke identificatie"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "publisher": "unknown"
+}
