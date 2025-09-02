@@ -102,7 +102,7 @@ def tables_factory(
     """
     tables = {}
     metadata = metadata or MetaData()
-    dataset_tables = dataset.get_tables(include_nested=True, include_through=True)
+    dataset_tables = dataset.get_all_tables(include_nested=True, include_through=True)
 
     # For compatibility and consistency, allow snake-cased table ID's
     db_table_names = _snake_keys(db_table_names) if db_table_names else {}
