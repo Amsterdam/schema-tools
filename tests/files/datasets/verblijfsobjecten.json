@@ -8,7 +8,7 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "niet_beschikbaar",
+      "status": "beschikbaar",
       "lifecycleStatus": "stable",
       "version": "0.0.1",
       "tables": [
