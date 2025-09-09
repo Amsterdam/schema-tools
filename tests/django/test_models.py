@@ -79,9 +79,19 @@ class TestDjangoModelFactory:
     @pytest.mark.django_db
     def test_model_factory_versioned_tables(self, metaschemav3_dataset):
         """Prove that versioned tables can be created"""
+
+        # Make all versions "beschikbaar"
+        metaschemav3_dataset.schema.versions["v0"].data["status"] = "beschikbaar"
         factory = DjangoModelFactory(metaschemav3_dataset)
         table_names = [cls._meta.db_table for cls in factory.build_models()]
         assert table_names == ["metaschema_3_table_v0", "metaschema_3_table_v1"]
+
+    @pytest.mark.django_db
+    def test_model_factory_unavailable_versioned_tables(self, metaschemav3_dataset):
+        """Prove that tables of unavailable versions are not be created"""
+        factory = DjangoModelFactory(metaschemav3_dataset)
+        table_names = [cls._meta.db_table for cls in factory.build_models()]
+        assert table_names == ["metaschema_3_table_v1"]
 
     @pytest.mark.django_db
     def test_model_factory_relations(self, afval_dataset):
