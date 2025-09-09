@@ -16,6 +16,7 @@ from factory.declarations import BaseDeclaration
 from schematools import SRID_3D
 from schematools.contrib.django import app_config, signals
 from schematools.contrib.django.fields import UnlimitedCharField
+from schematools.exceptions import ParserError
 from schematools.naming import to_snake_case
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
@@ -135,6 +136,13 @@ class DjangoModelFactory:
         Ensures relations are built properly between versions.
         """
         for vmajor, version in self.schema.versions.items():
+
+            # TODO: replace status property by lifecycle property
+            try:
+                if version.status == DatasetSchema.Status.niet_beschikbaar:
+                    continue
+            except ParserError:
+                pass
             self._current_version = vmajor
             for table in version.get_tables(include_nested=True, include_through=True):
                 self.models.append(self.build_model(table))
