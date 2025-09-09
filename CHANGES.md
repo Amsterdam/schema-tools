@@ -1,3 +1,7 @@
+# 2025-09-09 (8.3.2)
+
+* Only create dynamic models for available dataset versions
+
 # 2025-08-28 (8.3.1)
 
 * Bugfix: permissions are applied to all tables, not just those in the default version.
