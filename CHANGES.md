@@ -1,3 +1,7 @@
+# 2025-09-10 (8.3.3)
+
+* Validate that the default version is enabled instead of the only enabled version.
+
 # 2025-09-09 (8.3.2)
 
 * Only create dynamic models for available dataset versions
