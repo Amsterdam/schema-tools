@@ -363,6 +363,15 @@ def test_check_default_version(schema_loader) -> None:
     assert "Default version v2 is not enabled." in errors[0].message
 
 
+def test_check_default_version_is_experimental(schema_loader) -> None:
+    """Ensure that if there is only one version and it is experimental, it does not matter that
+    the default version is unavailable."""
+    dataset = schema_loader.get_dataset_from_file("schema_default_version_experimental.json")
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 0
+
+
 def test_production_version_tables(schema_loader) -> None:
     dataset = schema_loader.get_dataset("production_version")
 

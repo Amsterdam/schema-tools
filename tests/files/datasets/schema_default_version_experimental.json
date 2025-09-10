@@ -1,0 +1,16 @@
+{
+  "type": "dataset",
+  "id": "schemadefaultversion",
+  "title": "Schema defaultVersion Validation Test",
+  "description": "Schema for unit testing defaultVersion with experimental version",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "niet_beschikbaar",
+      "lifecycleStatus": "experimental",
+      "version": "1.0.0",
+      "tables": []
+    }
+  },
+  "publisher": "unknown"
+}
