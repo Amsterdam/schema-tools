@@ -1,3 +1,7 @@
+# 2025-09-10 (8.3.4)
+
+* Add migrate tables flag to import schemas.
+
 # 2025-09-10 (8.3.3)
 
 * Validate that the default version is enabled instead of the only enabled version.
