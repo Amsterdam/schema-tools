@@ -355,11 +355,12 @@ def test_check_default_version(schema_loader) -> None:
     errors = list(validation.run(dataset))
     assert len(errors) == 0
 
-    # Prove that wrong default version gives an error
+    # Prove that disabled default version gives an error (when there are multiple versions)
     dataset["defaultVersion"] = "v2"
+    dataset["versions"]["v2"]["status"] = "niet_beschikbaar"
     errors = list(validation.run(dataset))
     assert len(errors) == 1
-    assert "Default version v2 does not match enabled version v1" in errors[0].message
+    assert "Default version v2 is not enabled." in errors[0].message
 
 
 def test_production_version_tables(schema_loader) -> None:
