@@ -13,7 +13,7 @@ def pytest_configure(config):
     databases = {
         "default": env.db_url(
             "DATABASE_URL",
-            default="postgresql://dataservices:insecure@localhost:5415/dataservices",
+            default="postgresql://dataservices:insecure@localhost:5417/dataservices",
             engine="django.contrib.gis.db.backends.postgis",
         ),
     }

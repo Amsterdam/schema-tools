@@ -6,7 +6,7 @@ services:
   database:
     image: postgis/postgis:14-3.2
     ports:
-      - "5415:5432"
+      - "5417:5432"
     environment:
       POSTGRES_DB: dataservices
       POSTGRES_USER: dataservices
