@@ -124,6 +124,61 @@ def test_import_schema_update_has_dry_run(here, capsys):
 
 
 @pytest.mark.django_db()
+def test_import_schema_with_table_migrations(here, capsys):
+    """Prove that importing a dataset schema with migrate tables runs migrations"""
+    verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
+    gebieden = here / "files/datasets/gebieden.json"
+    hr_json_path = here / "files/datasets/hr.json"
+    call_command(
+        "import_schemas",
+        hr_json_path,
+        gebieden,
+        verblijfsobjecten,
+        "--execute",
+        "--create-tables",
+        "--migrate-tables",
+    )
+    updated_hr_json_path = here / "files/datasets/hr_updated.json"
+    call_command(
+        "import_schemas",
+        updated_hr_json_path,
+        gebieden,
+        verblijfsobjecten,
+        "--execute",
+        "--migrate-tables",
+    )
+    captured = capsys.readouterr()
+    assert """* Processing table maatschappelijkeactiviteiten""" in captured.out
+
+
+@pytest.mark.django_db()
+def test_import_schema_with_no_table_migrations(here, capsys):
+    """Prove that importing a dataset schema with migrate tables runs migrations"""
+    verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
+    gebieden = here / "files/datasets/gebieden.json"
+    hr_json_path = here / "files/datasets/hr.json"
+    call_command(
+        "import_schemas",
+        hr_json_path,
+        gebieden,
+        verblijfsobjecten,
+        "--execute",
+        "--no-migrate-tables",
+    )
+    updated_hr_json_path = here / "files/datasets/hr_updated.json"
+    call_command(
+        "import_schemas",
+        updated_hr_json_path,
+        gebieden,
+        verblijfsobjecten,
+        "--execute",
+        "--no-migrate-tables",
+    )
+    captured = capsys.readouterr()
+    assert """* Processing table maatschappelijkeactiviteiten""" not in captured.out
+
+
+@pytest.mark.django_db()
 def test_import_schema_does_not_alter_column(here, capsys):
     """Prove that ALTER COLUMN statements are filtered from generated SQL"""
     gebieden = here / "files/datasets/gebieden.json"
