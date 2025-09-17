@@ -133,7 +133,7 @@ class BaseExporter:
             if not columns:
                 continue
             with open(
-                self.base_dir / f"{table.db_name.replace('_v1', '')}.{self.extension}",
+                self.base_dir / f"{table.db_name_variant(with_version=False)}.{self.extension}",
                 "w",
                 encoding="utf8",
             ) as file_handle:

@@ -48,7 +48,8 @@ def export_geopackages(
     )
 
     for table in tables:
-        output_path = base_dir / f"{table.db_name.replace('_v1', '')}.gpkg"
+        # For now we only output the default version.
+        output_path = base_dir / f"{table.db_name_variant(with_version=False)}.gpkg"
         field_names = sql.SQL(",").join(
             sql.Identifier(field.db_name)
             for field in _get_fields(dataset_schema, table, scopes)
