@@ -1,3 +1,7 @@
+# 2025-09-17 (8.3.5)
+
+* Use unversioned filenames for exports (previously only '_v1' was removed).
+
 # 2025-09-10 (8.3.4)
 
 * Add migrate tables flag to import schemas.
