@@ -1,3 +1,7 @@
+# 2025-05-08 (7.7.4)
+
+* Use unversioned filenames for exports (previously only '_v1' was removed).
+
 # 2025-05-08 (7.7.3)
 
 * Make import schemas atomic and fix empty migrations.
@@ -277,9 +281,9 @@
 * Change export to only use active records for csv and jsonlines,
   so, no historical records. Also brought the export more in line
   with the csv export of the DSO-API:
-  - headers using capitalize()
-  - date-time in iso notation
-  - foreign keys only with an `identificatie` (no `volgnummer`)
+  * headers using capitalize()
+  * date-time in iso notation
+  * foreign keys only with an `identificatie` (no `volgnummer`)
 
 # 2023-12-05 (5.19.1)
 
@@ -470,8 +474,8 @@
 # 2023-06-05 (5.11.6)
 
 * Two small fixes to make `sqlmigrate_schema` work:
-  - requires_system_checks needs to be a list (from Django 1.4)
-  - list of datsets need to be a set when calling Django schema migrate API
+  * requires_system_checks needs to be a list (from Django 1.4)
+  * list of datsets need to be a set when calling Django schema migrate API
 
 # 2023-05-24 (5.11.5)
 
@@ -701,7 +705,6 @@ SUPPORTED METASCHEMAS: 1 2
 * Cleanup SQLAlchemy column creation logic.
 * The schema validator now rejects tables with both an 'id' field and a composite primary key.
 
-
 # 2022-12-01 (5.1.3)
 
 * Fix `limit_tables_to` issue with crash in index creation for skipped tables.
@@ -711,19 +714,16 @@ SUPPORTED METASCHEMAS: 1 2
 * Improved 3D coordinate system detection, and added more common SRID values.
 * Improved naming of geometry column index to be consistent with other generated indices.
 
-
 # 2022-11-24 (5.1.2)
 
 * Fix `BaseImporter.generate_db_objects()` to handle properly snake-cased table identifiers values for table creation.
 * Improve the underlying `tables_factory()` logic to support snake-cased table identifiers for all remaining parameters.
-
 
 # 2022-11-22 (5.1.1)
 
 * Improve `limit_tables_to` to accept snake-cased table identifiers, which broke Airflow jobs.
   This addresses an inconsistency between parameters, where `BaseImporter.generate_db_objects()`
   allowed snake-cased identifiers for `table_id`, but needed exact-cased values for `limit_tables_to`.
-
 
 # 2022-11-21 (5.1)
 
@@ -742,20 +742,17 @@ as all datasets are only cached within the same loader instance now.
 * Removed ununsed functions in `schematools.utils`.
 * Deprecated loading functions in `schematools.utils`, use `schematools.loaders` instead.
 
-
 # 2022-11-15 (5.0.2)
 
 * Using `BigAutoField` for all identifier fields now by default.
 * Fixed Django system check warnings for `AutoField`/`BigAutoField` migration changes.
-* Fixed CKAN metadata upload to https://data.overheid.nl/ for datasets without a description or title.
-
+* Fixed CKAN metadata upload to <https://data.overheid.nl/> for datasets without a description or title.
 
 # 2022-11-02 (5.0.1)
 
 * Added validation check to prevent field names from being prefixed with their table or dataset name.
 * Fixed Django ``db_column`` for subfields that use a shortname (regression by 5.0).
 * Fixed dependency pinning of shapely to 1.8.0
-
 
 # 2022-10-31 (5.0)
 
