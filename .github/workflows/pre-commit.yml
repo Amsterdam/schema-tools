@@ -5,12 +5,11 @@ permissions:
 
 on:
   push:
-    branches:
-    - features/**
   pull_request:
     branches:
     - main
     - master
+    - 'schema-tools-v*'
 
 jobs:
   pre-commit:
