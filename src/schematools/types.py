@@ -353,6 +353,7 @@ class DatasetSchema(SchemaType):
         inline_tables: bool = False,
         inline_publishers: bool = False,
         inline_scopes: bool = False,
+        scopes: list | None = None,
     ) -> str:
         """Overwritten JSON logic that allows inlining of $refs"""
         if not inline_tables and not inline_publishers and not inline_scopes:
@@ -370,7 +371,7 @@ class DatasetSchema(SchemaType):
             for vmajor, version in self.versions.items():
                 tables = version.get_tables()
                 data["versions"][vmajor]["tables"] = [
-                    t.json_data(inline_scopes=inline_scopes) for t in tables
+                    t.json_data(inline_scopes=inline_scopes, scopes=scopes) for t in tables
                 ]
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
@@ -383,6 +384,7 @@ class DatasetSchema(SchemaType):
         inline_tables: bool = False,
         inline_publishers: bool = False,
         inline_scopes: bool = False,
+        scopes: list | None = None,
     ) -> Json:
         """Overwritten logic that inlines tables"""
         return json.loads(
@@ -390,8 +392,14 @@ class DatasetSchema(SchemaType):
                 inline_tables=inline_tables,
                 inline_publishers=inline_publishers,
                 inline_scopes=inline_scopes,
+                scopes=scopes,
             )
         )
+
+    def filter_on_scopes(self, scopes: list):
+        """Filter out fields that are not within the provided scopes"""
+        schema_data = self.json_data(inline_tables=True, scopes=scopes)
+        return self.from_dict(schema_data)
 
     def get_view_sql(self) -> str:
         """Return the SQL for the view of the given table."""
@@ -996,8 +1004,16 @@ class DatasetTableSchema(SchemaType):
             for sub_field in element.get("properties", {}).values():
                 self._resolve_scope(sub_field)
 
-    def json_data(self, inline_scopes: bool = False):
+    def json_data(
+        self,
+        inline_scopes: bool = False,
+        scopes: list | None = None,
+    ):
         data = super().json_data()
+
+        # Filter fields based on scopes
+        if scopes:
+            data["schema"]["properties"] = self.filter_on_scopes(scopes)
 
         if not inline_scopes:
             return data
@@ -1505,6 +1521,28 @@ class DatasetTableSchema(SchemaType):
             f"A dict is not sufficient anymore to instantiate a {cls.__name__!r}. "
             "Use regular class instantiation instead and supply all required parameters!"
         )
+
+    def filter_on_scopes(self, scopes: list) -> list:
+        """Filter out fields of the tables based on a list of scopes"""
+        from schematools.permissions.auth import UserScopes
+
+        user_scopes = UserScopes(
+            query_params={},
+            request_scopes=scopes,
+            all_profiles=[],
+        )
+
+        # If no table scope, no fields
+        if not user_scopes.has_table_access(self).level:
+            return {}
+
+        # Only keep field if provided scope has access to it
+        filtered_fields = {}
+        for field in self.fields:
+            if user_scopes.has_field_access(field).level:
+                filtered_fields[field.id] = field.json_data()
+
+        return filtered_fields
 
 
 def _name_join(*parts):
