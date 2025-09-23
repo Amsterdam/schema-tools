@@ -331,6 +331,40 @@ def test_load_scope_object_from_field(schema_loader):
     assert field.auth == frozenset({"HARRY/THREE"})
 
 
+def test_scope_filtering(schema_loader):
+    """Test that supplying a scope only returns fields within that scope"""
+    schema = schema_loader.get_dataset_from_file("scope_filtering.json")
+    all_fields = {field.id for field in schema.tables[0].fields}
+
+    # Request has all scopes -> access to all fields
+    scopes = ["DB/AUTH", "TABLE/AUTH", "FIELD/AUTH"]
+    filtered_schema = schema.filter_on_scopes(scopes)
+    filtered_fields = {field.id for field in filtered_schema.tables[0].fields}
+
+    assert filtered_fields == all_fields
+
+    # Request misses field scope
+    scopes = ["DB/AUTH", "TABLE/AUTH"]
+    filtered_schema = schema.filter_on_scopes(scopes)
+    filtered_fields = {field.id for field in filtered_schema.tables[0].fields}
+
+    assert filtered_fields == {"schema", "id"}
+
+    # Request misses table scope
+    scopes = ["DB/AUTH", "FIELD/AUTH"]
+    filtered_schema = schema.filter_on_scopes(scopes)
+    filtered_fields = {field.id for field in filtered_schema.tables[0].fields}
+
+    assert filtered_fields == set()
+
+    # Request misses db scope
+    scopes = ["TABLE/AUTH", "FIELD/AUTH"]
+    filtered_schema = schema.filter_on_scopes(scopes)
+    filtered_fields = {field.id for field in filtered_schema.tables[0].fields}
+
+    assert filtered_fields == set()
+
+
 def test_load_multiple_scope_objects(schema_loader):
     """Test that we can retrieve a scope object from a DatasetSchema
     as defined by metaschema 2.0"""

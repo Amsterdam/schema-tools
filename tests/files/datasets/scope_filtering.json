@@ -1,0 +1,70 @@
+{
+  "type": "dataset",
+  "id": "experimental",
+  "title": "Schema experimental scope filtering",
+  "description": "Schema for unit testing that DatasetSchemas can be filtered on scope",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "version": "1.0.0",
+      "lifecycleStatus": "stable",
+      "tables": [
+        {
+          "id": "scoped_table",
+          "title": "Table to test experimental tables in a stable version",
+          "type": "table",
+          "version": "1.0.0",
+          "lifecycleStatus": "stable",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "identifier": "id",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "schema"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3#/definitions/schema"
+              },
+              "id": {
+                "title": "id",
+                "type": "string",
+                "description": "Unieke identificatie"
+              },
+              "test_filter_field": {
+                "title": "scoped_field",
+                "type": "string",
+                "description": "Scope filtering",
+                 "auth": [
+                    "FIELD/AUTH"
+                ]
+              }
+            }
+          },
+          "auth": [
+            "TABLE/AUTH"
+          ]
+        }
+      ]
+    }
+  },
+  "publisher": "unknown",
+    "auth": [
+        {
+            "type": "scope",
+            "id": "DB/AUTH",
+            "name": "DB/AUTH",
+            "accessPackages": {
+                "nonProduction": "EM4W-DATA-schemascope-ot-scope_hr_r",
+                "production": "EM4W-DATA-schemascope-p-scope_hr_r"
+            },
+            "owner": {
+                "$ref": "publishers/BENK"
+            }
+        }
+    ]
+}
