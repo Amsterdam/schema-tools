@@ -373,7 +373,7 @@ class DatasetSchema(SchemaType):
 
                 # Remove fields of all tables if dataset auth is not in provided scopes
                 ds_access = True
-                if scopes and {scope.id for scope in scopes}.isdisjoint(self.auth):
+                if scopes and not self.scopes.intersection(set(scopes)):
                     ds_access = False
                 data["versions"][vmajor]["tables"] = [
                     t.json_data(inline_scopes=inline_scopes, scopes=scopes, ds_access=ds_access)
@@ -1535,17 +1535,14 @@ class DatasetTableSchema(SchemaType):
     def filter_on_scopes(self, scopes: list[Scope], ds_access: bool) -> list:
         """Filter out fields of the tables based on a list of scopes"""
 
-        # Collect all scopes in a set
-        scope_set = {scope.id for scope in scopes}
-
         # If no table scope, no fields
-        if scope_set.isdisjoint(self.auth) or not ds_access:
+        if not self.scopes.intersection(set(scopes)):
             return {}
 
         # Only keep field if provided scope has access to it
         filtered_fields = {}
         for field in self.fields:
-            if not scope_set.isdisjoint(field.auth):
+            if field.scopes.intersection(set(scopes)):
                 filtered_fields[field.id] = field.json_data()
 
         return filtered_fields
