@@ -331,38 +331,49 @@ def test_load_scope_object_from_field(schema_loader):
     assert field.auth == frozenset({"HARRY/THREE"})
 
 
-def test_scope_filtering(schema_loader):
-    """Test that supplying a scope only returns fields within that scope"""
+@pytest.mark.parametrize(
+    "scopes,expected_fields",
+    [
+        (  # Test scope for Dataset access
+            ["DS/AUTH"],
+            {
+                "t1": {"id", "schema"},
+                "t2": set(),
+            },
+        ),
+        (  # Test scope for Table access
+            ["DS/AUTH", "TABLE/AUTH"],
+            {
+                "t1": {"id", "schema"},
+                "t2": {"id", "schema"},
+            },
+        ),
+        (  # Test scope for field access with table scope
+            ["DS/AUTH", "TABLE/AUTH", "FIELD/AUTH"],
+            {
+                "t1": {"id", "schema", "scoped_field"},
+                "t2": {"id", "schema", "scoped_field"},
+            },
+        ),
+        (  # Test scope for field access without table scope
+            ["DS/AUTH", "FIELD/AUTH"],
+            {
+                "t1": {"id", "schema", "scoped_field"},
+                "t2": set(),
+            },
+        ),
+    ],
+)
+def test_scope_filtering(schema_loader, scopes, expected_fields):
+    """Test that providing a list of scopes only returns fields within those scopes"""
     schema = schema_loader.get_dataset_from_file("scope_filtering.json")
-    all_fields = {field.id for field in schema.tables[0].fields}
 
-    # Request has all scopes -> access to all fields
-    scopes = ["DB/AUTH", "TABLE/AUTH", "FIELD/AUTH"]
-    filtered_schema = schema.filter_on_scopes(scopes)
-    filtered_fields = {field.id for field in filtered_schema.tables[0].fields}
+    filtered_schema = DatasetSchema.filter_on_scopes(schema, scopes)
+    filtered_fields = {}
+    filtered_fields["t1"] = {field.id for field in filtered_schema.tables[0].fields}
+    filtered_fields["t2"] = {field.id for field in filtered_schema.tables[1].fields}
 
-    assert filtered_fields == all_fields
-
-    # Request misses field scope
-    scopes = ["DB/AUTH", "TABLE/AUTH"]
-    filtered_schema = schema.filter_on_scopes(scopes)
-    filtered_fields = {field.id for field in filtered_schema.tables[0].fields}
-
-    assert filtered_fields == {"schema", "id"}
-
-    # Request misses table scope
-    scopes = ["DB/AUTH", "FIELD/AUTH"]
-    filtered_schema = schema.filter_on_scopes(scopes)
-    filtered_fields = {field.id for field in filtered_schema.tables[0].fields}
-
-    assert filtered_fields == set()
-
-    # Request misses db scope
-    scopes = ["TABLE/AUTH", "FIELD/AUTH"]
-    filtered_schema = schema.filter_on_scopes(scopes)
-    filtered_fields = {field.id for field in filtered_schema.tables[0].fields}
-
-    assert filtered_fields == set()
+    assert filtered_fields == expected_fields
 
 
 def test_load_multiple_scope_objects(schema_loader):

@@ -353,7 +353,7 @@ class DatasetSchema(SchemaType):
         inline_tables: bool = False,
         inline_publishers: bool = False,
         inline_scopes: bool = False,
-        scopes: list | None = None,
+        scopes: list[Scope] | None = None,
     ) -> str:
         """Overwritten JSON logic that allows inlining of $refs"""
         if not inline_tables and not inline_publishers and not inline_scopes:
@@ -370,8 +370,14 @@ class DatasetSchema(SchemaType):
             # Inline the tables in each version.
             for vmajor, version in self.versions.items():
                 tables = version.get_tables()
+
+                # Remove fields of all tables if dataset auth is not in provided scopes
+                ds_access = True
+                if scopes and {scope.id for scope in scopes}.isdisjoint(self.auth):
+                    ds_access = False
                 data["versions"][vmajor]["tables"] = [
-                    t.json_data(inline_scopes=inline_scopes, scopes=scopes) for t in tables
+                    t.json_data(inline_scopes=inline_scopes, scopes=scopes, ds_access=ds_access)
+                    for t in tables
                 ]
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
@@ -384,7 +390,7 @@ class DatasetSchema(SchemaType):
         inline_tables: bool = False,
         inline_publishers: bool = False,
         inline_scopes: bool = False,
-        scopes: list | None = None,
+        scopes: list[Scope] | None = None,
     ) -> Json:
         """Overwritten logic that inlines tables"""
         return json.loads(
@@ -396,10 +402,13 @@ class DatasetSchema(SchemaType):
             )
         )
 
-    def filter_on_scopes(self, scopes: list):
+    @classmethod
+    def filter_on_scopes(cls, schema, scopes: list[str]) -> DatasetSchema:
         """Filter out fields that are not within the provided scopes"""
-        schema_data = self.json_data(inline_tables=True, scopes=scopes)
-        return self.from_dict(schema_data)
+        scope_list = [Scope().from_string(scope) for scope in scopes]
+        scope_list.append(Scope().from_string("OPENBAAR"))
+        schema_data = schema.json_data(inline_tables=True, scopes=scope_list)
+        return cls.from_dict(schema_data)
 
     def get_view_sql(self) -> str:
         """Return the SQL for the view of the given table."""
@@ -1007,13 +1016,14 @@ class DatasetTableSchema(SchemaType):
     def json_data(
         self,
         inline_scopes: bool = False,
-        scopes: list | None = None,
+        scopes: list[Scope] | None = None,
+        ds_access: bool = True,
     ):
         data = super().json_data()
 
         # Filter fields based on scopes
         if scopes:
-            data["schema"]["properties"] = self.filter_on_scopes(scopes)
+            data["schema"]["properties"] = self.filter_on_scopes(scopes, ds_access)
 
         if not inline_scopes:
             return data
@@ -1522,24 +1532,20 @@ class DatasetTableSchema(SchemaType):
             "Use regular class instantiation instead and supply all required parameters!"
         )
 
-    def filter_on_scopes(self, scopes: list) -> list:
+    def filter_on_scopes(self, scopes: list[Scope], ds_access: bool) -> list:
         """Filter out fields of the tables based on a list of scopes"""
-        from schematools.permissions.auth import UserScopes
 
-        user_scopes = UserScopes(
-            query_params={},
-            request_scopes=scopes,
-            all_profiles=[],
-        )
+        # Collect all scopes in a set
+        scope_set = {scope.id for scope in scopes}
 
         # If no table scope, no fields
-        if not user_scopes.has_table_access(self).level:
+        if scope_set.isdisjoint(self.auth) or not ds_access:
             return {}
 
         # Only keep field if provided scope has access to it
         filtered_fields = {}
         for field in self.fields:
-            if user_scopes.has_field_access(field).level:
+            if not scope_set.isdisjoint(field.auth):
                 filtered_fields[field.id] = field.json_data()
 
         return filtered_fields
