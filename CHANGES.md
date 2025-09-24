@@ -1,3 +1,7 @@
+# 2025-09-24 (8.3.6)
+
+* DatasetSchema method to filter table fields based on scope
+
 # 2025-09-17 (8.3.5)
 
 * Use unversioned filenames for exports (previously only '_v1' was removed).
