@@ -1,3 +1,7 @@
+# 2025-09-24 (8.3.6.post1)
+
+* Minor fix for error in scope filtering
+
 # 2025-09-24 (8.3.6)
 
 * DatasetSchema method to filter table fields based on scope
