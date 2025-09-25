@@ -14,6 +14,7 @@ from more_ds.network.url import URL
 from schematools import (
     DEFAULT_PROFILE_URL,
     DEFAULT_SCHEMA_URL,
+    DEFAULT_SCOPE_URL,
     PUBLISHER_DIR,
     PUBLISHER_EXCLUDE_FILES,
     SCOPE_DIR,
@@ -97,6 +98,16 @@ class ProfileLoader:
         raise NotImplementedError()
 
     def get_all_profiles(self) -> list[ProfileSchema]:
+        raise NotImplementedError()
+
+
+class ScopeLoader:
+    """Interface for loading scope objects"""
+
+    def get_scope(self, scope_id: str) -> Scope:
+        raise NotImplementedError()
+
+    def get_all_scopes(self) -> list[Scope]:
         raise NotImplementedError()
 
 
@@ -632,6 +643,35 @@ class FileSystemProfileLoader(ProfileLoader):
         ]
 
 
+class FileSystemScopeLoader(ScopeLoader):
+    """Loading scopes from the file system."""
+
+    def __init__(
+        self,
+        scopes_url: Path | str,
+        *,
+        loaded_callback: Callable[[Scope], None] | None = None,
+    ):
+        self.profiles_url = Path(scopes_url) if isinstance(scopes_url, str) else scopes_url
+        self._loaded_callback = loaded_callback
+
+    def get_scope(self, scope_id: str) -> Scope:
+        """Load a specific scope by id."""
+        data = read_json_path(self.scopes_url / f"{scope_id}.json")
+        schema = Scope.from_dict(data)
+        if self._loaded_callback is not None:
+            self._loaded_callback(schema)
+        return schema
+
+    def get_all_scopes(self) -> list[Scope]:
+        """Load all scopes found in a folder"""
+        return [
+            Scope.from_dict(read_json_path(path))
+            for path in self.scope_url.glob("**/*.json")
+            if path.name != "index.json"
+        ]
+
+
 class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
     """Loading profiles from a URL"""
 
@@ -671,6 +711,43 @@ class URLProfileLoader(_SharedConnectionMixin, ProfileLoader):
         return profiles
 
 
+class URLScopeLoader(_SharedConnectionMixin, ScopeLoader):
+    """Loading scopes from a URL"""
+
+    def __init__(
+        self,
+        scopes_url: URL | str | None = None,
+        *,
+        loaded_callback: Callable[[Scope], None] | None = None,
+    ):
+        super().__init__()
+        self.scopes_url = URL(scopes_url or os.environ.get("SCOPES_URL", DEFAULT_SCOPE_URL))
+        self._loaded_callback = loaded_callback
+
+    def get_scope(self, datateam, scope_id: str) -> Scope:
+        data = self._read_json_url(self.scopes_url / datateam / f"{scope_id}")
+        schema = Scope.from_dict(data)
+        if self._loaded_callback is not None:
+            self._loaded_callback(schema)
+        return schema
+
+    def get_all_scopes(self) -> list[Scope]:
+        scopes = []
+        with self._persistent_connection():
+            index: dict[str, list[str]] = self._read_json_url(self.scopes_url / "index")
+            seen = []
+            for datateam, scope_list in index.items():
+                for name in scope_list:
+                    scope = self.get_scope(datateam, name)
+                    if scope.id in seen:
+                        raise DuplicateScopeId(
+                            f'Scope ID "{scope.id}" is already used in another scope.'
+                        )
+                    seen.append(scope.id)
+                    scopes.append(scope)
+        return scopes
+
+
 def get_schema_loader(schema_url: URL | str | None = None, **kwargs) -> CachedSchemaLoader:
     """Initialize the schema loader based on the given location.
 
@@ -695,6 +772,16 @@ def get_profile_loader(profiles_url: URL | Path | str | None = None, **kwargs) -
         return URLProfileLoader(profiles_url, **kwargs)
     else:
         return FileSystemProfileLoader(profiles_url, **kwargs)
+
+
+def get_scope_loader(scopes_url: URL | Path | str | None = None, **kwargs) -> ScopeLoader:
+    """Initialize the scope loader for a given location."""
+    if scopes_url is None:
+        scopes_url = os.environ.get("SCOPES_URL") or DEFAULT_SCOPE_URL
+    if _is_url(scopes_url):
+        return URLScopeLoader(scopes_url, **kwargs)
+    else:
+        return FileSystemScopeLoader(scopes_url, **kwargs)
 
 
 def _is_url(location: URL | str) -> bool:
