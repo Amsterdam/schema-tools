@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.management import BaseCommand
 
 from schematools.contrib.django.models import Scope
-from schematools.loaders import get_scope_loader
+from schematools.loaders import get_schema_loader
 from schematools.types import Scope as ScopeSchema
 
 
@@ -16,8 +16,8 @@ class Command(BaseCommand):
         parser.add_argument("scope", nargs="*", help="Local scope files to import")
         parser.add_argument(
             "--schema-url",
-            default=settings.SCOPES_URL,
-            help=f"Schema URL (default: {settings.SCOPES_URL})",
+            default=settings.SCHEMA_URL,
+            help=f"Schema URL (default: {settings.SCHEMA_URL})",
         )
 
     def handle(self, *args, **options) -> None:
@@ -27,7 +27,7 @@ class Command(BaseCommand):
             scopes = self.import_from_url(options["schema_url"])
 
         if scopes:
-            self.stdout.write(f"Imported scope: {len(scopes)}")
+            self.stdout.write(f"Imported scopes: {len(scopes)}")
         else:
             self.stdout.write("No new scopes imported.")
 
@@ -44,10 +44,10 @@ class Command(BaseCommand):
     def import_from_url(self, schema_url: str) -> list[Scope]:
         """Import all schema definitions from an URL"""
         self.stdout.write(f"Loading scopes from {schema_url}")
-        loader = get_scope_loader(schema_url)
+        loader = get_schema_loader(schema_url)
         scopes = []
 
-        for schema in loader.get_all_scopes():
+        for _, schema in loader.get_all_scopes().items():
             scope = self._import(schema)
             if scope is not None:
                 scopes.append(scope)

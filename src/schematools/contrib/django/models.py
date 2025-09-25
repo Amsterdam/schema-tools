@@ -602,7 +602,7 @@ class Scope(models.Model):
         return instance
 
     def save_for_schema(self, scope_schema: ScopeSchema) -> Scope:
-        self.name = scope_schema.name
+        self.name = scope_schema.id
         self.schema_data = scope_schema.json()
         self.save()
         return self
