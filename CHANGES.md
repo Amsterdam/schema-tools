@@ -1,4 +1,4 @@
-# 2025-09-24 (8.3.6.post1)
+# 2025-09-25 (8.3.6.post1)
 
 * Minor fix for error in scope filtering
 
