@@ -2564,6 +2564,10 @@ class Faker:
 
 
 class Publisher(SchemaType):
+    @property
+    def name(self) -> str:
+        return self.get("name", "")
+
     @classmethod
     def from_file(cls, filename: str) -> Publisher:
         with open(filename) as fh:
