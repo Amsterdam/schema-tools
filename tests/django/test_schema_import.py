@@ -5,6 +5,7 @@ from django.core.management import call_command
 from django.db import connection
 
 from schematools.contrib.django import models
+from schematools.contrib.django.management.commands.import_schemas import Command
 
 
 @pytest.mark.django_db
@@ -314,3 +315,36 @@ def test_import_schema_drop_experimental_table_with_m2m_also_drops_through_table
         cursor.execute("""SELECT table_name FROM information_schema.tables""")
         tables = [col for row in cursor.fetchall() for col in row]
         assert "experimental_experimentaltable_ligt_in_other_table_v1" not in tables
+
+
+@pytest.mark.django_db
+def test_missing_datasets_if_match(here):
+    """Prove that missing_datasets is empty when datasets match"""
+    command = Command()
+
+    verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
+    gebieden = here / "files/datasets/gebieden.json"
+
+    current = {"d1": str(verblijfsobjecten), "d2": str(gebieden)}
+    updated = [str(verblijfsobjecten), str(gebieden)]
+
+    missing = command.get_missing_datasets(current, updated)
+
+    assert missing == []
+
+
+@pytest.mark.django_db
+def test_missing_datasets(here):
+    """Prove that missing_datasets returns the correct dataset"""
+    command = Command()
+
+    verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
+    gebieden = here / "files/datasets/gebieden.json"
+    hr_json = here / "files/datasets/hr.json"
+
+    current = {"d1": str(verblijfsobjecten), "d2": str(gebieden), "d3": str(hr_json)}
+    updated = [str(hr_json), str(gebieden)]
+
+    missing = command.get_missing_datasets(current, updated)
+
+    assert missing == [str(verblijfsobjecten)]
