@@ -24,6 +24,7 @@ def test_remove_schema_and_tables(here):
 
     call_command("import_schemas", *args, create_tables=True, dry_run=False)
     assert models.Dataset.objects.count() == 4
+    assert models.DatasetVersion.objects.count() == 4
     assert models.DatasetTable.objects.count() == 13
 
     parkeervak_tables = set(
@@ -41,10 +42,14 @@ def test_remove_schema_and_tables(here):
         for table_schema in ds.schema.tables:
             assert factory.build_model(table_schema).objects.count() == 0
 
+    # Delete dataset and tables
     call_command("remove_schemas", "afvalwegingen", drop_tables=True)
 
     assert models.Dataset.objects.count() == 3
     assert models.DatasetTable.objects.count() == 9
+
+    # Prove that datasets_datasetsversion table is also updated
+    assert models.DatasetVersion.objects.count() == 3
 
     assert afvalweging_tables.isdisjoint(connection.introspection.table_names())
 
@@ -52,6 +57,7 @@ def test_remove_schema_and_tables(here):
     call_command("remove_schemas", "parkeervakken")
 
     assert models.Dataset.objects.count() == 2
+    assert models.DatasetVersion.objects.count() == 2
     assert models.DatasetTable.objects.count() == 7
 
     assert parkeervak_tables.issubset(connection.introspection.table_names())
@@ -60,3 +66,4 @@ def test_remove_schema_and_tables(here):
     call_command("remove_schemas", "verblijfsobjecten", "gebieden")
 
     assert models.Dataset.objects.count() == 0
+    assert models.DatasetVersion.objects.count() == 0
