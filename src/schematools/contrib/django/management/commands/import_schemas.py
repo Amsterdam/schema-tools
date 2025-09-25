@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from django.conf import settings
-from django.core.management import BaseCommand
+from django.core.management import BaseCommand, call_command
 from django.db import transaction
 
 from schematools import validation
@@ -66,6 +66,16 @@ class Command(BaseCommand):
                 self.stdout.write("No new datasets imported")
                 return
 
+            if updated_datasets and current_datasets:
+                # Check if there are datasets missing
+                missing_datasets = self.get_missing_datasets(current_datasets, updated_datasets)
+
+                if missing_datasets:
+                    # If missing, delete these schemas from datasets_dataset table
+                    for dataset in missing_datasets:
+                        self.stdout.write(f"Missing dataset: {dataset.name}")
+                        call_command("remove_schemas", dataset.name)
+
             if options["migrate_tables"]:
                 self._migrate_tables(current_datasets, updated_datasets, options)
 
@@ -76,6 +86,10 @@ class Command(BaseCommand):
 
             if options["create_views"]:
                 create_views(self, updated_datasets, dry_run=self.dry_run)
+
+    def get_missing_datasets(self, current, updated):
+        # Check if datasets_dataset table contains datasets not present in the updated datasets
+        return [dataset for dataset in current.values() if dataset not in updated]
 
     def get_schemas_from_files(self, schema_files) -> dict[str, DatasetSchema]:
         """Import all schema definitions from the given files."""
