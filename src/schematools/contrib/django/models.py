@@ -35,6 +35,9 @@ from schematools.types import (
     ProfileSchema,
     SemVer,
 )
+from schematools.types import (
+    Scope as ScopeSchema,
+)
 
 from . import managers
 from .validators import URLPathValidator, validate_json
@@ -571,6 +574,37 @@ class Profile(models.Model):
         self.name = profile_schema.name
         self.scopes = json.dumps(sorted(profile_schema.scopes))
         self.schema_data = profile_schema.json()
+        self.save()
+        return self
+
+
+class Scope(models.Model):
+    """Scope."""
+
+    name = models.CharField(max_length=100)
+    schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
+
+    def __str__(self):
+        return self.name
+
+    @cached_property
+    def schema(self) -> ScopeSchema:
+        """Provide access to the schema data"""
+        if not self.schema_data:
+            raise RuntimeError("Scope.schema_data is empty")
+
+        return ScopeSchema.from_dict(json.loads(self.schema_data))
+
+    @classmethod
+    def create_for_schema(cls, scope_schema: ScopeSchema) -> Scope:
+        """Create Scope object based on the Amsterdam Schema scope spec."""
+        instance = cls()
+        instance.save_for_schema(scope_schema)
+        return instance
+
+    def save_for_schema(self, scope_schema: ScopeSchema) -> Scope:
+        self.name = scope_schema.name
+        self.schema_data = scope_schema.json()
         self.save()
         return self
 
