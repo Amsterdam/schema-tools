@@ -406,7 +406,8 @@ class DatasetSchema(SchemaType):
     def filter_on_scopes(cls, schema, scopes: list[str]) -> DatasetSchema:
         """Filter out fields that are not within the provided scopes"""
         scope_list = [Scope().from_string(scope) for scope in scopes]
-        scope_list.append(Scope().from_string("OPENBAAR"))
+        if Scope().from_string("OPENBAAR") not in scope_list:
+            scope_list.append(Scope().from_string("OPENBAAR"))
         schema_data = schema.json_data(inline_tables=True, scopes=scope_list)
         return cls.from_dict(schema_data)
 
@@ -1535,8 +1536,8 @@ class DatasetTableSchema(SchemaType):
     def filter_on_scopes(self, scopes: list[Scope], ds_access: bool) -> list:
         """Filter out fields of the tables based on a list of scopes"""
 
-        # If no table scope, no fields
-        if not self.scopes.intersection(set(scopes)):
+        # If no table or ds scope, no fields
+        if not self.scopes.intersection(set(scopes)) or not ds_access:
             return {}
 
         # Only keep field if provided scope has access to it
