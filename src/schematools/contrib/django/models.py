@@ -35,9 +35,8 @@ from schematools.types import (
     ProfileSchema,
     SemVer,
 )
-from schematools.types import (
-    Scope as ScopeSchema,
-)
+from schematools.types import Publisher as PublisherSchema
+from schematools.types import Scope as ScopeSchema
 
 from . import managers
 from .validators import URLPathValidator, validate_json
@@ -605,6 +604,37 @@ class Scope(models.Model):
     def save_for_schema(self, scope_schema: ScopeSchema) -> Scope:
         self.name = scope_schema.name
         self.schema_data = scope_schema.json()
+        self.save()
+        return self
+
+
+class Publisher(models.Model):
+    """Publisher."""
+
+    name = models.CharField(max_length=100)
+    schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
+
+    def __str__(self):
+        return self.name
+
+    @cached_property
+    def schema(self) -> PublisherSchema:
+        """Provide access to the schema data"""
+        if not self.schema_data:
+            raise RuntimeError("Publisher.schema_data is empty")
+
+        return PublisherSchema.from_dict(json.loads(self.schema_data))
+
+    @classmethod
+    def create_for_schema(cls, publisher_schema: PublisherSchema) -> Publisher:
+        """Create Publisher object based on the Amsterdam Schema publisher spec."""
+        instance = cls()
+        instance.save_for_schema(publisher_schema)
+        return instance
+
+    def save_for_schema(self, publisher_schema: PublisherSchema) -> Publisher:
+        self.name = publisher_schema.id
+        self.schema_data = publisher_schema.json()
         self.save()
         return self
 
