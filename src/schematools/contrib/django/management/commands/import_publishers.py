@@ -55,17 +55,17 @@ class Command(BaseCommand):
 
     def _import(self, schema: PublisherSchema) -> Publisher | None:
         self.stdout.write(f"* Processing {schema.name}")
-        name = schema.name
+        id = schema.id
         try:
-            publisher = Publisher.objects.get(name=name)
+            publisher = Publisher.objects.get(id=id)
         except Publisher.DoesNotExist:
             publisher = Publisher.create_for_schema(schema)
-            self.stdout.write(f"   Created {name}")
+            self.stdout.write(f"   Created {schema.name}")
             return publisher
         else:
             updated = publisher.save_for_schema(schema)
             if updated:
-                self.stdout.write(f"    Updated {name}")
+                self.stdout.write(f"    Updated {schema.name}")
                 return publisher
 
         return None

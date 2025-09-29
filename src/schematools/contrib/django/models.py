@@ -580,6 +580,7 @@ class Profile(models.Model):
 class Scope(models.Model):
     """Scope."""
 
+    id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=100)
     schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
 
@@ -602,7 +603,8 @@ class Scope(models.Model):
         return instance
 
     def save_for_schema(self, scope_schema: ScopeSchema) -> Scope:
-        self.name = scope_schema.id
+        self.id = scope_schema.id
+        self.name = scope_schema.name
         self.schema_data = scope_schema.json()
         self.save()
         return self
@@ -611,6 +613,7 @@ class Scope(models.Model):
 class Publisher(models.Model):
     """Publisher."""
 
+    id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=100)
     schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
 
@@ -633,7 +636,8 @@ class Publisher(models.Model):
         return instance
 
     def save_for_schema(self, publisher_schema: PublisherSchema) -> Publisher:
-        self.name = publisher_schema.id
+        self.id = publisher_schema.id
+        self.name = publisher_schema.name
         self.schema_data = publisher_schema.json()
         self.save()
         return self
