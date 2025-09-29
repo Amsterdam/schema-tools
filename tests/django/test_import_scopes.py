@@ -7,7 +7,7 @@ from schematools.contrib.django import models
 
 
 @pytest.mark.django_db
-def test_import_schema(here):
+def test_import_scopes(here):
     path = here / "files/scopes/GLEBZ/glebzscope.json"
     args = [path]
     call_command("import_scopes", *args)
