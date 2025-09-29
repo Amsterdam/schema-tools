@@ -12,4 +12,4 @@ def test_import_scopes(here):
     args = [path]
     call_command("import_scopes", *args)
     assert models.Scope.objects.count() == 1
-    assert models.Scope.objects.first().name == "GLEBZ"
+    assert models.Scope.objects.first().id == "GLEBZ"

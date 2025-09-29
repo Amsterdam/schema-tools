@@ -55,17 +55,17 @@ class Command(BaseCommand):
 
     def _import(self, schema: ScopeSchema) -> Scope | None:
         self.stdout.write(f"* Processing {schema.name}")
-        name = schema.name
+        id = schema.id
         try:
-            scope = Scope.objects.get(name=name)
+            scope = Scope.objects.get(id=id)
         except Scope.DoesNotExist:
             scope = Scope.create_for_schema(schema)
-            self.stdout.write(f"   Created {name}")
+            self.stdout.write(f"   Created {id}")
             return scope
         else:
             updated = scope.save_for_schema(schema)
             if updated:
-                self.stdout.write(f"    Updated {name}")
+                self.stdout.write(f"    Updated {schema.name}")
                 return scope
 
         return None

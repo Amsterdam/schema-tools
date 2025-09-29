@@ -12,4 +12,4 @@ def test_import_publishers(here):
     args = [path]
     call_command("import_publishers", *args)
     assert models.Publisher.objects.count() == 1
-    assert models.Publisher.objects.first().name == "GLEBZ"
+    assert models.Publisher.objects.first().id == "GLEBZ"
