@@ -7,7 +7,7 @@ from schematools.contrib.django import models
 
 
 @pytest.mark.django_db
-def test_import_schema(here):
+def test_import_publishers(here):
     path = here / "files/publishers/GLEBZ.json"
     args = [path]
     call_command("import_publishers", *args)
