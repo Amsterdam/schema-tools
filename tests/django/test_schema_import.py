@@ -318,33 +318,66 @@ def test_import_schema_drop_experimental_table_with_m2m_also_drops_through_table
 
 
 @pytest.mark.django_db
-def test_missing_datasets_if_match(here):
+def test_missing_datasets_if_match(
+    gebieden_dataset,
+    verblijfsobjecten_dataset,
+    verblijfsobjecten_schema,
+    gebieden_schema,
+):
     """Prove that missing_datasets is empty when datasets match"""
     command = Command()
 
-    verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
-    gebieden = here / "files/datasets/gebieden.json"
+    current = {"verblijfsobjecten": verblijfsobjecten_dataset, "gebieden": gebieden_dataset}
+    updated = {"verblijfsobjecten": verblijfsobjecten_schema, "gebieden": gebieden_schema}
 
-    current = {"d1": str(verblijfsobjecten), "d2": str(gebieden)}
-    updated = [str(verblijfsobjecten), str(gebieden)]
+    missing_datasets = command.get_missing_datasets(current, updated)
 
-    missing = command.get_missing_datasets(current, updated)
-
-    assert missing == []
+    assert missing_datasets == []
 
 
 @pytest.mark.django_db
-def test_missing_datasets(here):
+def test_missing_datasets(
+    gebieden_dataset,
+    verblijfsobjecten_dataset,
+    hr_dataset,
+    verblijfsobjecten_schema,
+    gebieden_schema,
+):
     """Prove that missing_datasets returns the correct dataset"""
     command = Command()
 
-    verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
+    current = {
+        "verblijfsobjecten": verblijfsobjecten_dataset,
+        "gebieden": gebieden_dataset,
+        "hr": hr_dataset,
+    }
+    updated = {"verblijfsobjecten": verblijfsobjecten_schema, "gebieden": gebieden_schema}
+
+    missing_datasets = command.get_missing_datasets(current, updated)
+
+    missing = [str(d) for d in missing_datasets]
+    assert missing == ["hr"]
+
+
+@pytest.mark.django_db
+def test_missing_datasets_import(here, dataset_library, capsys):
+    """Prove that missing datasets get deleted by import_schemas command"""
+
+    # Create test datasets
+    gebieden_dataset = dataset_library["gebieden"]
+    afval_dataset = dataset_library["afval"]
+    parkeervakken_dataset = dataset_library["parkeervakken"]
+
+    # Pass only two schemas
     gebieden = here / "files/datasets/gebieden.json"
-    hr_json = here / "files/datasets/hr.json"
+    afval = here / "files/datasets/afval.json"
+    args = [gebieden, afval]
 
-    current = {"d1": str(verblijfsobjecten), "d2": str(gebieden), "d3": str(hr_json)}
-    updated = [str(hr_json), str(gebieden)]
+    call_command("import_schemas", *args, dry_run=False)
 
-    missing = command.get_missing_datasets(current, updated)
-
-    assert missing == [str(verblijfsobjecten)]
+    captured = capsys.readouterr()
+    assert """Deleted the following datasets: {'parkeervakken'}""" in captured.out
+    assert models.Dataset.objects.count() == 2
+    assert gebieden_dataset.name == "gebieden"
+    assert afval_dataset.name == "afvalwegingen"
+    assert parkeervakken_dataset.name == "parkeervakken"

@@ -140,3 +140,20 @@ def woningbouwplannen_dataset(woningbouwplannen_schema: DatasetSchema) -> Datase
 def metaschemav3_dataset(metaschemav3_schema: DatasetSchema) -> Dataset:
     """Create Metaschema v3 dataset."""
     return Dataset.create_for_schema(metaschemav3_schema)
+
+
+@pytest.fixture
+def dataset_library(
+    gebieden_schema: DatasetSchema,
+    parkeervakken_schema: DatasetSchema,
+    afval_schema: DatasetSchema,
+) -> Dataset:
+    """Create a dataset library"""
+    gebieden = Dataset.create_for_schema(gebieden_schema)
+    afval = Dataset.create_for_schema(afval_schema)
+    parkeervakken = Dataset.create_for_schema(parkeervakken_schema)
+    return {
+        "gebieden": gebieden,
+        "afval": afval,
+        "parkeervakken": parkeervakken,
+    }

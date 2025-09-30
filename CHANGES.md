@@ -1,6 +1,6 @@
 # 2025-09-24 (8.4.0)
 
-* Delete datasets when dataset.json schema is deleted
+* Delete datasets when schema is deleted and added management commands to import scopes and publishers.
 
 # 2025-09-25 (8.3.6.post1)
 

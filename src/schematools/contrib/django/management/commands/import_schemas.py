@@ -59,22 +59,22 @@ class Command(BaseCommand):
         else:
             schemas = self.get_schemas_from_url(options["schema_url"])
 
+        if schemas and current_datasets:
+            # Check if there are datasets missing
+            missing_datasets = self.get_missing_datasets(current_datasets, schemas)
+
+            if missing_datasets:
+                # If missing, delete these schemas from datasets_dataset table
+                for dataset in missing_datasets:
+                    self.stdout.write(f"Missing dataset: {dataset.name}")
+                    call_command("remove_schemas", dataset.name)
+
         with transaction.atomic():
             # Contains unsaved Dataset objects if dry_run.
             updated_datasets = self._run_import(schemas)
             if not updated_datasets:
                 self.stdout.write("No new datasets imported")
                 return
-
-            if updated_datasets and current_datasets:
-                # Check if there are datasets missing
-                missing_datasets = self.get_missing_datasets(current_datasets, updated_datasets)
-
-                if missing_datasets:
-                    # If missing, delete these schemas from datasets_dataset table
-                    for dataset in missing_datasets:
-                        self.stdout.write(f"Missing dataset: {dataset.name}")
-                        call_command("remove_schemas", dataset.name)
 
             if options["migrate_tables"]:
                 self._migrate_tables(current_datasets, updated_datasets, options)
@@ -87,9 +87,17 @@ class Command(BaseCommand):
             if options["create_views"]:
                 create_views(self, updated_datasets, dry_run=self.dry_run)
 
-    def get_missing_datasets(self, current, updated):
-        # Check if datasets_dataset table contains datasets not present in the updated datasets
-        return [dataset for dataset in current.values() if dataset not in updated]
+    def get_missing_datasets(self, current_datasets, schemas):
+        # Check if datasets_dataset table contains datasets not present in the schemas
+        current_names = set(current_datasets.keys())
+
+        # Get snake case names for schema objects
+        schema_names = {Dataset.name_from_schema(schema_obj) for schema_obj in schemas.values()}
+
+        # Datasets in current_datasets but missing in schemas
+        missing_datasets = current_names - schema_names
+
+        return [current_datasets[key] for key in list(missing_datasets) if key in current_datasets]
 
     def get_schemas_from_files(self, schema_files) -> dict[str, DatasetSchema]:
         """Import all schema definitions from the given files."""
