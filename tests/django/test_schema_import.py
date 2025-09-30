@@ -5,6 +5,7 @@ from django.core.management import call_command
 from django.db import connection
 
 from schematools.contrib.django import models
+from schematools.contrib.django.management.commands.import_schemas import Command
 
 
 @pytest.mark.django_db
@@ -314,3 +315,61 @@ def test_import_schema_drop_experimental_table_with_m2m_also_drops_through_table
         cursor.execute("""SELECT table_name FROM information_schema.tables""")
         tables = [col for row in cursor.fetchall() for col in row]
         assert "experimental_experimentaltable_ligt_in_other_table_v1" not in tables
+
+
+@pytest.mark.django_db
+def test_missing_datasets_if_match(
+    gebieden_dataset,
+    verblijfsobjecten_dataset,
+    verblijfsobjecten_schema,
+    gebieden_schema,
+):
+    """Prove that missing_datasets is empty when datasets match"""
+    command = Command()
+
+    current = {"verblijfsobjecten": verblijfsobjecten_dataset, "gebieden": gebieden_dataset}
+    updated = {"verblijfsobjecten": verblijfsobjecten_schema, "gebieden": gebieden_schema}
+
+    missing_datasets = command.get_missing_datasets(current, updated)
+
+    assert missing_datasets == []
+
+
+@pytest.mark.django_db
+def test_missing_datasets(
+    gebieden_dataset,
+    verblijfsobjecten_dataset,
+    hr_dataset,
+    verblijfsobjecten_schema,
+    gebieden_schema,
+):
+    """Prove that missing_datasets returns the correct dataset"""
+    command = Command()
+
+    current = {
+        "verblijfsobjecten": verblijfsobjecten_dataset,
+        "gebieden": gebieden_dataset,
+        "hr": hr_dataset,
+    }
+    updated = {"verblijfsobjecten": verblijfsobjecten_schema, "gebieden": gebieden_schema}
+
+    missing_datasets = command.get_missing_datasets(current, updated)
+
+    assert missing_datasets == [hr_dataset]
+
+
+@pytest.mark.django_db
+def test_missing_datasets_import(here, dataset_library, capsys):
+    """Prove that missing datasets get deleted by import_schemas command"""
+
+    # Pass only two schemas
+    gebieden = here / "files/datasets/gebieden.json"
+    afval = here / "files/datasets/afval.json"
+    args = [gebieden, afval]
+
+    call_command("import_schemas", *args, dry_run=False)
+
+    captured = capsys.readouterr()
+    assert """Deleted the following datasets: {'parkeervakken'}""" in captured.out
+    assert models.Dataset.objects.count() == 2
+    assert not models.Dataset.objects.filter(name="parkeervakken").exists()
