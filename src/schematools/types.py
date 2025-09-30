@@ -271,6 +271,10 @@ class SchemaType(JsonDict):
         return cast(str, self["id"])
 
     @property
+    def url_safe_id(self) -> str:
+        return self.id.replace("/", "_").lower()
+
+    @property
     def db_name(self) -> str:
         """The object name in a database-compatible format."""
         return to_snake_case(self.id)

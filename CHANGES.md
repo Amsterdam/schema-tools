@@ -1,3 +1,7 @@
+# 2025-09-30 (8.4.1)
+
+* Add `url_safe_id` property to SchemaType
+
 # 2025-09-30 (8.4.0)
 
 * Delete datasets when dataset.json schema is deleted.
