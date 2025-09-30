@@ -1,4 +1,5 @@
 {
+    "id": "brp_medewerker",
     "name": "brp_medewerker",
     "scopes": ["BRP/RNAME"],
     "datasets": {
