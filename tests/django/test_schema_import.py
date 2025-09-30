@@ -355,18 +355,12 @@ def test_missing_datasets(
 
     missing_datasets = command.get_missing_datasets(current, updated)
 
-    missing = [str(d) for d in missing_datasets]
-    assert missing == ["hr"]
+    assert missing_datasets == [hr_dataset]
 
 
 @pytest.mark.django_db
 def test_missing_datasets_import(here, dataset_library, capsys):
     """Prove that missing datasets get deleted by import_schemas command"""
-
-    # Create test datasets
-    gebieden_dataset = dataset_library["gebieden"]
-    afval_dataset = dataset_library["afval"]
-    parkeervakken_dataset = dataset_library["parkeervakken"]
 
     # Pass only two schemas
     gebieden = here / "files/datasets/gebieden.json"
@@ -378,6 +372,4 @@ def test_missing_datasets_import(here, dataset_library, capsys):
     captured = capsys.readouterr()
     assert """Deleted the following datasets: {'parkeervakken'}""" in captured.out
     assert models.Dataset.objects.count() == 2
-    assert gebieden_dataset.name == "gebieden"
-    assert afval_dataset.name == "afvalwegingen"
-    assert parkeervakken_dataset.name == "parkeervakken"
+    assert not models.Dataset.objects.filter(name="parkeervakken").exists()

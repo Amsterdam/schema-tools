@@ -147,7 +147,7 @@ def dataset_library(
     gebieden_schema: DatasetSchema,
     parkeervakken_schema: DatasetSchema,
     afval_schema: DatasetSchema,
-) -> Dataset:
+) -> dict[str, Dataset]:
     """Create a dataset library"""
     gebieden = Dataset.create_for_schema(gebieden_schema)
     afval = Dataset.create_for_schema(afval_schema)
