@@ -571,7 +571,7 @@ class Profile(models.Model):
         return instance
 
     def save_for_schema(self, profile_schema: ProfileSchema) -> Profile:
-        self.id = profile_schema.id
+        self.id = profile_schema.url_safe_id
         self.name = profile_schema.name
         self.scopes = json.dumps(sorted(profile_schema.scopes))
         self.schema_data = profile_schema.json()
@@ -605,11 +605,7 @@ class Scope(models.Model):
         return instance
 
     def save_for_schema(self, scope_schema: ScopeSchema) -> Scope:
-        id = scope_schema.id
-
-        # Make id URL safe
-        url_id = id.replace("/", "_").lower()
-        self.id = url_id
+        self.id = scope_schema.url_safe_id
         self.name = scope_schema.name
         self.schema_data = scope_schema.json()
         self.save()
@@ -642,7 +638,7 @@ class Publisher(models.Model):
         return instance
 
     def save_for_schema(self, publisher_schema: PublisherSchema) -> Publisher:
-        self.id = publisher_schema.id.lower()
+        self.id = publisher_schema.url_safe_id
         self.name = publisher_schema.name
         self.schema_data = publisher_schema.json()
         self.save()
