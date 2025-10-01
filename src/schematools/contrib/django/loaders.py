@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import ast
 import json
 import logging
 
-from schematools.contrib.django.models import Dataset
+from schematools.contrib.django.models import Dataset, Scope
 from schematools.exceptions import DatasetNotFound
 from schematools.loaders import CachedSchemaLoader
 from schematools.naming import to_snake_case
 from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.types import Scope as ScopeSchema
 
 logger = logging.getLogger(__name__)
 
@@ -56,3 +58,14 @@ class DatabaseSchemaLoader(CachedSchemaLoader):
     def _get_table(self, dataset: DatasetSchema, table_ref) -> DatasetTableSchema:
         """Datasets have their tables inlined, so there is no need to support this either."""
         raise NotImplementedError("DatabaseSchemaLoader don't support versioned tables")
+
+    def _get_all_scopes(self) -> dict[str, Scope]:
+        """Retrieve all Scope objects from the database storage"""
+        result = {}
+        for scope in Scope.objects.all():
+
+            # scope.schema_data is a string, we need to cast it to a dict
+            schema_dict = ast.literal_eval(scope.schema_data)
+            scope_object = ScopeSchema().from_dict(schema_dict)
+            result[scope.id] = scope_object
+        return result
