@@ -6,8 +6,8 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "niet_beschikbaar",
-      "lifecycleStatus": "experimental",
+      "enableAPI": false,
+      "status": "under_development",
       "version": "1.0.0",
       "tables": []
     }

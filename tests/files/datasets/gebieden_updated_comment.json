@@ -2,14 +2,14 @@
   "type": "dataset",
   "id": "gebieden",
   "title": "gebieden",
-  "status": "beschikbaar",
+  "enableAPI": true,
   "version": "0.0.1",
   "identifier": "identificatie",
   "crs": "EPSG:28992",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
+      "status": "stable",
       "version": "1.0.0",
       "tables": [
         {

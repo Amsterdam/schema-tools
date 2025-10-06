@@ -8,8 +8,8 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
+      "status": "stable",
       "version": "0.0.1",
       "tables": [
         {
@@ -84,7 +84,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "buurten",
@@ -182,7 +182,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "wijken",
@@ -241,7 +241,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "ggwgebieden",
@@ -329,7 +329,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         }
       ]
     }

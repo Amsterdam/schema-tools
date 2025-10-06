@@ -490,11 +490,7 @@ def _reasons_non_public_exists(dataset: DatasetSchema) -> Iterator[str]:
 def _reasons_non_public_value(dataset: DatasetSchema) -> Iterator[str]:
     """A reasonsNonPublic field in a published dataset should not contain a placeholder."""
     placeholder_value = "nader te bepalen"
-    versions = dataset.versions.values()
-    any_version_available = any(
-        version.status == DatasetSchema.Status.beschikbaar for version in versions
-    )
-    if not any_version_available:
+    if not dataset.has_an_available_version:
         return
     if placeholder_value in dataset.data.get("reasonsNonPublic", []):
         yield (
@@ -532,7 +528,7 @@ def _check_default_version_is_enabled(dataset: DatasetSchema) -> Iterator[str]:
     """Check that defaultVersion of a dataset is enabled if there is more than one version."""
     if len(dataset.versions) > 1:
         default_version = dataset.get_version(dataset.default_version)
-        if default_version.status != DatasetSchema.Status.beschikbaar:
+        if not default_version.enable_api:
             yield (f"Default version {dataset.default_version} is not enabled.")
 
 
@@ -556,19 +552,19 @@ def _check_production_version_tables(dataset: DatasetSchema) -> Iterator[str]:
                     )
 
 
-@_register_validator("stable version experimental tables")
-def _check_production_version_experimental_tables(dataset: DatasetSchema) -> Iterator[str]:
+@_register_validator("stable version under_development tables")
+def _check_production_version_under_development_tables(dataset: DatasetSchema) -> Iterator[str]:
     """Check that a stable dataset version contains no experimental tables."""
     for version_number, version in dataset.versions.items():
-        if version.lifecycle_status == DatasetVersionSchema.LifecycleStatus.experimental:
+        if version.status == DatasetVersionSchema.Status.under_development:
             continue
 
         for table in version.tables:
             # Don't validate inline tables, to allow backwards compatibility
-            if table.lifecycle_status == DatasetTableSchema.LifecycleStatus.experimental:
+            if table.status == DatasetTableSchema.Status.under_development:
                 yield (
                     f"Stable dataset {dataset.id} ({version_number}) cannot have tables with "
-                    f"lifecycleStatus of 'experimental'."
+                    f"status of 'under_development'."
                 )
 
 
@@ -582,10 +578,10 @@ def _check_lifecycle_status(dataset: DatasetSchema) -> Iterator[str]:
     for version_number, version in dataset.versions.items():
         if (
             version_number in non_production_versions
-            and version.lifecycle_status == DatasetVersionSchema.LifecycleStatus.stable
+            and version.status == DatasetVersionSchema.Status.stable
         ):
             yield (
-                f"Dataset version ({version_number}) cannot have a lifecycleStatus of "
+                f"Dataset version ({version_number}) cannot have a status of "
                 f"'stable' while being a non-production version."
             )
 
@@ -633,6 +629,7 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
                     yield (f"Target {target} does not define FEATURE/RLA auth.")
 
 
+
 @_register_validator("subresources in same dataset as resource")
 def _check_sub_resources_in_same_dataset(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:
@@ -648,6 +645,23 @@ def _check_sub_resources_in_same_dataset(dataset: DatasetSchema) -> Iterator[str
                         f"of the same dataset as {dataset.id}:{table.id}. Subresources must "
                         "always be part of the same dataset."
                     )
+
+
+@_register_validator("superseded version")
+def _check_superseded_version(dataset: DatasetSchema) -> Iterator[str]:
+    """
+    Check that a dataset version with status of `superseded` has an
+    endSupportDate.
+    """
+    for version_number, version in dataset.versions.items():
+        if (
+            version.status == DatasetVersionSchema.Status.superseded
+            and not version.end_support_date
+        ):
+            yield (
+                f"Dataset version ({version_number}) cannot have a status of "
+                f"'superseded' without an endSupportDate."
+            )
 
 
 def validate_dataset(
@@ -682,7 +696,7 @@ def validate_dataset(
 
 
 def validate_dataset_versions_version(id: str, previous: dict, current: dict) -> list[str]:
-    if previous["lifecycleStatus"] == DatasetVersionSchema.LifecycleStatus.experimental:
+    if previous["status"] == DatasetVersionSchema.Status.under_development:
         return []
     previous_version = SemVer(previous["version"])
     current_version = SemVer(current["version"])
@@ -802,7 +816,15 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
     current_version = SemVer(current["version"])
     table_id = previous["id"]
 
-    # First, check backwards compatible changes (requiring minor bump)
+    # Check if major version hasn't changed in the file. Major version bumps
+    # should result in a new file
+    if current_version.major != SemVer(previous["version"]).major:
+        return [
+            f"Table '{table_id}' changed major version, a new file "
+            f"{current_version.vmajor}.json should be created."
+        ]
+
+    # Check backwards compatible changes (requiring minor bump)
     # i.e. adding a field.
     previous_fields = previous["schema"]["properties"].keys()
     current_fields = current["schema"]["properties"].keys()

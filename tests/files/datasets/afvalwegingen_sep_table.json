@@ -23,8 +23,8 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
+      "status": "stable",
       "version": "2",
       "tables": [
         {
@@ -116,13 +116,13 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "clusters",
           "type": "table",
           "version": "1.0.0",
-          "lifecycleStatus": "stable",
+          "status": "stable",
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
@@ -261,7 +261,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "containertypes",
@@ -299,7 +299,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         }
       ]
     }

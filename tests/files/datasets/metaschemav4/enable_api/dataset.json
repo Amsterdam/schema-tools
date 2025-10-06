@@ -1,0 +1,30 @@
+{
+  "id": "metaschemav4/enableapi",
+  "type": "dataset",
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": false,
+      "status": "stable",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "table",
+          "$ref": "tables/v1"
+        }
+      ]
+    },
+    "v2": {
+      "enableAPI": true,
+      "status": "stable",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "table",
+          "$ref": "tables/v1"
+        }
+      ]
+    }
+  }
+}

@@ -10,8 +10,8 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "niet_beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": false,
+      "status": "stable",
       "version": "1.2.3",
       "tables": [
         {
@@ -64,7 +64,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         }
       ]
     }

@@ -1,0 +1,21 @@
+{
+  "type": "dataset",
+  "id": "status",
+  "title": "Schema under_development status Test",
+  "description": "Schema for unit testing that non-production versions don't have status 'stable'",
+  "defaultVersion": "v0",
+  "versions": {
+    "v0": {
+      "enableAPI": true,
+      "version": "0.1.0",
+      "status": "stable",
+      "tables": [
+        {
+          "id": "productiontable",
+          "$ref": "tables/v1"
+        }
+      ]
+    }
+  },
+  "publisher": "unknown"
+}

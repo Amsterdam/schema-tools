@@ -10,8 +10,8 @@
   "reasonsNonPublic": ["5.1 1c: Bevat persoonsgegevens"],
   "versions": {
     "v1": {
-      "status": "beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
+      "status": "stable",
       "version": "0.0.1",
       "tables": [
         {
@@ -114,7 +114,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable",
+          "status": "stable",
           "rowLevelAuth": {
             "source": "verblijfplaats.afgeschermd_adres",
             "targets": [
@@ -229,7 +229,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable",
+          "status": "stable",
           "rowLevelAuth": {
             "source": "verblijfplaats.afgeschermd",
             "targets": [

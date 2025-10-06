@@ -197,12 +197,9 @@ class Command(BaseCommand):
                     current_table.id, include_nested=False, include_through=False
                 )
                 if current_table.version.vmajor == updated_table.version.vmajor:
-                    # If the table is experimental and there are breaking changes to the table,
-                    # drop the table
-                    if (
-                        current_table.lifecycle_status
-                        == DatasetTableSchema.LifecycleStatus.experimental
-                    ):
+                    # If the table is under_development and there are breaking changes to
+                    # the table, drop the table
+                    if current_table.status == DatasetTableSchema.Status.under_development:
                         previous_fields = current_table.json_data()["schema"]["properties"]
                         next_fields = updated_table.json_data()["schema"]["properties"]
                         table_errors = validation.validate_table(previous_fields, next_fields)

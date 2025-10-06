@@ -6,8 +6,8 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
+      "status": "stable",
       "version": "1.0.0",
       "tables": [
         {
@@ -38,8 +38,8 @@
       ]
     },
     "v2": {
-      "status": "niet_beschikbaar",
-      "lifecycleStatus": "experimental",
+      "enableAPI": false,
+      "status": "under_development",
       "version": "1.0.0",
       "tables": [
         {
