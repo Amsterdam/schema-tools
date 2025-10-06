@@ -407,13 +407,13 @@ class DatasetSchema(SchemaType):
         )
 
     @classmethod
-    def filter_on_scopes(cls, schema, scopes: list[str]) -> DatasetSchema:
+    def filter_on_scopes(cls, schema: DatasetSchema, scopes: list[str]) -> DatasetSchema:
         """Filter out fields that are not within the provided scopes"""
         scope_list = [Scope().from_string(scope) for scope in scopes]
         if Scope().from_string("OPENBAAR") not in scope_list:
             scope_list.append(Scope().from_string("OPENBAAR"))
         schema_data = schema.json_data(inline_tables=True, scopes=scope_list)
-        return cls.from_dict(schema_data)
+        return cls.from_dict(schema_data, loader=schema.loader)
 
     def get_view_sql(self) -> str:
         """Return the SQL for the view of the given table."""
