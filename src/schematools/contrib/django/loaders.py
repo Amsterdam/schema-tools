@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ast
 import json
 import logging
 
@@ -63,8 +62,7 @@ class DatabaseSchemaLoader(CachedSchemaLoader):
         """Retrieve all Scope objects from the database storage"""
         result = {}
         for scope in Scope.objects.all():
-            # scope.schema_data is a string, we need to cast it to a dict
-            schema_dict = ast.literal_eval(scope.schema_data)
-            scope_object = ScopeSchema().from_dict(schema_dict)
+            schema_dict = json.loads(scope.schema_data)
+            scope_object = ScopeSchema.from_dict(schema_dict)
             result[scope.id] = scope_object
         return result
