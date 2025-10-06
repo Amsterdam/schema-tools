@@ -1,3 +1,7 @@
+# 2025-05-08 (7.7.5)
+
+* Export array fields in jsonlines for Azure Search.
+
 # 2025-05-08 (7.7.4)
 
 * Use unversioned filenames for exports (previously only '_v1' was removed).
