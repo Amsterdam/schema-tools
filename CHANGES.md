@@ -1,3 +1,7 @@
+# 2025-10-06 (8.4.2)
+
+* Add method to retrieve all Scope objects from database storage
+
 # 2025-09-30 (8.4.1)
 
 * Add `url_safe_id` property to SchemaType
