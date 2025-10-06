@@ -1,6 +1,6 @@
 # 2025-10-06 (8.4.2)
 
-* Add method to retrieve all Scope objects from database storage
+* Add method to retrieve all Scope objects from database storage to DatabaseSchemaLoader
 
 # 2025-09-30 (8.4.1)
 
