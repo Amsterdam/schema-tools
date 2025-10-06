@@ -327,12 +327,12 @@ def test_reasons_non_public_value(schema_loader) -> None:
     assert "not allowed in ReasonsNonPublic property of dataset hr." in errors[0].message
 
     # Test no error is given for the placeholder value in a dataset with status != beschikbaar.
-    dataset.versions["v1"]["status"] = "niet_beschikbaar"
+    dataset.versions["v1"]["enableAPI"] = False
     errors = list(validation.run(dataset))
     assert len(errors) == 0
 
     # Test no error is given for other values of reasonsNonPublic
-    dataset.versions["v1"]["status"] = "beschikbaar"
+    dataset.versions["v1"]["enableAPI"] = True
     dataset["reasonsNonPublic"] = ["5.1 1c: Bevat persoonsgegevens"]
     errors = list(validation.run(dataset))
     assert len(errors) == 0
@@ -418,24 +418,43 @@ def test_subresource(schema_loader) -> None:
     ]
 
 
-def test_production_version_experimental_tables(schema_loader) -> None:
-    dataset = schema_loader.get_dataset("experimental_tables")
+def test_production_version_under_development_tables(schema_loader) -> None:
+    dataset = schema_loader.get_dataset("under_development_tables")
 
     errors = list(validation.run(dataset))
     assert len(errors) == 1
     assert (
-        "Stable dataset experimental_tables (v1) cannot have tables with lifecycleStatus of 'experimental'."
+        "Stable dataset under_development_tables (v1) cannot have tables with status of 'under_development'."
         in errors[0].message
     )
 
 
-def test_check_lifecycle_status(schema_loader) -> None:
-    dataset = schema_loader.get_dataset("lifecycle_status")
+def test_check_status(schema_loader) -> None:
+    dataset = schema_loader.get_dataset("status")
 
     errors = list(validation.run(dataset))
     assert len(errors) == 1
     assert (
-        "Dataset version (v0) cannot have a lifecycleStatus of 'stable' while being a non-production version."
+        "Dataset version (v0) cannot have a status of 'stable' while being a non-production version."
+        in errors[0].message
+    )
+
+
+def test_check_enable_api(schema_loader) -> None:
+    dataset = schema_loader.get_dataset("metaschemav4/enableapi")
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1
+    assert "Default version v1 is not enabled." in errors[0].message
+
+
+def test_check_superseded_version(schema_loader) -> None:
+    dataset = schema_loader.get_dataset("metaschemav4/supersededversion")
+
+    errors = list(validation.run(dataset))
+    assert len(errors) == 1
+    assert (
+        "Dataset version (v1) cannot have a status of 'superseded' without an endSupportDate."
         in errors[0].message
     )
 
@@ -820,6 +839,38 @@ def test_validate_table(prev, curr, errors):
             },
             [],
         ),
+        # Change major version number on table fail
+        (
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "schema": {
+                    "properties": {
+                        "field": {
+                            "title": "field",
+                            "unit": "m2",
+                            "shortname": "field",
+                            "description": "Field1",
+                        }
+                    }
+                },
+            },
+            {
+                "id": "test",
+                "version": "2.0.0",
+                "schema": {
+                    "properties": {
+                        "field": {
+                            "title": "field2",
+                            "unit": "cm2",
+                            "shortname": "field2",
+                            "description": "Field2",
+                        }
+                    }
+                },
+            },
+            ["Table 'test' changed major version, a new file v2.json should be created."],
+        ),
     ],
 )
 def test_validate_table_version(prev, curr, errors):
@@ -832,76 +883,76 @@ def test_validate_table_version(prev, curr, errors):
     [
         # No changes, no fail
         (
-            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
-            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "status": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "status": "stable", "tables": [{"id": "table1"}]},
             [],
         ),
         # Changes with version bump, no fail
         (
-            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "status": "stable", "tables": [{"id": "table1"}]},
             {
                 "version": "1.1.0",
-                "lifecycleStatus": "stable",
+                "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
             [],
         ),
         # Changes for experimental table, no fail
         (
-            {"version": "1.0.0", "lifecycleStatus": "experimental", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "status": "under_development", "tables": [{"id": "table1"}]},
             {
                 "version": "1.1.0",
-                "lifecycleStatus": "experimental",
+                "status": "under_development",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
             [],
         ),
         # Changes without version bump, fail
         (
-            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "status": "stable", "tables": [{"id": "table1"}]},
             {
                 "version": "1.0.0",
-                "lifecycleStatus": "stable",
+                "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
             ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
         ),
         # Changes with too big of a minor version bump, fail
         (
-            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "status": "stable", "tables": [{"id": "table1"}]},
             {
                 "version": "1.2.0",
-                "lifecycleStatus": "stable",
+                "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
             ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
         ),
         # Changes with a patch version expect new minor version without patch, no fail
         (
-            {"version": "1.1.1", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.1.1", "status": "stable", "tables": [{"id": "table1"}]},
             {
                 "version": "1.2.0",
-                "lifecycleStatus": "stable",
+                "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
             [],
         ),
         # Changes with a major version bump, fail
         (
-            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "status": "stable", "tables": [{"id": "table1"}]},
             {
                 "version": "2.0.0",
-                "lifecycleStatus": "stable",
+                "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
             ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
         ),
         # Changes with too little of a version bump, fail
         (
-            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "status": "stable", "tables": [{"id": "table1"}]},
             {
                 "version": "1.0.1",
-                "lifecycleStatus": "stable",
+                "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
             ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],

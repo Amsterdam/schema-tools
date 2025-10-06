@@ -1,13 +1,13 @@
 {
   "id": "metaschema3",
   "type": "dataset",
-  "status": "beschikbaar",
+  "enableAPI": true,
   "publisher": "unknown",
   "defaultVersion": "v1",
   "versions": {
     "v0": {
-      "status": "niet_beschikbaar",
-      "lifecycleStatus": "experimental",
+      "enableAPI": false,
+      "status": "under_development",
       "version": "0.2.1",
       "tables": [
         {
@@ -17,8 +17,8 @@
       ]
     },
     "v1": {
-      "status": "beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
+      "status": "stable",
       "version": "1.0.0",
       "tables": [
         {

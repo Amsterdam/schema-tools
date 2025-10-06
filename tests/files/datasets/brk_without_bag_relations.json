@@ -9,8 +9,8 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
+      "status": "stable",
       "version": "0.0.1",
       "tables": [
         {
@@ -207,7 +207,7 @@
             },
             "mainGeometry": "geometrie"
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "zakelijkerechten",
@@ -325,7 +325,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "kadastralesubjecten",
@@ -625,7 +625,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "tenaamstellingen",
@@ -751,7 +751,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "aantekeningenrechten",
@@ -840,7 +840,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "aantekeningenkadastraleobjecten",
@@ -956,7 +956,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "stukdelen",
@@ -1095,7 +1095,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "aardzakelijkerechten",
@@ -1145,7 +1145,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "gemeentes",
@@ -1191,7 +1191,7 @@
             },
             "mainGeometry": "geometrie"
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "meta",
@@ -1223,7 +1223,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "kadastralesecties",
@@ -1269,7 +1269,7 @@
             },
             "mainGeometry": "geometrie"
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "kadastralegemeentecodes",
@@ -1311,7 +1311,7 @@
             },
             "mainGeometry": "geometrie"
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "kadastralegemeentes",
@@ -1353,7 +1353,7 @@
             },
             "mainGeometry": "geometrie"
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         }
       ]
     }

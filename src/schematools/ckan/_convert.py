@@ -65,7 +65,7 @@ def from_dataset(ds: DatasetSchema, path: str) -> dict[str, Any]:
 
     # XXX I can't find what the inverse is called, so we omit this field for
     # niet_beschikbaar. The uploader in dcatd does the same.
-    if ds.status == DatasetSchema.Status.beschikbaar:
+    if ds.has_an_available_version:
         data["dataset_status"] = "http://data.overheid.nl/status/beschikbaar"
 
     return data

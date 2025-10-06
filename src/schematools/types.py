@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import datetime
 import json
 import logging
 import re
@@ -304,12 +305,6 @@ class DatasetSchema(SchemaType):
     This is a collection of JSON Schema's within a single file.
     """
 
-    class Status(Enum):
-        """The allowed status values according to the Amsterdam schema spec."""
-
-        beschikbaar = "beschikbaar"
-        niet_beschikbaar = "niet_beschikbaar"
-
     def __init__(
         self,
         data: dict,
@@ -367,11 +362,6 @@ class DatasetSchema(SchemaType):
             return json.dumps(self.data)
 
         data = self.data.copy()
-
-        # As a temporary fix add the status property of the default version, this can be
-        # removed once the DSO-API doesn't rely on the status of a DatasetSchema, but on
-        # the status of a DatasetVersionSchema.
-        data["status"] = self.status.value
 
         if inline_tables:
             # Inline the tables in each version.
@@ -495,17 +485,6 @@ class DatasetSchema(SchemaType):
 
         return _normalize_auth(auth)
 
-    @property
-    def status(self) -> DatasetSchema.Status:
-        if self.get("versions"):
-            return self.get_version(self.default_version).status
-        else:
-            value = self.get("status")
-        try:
-            return DatasetSchema.Status[value]
-        except KeyError:
-            raise ParserError(f"Status field contains an unknown value: {value}") from None
-
     def _get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
         """Internal function to retrieve a (related) dataset from the shared cache."""
         if dataset_id == self.id:
@@ -536,11 +515,7 @@ class DatasetSchema(SchemaType):
     @property
     def has_an_available_version(self) -> bool:
         """Whether the Dataset has an available version which should be exposed on the API."""
-        # TODO: use the lifecycleStatus once it has an `unavailable` status.
-        for _, version in self.versions.items():
-            if version.status == DatasetSchema.Status.beschikbaar:
-                return True
-        return False
+        return any(version.enable_api for _, version in self.versions.items())
 
     @property
     def tables(self) -> list[DatasetTableSchema]:
@@ -867,11 +842,12 @@ class DatasetVersionSchema(SchemaType):
     Amsterdam Schema V3.
     """
 
-    class LifecycleStatus(Enum):
-        """The allowed lifecycle status values according to the Amsterdam schema spec."""
+    class Status(Enum):
+        """The allowed status values according to the Amsterdam schema spec."""
 
         stable = "stable"
-        experimental = "experimental"
+        under_development = "under_development"
+        superseded = "superseded"
 
     def __init__(
         self,
@@ -884,23 +860,45 @@ class DatasetVersionSchema(SchemaType):
         super().__init__(data)
 
     @property
-    def lifecycle_status(self) -> DatasetVersionSchema.LifecycleStatus | None:
-        # Allow no value to provide backwards compatability
-        value = self.data.get("lifecycleStatus")
-        try:
-            return DatasetVersionSchema.LifecycleStatus[value]
-        except KeyError:
-            raise ParserError(
-                f"LifecycleStatus field contains an unknown value: {value}"
-            ) from None
-
-    @property
-    def status(self) -> DatasetSchema.Status:
+    def status(self) -> DatasetVersionSchema.Status:
         value = self.data.get("status")
         try:
-            return DatasetSchema.Status[value]
+            return DatasetVersionSchema.Status[value]
         except KeyError:
-            raise ParserError(f"Status field contains an unknown value: {value}") from None
+            raise ParserError(f"status field contains an unknown value: {value}") from None
+
+    @property
+    def enable_api(self) -> bool:
+        value = self.data.get("enableAPI")
+        if not isinstance(value, bool):
+            raise ParserError("enableAPI must be a boolean")
+        return value
+
+    @property
+    def end_support_date(self) -> datetime.date | None:
+        value = self.data.get("endSupportDate")
+        if not value:
+            return None
+        try:
+            date_value = datetime.datetime.strptime(value, "%Y-%m-%d").astimezone().date()
+        except ValueError:
+            raise ParserError("endSupportDate must be a valid date ('YYYY-MM-DD')") from None
+        return date_value
+
+    @property
+    def release_date(self) -> datetime.date | None:
+        value = self.data.get("releaseDate")
+        if not value:
+            return None
+        try:
+            date_value = datetime.datetime.strptime(value, "%Y-%m-%d").astimezone().date()
+        except ValueError:
+            raise ParserError("releaseDate must be a valid date ('YYYY-MM-DD')") from None
+        return date_value
+
+    @property
+    def is_default(self) -> bool:
+        return self._parent_schema.default_version == self.version
 
     @property
     def schema(self) -> DatasetSchema:
@@ -1021,11 +1019,11 @@ class DatasetTableSchema(SchemaType):
     a human-readable abbreviation that fits inside the maximum database table name length.
     """
 
-    class LifecycleStatus(Enum):
+    class Status(Enum):
         """The allowed lifecycle status values according to the Amsterdam schema spec."""
 
         stable = "stable"
-        experimental = "experimental"
+        under_development = "under_development"
 
     def __init__(
         self,
@@ -1100,17 +1098,14 @@ class DatasetTableSchema(SchemaType):
         return data
 
     @property
-    def lifecycle_status(self) -> DatasetTableSchema.LifecycleStatus | None:
-        # Allow no value to provide backwards compatability
-        value = self.data.get("lifecycleStatus")
+    def status(self) -> DatasetTableSchema.Status:
+        value = self.data.get("status")
         if not value:
             return None
         try:
-            return DatasetTableSchema.LifecycleStatus[value]
+            return DatasetTableSchema.Status[value]
         except KeyError:
-            raise ParserError(
-                f"LifecycleStatus field contains an unknown value: {value}"
-            ) from None
+            raise ParserError(f"status field contains an unknown value: {value}") from None
 
     @cached_property
     def qualified_id(self) -> str:

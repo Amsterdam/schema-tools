@@ -1,0 +1,19 @@
+{
+  "id": "metaschemav4/supersededversion",
+  "type": "dataset",
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": true,
+      "status": "superseded",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "table",
+          "$ref": "tables/v1"
+        }
+      ]
+    }
+  }
+}

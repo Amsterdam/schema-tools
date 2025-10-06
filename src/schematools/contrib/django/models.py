@@ -306,9 +306,7 @@ class Dataset(models.Model):
             except DatasetVersion.DoesNotExist:
                 version_instance = DatasetVersion.create_for_schema(version, dataset=self)
             else:
-                version_instance.lifecycle_status = DatasetVersion.LifecycleStatus[
-                    version.lifecycle_status.value.upper()
-                ]
+                version_instance.status = DatasetVersion.Status[version.status.value.upper()]
                 version_instance.save()
                 # Remove tables that are no longer in the version.
                 for table in version_instance.tables.all():
@@ -372,15 +370,16 @@ class Dataset(models.Model):
 
 
 class DatasetVersion(models.Model):
-    class LifecycleStatus(models.TextChoices):
-        EXPERIMENTAL = "E", "experimental"
+    class Status(models.TextChoices):
+        UNDER_DEVELOPMENT = "D", "UNDER_DEVELOPMENT"
         STABLE = "S", "stable"
+        SUPERSEDED = "U", "superseded"
 
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="versions")
     version = models.CharField(default="v1", max_length=3)
-    lifecycle_status = models.CharField(
-        choices=LifecycleStatus.choices,
-        default=LifecycleStatus.EXPERIMENTAL,
+    status = models.CharField(
+        choices=Status.choices,
+        default=Status.UNDER_DEVELOPMENT,
     )
 
     def __str__(self):
@@ -398,7 +397,7 @@ class DatasetVersion(models.Model):
         obj = cls(
             dataset=dataset,
             version=version_schema.version,
-            lifecycle_status=cls.LifecycleStatus[version_schema.lifecycle_status.value.upper()],
+            status=cls.Status[version_schema.status.value.upper()],
         )
         obj.save()
         return obj

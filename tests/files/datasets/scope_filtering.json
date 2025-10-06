@@ -6,16 +6,16 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
+      "enableAPI": true,
       "version": "1.0.0",
-      "lifecycleStatus": "stable",
+      "status": "stable",
       "tables": [
         {
           "id": "unscoped_table",
           "title": "Unscoped table to test if it can be accessed when scopes are provided",
           "type": "table",
           "version": "1.0.0",
-          "lifecycleStatus": "stable",
+          "status": "stable",
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "identifier": "id",
@@ -51,7 +51,7 @@
           "title": "Scoped table to test if it can be accessed when (correct) scopes are provided",
           "type": "table",
           "version": "1.0.0",
-          "lifecycleStatus": "stable",
+          "status": "stable",
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "identifier": "id",

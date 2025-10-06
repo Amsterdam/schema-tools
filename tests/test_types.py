@@ -549,11 +549,11 @@ def test_datasetversions(schema_loader):
 
     # Test backwards compatible properties
     assert dataset.tables == dataset.get_tables("v1")
-    assert dataset.status == DatasetSchema.Status.beschikbaar
+    assert dataset.has_an_available_version
 
     # Test each version of the dataset is accessible
-    assert dataset.get_version("v0").status == DatasetSchema.Status.niet_beschikbaar
-    assert dataset.get_version("v1").status == DatasetSchema.Status.beschikbaar
+    assert not dataset.get_version("v0").enable_api
+    assert dataset.get_version("v1").enable_api
 
 
 def test_row_level_auth(schema_loader):

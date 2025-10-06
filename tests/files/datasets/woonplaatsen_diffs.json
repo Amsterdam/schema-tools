@@ -8,13 +8,14 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "niet_beschikbaar",
-      "lifecycleStatus": "stable",
+      "status": "stable",
+      "enableAPI": false,
       "version": "0.0.1",
       "tables": [
         {
           "id": "woonplaatsen",
           "type": "table",
+          "status": "stable",
           "version": "1.1.0",
           "temporal": {
             "identifier": "volgnummer",
@@ -64,12 +65,12 @@
               }
             },
             "mainGeometry": "geometrie"
-          },
-          "lifecycleStatus": "stable"
+          }
         },
         {
           "id": "dossiers",
           "type": "table",
+          "status": "stable",
           "version": "1.0.0",
           "schema": {
             "$id": "https://github.com/Amsterdam/schemas/bag/dossiers.json",
@@ -91,8 +92,7 @@
                 "description": "Verwijzing vanuit de overige objectklassen."
               }
             }
-          },
-          "lifecycleStatus": "stable"
+          }
         }
       ]
     }

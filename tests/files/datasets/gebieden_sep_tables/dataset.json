@@ -6,8 +6,8 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
+      "status": "stable",
       "version": "0.0.1",
       "tables": [
         {
@@ -15,7 +15,7 @@
           "mainGeometry": "geometrie",
           "type": "table",
           "version": "1.0.0",
-          "lifecycleStatus": "stable",
+          "status": "stable",
           "temporal": {
             "identifier": "volgnummer",
             "dimensions": {
@@ -70,7 +70,7 @@
           "id": "buurten",
           "type": "table",
           "version": "1.0.0",
-          "lifecycleStatus": "stable",
+          "status": "stable",
           "schema": {
             "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
             "$schema": "http://json-schema.org/draft-07/schema#",

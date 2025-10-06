@@ -489,11 +489,8 @@ def validate_datasets(paths: tuple[str], prefix: str):
             except KeyError:
                 click.echo("Dataset has no previous version")
                 continue
-            # We can skip checks as long as the previous version was experimental.
-            if (
-                previous_version["lifecycleStatus"]
-                == DatasetTableSchema.LifecycleStatus.experimental.value
-            ):
+            # We can skip checks as long as the previous version was under_development.
+            if previous_version["status"] == DatasetTableSchema.Status.under_development.value:
                 continue
 
             click.echo("Validating stable dataset for changes. Only additions are allowed.")
@@ -659,11 +656,8 @@ def validate_tables(paths: tuple[str], prefix: str):
         previous_path = "/".join(path_parts)
         previous: dict = read_json_path(previous_path)
         current: dict = read_json_path(path)
-        # We can skip checks as long as the previous version was experimental.
-        if (
-            previous.get("lifecycleStatus")
-            == DatasetTableSchema.LifecycleStatus.experimental.value
-        ):
+        # We can skip checks as long as the previous version was under_development.
+        if previous.get("status") == DatasetTableSchema.Status.under_development.value:
             continue
         try:
             click.echo(f"Validating table {path}: ", nl=False)
