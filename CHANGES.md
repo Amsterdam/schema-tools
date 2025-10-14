@@ -1,3 +1,8 @@
+# 2025-10-14 (8.5.0)
+
+* Validate the version numbers of tables and dataset versions so that they adhere to Semantic
+  Versioning.
+
 # 2025-10-06 (8.4.2)
 
 * Add method to retrieve all Scope objects from database storage to DatabaseSchemaLoader
