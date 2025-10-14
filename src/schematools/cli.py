@@ -652,8 +652,8 @@ def validate_tables(paths: tuple[str], prefix: str):
         path_parts = path.split("/")
         path_parts[-1] = f"{prefix}-{path_parts[-1]}"
         previous_path = "/".join(path_parts)
-        previous = read_json_path(previous_path)
-        current = read_json_path(path)
+        previous: dict = read_json_path(previous_path)
+        current: dict = read_json_path(path)
         # We can skip checks as long as the previous version was experimental.
         if (
             previous.get("lifecycleStatus")
@@ -665,6 +665,8 @@ def validate_tables(paths: tuple[str], prefix: str):
             previous_fields = previous["schema"]["properties"]
             current_fields = current["schema"]["properties"]
             table_errors = validation.validate_table(previous_fields, current_fields)
+
+            table_errors.extend(validation.validate_table_version(previous, current))
 
             if len(table_errors) > 0:
                 has_errors = True
