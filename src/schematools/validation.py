@@ -620,6 +620,28 @@ def validate_dataset(
     return dataset_errors
 
 
+def validate_dataset_versions_version(id: str, previous: dict, current: dict) -> list[str]:
+    if previous["lifecycleStatus"] == DatasetVersionSchema.LifecycleStatus.experimental:
+        return []
+
+    previous_version = SemVer(previous["version"])
+    current_version = SemVer(current["version"])
+
+    previous_tables = {table["id"] for table in previous["tables"]}
+    current_tables = {table["id"] for table in current["tables"]}
+
+    if current_tables > previous_tables:
+        expected_version = SemVer(previous["version"])
+        expected_version.minor += 1
+        if current_version != expected_version:
+            return [
+                f"Dataset '{id}' {previous_version.vmajor} has an added table, expecting new "
+                f"version to be {expected_version}."
+            ]
+
+    return []
+
+
 PROPERTIES_INTRODUCING_BREAKING_CHANGES = ["type", "$ref", "format", "relation", "enum"]
 IGNORED_FIELDS = ["schema"]  # This is not a database column.
 

@@ -15,6 +15,7 @@ from schematools.validation import (
     _check_maingeometry,
     _identifier_properties,
     validate_dataset,
+    validate_dataset_versions_version,
     validate_table,
     validate_table_version,
 )
@@ -790,3 +791,79 @@ def test_validate_table(prev, curr, errors):
 def test_validate_table_version(prev, curr, errors):
     table_errors = validate_table_version(prev, curr)
     assert table_errors == errors
+
+
+@pytest.mark.parametrize(
+    "prev,curr,errors",
+    [
+        # No changes, no fail
+        (
+            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            [],
+        ),
+        # Changes with version bump, no fail
+        (
+            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {
+                "version": "1.1.0",
+                "lifecycleStatus": "stable",
+                "tables": [{"id": "table1"}, {"id": "table2"}],
+            },
+            [],
+        ),
+        # Changes for experimental table, no fail
+        (
+            {"version": "1.0.0", "lifecycleStatus": "experimental", "tables": [{"id": "table1"}]},
+            {
+                "version": "1.1.0",
+                "lifecycleStatus": "experimental",
+                "tables": [{"id": "table1"}, {"id": "table2"}],
+            },
+            [],
+        ),
+        # Changes without version bump, fail
+        (
+            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {
+                "version": "1.0.0",
+                "lifecycleStatus": "stable",
+                "tables": [{"id": "table1"}, {"id": "table2"}],
+            },
+            ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
+        ),
+        # Changes with too big of a minor version bump, fail
+        (
+            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {
+                "version": "1.2.0",
+                "lifecycleStatus": "stable",
+                "tables": [{"id": "table1"}, {"id": "table2"}],
+            },
+            ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
+        ),
+        # Changes with a major version bump, fail
+        (
+            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {
+                "version": "2.0.0",
+                "lifecycleStatus": "stable",
+                "tables": [{"id": "table1"}, {"id": "table2"}],
+            },
+            ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
+        ),
+        # Changes with too little of a version bump, fail
+        (
+            {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {
+                "version": "1.0.1",
+                "lifecycleStatus": "stable",
+                "tables": [{"id": "table1"}, {"id": "table2"}],
+            },
+            ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
+        ),
+    ],
+)
+def test_validate_dataset_versions_version(prev, curr, errors):
+    dataset_version_errors = validate_dataset_versions_version("dataset", prev, curr)
+    assert dataset_version_errors == errors

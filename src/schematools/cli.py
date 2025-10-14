@@ -501,6 +501,11 @@ def validate_datasets(paths: tuple[str], prefix: str):
             dataset_errors = validation.validate_dataset(
                 previous_version["tables"], current_version["tables"]
             )
+            dataset_errors.extend(
+                validation.validate_dataset_versions_version(
+                    previous["id"], previous_version, current_version
+                )
+            )
             if len(dataset_errors) > 0:
                 has_errors = True
                 click.echo("FAIL")
