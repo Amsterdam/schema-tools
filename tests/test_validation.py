@@ -16,6 +16,7 @@ from schematools.validation import (
     _identifier_properties,
     validate_dataset,
     validate_table,
+    validate_table_version,
 )
 
 
@@ -575,4 +576,217 @@ def test_validate_dataset(prev, curr, errors):
 )
 def test_validate_table(prev, curr, errors):
     table_errors = validate_table(prev, curr)
+    assert table_errors == errors
+
+
+@pytest.mark.parametrize(
+    "prev,curr,errors",
+    [
+        # No updates
+        (
+            {"id": "test", "version": "1.0.0", "schema": {"properties": {"field": {}}}},
+            {"id": "test", "version": "1.0.0", "schema": {"properties": {"field": {}}}},
+            [],
+        ),
+        # Add field success
+        (
+            {"id": "test", "version": "1.0.0", "schema": {"properties": {"field": {}}}},
+            {
+                "id": "test",
+                "version": "1.1.0",
+                "schema": {"properties": {"field": {}, "field2": {}}},
+            },
+            [],
+        ),
+        # Add field fail no new version
+        (
+            {"id": "test", "version": "1.0.0", "schema": {"properties": {"field": {}}}},
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "schema": {"properties": {"field": {}, "field2": {}}},
+            },
+            ["Table 'test' added fields, expecting new version to be 1.1.0."],
+        ),
+        # Add field fail only patch bump
+        (
+            {"id": "test", "version": "1.0.0", "schema": {"properties": {"field": {}}}},
+            {
+                "id": "test",
+                "version": "1.0.1",
+                "schema": {"properties": {"field": {}, "field2": {}}},
+            },
+            ["Table 'test' added fields, expecting new version to be 1.1.0."],
+        ),
+        # Change metadata fail no new version
+        (
+            {
+                "id": "test",
+                "title": "Title 1",
+                "description": "Description 1",
+                "shortname": "test",
+                "version": "1.0.0",
+                "schema": {"properties": {"field": {}}},
+            },
+            {
+                "id": "test",
+                "title": "Title 2",
+                "description": "Description 2",
+                "shortname": "test2",
+                "version": "1.0.0",
+                "schema": {"properties": {"field": {}}},
+            },
+            [
+                "Property 'title' on table 'test' has changed, expecting new version to be 1.0.1.",
+                "Property 'description' on table 'test' has changed, expecting new version to be 1.0.1.",
+                "Property 'shortname' on table 'test' has changed, expecting new version to be 1.0.1.",
+            ],
+        ),
+        # Change metadata fail version too high
+        (
+            {
+                "id": "test",
+                "title": "Title 1",
+                "description": "Description 1",
+                "shortname": "test",
+                "version": "1.0.0",
+                "schema": {"properties": {"field": {}}},
+            },
+            {
+                "id": "test",
+                "title": "Title 2",
+                "description": "Description 2",
+                "shortname": "test2",
+                "version": "1.1.0",
+                "schema": {"properties": {"field": {}}},
+            },
+            [
+                "Property 'title' on table 'test' has changed, expecting new version to be 1.0.1.",
+                "Property 'description' on table 'test' has changed, expecting new version to be 1.0.1.",
+                "Property 'shortname' on table 'test' has changed, expecting new version to be 1.0.1.",
+            ],
+        ),
+        # Change metadata success
+        (
+            {
+                "id": "test",
+                "title": "Title 1",
+                "description": "Description 1",
+                "shortname": "test",
+                "version": "1.0.0",
+                "schema": {"properties": {"field": {}}},
+            },
+            {
+                "id": "test",
+                "title": "Title 2",
+                "description": "Description 2",
+                "shortname": "test2",
+                "version": "1.0.1",
+                "schema": {"properties": {"field": {}}},
+            },
+            [],
+        ),
+        # Change metadata on schema fail no new version
+        (
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "schema": {"display": "field", "properties": {"field": {}}},
+            },
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "schema": {"display": "field2", "properties": {"field": {}}},
+            },
+            [
+                "Property 'schema.display' on table 'test' has changed, expecting new version to be 1.0.1."
+            ],
+        ),
+        # Change metadata on schema success
+        (
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "schema": {"display": "field", "properties": {"field": {}}},
+            },
+            {
+                "id": "test",
+                "version": "1.0.1",
+                "schema": {"display": "field2", "properties": {"field": {}}},
+            },
+            [],
+        ),
+        # Change metadata on field fail no new version
+        (
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "schema": {
+                    "properties": {
+                        "field": {
+                            "title": "field",
+                            "unit": "m2",
+                            "shortname": "field",
+                            "description": "Field1",
+                        }
+                    }
+                },
+            },
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "schema": {
+                    "properties": {
+                        "field": {
+                            "title": "field2",
+                            "unit": "cm2",
+                            "shortname": "field2",
+                            "description": "Field2",
+                        }
+                    }
+                },
+            },
+            [
+                "Property 'title' on field 'field' in table 'test'has changed, expecting new version to be 1.0.1.",
+                "Property 'description' on field 'field' in table 'test'has changed, expecting new version to be 1.0.1.",
+                "Property 'shortname' on field 'field' in table 'test'has changed, expecting new version to be 1.0.1.",
+                "Property 'unit' on field 'field' in table 'test'has changed, expecting new version to be 1.0.1.",
+            ],
+        ),
+        # Change metadata on field success
+        (
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "schema": {
+                    "properties": {
+                        "field": {
+                            "title": "field",
+                            "unit": "m2",
+                            "shortname": "field",
+                            "description": "Field1",
+                        }
+                    }
+                },
+            },
+            {
+                "id": "test",
+                "version": "1.0.1",
+                "schema": {
+                    "properties": {
+                        "field": {
+                            "title": "field2",
+                            "unit": "cm2",
+                            "shortname": "field2",
+                            "description": "Field2",
+                        }
+                    }
+                },
+            },
+            [],
+        ),
+    ],
+)
+def test_validate_table_version(prev, curr, errors):
+    table_errors = validate_table_version(prev, curr)
     assert table_errors == errors

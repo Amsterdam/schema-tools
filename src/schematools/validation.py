@@ -33,7 +33,7 @@ from urllib.parse import urlparse
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
-from schematools.types import DatasetSchema, DatasetTableSchema, DatasetVersionSchema
+from schematools.types import DatasetSchema, DatasetTableSchema, DatasetVersionSchema, SemVer
 
 
 @dataclass(frozen=True)
@@ -701,5 +701,61 @@ def validate_table(
                     object_path,
                 )
             )
+
+    return table_errors
+
+
+METADATA_PROPERTIES = ["title", "description", "shortname", "unit", "display"]
+
+
+def validate_table_version(previous: dict, current: dict) -> list[str]:
+    """
+    Validate that a table that has been modified has the correct new version.
+
+    Adding a field requires a new minor version.
+
+    Changing metadata requires a new patch version.
+    """
+    current_version = SemVer(current["version"])
+
+    # First, check backwards compatible changes (requiring minor bump)
+    # i.e. adding a field.
+    previous_fields = previous["schema"]["properties"].keys()
+    current_fields = current["schema"]["properties"].keys()
+
+    if set(current_fields) > set(previous_fields):
+        expected_version = SemVer(previous["version"])
+        expected_version.minor += 1
+        expected_version.patch = 0
+        if current_version != expected_version:
+            return [
+                f"Table '{previous["id"]}' added fields, expecting new version "
+                f"to be {expected_version}."
+            ]
+
+    # Then, check metadata changes at table, table.schema, and field levels
+    table_errors = []
+    expected_version = SemVer(previous["version"])
+    expected_version.patch += 1
+    if current_version != expected_version:
+        for prop in METADATA_PROPERTIES:
+            # first check top level
+            if previous.get(prop) != current.get(prop):
+                table_errors.append(
+                    f"Property '{prop}' on table '{previous["id"]}' has changed, expecting new "
+                    f"version to be {expected_version}."
+                )
+            if previous["schema"].get(prop) != current["schema"].get(prop):
+                table_errors.append(
+                    f"Property 'schema.{prop}' on table '{previous["id"]}' has changed, expecting "
+                    f"new version to be {expected_version}."
+                )
+            for field_name, field in previous["schema"]["properties"].items():
+                current_field = current["schema"]["properties"][field_name]
+                if field.get(prop) != current_field.get(prop):
+                    table_errors.append(
+                        f"Property '{prop}' on field '{field_name}' in table '{previous["id"]}'"
+                        f"has changed, expecting new version to be {expected_version}."
+                    )
 
     return table_errors
