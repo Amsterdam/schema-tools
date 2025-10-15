@@ -1,3 +1,7 @@
+# 2025-10-14 (8.5.1)
+
+* Revert not creating tables for datasets which are unavailable.
+
 # 2025-10-14 (8.5.0)
 
 * Validate the version numbers of tables and dataset versions so that they adhere to Semantic
