@@ -956,6 +956,29 @@ class DatasetVersionSchema(SchemaType):
         ]
 
 
+@dataclasses.dataclass
+class RowLevelSecurityRule:
+    """Class that models Row Level Security rule, i.e. a rule where the
+    visibility of column(s) in a row depends on another value in the row."""
+
+    targets: list[str]
+    source: str
+    auth_map: dict[bool, frozenset]
+
+    @classmethod
+    def from_dict(cls, rls_dict: dict):
+        auth_map = {}
+        for key, val in rls_dict["authMap"].items():
+            # In json, you cannot use booleans as keys, but in Python no problem:
+            BOOL_MAP = {"true": True, "false": False}
+            auth_map[BOOL_MAP.get(key, key)] = frozenset(val)
+        # convert source and target to camelCase. Nested objects in the schema end up as such on
+        # the top level of the json output.
+        source = toCamelCase("_".join(rls_dict["source"].split(".")))
+        targets = [toCamelCase("_".join(target.split("."))) for target in rls_dict["targets"]]
+        return cls(targets=targets, source=source, auth_map=auth_map)
+
+
 class DatasetTableSchema(SchemaType):
     """The table within a dataset.
     This table definition follows the JSON Schema spec.
@@ -1004,6 +1027,12 @@ class DatasetTableSchema(SchemaType):
 
     def __hash__(self):
         return hash(self.db_name)
+
+    @cached_property
+    def rls(self) -> RowLevelSecurityRule | None:
+        if rls_dict := self.data.get("rowLevelAuth"):
+            return RowLevelSecurityRule.from_dict(rls_dict)
+        return None
 
     def _resolve_scope(self, element):
         if "$ref" in element.get("auth", {}):
