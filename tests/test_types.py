@@ -554,3 +554,19 @@ def test_datasetversions(schema_loader):
     # Test each version of the dataset is accessible
     assert dataset.get_version("v0").status == DatasetSchema.Status.niet_beschikbaar
     assert dataset.get_version("v1").status == DatasetSchema.Status.beschikbaar
+
+
+def test_row_level_auth(schema_loader):
+    dataset = schema_loader.get_dataset_from_file("brp_row_level_auth.json")
+    table = dataset.tables[0]  # there is only one table here.
+
+    rla = table.rla
+
+    assert rla.targets == [
+        "verblijfplaatsHuisnummer",
+        "verblijfplaatsStraatnaam",
+        "verblijfplaatsPostcode",
+    ]
+    assert rla.source == "verblijfplaatsAfgeschermd"
+    assert rla.auth_map[True] == frozenset({Scope.from_string("BRP/R-PLUS")})
+    assert rla.auth_map[False] == frozenset({Scope.from_string("BRP/R")})
