@@ -1,3 +1,8 @@
+# 2025-11-11 (8.6.0)
+
+* Add validation for rowLevelAuth if it exists on the table. Ensure source and target
+  fields exist and source field is a boolean.
+
 # 2025-10-14 (8.5.1)
 
 * Revert not creating tables for datasets which are unavailable.
