@@ -1,0 +1,244 @@
+{
+  "type": "dataset",
+  "id": "brp",
+  "title": "Basisregistratie Personen (BRP)",
+  "description": "Deze dataset maakt de basisregistratie personen toegankelijk, bij gebruik van login credentials.",
+  "crs": "EPSG:28992",
+  "auth": "BRP/R",
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "reasonsNonPublic": ["5.1 1c: Bevat persoonsgegevens"],
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "0.0.1",
+      "tables": [
+        {
+          "id": "ingeschrevenpersonen",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "id"
+            ],
+            "required": [
+              "id",
+              "schema",
+              "burgerservicenummer"
+            ],
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer"
+              },
+              "geslachtsaanduiding": {
+                "type": "string"
+              },
+              "naam": {
+                "type": "object",
+                "properties": {
+                  "aanduidingNaamgebruik": {
+                    "type": "string"
+                  },
+                  "voornamen": {
+                    "type": "string"
+                  },
+                  "voorletters": {
+                    "type": "string"
+                  },
+                  "geslachtsnaam": {
+                    "type": "string"
+                  },
+                  "voorvoegsel": {
+                    "type": "string"
+                  }
+                },
+                "required": []
+              },
+              "leeftijd": {
+                "type": "integer"
+              },
+              "burgerservicenummer": {
+                "type": "string"
+              },
+              "geboorte": {
+                "type": "object",
+                "properties": {
+                  "datum": {
+                    "type": "object",
+                    "properties": {
+                      "datum": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "jaar": {
+                        "type": "integer"
+                      },
+                      "maand": {
+                        "type": "integer"
+                      },
+                      "dag": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": []
+                  }
+                },
+                "required": []
+              },
+              "verblijfplaats": {
+                "type": "object",
+                "properties": {
+                  "huisnummer": {
+                    "type": "string"
+                  },
+                  "postcode": {
+                    "type": "string"
+                  },
+                  "straatnaam": {
+                    "type": "string"
+                  },
+                  "afgeschermd": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          "lifecycleStatus": "stable",
+          "rowLevelAuth": {
+            "source": "verblijfplaats.afgeschermd_adres",
+            "targets": [
+              "verblijfplaats.huisnummer",
+              "verblijfplaats.straatnaam",
+              "verblijfplaats.postcode",
+              "verblijfplaats.telefoon"
+            ],
+            "authMap": {
+              "true": ["BRP/R-PLUS"],
+              "false": ["BRP/R"]
+            }
+          }
+        },
+        {
+          "id": "ingeschrevenpersonen2",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "id"
+            ],
+            "required": [
+              "id",
+              "schema",
+              "burgerservicenummer"
+            ],
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer"
+              },
+              "geslachtsaanduiding": {
+                "type": "string"
+              },
+              "naam": {
+                "type": "object",
+                "properties": {
+                  "aanduidingNaamgebruik": {
+                    "type": "string"
+                  },
+                  "voornamen": {
+                    "type": "string"
+                  },
+                  "voorletters": {
+                    "type": "string"
+                  },
+                  "geslachtsnaam": {
+                    "type": "string"
+                  },
+                  "voorvoegsel": {
+                    "type": "string"
+                  }
+                },
+                "required": []
+              },
+              "leeftijd": {
+                "type": "integer"
+              },
+              "burgerservicenummer": {
+                "type": "string"
+              },
+              "geboorte": {
+                "type": "object",
+                "properties": {
+                  "datum": {
+                    "type": "object",
+                    "properties": {
+                      "datum": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "jaar": {
+                        "type": "integer"
+                      },
+                      "maand": {
+                        "type": "integer"
+                      },
+                      "dag": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": []
+                  }
+                },
+                "required": []
+              },
+              "verblijfplaats": {
+                "type": "object",
+                "properties": {
+                  "huisnummer": {
+                    "type": "string"
+                  },
+                  "postcode": {
+                    "type": "string"
+                  },
+                  "straatnaam": {
+                    "type": "string"
+                  },
+                  "afgeschermd": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "lifecycleStatus": "stable",
+          "rowLevelAuth": {
+            "source": "verblijfplaats.afgeschermd",
+            "targets": [
+              "verblijfplaats.huisnummer",
+              "verblijfplaats.straatnaam",
+              "verblijfplaats.postcode",
+              "bestaat.niet"
+            ],
+            "authMap": {
+              "true": ["BRP/R-PLUS"],
+              "false": ["BRP/R"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

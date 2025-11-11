@@ -384,6 +384,24 @@ def test_production_version_tables(schema_loader) -> None:
     )
 
 
+def test_row_level_auth(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("brp_row_level_auth.json")
+    errors = list(validation.run(dataset))
+    assert len(errors) == 0
+
+
+def test_row_level_auth_fail(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("brp_row_level_auth_fail.json")
+    errors = [v.message for v in validation.run(dataset)]
+    assert len(errors) == 4
+    assert errors == [
+        "Source verblijfplaats.afgeschermd_adres is not available in table Ingeschrevenpersonen.",
+        "Target verblijfplaats.telefoon does not exist in table Ingeschrevenpersonen",
+        "Source verblijfplaats.afgeschermd in table Ingeschrevenpersonen2 is not a boolean.",
+        "Target bestaat.niet does not exist in table Ingeschrevenpersonen2",
+    ]
+
+
 def test_production_version_experimental_tables(schema_loader) -> None:
     dataset = schema_loader.get_dataset("experimental_tables")
 
