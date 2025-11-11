@@ -589,6 +589,36 @@ def _check_lifecycle_status(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
+@_register_validator("rowLevelAuth")
+def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
+    """
+    Check that the rowLevelAuth property on each table contains valid names of source and target
+    fields.
+    """
+
+    def get_field(field_path: str, schema: dict) -> None | dict:
+        path_parts = field_path.split(".")
+        for part in path_parts:
+            if part not in schema["properties"]:
+                return None
+            schema = schema["properties"][part]
+        return schema
+
+    for table in dataset.tables:
+        if rla := table.data.get("rowLevelAuth"):
+            schema = table["schema"]
+            source = rla["source"]
+            source_field = get_field(source, schema)
+            if not source_field:
+                yield (f"Source {source} is not available in table {table.python_name}.")
+            elif source_field["type"] != "boolean":
+                yield (f"Source {source} in table {table.python_name} is not a boolean.")
+            targets = rla["targets"]
+            for target in targets:
+                if not get_field(target, schema):
+                    yield (f"Target {target} does not exist in table {table.python_name}")
+
+
 def validate_dataset(
     previous_tables: list[dict[str, str]],
     current_tables: list[dict[str, str]],
