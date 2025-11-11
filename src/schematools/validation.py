@@ -614,6 +614,8 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
             elif source_field["type"] != "boolean":
                 yield (f"Source {source} in table {table.python_name} is not a boolean.")
             targets = rla["targets"]
+            if source in targets:
+                yield (f"Source {source} is also a target!")
             for target in targets:
                 if not get_field(target, schema):
                     yield (f"Target {target} does not exist in table {table.python_name}")

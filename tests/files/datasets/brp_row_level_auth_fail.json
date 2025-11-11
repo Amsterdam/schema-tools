@@ -227,6 +227,7 @@
           "rowLevelAuth": {
             "source": "verblijfplaats.afgeschermd",
             "targets": [
+              "verblijfplaats.afgeschermd",
               "verblijfplaats.huisnummer",
               "verblijfplaats.straatnaam",
               "verblijfplaats.postcode",
