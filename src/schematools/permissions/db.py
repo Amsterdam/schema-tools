@@ -16,6 +16,7 @@ from schematools.types import (
     DatasetTableSchema,
     PermissionLevel,
     ProfileSchema,
+    RowLevelAuthorisation,
     Scope,
 )
 
@@ -28,6 +29,7 @@ existing_sequences = {}
 
 PUBLIC_SCOPE_OBJECT = Scope({"id": PUBLIC_SCOPE})
 PUBLIC_SCOPES = {PUBLIC_SCOPE_OBJECT, PUBLIC_SCOPE}
+RLA_SCOPE = Scope({"id": "FEATURE/RLA"})
 
 
 def introspect_permissions(engine: Engine, role: str) -> None:
@@ -239,7 +241,7 @@ def _collect_dataset_grants(
         ]
 
         # First process all fields, to know if any fields has a non-public scope
-        column_scopes = _get_column_level_scopes(fields)
+        column_scopes = _get_column_level_scopes(fields, table.rla)
         if column_scopes:
             # When some fields have a specific scope,
             # grant statements need to be generated for each individual field.
@@ -319,15 +321,24 @@ def _collect_profile_grants(
     return grants
 
 
-def _get_column_level_scopes(fields: list[DatasetFieldSchema]) -> dict[str, frozenset[Scope]]:
+def _get_column_level_scopes(
+    fields: list[DatasetFieldSchema], rla: RowLevelAuthorisation | None
+) -> dict[str, frozenset[Scope]]:
     """Tell whether there are fields that have an explicit scope."""
     column_scopes = {}
     for field in fields:
         # Object type relations have subfields, in that case
         # the auth scope on the relation is leading.
         field_scopes = field.scopes - PUBLIC_SCOPES
+
         if field.is_subfield:
             field_scopes = (field.parent_field.scopes - PUBLIC_SCOPES) or field_scopes
+
+        # In case row level auth exists on the field, we need to set an extra scope on it for
+        # graceful degradation. This ensures older versions of schematools don't expose things
+        # it shouldn't.
+        if rla is not None and field.name in rla.targets:
+            field_scopes = field_scopes | {RLA_SCOPE}
 
         if field_scopes:
             column_scopes[field.db_name] = field_scopes
