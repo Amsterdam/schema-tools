@@ -1,3 +1,11 @@
+# 2025-11-12 (8.7.0)
+
+* Add RowLevelAuthorisation type and `rla` attribute to the DatasetTableSchema. This can be read out
+  in other applications to enforce row level authorisation
+* Ensure that during `permissions apply` the targets of a rowLevelAuth definition get a grant linked
+  to the availability of the feature. This can be used to ensure older versions cannot circumvent
+  this authorisation.
+
 # 2025-11-11 (8.6.0)
 
 * Add validation for rowLevelAuth if it exists on the table. Ensure source and target
