@@ -966,13 +966,20 @@ class RowLevelAuthorisation:
     auth_map: dict[bool, frozenset]
 
     @classmethod
-    def from_dict(cls, rls_dict: dict):
+    def from_dict(cls, rls_dict: dict, schema: DatasetSchema):
         auth_map = {}
         for key, scopes in rls_dict["authMap"].items():
             # In json, you cannot use booleans as keys, but in Python no problem:
             BOOL_MAP = {"true": True, "false": False}
             auth_map[BOOL_MAP.get(key, key)] = frozenset(
-                [Scope.from_string(scope) for scope in scopes]
+                [
+                    (
+                        Scope(schema.loader.get_scope(scope["$ref"]))
+                        if "$ref" in scope
+                        else Scope.from_string(scope)
+                    )
+                    for scope in scopes
+                ]
             )
         # convert source and target to camelCase. Nested objects in the schema end up as such on
         # the top level of the json output.
@@ -1033,7 +1040,7 @@ class DatasetTableSchema(SchemaType):
     @cached_property
     def rla(self) -> RowLevelAuthorisation | None:
         if rla_dict := self.data.get("rowLevelAuth"):
-            return RowLevelAuthorisation.from_dict(rla_dict)
+            return RowLevelAuthorisation.from_dict(rla_dict, self.schema)
         return None
 
     def _resolve_scope(self, element):
