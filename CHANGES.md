@@ -1,3 +1,8 @@
+# 2025-11-17 (8.7.1)
+
+* Revert automatically setting grants on columns targeted by rowLevelAuth. Instead, validate that
+  users set the correct auth in the schema.
+
 # 2025-11-12 (8.7.0)
 
 * Add RowLevelAuthorisation type and `rla` attribute to the DatasetTableSchema. This can be read out
