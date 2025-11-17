@@ -393,12 +393,13 @@ def test_row_level_auth(schema_loader) -> None:
 def test_row_level_auth_fail(schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("brp_row_level_auth_fail.json")
     errors = [v.message for v in validation.run(dataset)]
-    assert len(errors) == 5
+    assert len(errors) == 6
     assert errors == [
         "Source verblijfplaats.afgeschermd_adres is not available in table Ingeschrevenpersonen.",
         "Target verblijfplaats.telefoon does not exist in table Ingeschrevenpersonen",
         "Source verblijfplaats.afgeschermd in table Ingeschrevenpersonen2 is not a boolean.",
         "Source verblijfplaats.afgeschermd is also a target!",
+        "Target verblijfplaats.huisnummer does not define FEATURE/RLA auth.",
         "Target bestaat.niet does not exist in table Ingeschrevenpersonen2",
     ]
 
