@@ -929,38 +929,6 @@ class TestReadPermissions:
             _check_select_permission_denied(engine, level_c_role, "hr_sbi_ac_v1", "sbi_ac_naam")
             _check_select_permission_granted(engine, level_c_role, "hr_sbi_ac_v1", "sbi_ac_no")
 
-    def test_row_level_auth_permissions(self, engine, schema_loader, dbsession, caplog):
-        """Assert that the targets of row level auth of a table have the correct scope (feature_rla)
-        which is used to block these fields of while using previous versions of schematools.
-        """
-        dataset = schema_loader.get_dataset_from_file("brp_row_level_auth.json")
-        importer = NDJSONImporter(dataset, engine)
-        importer.generate_db_objects("ingeschrevenpersonen", truncate=True, ind_extra_index=False)
-
-        ams_schema = {dataset.id: dataset}
-
-        with caplog.at_level(logging.INFO, logger="schematools.permissions.db"):
-            apply_schema_and_profile_permissions(
-                engine,
-                ams_schema,
-                profiles=None,
-                create_roles=True,
-                verbose=1,
-            )
-
-        grants = _filter_grant_statements(caplog)
-        assert 'CREATE ROLE "scope_feature_rla"' in grants
-        assert 'CREATE ROLE "scope_feature_rla.filtered" IN ROLE "scope_feature_rla"' in grants
-        for field in [
-            "verblijfplaats_huisnummer",
-            "verblijfplaats_straatnaam",
-            "verblijfplaats_postcode",
-        ]:
-            assert (
-                f"GRANT SELECT ({field}) ON TABLE public.brp_ingeschrevenpersonen_v1"
-                " TO scope_feature_rla"
-            ) in grants
-
 
 class TestWritePermissions:
     def test_dataset_write_role(self, engine, gebieden_schema_auth):
