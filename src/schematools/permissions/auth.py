@@ -21,6 +21,7 @@ from schematools.types import (
 )
 
 PUBLIC_SCOPE = "OPENBAAR"
+RLA_SCOPE = "FEATURE/RLA"
 
 __all__ = ("UserScopes",)
 

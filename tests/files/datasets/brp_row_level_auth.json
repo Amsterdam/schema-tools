@@ -96,13 +96,16 @@
                 "type": "object",
                 "properties": {
                   "huisnummer": {
-                    "type": "string"
+                    "type": "string",
+                    "auth": "FEATURE/RLA"
                   },
                   "postcode": {
-                    "type": "string"
+                    "type": "string",
+                    "auth": ["FEATURE/RLA"]
                   },
                   "straatnaam": {
-                    "type": "string"
+                    "type": "string",
+                    "auth": [{"$ref": "scopes/DADI/feature_rla"}]
                   },
                   "afgeschermd": {
                     "type": "boolean"

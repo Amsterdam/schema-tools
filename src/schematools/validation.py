@@ -33,6 +33,7 @@ from urllib.parse import urlparse
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
+from schematools.permissions.auth import RLA_SCOPE
 from schematools.types import DatasetSchema, DatasetTableSchema, DatasetVersionSchema, SemVer
 
 
@@ -595,6 +596,7 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
     Check that the rowLevelAuth property on each table contains valid names of source and target
     fields.
     """
+    RLA_REF = {"$ref": "scopes/DADI/feature_rla"}
 
     def get_field(field_path: str, schema: dict) -> None | dict:
         path_parts = field_path.split(".")
@@ -616,9 +618,19 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
             targets = rla["targets"]
             if source in targets:
                 yield (f"Source {source} is also a target!")
+            targets = [t for t in targets if t != source]
             for target in targets:
-                if not get_field(target, schema):
+                field = get_field(target, schema)
+                if field is None:
                     yield (f"Target {target} does not exist in table {table.python_name}")
+                    continue
+                auth = field.get("auth")
+                if (
+                    not auth
+                    or (isinstance(auth, list) and RLA_SCOPE not in auth and RLA_REF not in auth)
+                    or (isinstance(auth, str) and auth not in [RLA_SCOPE, RLA_REF])
+                ):
+                    yield (f"Target {target} does not define FEATURE/RLA auth.")
 
 
 def validate_dataset(
