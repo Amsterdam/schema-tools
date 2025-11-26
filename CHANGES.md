@@ -1,3 +1,7 @@
+# 2025-11-26 (8.7.2)
+
+* Fix small issue with dataset validation when a minor version bump should happen.
+
 # 2025-11-17 (8.7.1)
 
 * Revert automatically setting grants on columns targeted by rowLevelAuth. Instead, validate that
