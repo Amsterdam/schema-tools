@@ -862,6 +862,16 @@ def test_validate_table_version(prev, curr, errors):
             },
             ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
         ),
+        # Changes with a patch version expect new minor version without patch, no fail
+        (
+            {"version": "1.1.1", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
+            {
+                "version": "1.2.0",
+                "lifecycleStatus": "stable",
+                "tables": [{"id": "table1"}, {"id": "table2"}],
+            },
+            [],
+        ),
         # Changes with a major version bump, fail
         (
             {"version": "1.0.0", "lifecycleStatus": "stable", "tables": [{"id": "table1"}]},
