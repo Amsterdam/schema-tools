@@ -667,7 +667,6 @@ def validate_dataset(
 def validate_dataset_versions_version(id: str, previous: dict, current: dict) -> list[str]:
     if previous["lifecycleStatus"] == DatasetVersionSchema.LifecycleStatus.experimental:
         return []
-
     previous_version = SemVer(previous["version"])
     current_version = SemVer(current["version"])
 
@@ -677,6 +676,7 @@ def validate_dataset_versions_version(id: str, previous: dict, current: dict) ->
     if current_tables > previous_tables:
         expected_version = SemVer(previous["version"])
         expected_version.minor += 1
+        expected_version.patch = 0
         if current_version != expected_version:
             return [
                 f"Dataset '{id}' {previous_version.vmajor} has an added table, expecting new "
