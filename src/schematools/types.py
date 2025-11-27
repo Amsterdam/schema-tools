@@ -848,9 +848,6 @@ class DatasetVersionSchema(SchemaType):
         stable = "stable"
         under_development = "under_development"
         superseded = "superseded"
-        # Temporary fix to allow migration to Amsterdam Schema v4, used in v9.0.0-rc1
-        beschikbaar = "beschikbaar"
-        niet_beschikbaar = "niet_beschikbaar"
 
     def __init__(
         self,
