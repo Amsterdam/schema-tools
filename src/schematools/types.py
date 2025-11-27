@@ -848,6 +848,9 @@ class DatasetVersionSchema(SchemaType):
         stable = "stable"
         under_development = "under_development"
         superseded = "superseded"
+        # Temporary fix to allow migration to Amsterdam Schema v4, used in v9.0.0-rc1
+        beschikbaar = "beschikbaar"
+        niet_beschikbaar = "niet_beschikbaar"
 
     def __init__(
         self,
@@ -1024,6 +1027,9 @@ class DatasetTableSchema(SchemaType):
 
         stable = "stable"
         under_development = "under_development"
+        # Temporary fix to allow migration to Amsterdam Schema v4, used in v9.0.0-rc1
+        beschikbaar = "beschikbaar"
+        niet_beschikbaar = "niet_beschikbaar"
 
     def __init__(
         self,
@@ -1103,7 +1109,8 @@ class DatasetTableSchema(SchemaType):
         if not value:
             return None
         try:
-            return DatasetTableSchema.Status[value]
+            # Temporary fix to strip invalid statuses in old schemas, used in v9.0.0-rc1
+            return DatasetTableSchema.Status[value.strip()]
         except KeyError:
             raise ParserError(f"status field contains an unknown value: {value}") from None
 
