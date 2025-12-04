@@ -24,12 +24,15 @@ from typing import (
     cast,
 )
 
+from deepdiff import DeepDiff
+
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools._utils import cached_method
 from schematools.exceptions import (
     DatasetFieldNotFound,
     DatasetTableNotFound,
     DatasetVersionNotFound,
+    IncompatibleDataset,
     LoaderNotFound,
     ParserError,
     SchemaObjectNotFound,
@@ -839,6 +842,23 @@ class DatasetSchema(SchemaType):
             related_ids.update(table.related_dataset_ids)
 
         return related_ids
+
+    def get_diffs(self, compare_ds: DatasetSchema) -> dict:
+        """
+        Extract differences between 2 instances of the same dataset
+        """
+
+        if self.id != compare_ds.id:
+            raise IncompatibleDataset(
+                f"Cannot compare {self.id} with {compare_ds.id}."
+                "Can only compare instances of the same dataset."
+            )
+
+        return DeepDiff(
+            self.json_data(inline_tables=True),
+            compare_ds.json_data(inline_tables=True),
+            ignore_order=True,
+        ).to_dict()
 
 
 class DatasetVersionSchema(SchemaType):

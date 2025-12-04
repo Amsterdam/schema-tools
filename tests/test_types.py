@@ -4,7 +4,7 @@ import operator
 
 import pytest
 
-from schematools.exceptions import SchemaObjectNotFound, ScopeNotFound
+from schematools.exceptions import IncompatibleDataset, SchemaObjectNotFound, ScopeNotFound
 from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
@@ -570,3 +570,32 @@ def test_row_level_auth(schema_loader):
     assert rla.source == "verblijfplaatsAfgeschermd"
     assert rla.auth_map[True] == frozenset({Scope.from_string("BRP/R-PLUS")})
     assert rla.auth_map[False] == frozenset({Scope.from_string("BRP/R")})
+
+
+def test_dataset_get_diffs(schema_loader):
+    """
+    Test if get_diffs method extracts the correct differences
+    between 2 instances of woonplaatsen dataset
+    """
+    base_dataset = schema_loader.get_dataset_from_file("woonplaatsen.json")
+    update_dataset = schema_loader.get_dataset_from_file("woonplaatsen_diffs.json")
+    assert base_dataset.get_diffs(update_dataset) == {
+        "dictionary_item_added": [
+            "root['versions']['v1']['tables'][0]['schema']['properties']['testAddedField']"
+        ],
+        "values_changed": {
+            "root['versions']['v1']['tables'][0]['version']": {
+                "new_value": "1.1.0",
+                "old_value": "1.0.0",
+            }
+        },
+    }
+
+
+def test_dataset_get_diffs_incomp_datasets(schema_loader):
+    """Comparisons between 2 different datasets should raise exception"""
+    appels = schema_loader.get_dataset_from_file("woonplaatsen.json")
+    peren = schema_loader.get_dataset_from_file("afval.json")
+
+    with pytest.raises(IncompatibleDataset):
+        appels.get_diffs(peren)
