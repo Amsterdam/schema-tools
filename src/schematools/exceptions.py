@@ -20,6 +20,9 @@ class DatasetNotFound(SchemaObjectNotFound):
 class DatasetVersionNotFound(SchemaObjectNotFound):
     """The version could not be found."""
 
+    def __init__(self, message):
+        self.message = message
+
 
 class DatasetTableNotFound(SchemaObjectNotFound):
     """The table could not be found."""
