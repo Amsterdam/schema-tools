@@ -843,7 +843,7 @@ class DatasetSchema(SchemaType):
 
         return related_ids
 
-    def get_diffs(self, compare_ds: DatasetSchema) -> dict:
+    def get_diffs(self, compare_ds: DatasetSchema) -> dict[str:list]:
         """
         Extract differences between 2 instances of the same dataset
         """
