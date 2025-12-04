@@ -35,6 +35,10 @@ class IncompatibleMetaschema(Exception):
     not compatible with."""
 
 
+class IncompatibleDataset(Exception):
+    """Datasets to compare should be the same. Cannot compare different datasets."""
+
+
 class PendingMetaschemaDeprecation(PendingDeprecationWarning):
     """The used metaschema is marked for deprecation."""
 
