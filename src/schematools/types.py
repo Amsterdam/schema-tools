@@ -850,7 +850,7 @@ class DatasetSchema(SchemaType):
 
         if self.id != compare_ds.id:
             raise IncompatibleDataset(
-                f"Cannot compare {self.id} with {compare_ds.id}."
+                f"Cannot compare {self.id} with {compare_ds.id}. "
                 "Can only compare instances of the same dataset."
             )
 
