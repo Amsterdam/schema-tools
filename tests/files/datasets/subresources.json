@@ -1,0 +1,222 @@
+{
+  "type": "dataset",
+  "id": "gebieden",
+  "title": "gebieden",
+  "identifier": "identificatie",
+  "crs": "EPSG:28992",
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "status": "beschikbaar",
+      "lifecycleStatus": "stable",
+      "version": "0.0.1",
+      "tables": [
+        {
+          "id": "buurten",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "registratiedatum": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de toestand is geregistreerd."
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object."
+              },
+              "naam": {
+                "type": "string",
+                "description": "De naam van het object."
+              },
+              "code": {
+                "type": "string",
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is gecre\u00eberd."
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is komen te vervallen."
+              },
+              "documentdatum": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "documentnummer": {
+                "type": "string",
+                "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "cbsCode": {
+                "type": "string",
+                "description": "De CBS-code van het object."
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Geometry.json",
+                "description": "Geometrische beschrijving van een object."
+              }
+            }
+          },
+          "lifecycleStatus": "stable"
+        },
+        {
+          "id": "wijken",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object."
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "registratiedatum": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de toestand is geregistreerd."
+              },
+              "naam": {
+                "type": "string",
+                "description": "De naam van het object."
+              },
+              "code": {
+                "type": "string",
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is gecre\u00eberd."
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het object is komen te vervallen."
+              },
+              "documentdatum": {
+                "type": "string",
+                "format": "date",
+                "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "documentnummer": {
+                "type": "string",
+                "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+              },
+              "cbsCode": {
+                "type": "string",
+                "description": "De CBS-code van het object."
+              },
+              "heeftBuurten": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "identificatie": {
+                      "type": "string"
+                    },
+                    "volgnummer": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "relation": "gebieden:buurten",
+                "description": "De buurten in de wijk.",
+                "isSubresource": true
+              },
+              "heeftWoningbouwPlannen": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "projectnaam": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "relation": "woningbouwplannen:woningbouwplan",
+                "description": "De beroemde personen in de wijk.",
+                "isSubresource": true
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Geometry.json",
+                "description": "Geometrische beschrijving van een object."
+              }
+            }
+          },
+          "lifecycleStatus": "stable"
+        }
+      ]
+    }
+  }
+}

@@ -633,6 +633,23 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
                     yield (f"Target {target} does not define FEATURE/RLA auth.")
 
 
+@_register_validator("subresources in same dataset as resource")
+def _check_sub_resources_in_same_dataset(dataset: DatasetSchema) -> Iterator[str]:
+    for table in dataset.tables:
+        for field in table.fields:
+            if field.get("isSubresource"):
+                related_table = field.related_table
+                if related_table is None:
+                    # This is also covered by structural validation.
+                    yield (f"Related table {field.relation} does not exist.")
+                elif related_table.dataset.id != dataset.id:
+                    yield (
+                        f"Subresource {related_table.dataset.id}:{related_table.id} is not part "
+                        f"of the same dataset as {dataset.id}:{table.id}. Subresources must "
+                        "always be part of the same dataset."
+                    )
+
+
 def validate_dataset(
     previous_tables: list[dict[str, str]],
     current_tables: list[dict[str, str]],
