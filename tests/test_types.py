@@ -8,6 +8,7 @@ from schematools.exceptions import SchemaObjectNotFound, ScopeNotFound
 from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
+    DatasetVersionSchema,
     Permission,
     PermissionLevel,
     ProfileSchema,
@@ -504,8 +505,8 @@ def test_datasetversions(schema_loader):
 
     # Test backwards compatible properties
     assert dataset.tables == dataset.get_tables("v1")
-    assert dataset.status == DatasetSchema.Status.beschikbaar
+    assert dataset.status == DatasetVersionSchema.Status.stable
 
     # Test each version of the dataset is accessible
-    assert dataset.get_version("v0").status == DatasetSchema.Status.niet_beschikbaar
-    assert dataset.get_version("v1").status == DatasetSchema.Status.beschikbaar
+    assert not dataset.get_version("v0").enable_api
+    assert dataset.get_version("v1").enable_api

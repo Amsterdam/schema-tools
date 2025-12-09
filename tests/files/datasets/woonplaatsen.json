@@ -6,70 +6,90 @@
   "version": "0.0.1",
   "crs": "EPSG:28992",
   "identifier": "identificatie",
-  "tables": [
-    {
-      "id": "woonplaatsen",
-      "type": "table",
+  "versions": {
+    "v1": {
       "version": "1.0.0",
-      "temporal": {
-        "identifier": "volgnummer",
-        "dimensions": { "geldigOp": ["beginGeldigheid", "eindGeldigheid"] }
-      },
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/bag/woonplaatsen.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["schema", "id"],
-        "display": "id",
-        "properties": {
+      "status": "stable",
+      "enableAPI": false,
+      "tables": [
+        {
+          "id": "woonplaatsen",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "id": { "type": "string" },
-          "statusCode": {
-            "type": "integer",
-            "provenance": "$.status.code",
-            "description": "Levenscyclus van de woonplaats, Woonplaats aangewezen, Woonplaats ingetrokken. code"
-          },
-          "statusOmschrijving": {
-            "type": "string",
-            "provenance": "$.status.omschrijving",
-            "description": "Levenscyclus van de woonplaats, Woonplaats aangewezen, Woonplaats ingetrokken. omschrijving"
-          },
-          "heeftDossier": {
-            "type": "string",
-            "relation": "woonplaatsen:dossiers",
-            "provenance": "$.heeftDossier.dossier",
-            "description": "Het dossier op basis waarvan het object is toegevoegd aan de registratie."
+            "$id": "https://github.com/Amsterdam/schemas/bag/woonplaatsen.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema",
+              "id"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+              },
+              "id": {
+                "type": "string"
+              },
+              "statusCode": {
+                "type": "integer",
+                "provenance": "$.status.code",
+                "description": "Levenscyclus van de woonplaats, Woonplaats aangewezen, Woonplaats ingetrokken. code"
+              },
+              "statusOmschrijving": {
+                "type": "string",
+                "provenance": "$.status.omschrijving",
+                "description": "Levenscyclus van de woonplaats, Woonplaats aangewezen, Woonplaats ingetrokken. omschrijving"
+              },
+              "heeftDossier": {
+                "type": "string",
+                "relation": "woonplaatsen:dossiers",
+                "provenance": "$.heeftDossier.dossier",
+                "description": "Het dossier op basis waarvan het object is toegevoegd aan de registratie."
+              }
+            },
+            "mainGeometry": "geometrie"
           }
         },
-        "mainGeometry": "geometrie"
-      }
-    },
-    {
-      "id": "dossiers",
-      "type": "table",
-      "version": "1.0.0",
-      "schema": {
-        "$id": "https://github.com/Amsterdam/schemas/bag/dossiers.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": false,
-        "identifier": "dossier",
-        "required": ["schema", "dossier"],
-        "display": "dossier",
-        "properties": {
+        {
+          "id": "dossiers",
+          "type": "table",
+          "version": "1.0.0",
           "schema": {
-            "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
-          },
-          "dossier": {
-            "type": "string",
-            "description": "Verwijzing vanuit de overige objectklassen."
+            "$id": "https://github.com/Amsterdam/schemas/bag/dossiers.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "dossier",
+            "required": [
+              "schema",
+              "dossier"
+            ],
+            "display": "dossier",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+              },
+              "dossier": {
+                "type": "string",
+                "description": "Verwijzing vanuit de overige objectklassen."
+              }
+            }
           }
         }
-      }
+      ]
     }
-  ],
+  },
   "publisher": "unknown"
 }

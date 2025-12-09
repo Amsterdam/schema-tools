@@ -329,15 +329,8 @@ class Dataset(models.Model):
 
     @classmethod
     def has_api_enabled(cls, schema: DatasetSchema) -> bool:
-        dataset_status = schema.status
-        if dataset_status == DatasetSchema.Status.beschikbaar:
-            return True
-        elif dataset_status == DatasetSchema.Status.niet_beschikbaar:
-            return False
-
-        raise ValueError(
-            f"Cannot determine whether to enable REST api based on given status: {dataset_status}"
-        )
+        version = schema.get_version(schema.default_version)
+        return version.enable_api
 
     def schema_data_changed(self):
         """Check whether the schema_data attribute changed"""
