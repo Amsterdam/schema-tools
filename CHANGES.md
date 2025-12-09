@@ -1,3 +1,7 @@
+# 2025-12-09 (7.7.6)
+
+* Make this branch support metaschema v4
+
 # 2025-05-08 (7.7.5)
 
 * Export array fields in jsonlines for Azure Search.
