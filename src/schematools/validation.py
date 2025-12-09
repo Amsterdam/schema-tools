@@ -289,38 +289,6 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
                 )
 
 
-@_register_validator("active versions")
-def _active_versions(dataset: DatasetSchema) -> Iterator[str]:
-    """Validate activeVersions and table identifiers in referenced tables."""
-    # The current Amsterdam Meta Schema does not allow for inline definitions of multiple
-    # active tables versions. In addition :class:`DatasetSchema`'s
-    # :property:`~DatasetSchema.tables` property and :meth:~DatasetSchema.get_tables` method
-    # still assume that there will always be one and only one version. The part of
-    # :class:`DatasetSchema` that has gained some knowledge of multiple active versions is
-    # its internal representation with the addition of the :class:`TableVersions` class.
-    # Hence it is the internal representation that we use for this validation.
-    #
-    # This obviously is a stop gap. Ideally we have a more, arguably, sensible definition of
-    # multiple active version in the Amsterdam Meta Schema (eg an inline definition). When
-    # we do, we are in a position to restructure our abstraction (eg :class:`DatasetSchema`,
-    # etc) more definitely. And as a result can rely on those abstractions for our
-    # validation instead of some internal representation.
-    for table_versions in dataset.table_versions.values():
-        for version in table_versions:
-            try:
-                # Runtime checking already happens on retrieval of the tables,
-                # so this validation check only tests whether that would happen.
-                table_versions[version]
-            except RuntimeError as e:
-                yield str(e)
-
-        # See if default version exists
-        try:
-            table_versions[table_versions._default_version]
-        except SchemaObjectNotFound as e:
-            yield str(e)
-
-
 @_register_validator("mainGeometry")
 def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:
@@ -508,16 +476,11 @@ def _check_schema_ref(dataset: DatasetSchema) -> Iterator[str]:
 
 @_register_validator("defaultVersion")
 def _check_default_version(dataset: DatasetSchema) -> Iterator[str]:
-    """Check that defaultVersion field for a dataset matches the only 'beschikbaar' version."""
-    enabled_versions = []
-    for version_number, version in dataset.versions.items():
-        if version.status == DatasetSchema.Status.beschikbaar:
-            enabled_versions.append(version_number)
-            if version_number != dataset.default_version:
-                yield (
-                    f"Default version {dataset.default_version} does not match enabled "
-                    f"version {version_number}"
-                )
+    """Check that defaultVersion is enabled if there is more than one version."""
+    if len(dataset.versions) > 1:
+        default_version = dataset.get_version(dataset.default_version)
+        if not default_version.enable_api:
+            yield (f"Default version {dataset.default_version} is not enabled.")
 
 
 @_register_validator("production version tables")
@@ -540,36 +503,36 @@ def _check_production_version_tables(dataset: DatasetSchema) -> Iterator[str]:
                     )
 
 
-@_register_validator("stable version experimental tables")
-def _check_production_version_experimental_tables(dataset: DatasetSchema) -> Iterator[str]:
-    """Check that a stable dataset version contains no experimental tables."""
+@_register_validator("stable version under_development tables")
+def _check_production_version_under_development_tables(dataset: DatasetSchema) -> Iterator[str]:
+    """Check that a stable dataset version contains no under_development tables."""
     for version_number, version in dataset.versions.items():
-        if version.lifecycle_status == DatasetVersionSchema.LifecycleStatus.experimental:
+        if version.status == DatasetVersionSchema.Status.under_development:
             continue
 
         for table in version.tables:
             # Don't validate inline tables, to allow backwards compatibility
-            if table.lifecycle_status == DatasetTableSchema.LifecycleStatus.experimental:
+            if table.status == DatasetTableSchema.Status.under_development:
                 yield (
                     f"Stable dataset {dataset.id} ({version_number}) cannot have tables with "
-                    f"lifecycleStatus of 'experimental'."
+                    f"status of 'under_development'."
                 )
 
 
-@_register_validator("lifecycle status")
-def _check_lifecycle_status(dataset: DatasetSchema) -> Iterator[str]:
+@_register_validator("status")
+def _check_status(dataset: DatasetSchema) -> Iterator[str]:
     """
     Check that a non production version (< v1) contains can't have a
-    lifecycle status of 'stable'.
+    status of 'stable'.
     """
     non_production_versions = ["v0"]
     for version_number, version in dataset.versions.items():
         if (
             version_number in non_production_versions
-            and version.lifecycle_status == DatasetVersionSchema.LifecycleStatus.stable
+            and version.status == DatasetVersionSchema.Status.stable
         ):
             yield (
-                f"Dataset version ({version_number}) cannot have a lifecycleStatus of "
+                f"Dataset version ({version_number}) cannot have a status of "
                 f"'stable' while being a non-production version."
             )
 

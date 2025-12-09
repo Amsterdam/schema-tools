@@ -6,12 +6,14 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
+      "status": "stable",
+      "enableAPI": true,
       "version": "1.0.0",
       "tables": []
     },
     "v2": {
-      "status": "niet_beschikbaar",
+      "status": "stable",
+      "enableAPI": false,
       "version": "1.0.0",
       "tables": []
     }

@@ -11,7 +11,6 @@ from schematools.permissions import PUBLIC_SCOPE
 from schematools.types import DatasetSchema
 from schematools.validation import (
     PROPERTIES_INTRODUCING_BREAKING_CHANGES,
-    _active_versions,
     _check_display,
     _check_maingeometry,
     _identifier_properties,
@@ -160,24 +159,6 @@ def test_identifier_properties(schema_loader) -> None:
 
     dataset = schema_loader.get_dataset_from_file("stadsdelen.json")
     assert list(_identifier_properties(dataset)) == []  # no validation errors
-
-
-def test_active_versions(schema_loader) -> None:
-    dataset = schema_loader.get_dataset("gebieden_sep_tables")
-    table_versions = dataset.table_versions["bouwblokken"]
-    table_versions.id = "BOUWBLOKKEN"
-    error = next(validation.run(dataset))
-    assert error
-    assert "does not match with id" in error.message
-
-    dataset = schema_loader.get_dataset("gebieden_sep_tables")
-    dataset["tables"][0]["activeVersions"] = {"9.8.1": "bouwblokken/v1.0.0"}
-    error = next(validation.run(dataset))
-    assert error
-    assert "does not match with version" in error.message
-
-    dataset = schema_loader.get_dataset("gebieden_sep_tables")
-    assert list(_active_versions(dataset)) == []  # no validation errors
 
 
 def test_main_geometry(schema_loader, gebieden_schema) -> None:
@@ -347,7 +328,7 @@ def test_check_default_version(schema_loader) -> None:
     dataset["defaultVersion"] = "v2"
     errors = list(validation.run(dataset))
     assert len(errors) == 1
-    assert "Default version v2 does not match enabled version v1" in errors[0].message
+    assert "Default version v2 is not enabled." in errors[0].message
 
 
 def test_production_version_tables(schema_loader) -> None:
@@ -366,7 +347,7 @@ def test_production_version_experimental_tables(schema_loader) -> None:
     errors = list(validation.run(dataset))
     assert len(errors) == 1
     assert (
-        "Stable dataset experimental_tables (v1) cannot have tables with lifecycleStatus of 'experimental'."
+        "Stable dataset experimental_tables (v1) cannot have tables with status of 'under_development'."
         in errors[0].message
     )
 
@@ -377,7 +358,7 @@ def test_check_lifecycle_status(schema_loader) -> None:
     errors = list(validation.run(dataset))
     assert len(errors) == 1
     assert (
-        "Dataset version (v0) cannot have a lifecycleStatus of 'stable' while being a non-production version."
+        "Dataset version (v0) cannot have a status of 'stable' while being a non-production version."
         in errors[0].message
     )
 

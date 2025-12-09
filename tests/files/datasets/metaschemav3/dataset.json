@@ -6,7 +6,8 @@
   "defaultVersion": "v1",
   "versions": {
     "v0": {
-      "status": "niet_beschikbaar",
+      "status": "stable",
+      "enableAPI": false,
       "version": "0.2.1",
       "tables": [
         {
@@ -16,7 +17,8 @@
       ]
     },
     "v1": {
-      "status": "beschikbaar",
+      "status": "stable",
+      "enableAPI": true,
       "version": "1.0.0",
       "tables": [
         {

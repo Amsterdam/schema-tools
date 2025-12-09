@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import datetime
 import json
 import logging
 import re
@@ -443,6 +444,10 @@ class DatasetSchema(SchemaType):
         """
         return True
 
+    @property
+    def has_an_available_version(self) -> bool:
+        return any(version.enable_api for version in self.versions.values())
+
     def _resolve_scope(self, auth):
         """Auth may contain a reference to a scope, or a list of such references.
 
@@ -496,21 +501,13 @@ class DatasetSchema(SchemaType):
         except KeyError:
             raise ParserError(f"Status field contains an unknown value: {value}") from None
 
-    def _get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
-        """Internal function to retrieve a (related) dataset from the shared cache."""
-        if dataset_id == self.id:
-            return self  # shortcut to avoid unneeded lookups
-
-        # It's assumed here that the loader is a CachedSchemaLoader,
-        # so data can be fetched multiple times.
-        return self.loader.get_dataset(dataset_id)
-
     @cached_property
     def versions(self) -> dict[str, DatasetVersionSchema]:
         """Access the versions within the file."""
         if not self.get("versions"):
             version_dict = {
-                "status": DatasetSchema.Status.beschikbaar.value,
+                "status": DatasetVersionSchema.Status.stable.value,
+                "enableAPI": True,
                 "version": "1.0.0",
                 "tables": self.get("tables"),
             }
@@ -519,6 +516,15 @@ class DatasetSchema(SchemaType):
             version_number: DatasetVersionSchema(version, parent_schema=self)
             for version_number, version in self.get("versions").items()
         }
+
+    def _get_dataset_schema(self, dataset_id: str) -> DatasetSchema:
+        """Internal function to retrieve a (related) dataset from the shared cache."""
+        if dataset_id == self.id:
+            return self  # shortcut to avoid unneeded lookups
+
+        # It's assumed here that the loader is a CachedSchemaLoader,
+        # so data can be fetched multiple times.
+        return self.loader.get_dataset(dataset_id)
 
     def get_version(self, version) -> DatasetVersionSchema:
         """Get a specific version of the dataset."""
@@ -843,15 +849,19 @@ class DatasetSchema(SchemaType):
 
 class DatasetVersionSchema(SchemaType):
     """
-    Minimal implementation of DatasetVersionSchema to be able to work with
-    Amsterdam Schema V3.
+    Implementation of DatasetVersionSchema to be able to work with
+    Amsterdam Schema V4.
     """
 
-    class LifecycleStatus(Enum):
-        """The allowed lifecycle status values according to the Amsterdam schema spec."""
+    class Status(Enum):
+        """The allowed status values according to the Amsterdam schema spec."""
 
         stable = "stable"
-        experimental = "experimental"
+        under_development = "under_development"
+        superseded = "superseded"
+        # allow old values for backwards compatibility
+        beschikbaar = "beschikbaar"
+        niet_beschikbaar = "niet_beschikbaar"
 
     def __init__(
         self,
@@ -862,31 +872,58 @@ class DatasetVersionSchema(SchemaType):
         super().__init__(data)
 
     @property
-    def lifecycle_status(self) -> DatasetVersionSchema.LifecycleStatus | None:
+    def status(self) -> DatasetVersionSchema.Status | None:
         # Allow no value to provide backwards compatability
-        value = self.data.get("lifecycleStatus")
+        value = self.data.get("status")
         if not value:
             return None
         try:
-            return DatasetVersionSchema.LifecycleStatus[value]
-        except KeyError:
-            raise ParserError(
-                f"LifecycleStatus field contains an unknown value: {value}"
-            ) from None
-
-    @property
-    def status(self) -> DatasetSchema.Status:
-        value = self.data.get("status")
-        try:
-            return DatasetSchema.Status[value]
+            return DatasetVersionSchema.Status[value]
         except KeyError:
             raise ParserError(f"Status field contains an unknown value: {value}") from None
+
+    @property
+    def enable_api(self) -> bool:
+        value = self.data.get("enableAPI")
+        if not isinstance(value, bool):
+            raise ParserError("enableAPI must be a boolean")
+        return value
+
+    @property
+    def end_support_date(self) -> datetime.date | None:
+        value = self.data.get("endSupportDate")
+        if not value:
+            return None
+        try:
+            date_value = datetime.datetime.strptime(value, "%y-%m-%d").astimezone().date()
+        except ValueError:
+            raise ParserError("endSupportDate must be a valid date ('YYYY-MM-DD')") from None
+        return date_value
+
+    @property
+    def release_date(self) -> datetime.date | None:
+        value = self.data.get("releaseDate")
+        if not value:
+            return None
+        try:
+            date_value = datetime.datetime.strptime(value, "%y-%m-%d").astimezone().date()
+        except ValueError:
+            raise ParserError("releaseDate must be a valid date ('YYYY-MM-DD')") from None
+        return date_value
 
     @property
     def schema(self) -> DatasetSchema:
         if self._parent_schema is None:
             raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
         return self._parent_schema
+
+    @property
+    def is_default(self) -> bool:
+        return self._parent_schema.default_version == self.version
+
+    @property
+    def version(self):
+        return
 
     @cached_property
     def tables(self) -> list[DatasetTableSchema]:
@@ -969,11 +1006,11 @@ class DatasetTableSchema(SchemaType):
     a human-readable abbreviation that fits inside the maximum database table name length.
     """
 
-    class LifecycleStatus(Enum):
-        """The allowed lifecycle status values according to the Amsterdam schema spec."""
+    class Status(Enum):
+        """The allowed status values according to the Amsterdam schema spec."""
 
         stable = "stable"
-        experimental = "experimental"
+        under_development = "under_development"
 
     def __init__(
         self,
@@ -1027,17 +1064,15 @@ class DatasetTableSchema(SchemaType):
         return data
 
     @property
-    def lifecycle_status(self) -> DatasetTableSchema.LifecycleStatus | None:
+    def status(self) -> DatasetTableSchema.Status | None:
         # Allow no value to provide backwards compatability
-        value = self.data.get("lifecycleStatus")
+        value = self.data.get("status")
         if not value:
             return None
         try:
-            return DatasetTableSchema.LifecycleStatus[value]
+            return DatasetTableSchema.Status[value]
         except KeyError:
-            raise ParserError(
-                f"LifecycleStatus field contains an unknown value: {value}"
-            ) from None
+            raise ParserError(f"Status field contains an unknown value: {value}") from None
 
     @cached_property
     def qualified_id(self) -> str:

@@ -6,9 +6,9 @@
   "defaultVersion": "v1",
   "versions": {
     "v1": {
-      "status": "beschikbaar",
+      "status": "stable",
       "version": "1.0.0",
-      "lifecycleStatus": "stable",
+      "enableAPI": true,
       "tables": [
         {
           "id": "productiontable",
