@@ -599,3 +599,14 @@ def test_dataset_get_diffs_incomp_datasets(schema_loader):
 
     with pytest.raises(IncompatibleDataset):
         appels.get_diffs(peren)
+
+
+def test_subresource(schema_loader):
+    """
+    Test to see that the resource table has a subresource to the subresource table
+    """
+    dataset = schema_loader.get_dataset("subresources")
+    resource_table = dataset.get_table_by_id("resource")
+    subresource_table = dataset.get_table_by_id("subresource")
+
+    assert resource_table.subresources == {"hasSubresources": subresource_table}
