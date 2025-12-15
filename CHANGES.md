@@ -5,6 +5,7 @@
   * Add enableAPI flag to replace status `beschikbaar/niet_beschikbaar`
   * Remove temporary statusses from rc1
 * Add extra validation for major version bumps in tables
+* Add subresources property to tables
 
 # 2025-11-27 (9.0.0-rc1)
 

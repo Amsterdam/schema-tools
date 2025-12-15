@@ -629,7 +629,6 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
                     yield (f"Target {target} does not define FEATURE/RLA auth.")
 
 
-
 @_register_validator("subresources in same dataset as resource")
 def _check_sub_resources_in_same_dataset(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:

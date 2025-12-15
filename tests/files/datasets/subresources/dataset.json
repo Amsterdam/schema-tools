@@ -1,0 +1,25 @@
+{
+  "type": "dataset",
+  "id": "subresources",
+  "title": "Schema for testing subresources",
+  "description": "Schema for unit testing subresources",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": true,
+      "status": "stable",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "resource",
+          "$ref": "resource/v1"
+        },
+        {
+          "id": "subresource",
+          "$ref": "subresource/v1"
+        }
+      ]
+    }
+  },
+  "publisher": "unknown"
+}
