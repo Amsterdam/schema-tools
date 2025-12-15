@@ -1174,6 +1174,10 @@ class DatasetTableSchema(SchemaType):
         )
 
     @cached_property
+    def subresources(self) -> dict[str, DatasetTableSchema]:
+        return {field.id: field.related_table for field in self.fields if field.is_subresource}
+
+    @cached_property
     def max_zoom(self) -> int:
         return self.get("zoom", {"max": 30})["max"]
 
@@ -1898,6 +1902,11 @@ class DatasetFieldSchema(JsonDict):
             return None
 
         return related_table.get_reverse_relation(self)
+
+    @cached_property
+    def is_subresource(self) -> bool:
+        """Tell whether the field is a subresource relation."""
+        return bool(self.get("isSubresource"))
 
     @property
     def format(self) -> str | None:

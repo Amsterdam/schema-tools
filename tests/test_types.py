@@ -570,3 +570,14 @@ def test_row_level_auth(schema_loader):
     assert rla.source == "verblijfplaatsAfgeschermd"
     assert rla.auth_map[True] == frozenset({Scope.from_string("BRP/R-PLUS")})
     assert rla.auth_map[False] == frozenset({Scope.from_string("BRP/R")})
+
+
+def test_subresource(schema_loader):
+    """
+    Test to see that the resource table has a subresource to the subresource table
+    """
+    dataset = schema_loader.get_dataset("subresources")
+    resource_table = dataset.get_table_by_id("resource")
+    subresource_table = dataset.get_table_by_id("subresource")
+
+    assert resource_table.subresources == {"hasSubresources": subresource_table}

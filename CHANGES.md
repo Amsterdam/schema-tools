@@ -1,3 +1,7 @@
+# 2025-12-22 (8.8.0)
+
+* Add subresources property to tables
+
 # 2025-11-26 (8.7.2)
 
 * Fix small issue with dataset validation when a minor version bump should happen.
