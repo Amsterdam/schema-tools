@@ -869,10 +869,7 @@ class DatasetVersionSchema(SchemaType):
 
     @property
     def enable_api(self) -> bool:
-        value = self.data.get("enableAPI")
-        if not isinstance(value, bool):
-            raise ParserError("enableAPI must be a boolean")
-        return value
+        return self.data.get("enableAPI")
 
     @property
     def end_support_date(self) -> datetime.date | None:

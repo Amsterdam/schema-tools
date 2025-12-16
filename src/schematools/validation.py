@@ -556,16 +556,17 @@ def _check_production_version_tables(dataset: DatasetSchema) -> Iterator[str]:
 def _check_production_version_under_development_tables(dataset: DatasetSchema) -> Iterator[str]:
     """Check that a stable dataset version contains no experimental tables."""
     for version_number, version in dataset.versions.items():
-        if version.status == DatasetVersionSchema.Status.under_development:
-            continue
-
-        for table in version.tables:
-            # Don't validate inline tables, to allow backwards compatibility
-            if table.status == DatasetTableSchema.Status.under_development:
-                yield (
-                    f"Stable dataset {dataset.id} ({version_number}) cannot have tables with "
-                    f"status of 'under_development'."
-                )
+        if version.status in [
+            DatasetVersionSchema.Status.stable,
+            DatasetVersionSchema.Status.superseded,
+        ]:
+            for table in version.tables:
+                # Don't validate inline tables, to allow backwards compatibility
+                if table.status == DatasetTableSchema.Status.under_development:
+                    yield (
+                        f"{version.status.name} dataset {dataset.id} ({version_number}) cannot "
+                        f"have tables with status of 'under_development'."
+                    )
 
 
 @_register_validator("lifecycle status")
