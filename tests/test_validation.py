@@ -424,7 +424,7 @@ def test_production_version_under_development_tables(schema_loader) -> None:
     errors = list(validation.run(dataset))
     assert len(errors) == 1
     assert (
-        "Stable dataset under_development_tables (v1) cannot have tables with status of 'under_development'."
+        "stable dataset under_development_tables (v1) cannot have tables with status of 'under_development'."
         in errors[0].message
     )
 

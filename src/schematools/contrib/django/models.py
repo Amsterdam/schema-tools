@@ -371,7 +371,7 @@ class Dataset(models.Model):
 
 class DatasetVersion(models.Model):
     class Status(models.TextChoices):
-        UNDER_DEVELOPMENT = "D", "UNDER_DEVELOPMENT"
+        UNDER_DEVELOPMENT = "D", "under_development"
         STABLE = "S", "stable"
         SUPERSEDED = "U", "superseded"
 

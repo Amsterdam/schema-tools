@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             model_name="datasetversion",
             name="status",
             field=models.CharField(
-                choices=[("D", "UNDER_DEVELOPMENT"), ("S", "stable"), ("U", "superseded")],
+                choices=[("D", "under_development"), ("S", "stable"), ("U", "superseded")],
                 default="D",
             ),
         ),
