@@ -1,3 +1,7 @@
+# 2025-12-19 (9.0.1)
+
+* Restore support for Django 4.2, which was accidentally dropped.
+
 # 2025-11-27 (9.0.0)
 
 * Ensure schematools can handle metaschema v4:
