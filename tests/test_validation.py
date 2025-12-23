@@ -406,15 +406,17 @@ def test_row_level_auth_fail(schema_loader) -> None:
 
 def test_subresource(schema_loader) -> None:
     schema_loader.get_dataset_from_file("woningbouwplannen.json")
-    dataset = schema_loader.get_dataset_from_file("subresources.json")
+    dataset = schema_loader.get_dataset_from_file("subresources_invalid.json")
     errors = [v.message for v in validation.run(dataset)]
 
     # There are two subresources defined in the schema, but only one refers to a table in the
     # same dataset. The other should give an error.
-    assert len(errors) == 1
+    assert len(errors) == 3
     assert errors == [
         "Subresource woningbouwplannen:woningbouwplan is not part of the same dataset as "
-        "gebieden:wijken. Subresources must always be part of the same dataset."
+        "gebieden:wijken. Subresources must always be part of the same dataset.",
+        "Table pleinen does not exist in dataset gebieden. Cannot use as subresource.",
+        "Field ligtInDezeWijk does not exist on table gebieden:straten. Cannot use as subresource.",
     ]
 
 

@@ -13,6 +13,62 @@
       "version": "0.0.1",
       "tables": [
         {
+          "id": "straten",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/buurten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": [
+              "naam"
+            ],
+            "required": [
+              "schema",
+              "naam"
+            ],
+            "display": "naam",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "naam": {
+                "type": "string",
+                "description": "De naam van het object."
+              },
+              "ligtInWijk": {
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  }
+                },
+                "relation": "gebieden:wijken",
+                "description": "De wijk waar de straat in ligt."
+              },
+              "geometrie": {
+                "$ref": "https://geojson.org/schema/Geometry.json",
+                "description": "Geometrische beschrijving van een object."
+              }
+            }
+          },
+          "lifecycleStatus": "stable"
+        },
+        {
           "id": "buurten",
           "type": "table",
           "version": "1.0.0",
@@ -89,6 +145,19 @@
                 "type": "string",
                 "description": "De CBS-code van het object."
               },
+              "ligtInWijk": {
+                "type": "object",
+                "properties": {
+                  "identificatie": {
+                    "type": "string"
+                  },
+                  "volgnummer": {
+                    "type": "integer"
+                  }
+                },
+                "relation": "gebieden:wijken",
+                "description": "De wijk waar de buurt in ligt."
+              },
               "geometrie": {
                 "$ref": "https://geojson.org/schema/Geometry.json",
                 "description": "Geometrische beschrijving van een object."
@@ -109,6 +178,12 @@
                 "eindGeldigheid"
               ]
             }
+          },
+          "subresources": {
+            "gebieden:buurten": "ligtInWijk",
+            "woningbouwplannen:woningbouwplan": "buurten",
+            "gebieden:pleinen": "ligtInWijk",
+            "gebieden:straten": "ligtInDezeWijk"
           },
           "schema": {
             "$id": "https://github.com/Amsterdam/schemas/gebieden/wijken.json",
@@ -188,8 +263,7 @@
                   }
                 },
                 "relation": "gebieden:buurten",
-                "description": "De buurten in de wijk.",
-                "isSubresource": true
+                "description": "De buurten in de wijk."
               },
               "heeftWoningbouwPlannen": {
                 "type": "array",
@@ -205,8 +279,7 @@
                   }
                 },
                 "relation": "woningbouwplannen:woningbouwplan",
-                "description": "De beroemde personen in de wijk.",
-                "isSubresource": true
+                "description": "De beroemde personen in de wijk."
               },
               "geometrie": {
                 "$ref": "https://geojson.org/schema/Geometry.json",
