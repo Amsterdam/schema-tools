@@ -31,7 +31,7 @@ from typing import cast
 from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools.exceptions import SchemaObjectNotFound
+from schematools.exceptions import DatasetFieldNotFound, SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.auth import RLA_SCOPE
 from schematools.types import DatasetSchema, DatasetTableSchema, DatasetVersionSchema, SemVer
@@ -630,20 +630,32 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
                     yield (f"Target {target} does not define FEATURE/RLA auth.")
 
 
-@_register_validator("subresources in same dataset as resource")
-def _check_sub_resources_in_same_dataset(dataset: DatasetSchema) -> Iterator[str]:
+@_register_validator("subresources")
+def _check_sub_resources(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:
-        for field in table.fields:
-            if field.get("isSubresource"):
-                related_table = field.related_table
-                if related_table is None:
-                    # This is also covered by structural validation.
-                    yield (f"Related table {field.relation} does not exist.")
-                elif related_table.dataset.id != dataset.id:
+        if subresources := table.get("subresources"):
+            for key, field_name in subresources.items():
+                dataset_id, table_id = key.split(":")
+                if dataset_id != dataset.id:
                     yield (
-                        f"Subresource {related_table.dataset.id}:{related_table.id} is not part "
-                        f"of the same dataset as {dataset.id}:{table.id}. Subresources must "
-                        "always be part of the same dataset."
+                        f"Subresource {key} is not part of the same dataset as "
+                        f"{dataset.id}:{table.id}. Subresources must always be part of the same "
+                        "dataset."
+                    )
+                    continue
+                try:
+                    target_table = dataset.get_table_by_id(table_id)
+                    print(key, field_name, target_table.fields)
+                    target_table.get_field_by_id(field_name)
+                except StopIteration:
+                    yield (
+                        f"Table {table_id} does not exist in dataset {dataset.id}. Cannot use as "
+                        "subresource."
+                    )
+                except DatasetFieldNotFound:
+                    yield (
+                        f"Field {field_name} does not exist on table {key}. Cannot use as "
+                        "subresource."
                     )
 
 
