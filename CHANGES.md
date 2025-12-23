@@ -1,3 +1,7 @@
+# 2025-12-23 (9.0.2)
+
+* Refactor towards updated structure for subresources.
+
 # 2025-12-19 (9.0.1)
 
 * Restore support for Django 4.2, which was accidentally dropped.
