@@ -10,7 +10,7 @@ import logging
 import re
 import sys
 import typing
-from collections import UserDict
+from collections import UserDict, namedtuple
 from collections.abc import Callable, Iterator
 from enum import Enum
 from functools import cached_property, total_ordering
@@ -1003,6 +1003,9 @@ class RowLevelAuthorisation:
         return cls(targets=targets, source=source, auth_map=auth_map)
 
 
+Subresource = namedtuple("Subresource", ["table", "field"])
+
+
 class DatasetTableSchema(SchemaType):
     """The table within a dataset.
     This table definition follows the JSON Schema spec.
@@ -1190,8 +1193,13 @@ class DatasetTableSchema(SchemaType):
         )
 
     @cached_property
-    def subresources(self) -> dict[str, DatasetTableSchema]:
-        return {field.id: field.related_table for field in self.fields if field.is_subresource}
+    def subresources(self) -> list[Subresource]:
+        subresources = self.get("subresources", {})
+
+        return [
+            Subresource(self.dataset.get_table_by_id(rel.split(":")[1]), field)
+            for rel, field in subresources.items()
+        ]
 
     @cached_property
     def max_zoom(self) -> int:
@@ -1918,11 +1926,6 @@ class DatasetFieldSchema(JsonDict):
             return None
 
         return related_table.get_reverse_relation(self)
-
-    @cached_property
-    def is_subresource(self) -> bool:
-        """Tell whether the field is a subresource relation."""
-        return bool(self.get("isSubresource"))
 
     @property
     def format(self) -> str | None:

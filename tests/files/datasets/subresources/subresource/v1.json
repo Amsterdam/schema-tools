@@ -21,6 +21,11 @@
         "title": "id",
         "type": "string",
         "description": "Unieke identificatie"
+      },
+      "ofResource": {
+        "description": "Resource waar subresource bij hoort",
+        "type": "string",
+        "relation": "subresources:resource"
       }
     }
   }

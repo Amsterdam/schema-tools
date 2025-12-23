@@ -609,4 +609,7 @@ def test_subresource(schema_loader):
     resource_table = dataset.get_table_by_id("resource")
     subresource_table = dataset.get_table_by_id("subresource")
 
-    assert resource_table.subresources == {"hasSubresources": subresource_table}
+    subresources = resource_table.subresources
+    assert len(subresources) == 1
+    assert subresources[0].table == subresource_table
+    assert subresources[0].field == "ofResource"
