@@ -1,0 +1,365 @@
+{
+  "type": "dataset",
+  "id": "brk",
+  "title": "brk",
+  "crs": "EPSG:28992",
+  "auth": "BRK/RSN",
+  "identifier": "identificatie",
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": true,
+      "status": "stable",
+      "version": "0.0.1",
+      "tables": [
+        {
+          "id": "kadastraleobjecten",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/brk/kadastraleobjecten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "id",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "identificatie",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "string",
+                "description": "Neuron ID"
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "De unieke aanduiding van een Kadastraal object."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date-time",
+                "description": ""
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date-time",
+                "description": ""
+              }
+            },
+            "mainGeometry": "geometrie"
+          },
+          "status": "stable"
+        },
+        {
+          "id": "zakelijkerechten",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/brk/zakelijkerechten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "id",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "De Kadaster identificatie is een door het Kadaster toegekende landelijk uniek nummer aan dit zakelijk recht binnen de kadastrale registratie."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date-time",
+                "description": ""
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date-time",
+                "description": ""
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "kadastralesubjecten",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/brk/kadastralesubjecten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "identificatie",
+            "required": [
+              "schema",
+              "identificatie"
+            ],
+            "display": "identificatie",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Het aan dit subject toegekende landelijk unieke nummer"
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "tenaamstellingen",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/brk/tenaamstellingen.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "volgnummer",
+              "identificatie"
+            ],
+            "display": "identificatie",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "De identificatie is een uniek nummer aan deze tenaamstelling binnen de kadastrale registratie."
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": ""
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "aantekeningenrechten",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/brk/aantekeningenrechten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "id",
+            "required": [
+              "schema",
+              "id",
+              "identificatie"
+            ],
+            "display": "identificatie",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "string",
+                "description": "Neuron ID"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Het aan deze aantekening toegekende landelijk unieke nummer."
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "aantekeningenkadastraleobjecten",
+          "type": "table",
+          "version": "1.0.0",
+          "temporal": {
+            "identifier": "volgnummer",
+            "dimensions": {
+              "geldigOp": [
+                "beginGeldigheid",
+                "eindGeldigheid"
+              ]
+            }
+          },
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/brk/aantekeningenkadastraleobjecten.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "identificatie",
+              "volgnummer"
+            ],
+            "required": [
+              "schema",
+              "identificatie",
+              "volgnummer"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date-time",
+                "description": ""
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date-time",
+                "description": ""
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Het door het Kadaster toegekende landelijk unieke nummer aan deze aantekening."
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "gemeentes",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/brk/gemeentes.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "identificatie",
+            "required": [
+              "schema",
+              "identificatie"
+            ],
+            "display": "identificatie",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "De unieke aanduiding van een gemeente."
+              },
+              "naam": {
+                "type": "string",
+                "description": "De offici\u00eble vastgestelde gemeentenaam."
+              },
+              "beginGeldigheid": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de gemeente is ontstaan."
+              },
+              "eindGeldigheid": {
+                "type": "string",
+                "format": "date-time",
+                "description": "De datum waarop de gemeente is opgeheven."
+              }
+            },
+            "mainGeometry": "geometrie"
+          },
+          "status": "stable"
+        },
+        {
+          "id": "meta",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/brk/meta.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "id",
+            "required": [
+              "schema",
+              "id"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer",
+                "description": ""
+              },
+              "kennisgevingsdatum": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Toestandsdatum, d.i. de laatste aanmaakdatum van de BRK-berichten in de naar DIVA gerepliceerde BRK-levering."
+              }
+            }
+          },
+          "status": "stable"
+        }
+      ]
+    }
+  }
+}

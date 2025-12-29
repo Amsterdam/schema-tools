@@ -376,6 +376,40 @@ def test_scope_filtering(schema_loader, scopes, expected_fields):
     assert filtered_fields == expected_fields
 
 
+@pytest.mark.parametrize(
+    "tables,expected_tables",
+    [
+        ([], []),
+        (["meta"], ["meta"]),
+        (["meta", "gemeentes", "bestaat_niet"], ["meta", "gemeentes"]),
+    ],
+)
+def test_table_filtering(schema_loader, tables, expected_tables):
+    """Test that providing a list of scopes only returns fields within those scopes"""
+    schema = schema_loader.get_dataset_from_file("table_filtering.json")
+
+    filtered_schema = DatasetSchema.filter_on_tables(schema, tables)
+    filtered_tables = [t.id for t in filtered_schema.get_version("v1").tables]
+    assert set(filtered_tables) == set(expected_tables)
+
+
+def test_scope_and_table_filtering(schema_loader):
+    """Test that providing a list of scopes only returns fields within those scopes"""
+    scopes = ["DS/AUTH", "TABLE/AUTH", "FIELD/AUTH"]
+    tables = ["scoped_table"]
+    schema = schema_loader.get_dataset_from_file("scope_filtering.json")
+
+    filtered_schema = DatasetSchema.filter_on_tables(
+        DatasetSchema.filter_on_scopes(schema, scopes), tables
+    )
+    filtered_tables = [t.id for t in filtered_schema.get_version("v1").tables]
+    assert filtered_tables == tables
+
+    filtered_fields = [field.id for field in filtered_schema.tables[0].fields]
+
+    assert set(filtered_fields) == {"id", "schema", "scoped_field"}
+
+
 def test_load_multiple_scope_objects(schema_loader):
     """Test that we can retrieve a scope object from a DatasetSchema
     as defined by metaschema 2.0"""
