@@ -204,7 +204,6 @@ def _postgres_identifier_length(dataset: DatasetSchema) -> Iterator[str]:
         db_name = table.db_name_variant(
             with_dataset_prefix=True, with_version=True, check_assert=False
         )
-        # print(f"{db_name:>{MAX_TABLE_NAME_LENGTH}}")
         if (length := len(db_name)) > MAX_TABLE_NAME_LENGTH:
             excess = length - MAX_TABLE_NAME_LENGTH
             yield (
@@ -645,7 +644,6 @@ def _check_sub_resources(dataset: DatasetSchema) -> Iterator[str]:
                     continue
                 try:
                     target_table = dataset.get_table_by_id(table_id)
-                    print(key, field_name, target_table.fields)
                     target_table.get_field_by_id(field_name)
                 except StopIteration:
                     yield (
