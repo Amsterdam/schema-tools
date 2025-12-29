@@ -1,3 +1,7 @@
+# 2025-12-28 (9.1.0)
+
+* Added DatasetSchema classmethod to filter on tables.
+
 # 2025-12-23 (9.0.2)
 
 * Refactor towards updated structure for subresources.
