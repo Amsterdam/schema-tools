@@ -408,6 +408,18 @@ class DatasetSchema(SchemaType):
         schema_data = schema.json_data(inline_tables=True, scopes=scope_list)
         return cls.from_dict(schema_data, loader=schema.loader)
 
+    @classmethod
+    def filter_on_tables(cls, schema: DatasetSchema, tables_list: list[str]) -> DatasetSchema:
+        """Filter out tables that are not in the list."""
+        schema_data = schema.json_data(inline_tables=True)
+        for vmajor, version in schema_data.get("versions", {}).items():
+            tables = []
+            for table in version.get("tables", []):
+                if table["id"] in tables_list:
+                    tables.append(table)
+            schema_data["versions"][vmajor]["tables"] = tables
+        return cls.from_dict(schema_data, loader=schema.loader)
+
     def get_view_sql(self) -> str:
         """Return the SQL for the view of the given table."""
         if self.view_sql is None:
