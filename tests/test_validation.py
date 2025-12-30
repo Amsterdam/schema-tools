@@ -535,6 +535,12 @@ def test_validate_dataset(prev, curr, errors):
             {"object": {"type": "object", "properties": {"element": {"type": "integer"}}}},
             ["Column object would change element.type."],
         ),
+        # Object with format JSON works does not raise errors.
+        (
+            {"object": {"type": "object", "format": "json"}},
+            {"object": {"type": "object", "format": "json"}},
+            [],
+        ),
         # Changed object property type within an array
         (
             {

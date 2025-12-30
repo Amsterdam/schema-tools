@@ -789,8 +789,8 @@ def validate_table(
                 validate_table(previous_array_items, current_array_items, column_name)
             )
 
-        # recursively check object properties
-        if previous_field.get("type") == "object":
+        # recursively check object properties, except for format json as there are no properties
+        if previous_field.get("type") == "object" and previous_field.get("format") != "json":
             previous_object_properties = previous_field.get("properties")
             current_object_properties = current_field.get("properties")
             if previous_field_name != column_name:
