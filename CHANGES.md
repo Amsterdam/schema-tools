@@ -1,3 +1,7 @@
+# 2025-12-30 (9.1.1)
+
+* Fix issue with table validation
+
 # 2025-12-28 (9.1.0)
 
 * Added DatasetSchema classmethod to filter on tables.
