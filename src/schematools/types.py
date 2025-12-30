@@ -511,9 +511,13 @@ class DatasetSchema(SchemaType):
                 "version": "1.0.0",
                 "tables": self.get("tables"),
             }
-            return {self.default_version: DatasetVersionSchema(version_dict, parent_schema=self)}
+            return {
+                self.default_version: DatasetVersionSchema(
+                    version_dict, self.default_version, parent_schema=self
+                )
+            }
         return {
-            version_number: DatasetVersionSchema(version, parent_schema=self)
+            version_number: DatasetVersionSchema(version, version_number, parent_schema=self)
             for version_number, version in self.get("versions").items()
         }
 
@@ -866,8 +870,10 @@ class DatasetVersionSchema(SchemaType):
     def __init__(
         self,
         data: dict,
+        vmajor: str,
         parent_schema: DatasetSchema,
     ):
+        self.version = vmajor
         self._parent_schema = parent_schema
         super().__init__(data)
 
@@ -920,10 +926,6 @@ class DatasetVersionSchema(SchemaType):
     @property
     def is_default(self) -> bool:
         return self._parent_schema.default_version == self.version
-
-    @property
-    def version(self):
-        return
 
     @cached_property
     def tables(self) -> list[DatasetTableSchema]:
