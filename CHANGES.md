@@ -1,3 +1,7 @@
+# 2025-12-30 (9.0.0-rc4)
+
+* Fix temporary workaround for status
+
 # 2025-12-30 (9.0.0-rc3)
 
 * Fix temporary workaround for enableAPI flag

@@ -1031,6 +1031,7 @@ class DatasetTableSchema(SchemaType):
         # Temporary fix to allow migration to Amsterdam Schema v4, used in v9.0.0-rc1
         beschikbaar = "beschikbaar"
         niet_beschikbaar = "niet_beschikbaar"
+        experimental = "experimental"
 
     def __init__(
         self,
@@ -1108,7 +1109,7 @@ class DatasetTableSchema(SchemaType):
     def status(self) -> DatasetTableSchema.Status:
         value = self.data.get("status")
         if not value:
-            return None
+            value = self.data.get("lifecycleStatus")
         try:
             # Temporary fix to strip invalid statuses in old schemas, used in v9.0.0-rc1
             return DatasetTableSchema.Status[value.strip()]
