@@ -1,3 +1,7 @@
+# 2025-12-30 (9.0.0-rc2)
+
+* Fix Django requirements
+
 # 2025-11-27 (9.0.0-rc1)
 
 * Temporary allow `beschikbaar` and `niet_beschikbaar` to be able to migrate datasets for metaschema v4
