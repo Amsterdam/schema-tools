@@ -95,7 +95,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         },
         {
           "id": "wijken",
@@ -214,7 +214,7 @@
               }
             }
           },
-          "lifecycleStatus": "stable"
+          "status": "stable"
         }
       ]
     }

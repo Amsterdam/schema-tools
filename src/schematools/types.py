@@ -874,7 +874,8 @@ class DatasetVersionSchema(SchemaType):
     def enable_api(self) -> bool:
         value = self.data.get("enableAPI")
         if not isinstance(value, bool):
-            raise ParserError("enableAPI must be a boolean")
+            # Temporary get this value from the status untill migration is done
+            return self.status == DatasetVersionSchema.Status.beschikbaar
         return value
 
     @property
