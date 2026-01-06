@@ -1,3 +1,7 @@
+# 2025-01-06 (9.1.2)
+
+* Fix issue with dataset version validation
+
 # 2025-12-30 (9.1.1)
 
 * Fix issue with table validation
