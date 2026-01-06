@@ -15,7 +15,6 @@ from factory.declarations import BaseDeclaration
 
 from schematools import SRID_3D
 from schematools.contrib.django import app_config, signals
-from schematools.contrib.django.fields import UnlimitedCharField
 from schematools.naming import to_snake_case
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 
@@ -34,10 +33,10 @@ MODEL_CREATION_COUNTER = 1
 MODEL_MOCKER_CREATION_COUNTER = 1
 
 JSON_TYPE_TO_DJANGO = {
-    "string": UnlimitedCharField,
+    "string": models.CharField,
     "integer": models.BigIntegerField,
     "integer/autoincrement": models.AutoField,
-    "string/autoincrement": UnlimitedCharField,
+    "string/autoincrement": models.CharField,
     "datetime": models.DateTimeField,
     "number": models.FloatField,
     "boolean": models.BooleanField,
@@ -48,12 +47,12 @@ JSON_TYPE_TO_DJANGO = {
     "date-time": models.DateTimeField,
     "uri": models.URLField,
     "email": models.EmailField,
-    "blob-azure": UnlimitedCharField,
+    "blob-azure": models.CharField,
     # "object" handled elsewhere, unless format is json
     # Format variant for type = object and format = json
     "json": models.JSONField,
     "/definitions/id": models.IntegerField,
-    "/definitions/schema": UnlimitedCharField,
+    "/definitions/schema": models.CharField,
     "https://geojson.org/schema/Geometry.json": gis_models.GeometryField,
     "https://geojson.org/schema/Point.json": gis_models.PointField,
     "https://geojson.org/schema/MultiPoint.json": gis_models.MultiPointField,

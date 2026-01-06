@@ -77,14 +77,8 @@ class Command(BaseCommand):
             print(repr(field))
         # <django.db.models.fields.BigIntegerField: id>
         # <django.contrib.gis.db.models.fields.GeometryField: geometry>
-        # <django_postgres_unlimited_varchar.UnlimitedCharField: buurt_code>
-        # <django_postgres_unlimited_varchar.UnlimitedCharField: buurt_naam>
-        # <django_postgres_unlimited_varchar.UnlimitedCharField: toelichting>
-        # <django_postgres_unlimited_varchar.UnlimitedCharField: aandeel_kookgas>
         # class buurtinitiatief(DynamicModel):
         # <django.db.models.fields.BigIntegerField: id>
         # <django.contrib.gis.db.models.fields.GeometryField: geometry>
-        # <django_postgres_unlimited_varchar.UnlimitedCharField: buurtinitiatief_type>
-        # <django_postgres_unlimited_varchar.UnlimitedCharField: buurt_naam>
         # <django.db.models.fields.FloatField: x_coordinaat>
         # <django.db.models.fields.FloatField: y_coordinaat>
