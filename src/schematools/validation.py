@@ -867,10 +867,13 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
                     f"new version to be {expected_version}."
                 )
             for field_name, field in previous["schema"]["properties"].items():
-                current_field = current["schema"]["properties"][field_name]
+                current_field = current["schema"]["properties"].get(field_name)
+                if not current_field:
+                    # Field was deleted, which is covered by `validate_table()`
+                    continue
                 if field.get(prop) != current_field.get(prop):
                     table_errors.append(
-                        f"Property '{prop}' on field '{field_name}' in table '{table_id}'"
+                        f"Property '{prop}' on field '{field_name}' in table '{table_id}' "
                         f"has changed, expecting new version to be {expected_version}."
                     )
 

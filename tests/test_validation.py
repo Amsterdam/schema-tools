@@ -809,10 +809,10 @@ def test_validate_table(prev, curr, errors):
                 },
             },
             [
-                "Property 'title' on field 'field' in table 'test'has changed, expecting new version to be 1.0.1.",
-                "Property 'description' on field 'field' in table 'test'has changed, expecting new version to be 1.0.1.",
-                "Property 'shortname' on field 'field' in table 'test'has changed, expecting new version to be 1.0.1.",
-                "Property 'unit' on field 'field' in table 'test'has changed, expecting new version to be 1.0.1.",
+                "Property 'title' on field 'field' in table 'test' has changed, expecting new version to be 1.0.1.",
+                "Property 'description' on field 'field' in table 'test' has changed, expecting new version to be 1.0.1.",
+                "Property 'shortname' on field 'field' in table 'test' has changed, expecting new version to be 1.0.1.",
+                "Property 'unit' on field 'field' in table 'test' has changed, expecting new version to be 1.0.1.",
             ],
         ),
         # Change metadata on field success
