@@ -181,7 +181,7 @@ class DjangoModelFactory:
                 )
                 constraints.append(
                     CheckConstraint(
-                        check=~Q(**{f"{model_field.name}__contains": "/"}),
+                        condition=~Q(**{f"{model_field.name}__contains": "/"}),
                         name=f"{table_name}_not_contains_slash",
                     )
                 )
