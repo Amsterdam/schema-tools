@@ -8,7 +8,6 @@ from django.db.models.base import ModelBase
 from django.db.models.fields import DateTimeField
 
 from schematools.contrib.django.factories import DjangoModelFactory
-from schematools.contrib.django.fields import UnlimitedCharField
 from schematools.contrib.django.models import (
     Dataset,
     DatasetTable,
@@ -39,7 +38,7 @@ class TestDjangoModelFactory:
         assert meta.get_field("id").primary_key
 
         assert isinstance(meta.get_field("cluster_id"), models.ForeignKey)
-        assert isinstance(meta.get_field("eigenaar_naam"), UnlimitedCharField)
+        assert isinstance(meta.get_field("eigenaar_naam"), models.CharField)
         assert isinstance(meta.get_field("datum_creatie"), models.DateField)
         assert isinstance(meta.get_field("datum_leegmaken"), models.DateTimeField)
         geo_field = meta.get_field("geometry")
@@ -53,7 +52,7 @@ class TestDjangoModelFactory:
         model_cls = factory.build_model(table_with_id_as_string)
         meta = model_cls._meta
         assert meta.get_field("id").primary_key
-        assert isinstance(meta.get_field("id"), UnlimitedCharField)
+        assert isinstance(meta.get_field("id"), models.CharField)
 
     @pytest.mark.django_db
     def test_model_factory_table_name_no_versions(self, afval_dataset):
