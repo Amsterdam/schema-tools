@@ -1,10 +1,15 @@
+# 2025-01-06 (9.1.3)
+
+* Fix Django deprecation warnings.
+* Remove pre-Django4.2 UnlimitedCharField.
+
 # 2025-01-06 (9.1.2)
 
-* Fix issue with dataset version validation
+* Fix issue with dataset version validation.
 
 # 2025-12-30 (9.1.1)
 
-* Fix issue with table validation
+* Fix issue with table validation.
 
 # 2025-12-28 (9.1.0)
 
