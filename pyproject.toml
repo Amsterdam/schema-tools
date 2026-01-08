@@ -5,6 +5,40 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+# ==== pytest ====
+[tool.pytest.ini_options]
+minversion = "9.0"
+django_find_project = false
+pythonpath = "./"
+testpaths = ["tests"]
+addopts = [
+    "--nomigrations",
+    "--reuse-db",
+    "--cov=schematools",
+    "--cov-fail-under=65",
+]
+norecursedirs = ["node_modules", ".tox", ".git"]
+filterwarnings = [
+    "once::DeprecationWarning",
+    "once::PendingDeprecationWarning",
+]
+
+# ==== Coverage ====
+[tool.coverage.run]
+branch = true
+source = ["schematools"]
+omit = ["*/migrations/*.py", "*/tests/*"]
+relative_files = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if settings.DEBUG:",
+    'if "debug_toolbar" in settings.INSTALLED_APPS:',
+    "raise NotImplementedError",
+    "logger",
+    "warnings.warn",
+]
+
 [tool.black]
 line-length = 99
 include = '\.pyi?$'
