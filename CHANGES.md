@@ -1,3 +1,7 @@
+# 2025-01-08 (9.1.4)
+
+* Fix escaping of % signs in field comments on create tables.
+
 # 2025-01-06 (9.1.3)
 
 * Fix Django deprecation warnings.

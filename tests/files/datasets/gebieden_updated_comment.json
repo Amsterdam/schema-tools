@@ -51,7 +51,7 @@
               },
               "identificatie": {
                 "type": "string",
-                "description": "Unieke identificatie van het object. Gewijzigd voor db_comment."
+                "description": "Unieke identificatie van het object. Gewijzigd voor db_comment met %."
               },
               "volgnummer": {
                 "type": "integer",

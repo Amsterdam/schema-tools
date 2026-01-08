@@ -274,7 +274,8 @@ class DjangoModelFactory:
             "verbose_name": field.title,
             "help_text": field.description or "",  # also used by OpenAPI spec
             "db_column": field.db_name if field.db_name != field.python_name else None,
-            "db_comment": field.description or None,
+            # Escape percentage signs on comments to prevent issues with migrations
+            "db_comment": field.description.replace("%", "%%") if field.description else None,
         }
 
         if not field.is_primary and field.nm_relation is None:
