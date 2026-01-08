@@ -1,4 +1,4 @@
-FROM python:3.13-bookworm
+FROM python:3.14-bookworm
 
 RUN useradd --user-group --system datapunt
 RUN apt-get update && apt install -y libgdal32
