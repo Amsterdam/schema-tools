@@ -199,6 +199,26 @@ def test_import_schema_does_not_alter_column(here, capsys):
     )
 
 
+@pytest.mark.django_db()
+def test_import_schema_escapes_percentage_in_comment(here, capsys):
+    """Prove that % signs are escaped in generated SQL"""
+    gebieden = here / "files/datasets/gebieden.json"
+    call_command(
+        "import_schemas",
+        gebieden,
+        create_tables=1,
+        create_views=1,
+        dry_run=False,
+    )
+    updated_gebieden_json_path = here / "files/datasets/gebieden_updated_comment.json"
+    call_command("import_schemas", updated_gebieden_json_path, "--dry-run")
+    captured = capsys.readouterr()
+    assert (
+        """COMMENT ON COLUMN "gebieden_bouwblokken_v1"."identificatie" IS 'Unieke identificatie """
+        """van het object. Gewijzigd voor db_comment met %%.';""" in captured.out
+    )
+
+
 @pytest.mark.django_db
 def test_import_schema_enables_and_disables_api_based_on_status(here):
     """Prove that the enable_api flag is set at schema import time based on
