@@ -1,3 +1,7 @@
+# 2025-01-12 (9.1.5)
+
+* Support Python 3.14
+
 # 2025-01-08 (9.1.4)
 
 * Fix escaping of % signs in field comments on create tables.
