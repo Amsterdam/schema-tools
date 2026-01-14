@@ -420,17 +420,6 @@ def test_subresource(schema_loader) -> None:
     ]
 
 
-def test_production_version_under_development_tables(schema_loader) -> None:
-    dataset = schema_loader.get_dataset("under_development_tables")
-
-    errors = list(validation.run(dataset))
-    assert len(errors) == 1
-    assert (
-        "stable dataset under_development_tables (v1) cannot have tables with status of 'under_development'."
-        in errors[0].message
-    )
-
-
 def test_check_status(schema_loader) -> None:
     dataset = schema_loader.get_dataset("status")
 

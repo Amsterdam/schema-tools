@@ -34,7 +34,7 @@ from schematools import MAX_TABLE_NAME_LENGTH
 from schematools.exceptions import DatasetFieldNotFound, SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.auth import RLA_SCOPE
-from schematools.types import DatasetSchema, DatasetTableSchema, DatasetVersionSchema, SemVer
+from schematools.types import DatasetSchema, DatasetVersionSchema, SemVer
 
 
 @dataclass(frozen=True)
@@ -551,28 +551,11 @@ def _check_production_version_tables(dataset: DatasetSchema) -> Iterator[str]:
                     )
 
 
-@_register_validator("stable version under_development tables")
-def _check_production_version_under_development_tables(dataset: DatasetSchema) -> Iterator[str]:
-    """Check that a stable dataset version contains no experimental tables."""
-    for version_number, version in dataset.versions.items():
-        if version.status in [
-            DatasetVersionSchema.Status.stable,
-            DatasetVersionSchema.Status.superseded,
-        ]:
-            for table in version.tables:
-                # Don't validate inline tables, to allow backwards compatibility
-                if table.status == DatasetTableSchema.Status.under_development:
-                    yield (
-                        f"{version.status.name} dataset {dataset.id} ({version_number}) cannot "
-                        f"have tables with status of 'under_development'."
-                    )
-
-
-@_register_validator("lifecycle status")
-def _check_lifecycle_status(dataset: DatasetSchema) -> Iterator[str]:
+@_register_validator("non production status")
+def _check_non_production_status(dataset: DatasetSchema) -> Iterator[str]:
     """
-    Check that a non production version (< v1) contains can't have a
-    lifecycle status of 'stable'.
+    Check that a non production version (< v1) can't have a
+    status of 'stable'.
     """
     non_production_versions = ["v0"]
     for version_number, version in dataset.versions.items():
