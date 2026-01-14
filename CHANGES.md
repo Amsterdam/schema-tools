@@ -1,17 +1,21 @@
-# 2025-01-12 (9.1.5)
+# 2026-01-14 (9.1.6)
+
+* Allow under_development tables in stable datasets
+
+# 2026-01-12 (9.1.5)
 
 * Support Python 3.14
 
-# 2025-01-08 (9.1.4)
+# 2026-01-08 (9.1.4)
 
 * Fix escaping of % signs in field comments on create tables.
 
-# 2025-01-06 (9.1.3)
+# 2026-01-06 (9.1.3)
 
 * Fix Django deprecation warnings.
 * Remove pre-Django4.2 UnlimitedCharField.
 
-# 2025-01-06 (9.1.2)
+# 2026-01-06 (9.1.2)
 
 * Fix issue with dataset version validation.
 
