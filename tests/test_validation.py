@@ -17,6 +17,7 @@ from schematools.validation import (
     validate_dataset,
     validate_dataset_versions_version,
     validate_table,
+    validate_table_identifier,
     validate_table_version,
 )
 
@@ -488,6 +489,32 @@ def test_check_superseded_version(schema_loader) -> None:
 )
 def test_validate_dataset(prev, curr, errors):
     table_errors = validate_dataset(prev, curr)
+    assert table_errors == errors
+
+
+@pytest.mark.parametrize(
+    "prev,curr,errors",
+    [
+        (
+            ["value"],
+            ["changed_value"],
+            [
+                "Identifier field would be changed from ['value'] to ['changed_value']."
+                "Changing the table identifier is a breaking change."
+            ],
+        ),
+        (
+            "value",
+            "changed_value",
+            [
+                "Identifier field would be changed from value to changed_value."
+                "Changing the table identifier is a breaking change."
+            ],
+        ),
+    ],
+)
+def test_validate_table_identifier(prev, curr, errors):
+    table_errors = validate_table_identifier(prev, curr)
     assert table_errors == errors
 
 
