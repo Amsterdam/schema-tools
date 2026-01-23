@@ -1,3 +1,7 @@
+# 2026-01-14 (9.1.7)
+
+* Add validation for changing the identifier of a table
+
 # 2026-01-14 (9.1.6)
 
 * Allow under_development tables in stable datasets

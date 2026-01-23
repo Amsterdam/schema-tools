@@ -714,6 +714,17 @@ PROPERTIES_INTRODUCING_BREAKING_CHANGES = ["type", "$ref", "format", "relation",
 IGNORED_FIELDS = ["schema"]  # This is not a database column.
 
 
+def validate_table_identifier(prev_id_field: dict, curr_id_field: dict) -> list[str]:
+    """ """
+    table_errors = []
+    if prev_id_field != curr_id_field:
+        table_errors.append(
+            f"Identifier field would be changed from {prev_id_field} to {curr_id_field}."
+            f"Changing the table identifier is a breaking change."
+        )
+    return table_errors
+
+
 def validate_table(
     previous_fields: dict,
     current_fields: dict,

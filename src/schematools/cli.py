@@ -661,9 +661,14 @@ def validate_tables(paths: tuple[str], prefix: str):
             continue
         try:
             click.echo(f"Validating table {path}: ", nl=False)
+
+            table_errors = validation.validate_table_identifier(
+                previous["schema"]["identifier"], current["schema"]["identifier"]
+            )
+
             previous_fields = previous["schema"]["properties"]
             current_fields = current["schema"]["properties"]
-            table_errors = validation.validate_table(previous_fields, current_fields)
+            table_errors.extend(validation.validate_table(previous_fields, current_fields))
 
             table_errors.extend(validation.validate_table_version(previous, current))
 
