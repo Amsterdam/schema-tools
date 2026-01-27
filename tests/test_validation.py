@@ -16,8 +16,8 @@ from schematools.validation import (
     _identifier_properties,
     validate_dataset,
     validate_dataset_versions_version,
+    validate_schema_identifier,
     validate_table,
-    validate_table_identifier,
     validate_table_version,
 )
 
@@ -496,25 +496,33 @@ def test_validate_dataset(prev, curr, errors):
     "prev,curr,errors",
     [
         (
-            ["value"],
-            ["changed_value"],
-            [
-                "Identifier field would be changed from ['value'] to ['changed_value']."
-                "Changing the table identifier is a breaking change."
-            ],
-        ),
-        (
             "value",
             "changed_value",
             [
-                "Identifier field would be changed from value to changed_value."
-                "Changing the table identifier is a breaking change."
+                "Identifier field would be changed from value to changed_value. "
+                "Changing the table schema identifier is a breaking change."
+            ],
+        ),
+        (
+            ["value"],
+            ["changed_value"],
+            [
+                "Identifier field would be changed from ['value'] to ['changed_value']. "
+                "Changing the table schema identifier is a breaking change."
+            ],
+        ),
+        (
+            None,
+            ["changed_value"],
+            [
+                "Identifier field would be changed from None to ['changed_value']. "
+                "Changing the table schema identifier is a breaking change."
             ],
         ),
     ],
 )
-def test_validate_table_identifier(prev, curr, errors):
-    table_errors = validate_table_identifier(prev, curr)
+def test_validate_table_schema_identifier(prev, curr, errors):
+    table_errors = validate_schema_identifier(prev, curr)
     assert table_errors == errors
 
 
