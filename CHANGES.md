@@ -1,3 +1,7 @@
+# 2026-01-27 (9.1.8)
+
+* Bugfix for geopackage export with psycopg3
+
 # 2026-01-27 (9.1.7)
 
 * Add validation for changing the identifier of a table schema
