@@ -3,8 +3,6 @@ from __future__ import annotations
 import sqlite3
 
 import orjson
-import pytest
-from sqlalchemy import text
 
 from schematools.exports.csv import export_csvs
 from schematools.exports.geojson import export_geojsons
@@ -64,9 +62,6 @@ def test_jsonlines_export(here, engine, meetbouten_schema, dbsession, tmp_path):
             }
 
 
-# We have to skip this test, ogr2og2 is not available on github
-# We need to think of a flag to enable this test locally with `skipif`.
-@pytest.mark.skip()
 def test_geopackage_export(here, engine, meetbouten_schema, dbsession, tmp_path):
     """Prove that geopackage export contains the correct content."""
     _load_meetbouten_content(here, engine, meetbouten_schema)
@@ -74,13 +69,13 @@ def test_geopackage_export(here, engine, meetbouten_schema, dbsession, tmp_path)
         export_geopackages(connection, meetbouten_schema, str(tmp_path), [], [])
     sqlite3_conn = sqlite3.connect(tmp_path / "meetbouten_meetbouten.gpkg")
     cursor = sqlite3_conn.cursor()
-    cursor.execute(text("select * from rtree_sql_statement_geometrie"))
+    cursor.execute("select * from rtree_sql_statement_geometrie")
     res = cursor.fetchall()
     assert res == [(1, 119434.0, 119434.0, 487091.59375, 487091.65625)]
     cursor.execute(
         """
             select identificatie, ligt_in_buurt_id, merk_code, merk_omschrijving from sql_statement
-       """
+        """
     )
     res = cursor.fetchall()
     assert res == [(1, "10180001.1", "12", "De meetbout")]
