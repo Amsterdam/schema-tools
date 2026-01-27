@@ -1,6 +1,6 @@
 # 2026-01-14 (9.1.7)
 
-* Add validation for changing the identifier of a table
+* Add validation for changing the identifier of a table schema
 
 # 2026-01-14 (9.1.6)
 

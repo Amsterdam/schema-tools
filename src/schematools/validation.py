@@ -714,13 +714,17 @@ PROPERTIES_INTRODUCING_BREAKING_CHANGES = ["type", "$ref", "format", "relation",
 IGNORED_FIELDS = ["schema"]  # This is not a database column.
 
 
-def validate_table_identifier(prev_id_field: dict, curr_id_field: dict) -> list[str]:
-    """ """
+def validate_schema_identifier(prev_id_field: dict, curr_id_field: dict) -> list[str]:
+    """
+    Validates that the identifier of a table schema is not modified.
+    This identifier is used as the primary key for the database table,
+    so editing this identifier is a breaking change.
+    """
     table_errors = []
     if prev_id_field != curr_id_field:
         table_errors.append(
-            f"Identifier field would be changed from {prev_id_field} to {curr_id_field}."
-            f"Changing the table identifier is a breaking change."
+            f"Identifier field would be changed from {prev_id_field} to {curr_id_field}. "
+            f"Changing the table schema identifier is a breaking change."
         )
     return table_errors
 
