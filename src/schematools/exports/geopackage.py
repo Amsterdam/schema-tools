@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from io import StringIO
 from pathlib import Path
 
 from psycopg import sql
@@ -51,10 +50,10 @@ def export_geopackages(
         output_path = base_dir / f"{table.db_name_variant(with_version=False)}.gpkg"
         field_names = sql.SQL(",").join(
             sql.Identifier(field.db_name)
-            for field in _get_fields(dataset_schema, table, scopes)
+            for field in _get_fields(dataset_schema, table, scopes or [])
             if field.db_name != "schema"
         )
-        if not field_names.seq:
+        if not next(field_names.__iter__(), None):
             continue
 
         table_name = sql.Identifier(table.db_name)
@@ -64,10 +63,7 @@ def export_geopackages(
         if size is not None:
             query = sql.SQL("{query} LIMIT {size}").format(query=query, size=sql.Literal(size))
 
-        copy_sql = sql.SQL("COPY ({query}) TO STDOUT").format(query=query)
-
         with connection.connection.cursor() as cursor:
-            cursor.copy_expert(copy_sql, StringIO())
             sql_stmt = query.as_string(cursor)
 
         os.system(  # noqa: S605  # nosec: B605
