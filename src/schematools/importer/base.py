@@ -270,14 +270,17 @@ class BaseImporter:
             metadata.bind = self.engine
 
             # Get a table to import into
-            self.tables = tables_factory(
-                dataset,
-                metadata=metadata,
-                db_schema_names={table_id: db_schema_name},
-                db_table_names={table_id: db_table_name},
-                limit_tables_to=limit_tables_to,
-                is_versioned_dataset=is_versioned_dataset,
-            )
+            for version in self.dataset_schema.versions:
+                self.tables.update(
+                    tables_factory(
+                        dataset,
+                        metadata=metadata,
+                        db_schema_names={table_id: db_schema_name},
+                        db_table_names={table_id: db_table_name},
+                        limit_tables_to=limit_tables_to,
+                        version=version,
+                    )
+                )
 
             if is_versioned_dataset:
                 self.views = views_factory(dataset, self.tables)
@@ -298,7 +301,6 @@ class BaseImporter:
                 db_schema_name=db_schema_name,
                 metadata=metadata,
                 db_table_name=db_table_name,
-                is_versioned_dataset=is_versioned_dataset,
             )
             metadata_inspector = inspect(metadata.bind)
             self.prepare_extra_index(
