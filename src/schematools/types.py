@@ -577,7 +577,7 @@ class DatasetSchema(SchemaType):
             for table in version_tables:
                 if table.db_name not in tables:
                     tables[table.db_name] = table
-        return tables.values()
+        return list(tables.values())
 
     def get_tables(
         self,
@@ -776,7 +776,6 @@ class DatasetSchema(SchemaType):
         # For both types of through tables (M2M and FK), we add extra fields
         # to the table (see docstring).
         if field.is_through_table:
-
             if field.is_object:
                 properties = field.get("properties", {})
             elif field.is_array_of_objects:

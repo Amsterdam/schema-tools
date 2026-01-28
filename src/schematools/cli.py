@@ -12,7 +12,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
 from importlib.metadata import version
-from pathlib import Path, PosixPath
+from pathlib import Path
 from typing import Any
 
 import click
@@ -24,7 +24,6 @@ from jsonschema import draft7_format_checker
 from sqlalchemy import inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import create_engine
-from sqlalchemy.schema import CreateTable
 
 from schematools import (
     COMPATIBLE_METASCHEMAS,
@@ -44,10 +43,6 @@ from schematools.exports.csv import export_csvs
 from schematools.exports.geojson import export_geojsons
 from schematools.exports.geopackage import export_geopackages
 from schematools.exports.jsonlines import export_jsonls
-from schematools.factories import tables_factory
-from schematools.importer.base import BaseImporter
-from schematools.importer.geojson import GeoJSONImporter
-from schematools.importer.ndjson import NDJSONImporter
 from schematools.introspect.db import introspect_db_schema
 from schematools.introspect.geojson import introspect_geojson_files
 from schematools.loaders import (
@@ -549,7 +544,7 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
         meta_schema = _fetch_json(url)
         if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
             raise IncompatibleMetaschema(
-                f"Schematools {pkg_version} is not"
+                f"Schematools {pkg_version} is not "
                 f"compatible with metaschema {meta_schema_version}"
             )
 
@@ -606,7 +601,7 @@ def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
         meta_schema = _fetch_json(url)
         if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
             raise IncompatibleMetaschema(
-                f"Schematools {pkg_version} is not"
+                f"Schematools {pkg_version} is not "
                 f"compatible with metaschema {meta_schema_version}"
             )
 
@@ -986,56 +981,6 @@ def introspect_geojson(dataset_id: str, files: list[str]) -> None:
     click.echo(json.dumps(aschema, indent=2))
 
 
-@import_.command("ndjson")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.argument("table_id")
-@click.argument("ndjson_path")
-@click.option("--batch_size", default=100, type=int)
-@click.option("--truncate-table", is_flag=True)
-def import_ndjson(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    table_id: str,
-    batch_size: int,
-    ndjson_path: PosixPath,
-    truncate_table: bool,
-) -> None:
-    """Import a NDJSON file into a table."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    importer = NDJSONImporter(dataset_schema, engine)
-    importer.generate_db_objects(table_id, truncate=False, ind_tables=True, ind_extra_index=False)
-    importer.load_file(ndjson_path, batch_size, truncate=truncate_table)
-
-
-@import_.command("geojson")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.argument("table_id")
-@click.argument("geojson_path")
-@click.option("--batch_size", default=100, type=int)
-@click.option("--truncate-table", is_flag=True)
-def import_geojson(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    table_id: str,
-    batch_size: int,
-    geojson_path: PosixPath,
-    truncate_table: bool,
-) -> None:
-    """Import a GeoJSON file into a table."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    importer = GeoJSONImporter(dataset_schema, engine)
-    importer.generate_db_objects(table_id, truncate=False, ind_tables=True, ind_extra_index=False)
-    importer.load_file(geojson_path, batch_size=batch_size, truncate=truncate_table)
-
-
 def _get_dataset_schema(
     dataset_id: str, schema_url: str, prefetch_related: bool = False
 ) -> DatasetSchema:
@@ -1077,103 +1022,6 @@ def _get_scopes(schema_url: str) -> dict[str, Scope]:
         return loader.get_all_scopes()
     except (SchemaObjectNotFound, DuplicateScopeId) as e:
         raise click.ClickException(str(e)) from None
-
-
-@create.command("extra_index")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-def create_identifier_index(db_url: str, schema_url: str, dataset_id: str) -> None:
-    """Execute SQLalchemy Index based on Identifier in the JSON schema data definition."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    importer = BaseImporter(dataset_schema, engine)
-
-    for table in dataset_schema.get_tables():
-        importer.generate_db_objects(
-            table.id,
-            ind_tables=False,
-            ind_extra_index=True,
-            is_versioned_dataset=importer.is_versioned_dataset,
-        )
-
-
-@create.command("tables")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-def create_tables(db_url: str, schema_url: str, dataset_id: str) -> None:
-    """Execute SQLalchemy Table objects."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
-    importer = BaseImporter(dataset_schema, engine)
-
-    for table in dataset_schema.get_tables():
-        importer.generate_db_objects(
-            table.id,
-            ind_extra_index=False,
-            ind_tables=True,
-            is_versioned_dataset=importer.is_versioned_dataset,
-        )
-
-
-@create.command("sql")
-@click.option("--versioned/--no-versioned", default=True)
-@option_db_url
-@click.argument("schema_path")
-def create_sql(versioned: bool, db_url: str, schema_path: str) -> None:
-    """Generate SQL Create from amsterdam schema definition."""
-    engine = _get_engine(db_url)
-    loader = FileSystemSchemaLoader.from_file(schema_path)
-    dataset_schema = loader.get_dataset_from_file(schema_path)
-    tables = tables_factory(dataset_schema, is_versioned_dataset=versioned)
-    for table in tables.values():
-        table_sql = CreateTable(table).compile(engine)
-        click.echo(str(table_sql))
-
-
-@create.command("all")
-@option_db_url
-@option_schema_url
-@click.option(
-    "-x",
-    "--exclude",
-    multiple=True,
-    type=str,
-    default=[],
-    help="dataset_id to exclude. Can be repeated.",
-)
-@click.argument("dataset_id", required=False)
-def create_all_objects(
-    db_url: str, schema_url: str, exclude: list[str], dataset_id: str | None
-) -> None:
-    """Execute SQLalchemy Index (Identifier fields) and Table objects.
-
-    If no DATASET_ID is provide it will process all datasets!
-    """
-    loader = get_schema_loader(schema_url)
-    if dataset_id is None:
-        click.echo("No 'dataset_id' provided. Processing all datasets!")
-        dataset_schemas = loader.get_all_datasets().values()
-    else:
-        dataset_schemas = [loader.get_dataset(dataset_id, prefetch_related=True)]
-
-    engine = _get_engine(db_url)
-    for dataset_schema in dataset_schemas:
-        if dataset_schema.id in exclude:
-            msg = f"Skipping dataset {dataset_id!r}"
-            click.echo(msg)
-            click.echo("=" * len(msg))
-            continue
-        msg = f"Processing dataset {dataset_id!r}"
-        click.echo(msg)
-        click.echo("-" * len(msg))
-        importer = BaseImporter(dataset_schema, engine)
-        for table in dataset_schema.get_tables():
-            importer.generate_db_objects(
-                table.id,
-                is_versioned_dataset=importer.is_versioned_dataset,
-            )
 
 
 @diff.command("all")

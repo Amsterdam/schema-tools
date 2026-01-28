@@ -20,7 +20,6 @@ from schematools import (
     MAX_TABLE_NAME_LENGTH,
     SRID_3D,
     TABLE_INDEX_POSTFIX,
-    TMP_TABLE_POSTFIX,
 )
 from schematools.naming import to_snake_case
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
@@ -71,7 +70,7 @@ def tables_factory(
     db_table_names: dict[str, str | None] | None = None,
     db_schema_names: dict[str, str | None] | None = None,
     limit_tables_to: set | None = None,
-    is_versioned_dataset: bool = False,
+    version: str | None = None,
 ) -> dict[str, Table]:
     """Generate the SQLAlchemy Table objects base on a `DatasetSchema` definition.
 
@@ -83,11 +82,6 @@ def tables_factory(
         db_schema_names: Optional database schema names, keyed on dataset_table_id.
             If not given, schema names default to `public`.
         limit_tables_to: Only process the indicated tables (based on table.id).
-        is_versioned_dataset: Indicate whether the tables should be created in a private DB
-            schema with a version in their name. See also:
-            :attr:`.BaseImporter.is_versioned_dataset`. The private
-            schema name will be derived from the dataset ID, unless overridden by the
-            ``db_schema_name`` parameter.
 
     The returned tables are keyed on the name of the dataset and table.
     SA Table objects are also created for the junction tables that are needed for relations.
@@ -102,7 +96,7 @@ def tables_factory(
     """
     tables = {}
     metadata = metadata or MetaData()
-    dataset_tables = dataset.get_all_tables(include_nested=True, include_through=True)
+    dataset_tables = dataset.get_tables(version=version, include_nested=True, include_through=True)
 
     # For compatibility and consistency, allow snake-cased table ID's
     db_table_names = _snake_keys(db_table_names) if db_table_names else {}
@@ -151,28 +145,13 @@ def tables_factory(
         if (db_table_name := db_table_names.get(snaked_table_id)) is None:
             # No predefined table name, generate a custom one.
             # When the parent has a _new postfix, make sure nested tables also receive that.
-            has_postfix = (
-                db_schema_names
-                and snaked_parent_table_id
-                and (parent_table_name := db_table_names.get(snaked_parent_table_id)) is not None
-                and parent_table_name.endswith(TMP_TABLE_POSTFIX)
-            )
-            postfix = TMP_TABLE_POSTFIX if has_postfix else ""
-            if is_versioned_dataset:
-                db_table_name = dataset_table.db_name_variant(
-                    with_dataset_prefix=False, with_version=True, postfix=postfix
-                )
-            else:
-                db_table_name = dataset_table.db_name_variant(postfix=postfix)
+            db_table_name = dataset_table.db_name
 
         # If schema is None, default to Public. Leave it to None will have a risk that
         # the DB schema that is currently in use will be used to create the table in
         # leading to unwanted/unexepected results
         if (db_schema_name := db_schema_names.get(snaked_table_id)) is None:
-            if is_versioned_dataset:
-                db_schema_name = to_snake_case(dataset.id)
-            else:
-                db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
+            db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
 
         columns = [_column_factory(field) for field in dataset_table.get_db_fields()]
 
@@ -301,7 +280,6 @@ def index_factory(
     metadata: MetaData | None = None,
     db_table_name: str | None = None,
     db_schema_name: str | None = None,
-    is_versioned_dataset: bool = False,
 ) -> dict[str, list[Index]]:
     """Generates one or more SQLAlchemy Index objects to work with the JSON Schema.
 
@@ -311,33 +289,16 @@ def index_factory(
         db_table_name: Optional table name, which is otherwise inferred from the schema name.
         db_schema_name: Optional database schema name, which is otherwise None and
             defaults to "public"
-        is_versioned_dataset: Indicate whether the indices should be created in a private DB
-            schema with a version in their name. See also:
-            :attr:`.BaseImporter.is_versioned_dataset`. The private
-            schema name will be derived from the dataset ID, unless overridden by the
-            ``db_schema_name`` parameter.
 
     The returned Index objects are grouped by table names.
     """
     indexes: defaultdict[str, list[Index]] = defaultdict(list)
     _metadata = cast(MetaData, metadata or MetaData())
 
-    if is_versioned_dataset:
-        if db_schema_name is None:
-            # private DB schema instead of `public`
-            db_schema_name = dataset_table.dataset.id
-        if db_table_name is None:
-            db_table_name = dataset_table.db_name_variant(
-                # No dataset prefix as the tables will be created in their own
-                # private schema.
-                with_dataset_prefix=False,
-                with_version=True,
-            )
-    else:
-        if db_schema_name is None:
-            db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
-        if db_table_name is None:
-            db_table_name = dataset_table.db_name
+    if db_schema_name is None:
+        db_schema_name = DATABASE_SCHEMA_NAME_DEFAULT
+    if db_table_name is None:
+        db_table_name = dataset_table.db_name
 
     table_id = f"{db_schema_name}.{db_table_name}"
     try:
@@ -354,7 +315,7 @@ def index_factory(
             *build_temporal_indexes(table, dataset_table, db_table_name),
         ]
 
-    m2m_indexes = _build_m2m_indexes(metadata, dataset_table, is_versioned_dataset, db_schema_name)
+    m2m_indexes = _build_m2m_indexes(metadata, dataset_table, db_schema_name)
     for table_db_name, through_indexes in m2m_indexes.items():
         indexes[table_db_name].extend(through_indexes)
 
@@ -440,7 +401,6 @@ def build_temporal_indexes(
 def _build_m2m_indexes(
     metadata: MetaData,
     dataset_table: DatasetTableSchema,
-    is_versioned_dataset: bool,
     db_schema_name: str,
 ) -> dict[str, list[Index]]:
     """Creates index(es) on the many-to-many tables.
@@ -455,10 +415,7 @@ def _build_m2m_indexes(
         table = field.through_table
 
         # create the Index objects
-        if is_versioned_dataset:
-            table_db_name = table.db_name_variant(with_dataset_prefix=False, with_version=True)
-        else:
-            table_db_name = table.db_name
+        table_db_name = table.db_name
 
         table_id = f"{db_schema_name}.{table_db_name}"
         try:
