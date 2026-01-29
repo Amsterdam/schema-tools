@@ -1,3 +1,7 @@
+# 2026-01-29 (9.1.9)
+
+* Fix missing imports by removing unused code.
+
 # 2026-01-27 (9.1.8)
 
 * Bugfix for geopackage export with psycopg3
