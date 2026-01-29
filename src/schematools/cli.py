@@ -9,7 +9,6 @@ import operator
 import os
 import sys
 from collections import defaultdict
-from collections.abc import Iterable
 from functools import reduce
 from importlib.metadata import version
 from pathlib import Path
@@ -43,8 +42,6 @@ from schematools.exports.csv import export_csvs
 from schematools.exports.geojson import export_geojsons
 from schematools.exports.geopackage import export_geopackages
 from schematools.exports.jsonlines import export_jsonls
-from schematools.introspect.db import introspect_db_schema
-from schematools.introspect.geojson import introspect_geojson_files
 from schematools.loaders import (
     FileSystemSchemaLoader,
     get_profile_loader,
@@ -335,11 +332,6 @@ def permissions_apply(
             additional_grants=additional_grants,
             all_scopes=scopes,
         )
-
-
-@schema.group()
-def introspect() -> None:
-    """Subcommand to generate a schema."""
 
 
 @schema.group()
@@ -955,30 +947,6 @@ def show_scopes(schema_url: str, dataset_id: str) -> None:
     for table in dataset_schema.tables:
         scopes |= set(table.auth) | reduce(operator.or_, (set(f.auth) for f in table.fields))
     click.echo(" ".join(str(scope) for scope in scopes - {"OPENBAAR"}))
-
-
-@introspect.command("db")
-@click.option("--db-schema", "-s", help="Tables are in a different postgres schema (not 'public')")
-@click.option("--prefix", "-p", help="Tables have prefix that needs to be stripped")
-@option_db_url
-@click.argument("dataset_id")
-@click.argument("tables", nargs=-1)
-def introspect_db(
-    db_schema: str, prefix: str, db_url: str, dataset_id: str, tables: Iterable[str]
-) -> None:
-    """Generate a schema for the tables in a database."""
-    engine = _get_engine(db_url)
-    aschema = introspect_db_schema(engine, dataset_id, tables, db_schema, prefix)
-    click.echo(json.dumps(aschema, indent=2))
-
-
-@introspect.command("geojson")
-@click.argument("dataset_id")
-@click.argument("files", nargs=-1, required=True)
-def introspect_geojson(dataset_id: str, files: list[str]) -> None:
-    """Generate a schema from a GeoJSON file."""
-    aschema = introspect_geojson_files(dataset_id, files)
-    click.echo(json.dumps(aschema, indent=2))
 
 
 def _get_dataset_schema(
