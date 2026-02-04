@@ -1,3 +1,7 @@
+# 2026-02-04 (9.1.10)
+
+* Add github workflow for publishing the package.
+
 # 2026-01-29 (9.1.9)
 
 * Fix missing imports by removing unused code.
