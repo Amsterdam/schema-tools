@@ -120,8 +120,7 @@ schema-tools, make sure one of the commit increments the version number in
   ``git checkout master && git fetch origin && git merge --ff-only origin/master``;
 * tag the release X.Y.Z with ``git tag -a vX.Y.Z -m "Bump to vX.Y.Z"``;
 * push the tag to GitHub with ``git push origin --tags``;
-* release to PyPI: ``make upload``. This requires the PyPI secret, which you should then have available in your ``~/.pypirc``,
-  ([instructions](https://packaging.python.org/en/latest/specifications/pypirc/#using-a-pypi-token)).
+* The publish-to-pypi workflow will automatically publish the release.
 
 ## Mocking data
 

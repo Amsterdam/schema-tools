@@ -30,8 +30,3 @@ build: clean
 	python -m build --sdist --wheel .
 
 version := $(shell awk '/^version = / {print $$3}' setup.cfg)
-
-.PHONY: upload
-upload: build
-	[ "$$(head -n 1 CHANGES.md)" = "# $$(date +%Y-%m-%d) (${version})" ]
-	python -m twine upload dist/*
