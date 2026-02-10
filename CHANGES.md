@@ -1,3 +1,7 @@
+# 2026-02-10 (9.1.11)
+
+* Fix bug in create views so that now multiple sql statements can be executed.
+
 # 2026-02-04 (9.1.10)
 
 * Add github workflow for publishing the package.
