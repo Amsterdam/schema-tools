@@ -6,6 +6,7 @@ from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, transaction
 from django.db.backends.utils import CursorWrapper
 from psycopg import sql
+from sqlparse import split
 
 from schematools.contrib.django.models import Dataset, DatasetTableSchema
 from schematools.naming import to_snake_case
@@ -78,9 +79,7 @@ def _check_required_permissions_exist(
 
 def _execute_multi_sql(cursor: CursorWrapper, sql_string: str):
     # There may be multiple sql statements
-    sql_parts = sql_string.split(";")
-    # Add semi-colon back in, remove empty parts
-    statements = [f"{part.strip()};" for part in sql_parts if part]
+    statements = split(sql_string)
     for statement in statements:
         cursor.execute(sql.SQL(statement))
 

@@ -17,6 +17,7 @@ class TestCreateViews:
                 id int,
                 name varchar(255)
             );
+
             INSERT INTO element (id, name) VALUES (1, 'name');
             SELECT * FROM element;
         """
