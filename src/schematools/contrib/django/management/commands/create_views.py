@@ -4,6 +4,7 @@ from collections.abc import Iterable
 
 from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, transaction
+from django.db.backends.utils import CursorWrapper
 from psycopg import sql
 
 from schematools.contrib.django.models import Dataset, DatasetTableSchema
@@ -27,7 +28,7 @@ def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
             sid = transaction.savepoint()
             with connection.cursor() as cursor:
                 cursor.execute("SET statement_timeout = 5000;")
-                cursor.execute(sql.SQL(view_sql))
+                _execute_multi_sql(cursor, view_sql)
             transaction.savepoint_rollback(sid)
     except Exception as e:  # noqa: F841, BLE001
         return False
@@ -73,6 +74,15 @@ def _check_required_permissions_exist(
     """
 
     return required_permissions <= (view_dataset_auth | {"OPENBAAR"})
+
+
+def _execute_multi_sql(cursor: CursorWrapper, sql_string: str):
+    # There may be multiple sql statements
+    sql_parts = sql_string.split(";")
+    # Add semi-colon back in, remove empty parts
+    statements = [f"{part.strip()};" for part in sql_parts if part]
+    for statement in statements:
+        cursor.execute(sql.SQL(statement))
 
 
 def _clean_sql(sql) -> str:
@@ -146,7 +156,6 @@ def create_views(
                         continue
                     try:
                         with connection.cursor() as cursor:
-
                             # Check if write role exists and create if it does not
                             _create_role_if_not_exists(cursor, write_role_name)
 
@@ -171,7 +180,7 @@ def create_views(
                             # Loop though all required permissions and and grant them to the
                             # write user
                             for scope in required_permissions:
-                                scope = f'scope_{scope.replace("/", "_").lower()}'
+                                scope = f"scope_{scope.replace('/', '_').lower()}"
                                 if scope:
                                     cursor.execute(
                                         sql.SQL("GRANT {scope} TO {write_role_name}").format(
@@ -206,7 +215,7 @@ def create_views(
                                 )
 
                             # Create the view
-                            cursor.execute(sql.SQL(view_sql))
+                            _execute_multi_sql(cursor, view_sql)
 
                             # Reset the role to the default role
                             cursor.execute("RESET ROLE")
