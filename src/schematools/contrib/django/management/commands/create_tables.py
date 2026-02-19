@@ -78,7 +78,7 @@ def create_tables(
             is_view = False
 
             for view_table in model._dataset.schema.tables:
-                if view_table.is_view:
+                if db_table_name == view_table.id and view_table.is_view:
                     command.stdout.write(f"  Skipping view: {db_table_name}")
                     is_view = True
 
