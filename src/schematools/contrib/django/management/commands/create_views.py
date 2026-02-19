@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from django.core.management import BaseCommand, CommandError
-from django.db import DatabaseError, connection, transaction
+from django.db import DatabaseError, ProgrammingError, connection, transaction
 from django.db.backends.utils import CursorWrapper
 from psycopg import sql
 from sqlparse import split
@@ -22,16 +22,31 @@ class Command(BaseCommand):
         create_views(self, Dataset.objects.db_enabled())
 
 
-def _is_valid_sql(view_sql: str, view_name: str, write_role_name: str) -> bool:
+def _is_valid_sql(
+    view_sql: str, write_role_name: str, view_owner_name: str, required_permissions: frozenset[str]
+) -> bool:
     """Try and execute the SQL return true if it succeeds, rollback the transaction."""
     try:
         with transaction.atomic():
             sid = transaction.savepoint()
             with connection.cursor() as cursor:
                 cursor.execute("SET statement_timeout = 5000;")
+                _create_users(cursor, write_role_name, view_owner_name)
+                _set_grants(
+                    cursor,
+                    write_role=write_role_name,
+                    view_owner=view_owner_name,
+                    required_permissions=required_permissions,
+                )
+                cursor.execute(
+                    sql.SQL("SET ROLE {write_role_name}")
+                    .format(write_role_name=sql.Identifier(write_role_name))
+                    .as_string()
+                )
+                # Should not fail
                 _execute_multi_sql(cursor, view_sql)
             transaction.savepoint_rollback(sid)
-    except Exception as e:  # noqa: F841, BLE001
+    except Exception:  # noqa: BLE001
         return False
     return True
 
@@ -81,7 +96,7 @@ def _execute_multi_sql(cursor: CursorWrapper, sql_string: str):
     # There may be multiple sql statements
     statements = split(sql_string)
     for statement in statements:
-        cursor.execute(sql.SQL(statement))
+        cursor.execute(statement)
 
 
 def _clean_sql(sql) -> str:
@@ -103,6 +118,77 @@ def _create_role_if_not_exists(cursor, role_name):
         cursor.execute(
             sql.SQL("CREATE ROLE {role_name}").format(role_name=sql.Identifier(role_name))
         )
+
+
+def _set_grants(
+    cursor: CursorWrapper,
+    *,
+    write_role: str,
+    view_owner: str,
+    required_permissions: frozenset[str],
+):
+    # Grant usage and create on schema public to write role
+    cursor.execute(
+        sql.SQL("GRANT usage,create on schema public TO {write_role}")
+        .format(write_role=sql.Identifier(write_role))
+        .as_string()
+    )
+    cursor.execute(
+        sql.SQL("GRANT SELECT on ALL TABLES in schema public TO {write_role}")
+        .format(write_role=sql.Identifier(write_role))
+        .as_string()
+    )
+    cursor.execute(
+        sql.SQL("GRANT {view_owner} TO current_user")
+        .format(view_owner=sql.Identifier(view_owner))
+        .as_string()
+    )
+    cursor.execute(
+        sql.SQL("GRANT {write_role} TO {view_owner}")
+        .format(write_role=sql.Identifier(write_role), view_owner=sql.Identifier(view_owner))
+        .as_string()
+    )
+
+    # Loop though all required permissions and and grant them to the
+    # write user
+    for scope in required_permissions:
+        scope = f"scope_{scope.replace('/', '_').lower()}"
+        if scope:
+            cursor.execute(
+                sql.SQL("GRANT {scope} TO {write_role}")
+                .format(
+                    scope=sql.Identifier(scope),
+                    write_role=sql.Identifier(write_role),
+                )
+                .as_string()
+            )
+
+    cursor.execute(
+        sql.SQL("GRANT scope_openbaar TO {write_role}")
+        .format(write_role=sql.Identifier(write_role))
+        .as_string()
+    )
+
+    # Grant permissions on cron, so write role can create cron jobs for refreshing views.
+    # Since for local tests we do not have pg_cron installed, we use a separate (nested)
+    # transaction and rollback if it fails, otherwise the whole (outer) transaction fails.
+    with transaction.atomic():
+        sid = transaction.savepoint()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    sql.SQL("GRANT USAGE ON SCHEMA cron TO {write_role}")
+                    .format(write_role=sql.Identifier(write_role))
+                    .as_string()
+                )
+        except ProgrammingError:
+            transaction.savepoint_rollback(sid)
+
+
+def _create_users(cursor, *args):
+    for rolename in args:
+        # Check if write role exists and create if it does not
+        _create_role_if_not_exists(cursor, rolename)
 
 
 def create_views(
@@ -132,16 +218,19 @@ def create_views(
                 command.stdout.write(f"* Creating view {table.db_name}")
                 # Generate the write role name
                 write_role_name = f"write_{table._parent_schema.db_name}"
+                view_owner_name = "view_owner"
 
                 # Check if the view sql is valid
                 # If not skip this view and proceed with next view
                 view_sql = _clean_sql(dataset.schema.get_view_sql())
                 view_type = "materialized" if "materialized" in view_sql.lower() else "view"
-                if not _is_valid_sql(view_sql, table.db_name, write_role_name):
+                required_permissions = _get_required_permissions(table)
+                if not _is_valid_sql(
+                    view_sql, write_role_name, view_owner_name, required_permissions
+                ):
                     command.stderr.write(f"  Invalid SQL for view {table.db_name}")
                     continue
 
-                required_permissions = _get_required_permissions(table)
                 view_dataset_auth = (
                     dataset.schema.auth
                     if view_type == "view"
@@ -155,51 +244,20 @@ def create_views(
                         continue
                     try:
                         with connection.cursor() as cursor:
-                            # Check if write role exists and create if it does not
-                            _create_role_if_not_exists(cursor, write_role_name)
-
-                            # Grant usage and create on schema public to write role
-                            cursor.execute(
-                                sql.SQL(
-                                    "GRANT usage,create on schema public TO {write_role_name}"
-                                ).format(write_role_name=sql.Identifier(write_role_name))
-                            )
-
-                            # We create one `view_owner` role that owns all views
-                            _create_role_if_not_exists(cursor, "view_owner")
-
-                            cursor.execute("GRANT view_owner TO current_user")
-
-                            cursor.execute(
-                                sql.SQL("GRANT {write_role_name} TO view_owner").format(
-                                    write_role_name=sql.Identifier(write_role_name)
-                                )
-                            )
-
-                            # Loop though all required permissions and and grant them to the
-                            # write user
-                            for scope in required_permissions:
-                                scope = f"scope_{scope.replace('/', '_').lower()}"
-                                if scope:
-                                    cursor.execute(
-                                        sql.SQL("GRANT {scope} TO {write_role_name}").format(
-                                            scope=sql.Identifier(scope),
-                                            write_role_name=sql.Identifier(write_role_name),
-                                        )
-                                    )
-
-                            cursor.execute(
-                                sql.SQL("GRANT scope_openbaar TO {write_role_name}").format(
-                                    write_role_name=sql.Identifier(write_role_name)
-                                )
+                            _create_users(cursor, write_role_name, view_owner_name)
+                            _set_grants(
+                                cursor,
+                                write_role=write_role_name,
+                                view_owner=view_owner_name,
+                                required_permissions=required_permissions,
                             )
 
                             # Set the role before creating the view because the view is created
                             # with the permissions of the role
                             cursor.execute(
-                                sql.SQL("SET ROLE {write_role_name}").format(
-                                    write_role_name=sql.Identifier(write_role_name)
-                                )
+                                sql.SQL("SET ROLE {write_role_name}")
+                                .format(write_role_name=sql.Identifier(write_role_name))
+                                .as_string()
                             )
 
                             # Remove the view if it exists
@@ -208,9 +266,9 @@ def create_views(
                             # to the materialized view the view must be dropped manually.
                             if view_type != "materialized":
                                 cursor.execute(
-                                    sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE").format(
-                                        view_name=sql.Identifier(table.db_name)
-                                    )
+                                    sql.SQL("DROP VIEW IF EXISTS {view_name} CASCADE")
+                                    .format(view_name=sql.Identifier(table.db_name))
+                                    .as_string()
                                 )
 
                             # Create the view
@@ -223,7 +281,9 @@ def create_views(
                             cursor.execute(
                                 sql.SQL(
                                     "REVOKE usage,create on schema public FROM {write_role_name}"
-                                ).format(write_role_name=sql.Identifier(write_role_name))
+                                )
+                                .format(write_role_name=sql.Identifier(write_role_name))
+                                .as_string()
                             )
 
                             cursor.close()
