@@ -109,7 +109,7 @@ class TestDjangoModelFactory:
             dry_run=False,
         )
         factory = DjangoModelFactory(aardgasverbruik_dataset)
-        MraLiander, PostcodeRangeModel = factory.build_models()
+        MraLiander, PostcodeRangeModel, _ = factory.build_models()
         pk_field = PostcodeRangeModel._meta.pk
         assert isinstance(pk_field, models.OneToOneField)
         assert pk_field.db_column == "id"

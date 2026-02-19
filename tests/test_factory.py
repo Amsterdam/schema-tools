@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from schematools.factories import tables_factory
+from schematools.factories import tables_factory, views_factory
 
 
 def test_through_col_creation(engine, brk_schema, verblijfsobjecten_schema):
@@ -17,6 +17,12 @@ def test_through_col_creation(engine, brk_schema, verblijfsobjecten_schema):
         "stukdelen_isBronVoorAantekeningKadastraalObject",
         "aantekeningenrechten_heeftBetrokkenPersoon",
     ]:
-
         colum_names = {c.name for c in sa_tables[test_table_name].columns}
         assert {"begin_geldigheid", "eind_geldigheid"} < colum_names
+
+
+def test_views_factory(engine, aardgasverbruik_schema):
+    tables = tables_factory(aardgasverbruik_schema)
+    views = views_factory(aardgasverbruik_schema, tables)
+    for name in ["mraLiander", "mraStatistiekenPcranges", "aardgasverbruik"]:
+        assert name in views
