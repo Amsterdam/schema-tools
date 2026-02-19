@@ -6,6 +6,7 @@ from django.db import connection
 
 from schematools.contrib.django.management.commands.create_views import (
     _clean_sql,
+    _create_role_if_not_exists,
     _execute_multi_sql,
 )
 
@@ -39,12 +40,14 @@ class TestCreateViews:
     def test_create_views_can_create_and_refresh_materialized_view(
         self, aardgasverbruik_dataset
     ) -> None:
+        with connection.cursor() as cursor:
+            _create_role_if_not_exists(cursor, "scope_openbaar")
         view_sql = """
-        CREATE MATERIALIZED VIEW IF NOT EXISTS public.aardgasverbruik_aardgasverbruik AS
+        CREATE MATERIALIZED VIEW IF NOT EXISTS aardgasverbruik_aardgasverbruik AS
         SELECT id
         FROM public.aardgasverbruik_mra_liander_v1;
 
-        REFRESH MATERIALIZED VIEW public.aardgasverbruik_aardgasverbruik;
+        REFRESH MATERIALIZED VIEW aardgasverbruik_aardgasverbruik;
         """
         aardgasverbruik_dataset.view_data = view_sql
         aardgasverbruik_dataset.save()
@@ -56,5 +59,5 @@ class TestCreateViews:
         call_command("create_views")
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT count(*) FROM public.aardgasverbruik_aardgasverbruik;")
+            cursor.execute("SELECT count(*) FROM aardgasverbruik_aardgasverbruik;")
             assert cursor.fetchone() == (0,)
