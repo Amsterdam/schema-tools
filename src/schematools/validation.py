@@ -150,11 +150,9 @@ def _id_matches_path(dataset: DatasetSchema, location: str | None) -> Iterator[s
         temp_path = path
         while len(id_):
             temp_path = temp_path.parent
+            # Yield validation error if folder is not snake cased
             if not id_.endswith(temp_path.name):
-                yield (
-                    f"Id of the dataset {dataset.id} does not match "
-                    f"the parent directory {path.parent}."
-                )
+                yield (f"Parent directory {path.parent} is not snake cased.")
                 break
             id_ = id_[: -len(temp_path.name) - 1]
 

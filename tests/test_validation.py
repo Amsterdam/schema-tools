@@ -100,8 +100,7 @@ def test_id_matches_path(here: Path, schema_loader) -> None:
     assert error
     assert error.validator_name == "ID does not match file path"
     assert re.match(
-        r"^Id of the dataset stadsdelen does not match the parent directory"
-        r" .*/files/datasets/regios\.$",
+        r"^Parent directory .*/files/datasets/regios\ is not snake cased.$",
         error.message,
     )
     assert list(errors) == []
@@ -113,8 +112,7 @@ def test_id_matches_path(here: Path, schema_loader) -> None:
     assert error
     assert error.validator_name == "ID does not match file path"
     assert re.match(
-        r"^Id of the dataset beheerkaartCbsGrid does not match the parent directory"
-        r" .*/files/datasets/bierkaart/cbs_grid\.$",
+        r"^Parent directory .*/files/datasets/bierkaart/cbs_grid\ is not snake cased.$",
         error.message,
     )
     assert list(errors) == []
