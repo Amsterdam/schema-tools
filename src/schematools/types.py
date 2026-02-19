@@ -345,10 +345,13 @@ class DatasetSchema(SchemaType):
 
     @classmethod
     def from_dict(
-        cls, obj: dict[str, Any], loader: CachedSchemaLoader | None = None
+        cls,
+        obj: dict[str, Any],
+        loader: CachedSchemaLoader | None = None,
+        view_sql: str | None = None,
     ) -> DatasetSchema:
         """Parses given dict and validates the given schema."""
-        return cls(obj, loader=loader)
+        return cls(obj, loader=loader, view_sql=view_sql)
 
     def json(
         self,
