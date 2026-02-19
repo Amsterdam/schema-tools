@@ -335,6 +335,7 @@ class Dataset(models.Model):
         return DatasetSchema.from_dict(
             json.loads(self.schema_data),
             loader=loader,
+            view_sql=self.view_data,
         )
 
     @cached_property
