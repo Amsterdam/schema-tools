@@ -1,3 +1,7 @@
+# 2026-02-19 (9.1.12)
+
+* Set correct user and permission for creating views and cronjobs.
+
 # 2026-02-10 (9.1.11)
 
 * Fix bug in create views so that now multiple sql statements can be executed.
