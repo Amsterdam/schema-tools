@@ -702,6 +702,16 @@ def test_validate_table(prev, curr, errors):
             },
             ["Table 'test' added fields, expecting new version to be 1.1.0."],
         ),
+        # Add field and metadata changes, test only minor version bump
+        (
+            {"id": "test", "version": "1.0.0", "schema": {"properties": {"field": {}}}},
+            {
+                "id": "test",
+                "version": "1.1.0",
+                "schema": {"properties": {"field": {"title": "test"}, "field2": {}}},
+            },
+            [],
+        ),
         # Change metadata fail no new version
         (
             {
