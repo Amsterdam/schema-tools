@@ -844,6 +844,9 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
                 f"Table '{table_id}' added fields, expecting new version "
                 f"to be {expected_version}."
             ]
+        else:
+            # If there is a minor version bump, we don't need to check for metadata changes
+            return []
 
     # Then, check metadata changes at table, table.schema, and field levels
     table_errors = []
