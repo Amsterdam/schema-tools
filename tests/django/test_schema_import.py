@@ -316,6 +316,29 @@ def test_import_schema_doesnt_drop_experimental_table_with_non_breaking_change_d
 
 
 @pytest.mark.django_db
+def test_import_schema_updates_experimental_table_with_non_breaking_change(here):
+    original = here / "files/datasets/experimental/original.json"
+    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    assert models.Dataset.objects.count() == 1
+
+    updated = here / "files/datasets/experimental/new_field.json"
+    call_command("import_schemas", updated, dry_run=False, create_tables=1)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """SELECT
+                column_name
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = 'experimental_experimentaltable_v1'
+            """
+        )
+        columns = [col for row in cursor.fetchall() for col in row]
+        assert "another" in columns
+
+
+@pytest.mark.django_db
 def test_import_schema_drop_experimental_table_with_m2m_also_drops_through_table(here, capsys):
     original = here / "files/datasets/experimental/original_m2m.json"
     call_command("import_schemas", original, dry_run=False, create_tables=1)
