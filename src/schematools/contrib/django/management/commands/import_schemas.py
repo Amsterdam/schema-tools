@@ -181,7 +181,7 @@ class Command(BaseCommand):
         return real_apps
 
     def _migrate_tables(
-        self, current_datasets: dict[str, any], updated_datasets: Iterable[Dataset], options
+        self, current_datasets: dict[str, Dataset], updated_datasets: Iterable[Dataset], options
     ):
         # Loop over updated datasets and perform migrations.
         for updated_dataset in updated_datasets:
@@ -192,7 +192,7 @@ class Command(BaseCommand):
                 continue
 
             real_apps = self._load_dependencies(updated_dataset.schema, updated_dataset)
-            for current_table in current_dataset.schema.tables:
+            for current_table in current_dataset.schema.get_all_tables():
                 updated_table = updated_dataset.schema.get_table_by_id(
                     current_table.id, include_nested=False, include_through=False
                 )
@@ -204,6 +204,8 @@ class Command(BaseCommand):
                         next_fields = updated_table.json_data()["schema"]["properties"]
                         table_errors = validation.validate_table(previous_fields, next_fields)
                         if len(table_errors) > 0:
+                            for error in table_errors:
+                                self.stdout.write(f"  [ERROR]: {error}")
                             if not options["create_tables"]:
                                 self.stdout.write(
                                     "Not dropping table, as create_tables is set to false."
@@ -218,6 +220,10 @@ class Command(BaseCommand):
                                     if through_table := field.through_table:
                                         drop_table(through_table.db_name)
                                 drop_table(current_table.db_name)
+                                self.stdout.write(
+                                    f"Dropped table {current_table.db_name} due to breaking "
+                                    "changes while under development."
+                                )
                             # do not migrate in this case.
                             continue
 
