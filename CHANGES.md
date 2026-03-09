@@ -1,8 +1,12 @@
+# 2026-03-09 (9.1.14)
+
+* Bugfix: Migrate non-breaking changes of tables that are not in default version.
+
 # 2026-03-09 (9.1.13)
 
 * Fix issue with schema version validation when fields are added and metadata is changed at the same time.
 
-* # 2026-02-19 (9.1.12)
+# 2026-02-19 (9.1.12)
 
 * Set correct user and permission for creating views and cronjobs.
 
