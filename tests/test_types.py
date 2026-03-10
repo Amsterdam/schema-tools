@@ -666,4 +666,5 @@ def test_exports_type(schema_loader):
         "gebieden_v1_kleine_gebieden.jsonl",
     ]
     assert len(v1.exports[0].tables) == len(v1.get_tables())
-    assert v1.exports[0].scope == Scope.from_string("openbaar")
+    assert v1.exports[0].is_public
+    assert not v1.exports[5].is_public
