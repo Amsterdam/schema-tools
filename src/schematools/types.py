@@ -20,6 +20,7 @@ from typing import (
     ClassVar,
     NamedTuple,
     NoReturn,
+    Self,
     TypeVar,
     Union,
     cast,
@@ -862,6 +863,7 @@ class DatasetVersionSchema(SchemaType):
         stable = "stable"
         under_development = "under_development"
         superseded = "superseded"
+        deprecated = "deprecated"
 
     def __init__(
         self,
@@ -983,6 +985,53 @@ class DatasetVersionSchema(SchemaType):
             for f in t.fields
             if f.is_through_table and not (f.is_loose_relation and f.nm_relation is None)
         ]
+
+    @cached_property
+    def exports(self) -> list[Export]:
+        """List the exports created for the dataset version."""
+        exports = []
+        for export in self.get("exports", []):
+            for scope in export["scopes"]:
+                for filetype in export["filetypes"]:
+                    exports.append(Export.from_json(export, scope, filetype, self))
+        return exports
+
+
+@dataclasses.dataclass
+class Export:
+    """Class that models the export definitions in the dataset schema."""
+
+    name: str
+    tables: list[DatasetTableSchema]
+    scope: Scope
+    _filetype: str
+    _dataset_name: str
+    _version: str
+
+    @classmethod
+    def from_json(
+        cls, export_json: dict, scope: str, filetype: str, version_schema: DatasetVersionSchema
+    ) -> Self:
+        tables = []
+        table_ids = export_json.get("tables", [])
+        if table_ids == "*":
+            tables = version_schema.get_tables()
+        else:
+            for table_id in table_ids:
+                # Validation already verifies the tables exist on the version.
+                tables.append(version_schema.get_table_by_id(table_id))
+        return cls(
+            name=export_json["name"],
+            tables=tables,
+            scope=Scope.from_string(scope),
+            _filetype=filetype,
+            _version=version_schema.version,
+            _dataset_name=version_schema.schema.id,
+        )
+
+    @property
+    def filename(self) -> str:
+        return f"{self._dataset_name}_{self._version}_{self.name}.{self._filetype}"
 
 
 @dataclasses.dataclass
