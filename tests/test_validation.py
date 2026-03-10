@@ -419,6 +419,28 @@ def test_subresource(schema_loader) -> None:
     ]
 
 
+def test_exports_invalid(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("exports_invalid.json")
+    errors = [v.message for v in validation.run(dataset)]
+
+    assert len(errors) == 3
+    assert errors == [
+        "Export 'gebieden' in dataset 'gebieden' version 'v1' refers to table 'steden' that "
+        "does not exist in this version.",
+        "Export 'gebieden' in dataset 'gebieden' version 'v1' refers to table 'landen' that "
+        "does not exist in this version.",
+        "Export name 'gebieden' in dataset 'gebieden' version 'v1' is not unique. Export "
+        "names should be unique within a dataset version.",
+    ]
+
+
+def test_exports_valid(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("exports_valid.json")
+    errors = list(validation.run(dataset))
+
+    assert len(errors) == 0
+
+
 def test_check_status(schema_loader) -> None:
     dataset = schema_loader.get_dataset("status")
 

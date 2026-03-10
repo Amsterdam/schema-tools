@@ -31,7 +31,7 @@ from typing import cast
 from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools.exceptions import DatasetFieldNotFound, SchemaObjectNotFound
+from schematools.exceptions import DatasetFieldNotFound, DatasetTableNotFound, SchemaObjectNotFound
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.auth import RLA_SCOPE
 from schematools.types import DatasetSchema, DatasetVersionSchema, SemVer
@@ -655,6 +655,44 @@ def _check_superseded_version(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
+@_register_validator("exports")
+def _check_exports(dataset: DatasetSchema) -> Iterator[str]:
+    """
+    Check that each dataset version that has exports defined, has a valid export configuration.
+
+    1. Name should be unique within the version
+    2. Each export should refer to existing tables in the version, unless all tables are exported
+    (tables = "*").
+    """
+    for version_number, version in dataset.versions.items():
+        exports = version.data.get("exports")
+        if not exports:
+            continue
+
+        names = []
+        for export in exports:
+            if export["name"] in names:
+                yield (
+                    f"Export name '{export['name']}' in dataset '{dataset.id}' version "
+                    f"'{version_number}' is not unique. Export names should be unique within a "
+                    "dataset version."
+                )
+            names.append(export["name"])
+
+            tables = export["tables"]
+            if tables == "*":
+                continue
+            for table in tables:
+                try:
+                    version.get_table_by_id(table)
+                except DatasetTableNotFound:
+                    yield (
+                        f"Export '{export['name']}' in dataset '{dataset.id}' version "
+                        f"'{version_number}' refers to table '{table}' that does not exist "
+                        "in this version."
+                    )
+
+
 def validate_dataset(
     previous_tables: list[dict[str, str]],
     current_tables: list[dict[str, str]],
@@ -662,7 +700,7 @@ def validate_dataset(
     """Validates that the current version of a stable dataset does not introduce breaking changes.
 
     We check:
-    1. wheter an existing tables is removed
+    1. whether an existing tables is removed
     2. whether an existing table is changed to another version
 
     NB. This is not a registered validator that has been registered, as here we have to
