@@ -12,9 +12,9 @@
       "status": "stable",
       "version": "0.0.1",
       "exports": [
-        {"name": "alle_gebieden", "tables": "*", "scopes": ["openbaar"]},
-        {"name": "grote_gebieden", "tables": ["stadsdelen","ggwgebieden","wijken"], "scopes": ["openbaar", "fp/mdw"]},
-        {"name": "kleine_gebieden", "tables": ["bouwblokken", "buurten"], "scopes": ["fp/mdw"]}
+        {"name": "alle_gebieden", "tables": "*", "filetypes": ["csv","geojson"], "scopes": ["openbaar"]},
+        {"name": "grote_gebieden", "tables": ["stadsdelen","ggwgebieden","wijken"],"filetypes": ["gpkg"], "scopes": ["openbaar", "fp/mdw"]},
+        {"name": "kleine_gebieden", "tables": ["bouwblokken", "buurten"], "filetypes": ["csv","jsonl"], "scopes": ["fp/mdw"]}
       ],
       "tables": [
         {

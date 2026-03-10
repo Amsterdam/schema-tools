@@ -8,6 +8,7 @@ from schematools.exceptions import IncompatibleDataset, SchemaObjectNotFound, Sc
 from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
+    Export,
     Permission,
     PermissionLevel,
     ProfileSchema,
@@ -647,3 +648,22 @@ def test_subresource(schema_loader):
     assert len(subresources) == 1
     assert subresources[0].table == subresource_table
     assert subresources[0].field == "ofResource"
+
+
+def test_exports_type(schema_loader):
+    dataset = schema_loader.get_dataset_from_file("exports_valid.json")
+    v1 = dataset.get_version("v1")
+    # Assert export is created for each scope/filetype combination
+    assert len(v1.exports) == 6
+    assert all(isinstance(export, Export) for export in v1.exports)
+    filenames = [export.filename for export in v1.exports]
+    assert filenames == [
+        "gebieden_v1_alle_gebieden.csv",
+        "gebieden_v1_alle_gebieden.geojson",
+        "gebieden_v1_grote_gebieden.gpkg",  # scope openbaar
+        "gebieden_v1_grote_gebieden.gpkg",  # scope fp/mdw
+        "gebieden_v1_kleine_gebieden.csv",
+        "gebieden_v1_kleine_gebieden.jsonl",
+    ]
+    assert len(v1.exports[0].tables) == len(v1.get_tables())
+    assert v1.exports[0].scope == Scope.from_string("openbaar")
