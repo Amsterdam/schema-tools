@@ -1023,7 +1023,7 @@ class Export:
         return cls(
             name=export_json["name"],
             tables=tables,
-            scope=Scope.from_string(scope),
+            scope=Scope.from_string(scope.upper()),
             _filetype=filetype,
             _version=version_schema.version,
             _dataset_name=version_schema.schema.id,
@@ -1032,6 +1032,10 @@ class Export:
     @property
     def filename(self) -> str:
         return f"{self._dataset_name}_{self._version}_{self.name}.{self._filetype}"
+
+    @property
+    def is_public(self) -> bool:
+        return self.scope.name == _PUBLIC_SCOPE
 
 
 @dataclasses.dataclass
