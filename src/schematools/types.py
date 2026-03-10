@@ -20,7 +20,6 @@ from typing import (
     ClassVar,
     NamedTuple,
     NoReturn,
-    Self,
     TypeVar,
     Union,
     cast,
@@ -1011,7 +1010,7 @@ class Export:
     @classmethod
     def from_json(
         cls, export_json: dict, scope: str, filetype: str, version_schema: DatasetVersionSchema
-    ) -> Self:
+    ) -> Export:
         tables = []
         table_ids = export_json.get("tables", [])
         if table_ids == "*":
