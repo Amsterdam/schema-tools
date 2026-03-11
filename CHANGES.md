@@ -1,3 +1,7 @@
+# 2026-03-09 (9.1.15)
+
+* Add validation and types for export definitions available in metaschema 4.1.0.
+
 # 2026-03-09 (9.1.14)
 
 * Bugfix: Migrate non-breaking changes of tables that are not in default version.
