@@ -3,7 +3,9 @@
   "type": "dataset",
   "description": "Dataset with an identifier field that is not integer or string",
   "license": "public",
-  "publisher": "us",
+  "publisher": {
+    "$ref": "publishers/HARRY"
+  },
   "owner": "us",
   "authorizationGrantor": "us",
   "crs": "EPSG:28992",

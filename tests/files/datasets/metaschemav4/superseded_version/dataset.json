@@ -1,7 +1,9 @@
 {
   "id": "metaschemav4/supersededversion",
   "type": "dataset",
-  "publisher": "unknown",
+  "publisher": {
+    "$ref": "publishers/GLEBZ"
+  },
   "defaultVersion": "v1",
   "versions": {
     "v1": {

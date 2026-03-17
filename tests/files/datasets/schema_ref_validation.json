@@ -3,7 +3,9 @@
   "id": "schemrefvalidation",
   "title": "Schema $ref hostname Validation Test",
   "description": "Schema for unit testing schema $ref validator",
-  "publisher": "unknown",
+  "publisher": {
+    "$ref": "publishers/GLEBZ"
+  },
   "defaultVersion": "v1",
   "versions": {
     "v1": {

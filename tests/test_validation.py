@@ -246,27 +246,27 @@ def test_rel_auth_dataset_public(schema_loader) -> None:
     assert len(errors) == 0, errors
 
 
-def test_rel_auth_table(here: Path) -> None:
+def test_rel_auth_table(here: Path, schema_loader) -> None:
     with (here / "files/datasets/rel_auth.json").open() as f:
         dataset_json = json.load(f)
     table = next(t for t in dataset_json["versions"]["v1"]["tables"] if t["id"] == "base")
     table["auth"] = ["HAMMERTIME"]
     table["reasonsNonPublic"] = ["U can't touch this"]
-    dataset = DatasetSchema.from_dict(dataset_json)
+    dataset = DatasetSchema.from_dict(dataset_json, loader=schema_loader)
 
     errors = list(validation.run(dataset))
     assert len(errors) == 1, errors
     assert "requires scopes ['HAMMERTIME']" in str(errors[0])
 
 
-def test_rel_auth_field(here: Path) -> None:
+def test_rel_auth_field(here: Path, schema_loader) -> None:
     with (here / "files/datasets/rel_auth.json").open() as f:
         dataset_json = json.load(f)
     table = next(t for t in dataset_json["versions"]["v1"]["tables"] if t["id"] == "base")
     field = table["schema"]["properties"]["stop"]
     field["auth"] = ["HAMMERTIME"]
 
-    dataset = DatasetSchema.from_dict(dataset_json)
+    dataset = DatasetSchema.from_dict(dataset_json, loader=schema_loader)
     errors = list(validation.run(dataset))
 
     assert len(errors) >= 1, errors
@@ -310,7 +310,7 @@ def test_reasons_non_public_exists(here: Path, schema_loader) -> None:
     dataset_json["versions"]["v1"]["tables"][0]["reasonsNonPublic"] = [
         "5.1 1c: Bevat persoonsgegevens"
     ]
-    dataset = DatasetSchema.from_dict(dataset_json)
+    dataset = DatasetSchema.from_dict(dataset_json, loader=schema_loader)
     dataset["auth"] = [PUBLIC_SCOPE]
     errors = list(validation.run(dataset))
     assert len(errors) == 0
@@ -439,6 +439,29 @@ def test_exports_valid(schema_loader) -> None:
     errors = list(validation.run(dataset))
 
     assert len(errors) == 0
+
+
+def test_publisher_valid(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("publisher_valid.json")
+    errors = list(validation.run(dataset))
+
+    assert len(errors) == 0
+
+
+def test_publisher_invalid(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("publisher_invalid.json")
+    errors = list(validation.run(dataset))
+
+    assert len(errors) == 1
+    assert "Publisher does not exist:" in errors[0].message
+
+
+def test_no_publisher_assigned(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("publisher_not_assigned.json")
+    errors = list(validation.run(dataset))
+
+    assert len(errors) == 1
+    assert "No publisher assigned to dataset" in errors[0].message
 
 
 def test_check_status(schema_loader) -> None:

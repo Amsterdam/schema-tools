@@ -5,7 +5,7 @@
   "description": "Schema for unit testing PsqlDuplicateIdentifierValidator",
   "crs": "EPSG:4326",
   "publisher": {
-    "$ref": "publishers/GLEBZ"
+    "$ref": "publishers/NONEXISTENT"
   },
   "defaultVersion": "v1",
   "versions": {

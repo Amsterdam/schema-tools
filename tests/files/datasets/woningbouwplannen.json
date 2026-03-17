@@ -4,7 +4,9 @@
   "title": "Woningbouwplannen en Strategische ruimtes",
   "description": "Deze dataset bevat de gegevens over de te realiseren woningen in Amsterdam.",
   "crs": "EPSG:28992",
-  "publisher": "unknown",
+  "publisher": {
+    "$ref": "publishers/GLEBZ"
+  },
   "defaultVersion": "v1",
   "versions": {
     "v1": {

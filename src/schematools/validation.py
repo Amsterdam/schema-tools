@@ -655,6 +655,19 @@ def _check_superseded_version(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
+@_register_validator("publisher exists")
+def _check_publisher_exists(dataset: DatasetSchema) -> Iterator[str]:
+    """
+    Check that a publisher of a dataset exists.
+    """
+    try:
+        publisher = dataset.publisher
+        if publisher is None:
+            yield (f"No publisher assigned to dataset {dataset.id}.")
+    except SchemaObjectNotFound as e:
+        yield f"Publisher does not exist: {e}"
+
+
 @_register_validator("exports")
 def _check_exports(dataset: DatasetSchema) -> Iterator[str]:
     """
