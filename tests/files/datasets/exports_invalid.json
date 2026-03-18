@@ -4,7 +4,9 @@
   "title": "gebieden",
   "identifier": "identificatie",
   "crs": "EPSG:28992",
-  "publisher": "unknown",
+  "publisher": {
+    "$ref": "publishers/HARRY"
+  },
   "defaultVersion": "v1",
   "versions": {
     "v1": {

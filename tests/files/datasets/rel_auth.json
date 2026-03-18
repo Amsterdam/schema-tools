@@ -5,7 +5,9 @@
   "auth": [
     "OPENBAAR"
   ],
-  "publisher": "unknown",
+  "publisher": {
+    "$ref": "publishers/HARRY"
+  },
   "defaultVersion": "v1",
   "versions": {
     "v1": {

@@ -3,7 +3,9 @@
   "id": "validationTest",
   "title": "crs required Validation Test",
   "description": "Schema for unit testing crs validator",
-  "publisher": "unknown",
+  "publisher": {
+    "$ref": "publishers/GLEBZ"
+  },
   "defaultVersion": "v1",
   "versions": {
     "v1": {

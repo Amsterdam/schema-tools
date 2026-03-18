@@ -1,8 +1,8 @@
 {
   "type": "dataset",
   "id": "validationTest",
-  "title": "PsqlIdentifierLengthValidator Validation Test",
-  "description": "Schema for unit testing PsqlIdentifierLengthValidator",
+  "title": "PublisherExistsValidator Validation Test",
+  "description": "Schema for unit testing PublisherExistsValidator",
   "crs": "EPSG:4326",
   "publisher": {
     "$ref": "publishers/GLEBZ"
@@ -15,27 +15,28 @@
       "version": "0.0.1",
       "tables": [
         {
-          "id": "AnAbsurdlyLongIdentifierThatShouldDefinitelyTriggerPsqlIdentifierLengthValidator",
-          "title": "Some title",
+          "id": "maatschappelijkeactiviteiten",
+          "shortname": "activiteiten",
           "type": "table",
           "version": "1.0.0",
           "schema": {
-            "$id": "https://github.com/Amsterdam/schemas/tests/long_ids.json",
+            "$id": "https://github.com/Amsterdam/schemas/tests/duplicate_shortnames.json",
             "$schema": "http://json-schema.org/draft-07/schema#",
-            "identifier": "fubar",
             "type": "object",
             "additionalProperties": false,
+            "identifier": "kvknummer",
             "required": [
-              "fubar",
-              "schema"
+              "schema",
+              "kvknummer"
             ],
-            "display": "fubar",
+            "display": "kvknummer",
             "properties": {
               "schema": {
                 "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
               },
-              "fubar": {
-                "type": "string"
+              "kvknummer": {
+                "type": "string",
+                "description": "Betreft het identificerende gegeven voor de Maatschappelijke Activiteit, het KvK-nummer."
               }
             }
           },

@@ -3,7 +3,9 @@
   "type": "dataset",
   "description": "Dataset with enum errors",
   "license": "public",
-  "publisher": "us",
+  "publisher": {
+    "$ref": "publishers/GLEBZ"
+  },
   "owner": "us",
   "authorizationGrantor": "us",
   "crs": "EPSG:28992",

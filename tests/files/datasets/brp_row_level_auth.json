@@ -5,7 +5,9 @@
   "description": "Deze dataset maakt de basisregistratie personen toegankelijk, bij gebruik van login credentials.",
   "crs": "EPSG:28992",
   "auth": "BRP/R",
-  "publisher": "unknown",
+  "publisher": {
+    "$ref": "publishers/HARRY"
+  },
   "defaultVersion": "v1",
   "reasonsNonPublic": ["5.1 1c: Bevat persoonsgegevens"],
   "versions": {

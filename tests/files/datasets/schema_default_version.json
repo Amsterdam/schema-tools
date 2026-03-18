@@ -18,5 +18,7 @@
       "tables": []
     }
   },
-  "publisher": "unknown"
+  "publisher": {
+    "$ref": "publishers/GLEBZ"
+  }
 }
