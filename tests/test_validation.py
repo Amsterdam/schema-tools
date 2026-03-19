@@ -13,6 +13,7 @@ from schematools.validation import (
     PROPERTIES_INTRODUCING_BREAKING_CHANGES,
     _check_display,
     _check_maingeometry,
+    _check_scopes_exist,
     _identifier_properties,
     validate_dataset,
     validate_dataset_versions_version,
@@ -462,6 +463,39 @@ def test_no_publisher_assigned(schema_loader) -> None:
 
     assert len(errors) == 1
     assert "No publisher assigned to dataset" in errors[0].message
+
+
+def test_scopes_valid(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("scopes_valid.json")
+    errors = list(validation.run(dataset))
+
+    assert len(errors) == 0
+
+
+def test_scopes_invalid(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("scopes_invalid.json")
+
+    # test deze validator apart omdat anders _relation_auth validator hier op breekt
+    errors = list(_check_scopes_exist(dataset))
+    assert len(errors) == 1
+    assert "Scope on dataset does not exist:" in errors[0]
+
+
+def test_table_and_field_scopes_invalid(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("table_scopes_invalid.json")
+
+    errors = list(_check_scopes_exist(dataset))
+    assert len(errors) == 2
+    assert "Scope on table does not exist:" in errors[0]
+    assert "Scope on field does not exist:" in errors[1]
+
+
+def test_field_scopes_invalid(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("field_scopes_invalid.json")
+
+    errors = list(_check_scopes_exist(dataset))
+    assert len(errors) == 1
+    assert "Scope on field does not exist:" in errors[0]
 
 
 def test_check_status(schema_loader) -> None:

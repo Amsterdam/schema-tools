@@ -1,3 +1,7 @@
+# 2026-03-09 (9.1.16)
+
+* Add validation that publisher in publisher field and scopes in auth fields exist.
+
 # 2026-03-09 (9.1.15)
 
 * Add validation and types for export definitions available in metaschema 4.1.0.

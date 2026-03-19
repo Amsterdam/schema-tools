@@ -31,7 +31,11 @@ from typing import cast
 from urllib.parse import urlparse
 
 from schematools import MAX_TABLE_NAME_LENGTH
-from schematools.exceptions import DatasetFieldNotFound, DatasetTableNotFound, SchemaObjectNotFound
+from schematools.exceptions import (
+    DatasetFieldNotFound,
+    DatasetTableNotFound,
+    SchemaObjectNotFound,
+)
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.auth import RLA_SCOPE
 from schematools.types import DatasetSchema, DatasetVersionSchema, SemVer
@@ -666,6 +670,41 @@ def _check_publisher_exists(dataset: DatasetSchema) -> Iterator[str]:
             yield (f"No publisher assigned to dataset {dataset.id}.")
     except SchemaObjectNotFound as e:
         yield f"Publisher does not exist: {e}"
+
+
+@_register_validator("scopes exist")
+def _check_scopes_exist(dataset: DatasetSchema) -> Iterator[str]:
+    """
+    Check that scopes assigned to datasets, tables and fields exist.
+    """
+    try:
+        scopes = dataset.scopes
+        if scopes is None:
+            yield f"No scopes found for dataset {dataset.id}"
+    except SchemaObjectNotFound as e:
+        yield f"Scope on dataset does not exist: {e}"
+
+    # Loop through dataset tables
+    for table in dataset.tables:
+        try:
+            scopes_to_check = table.scopes if table.scopes else dataset.scopes
+            if not scopes_to_check:
+                yield f"No scopes found for table {table.id}"
+        except SchemaObjectNotFound as e:
+            yield (f"Scope on table does not exist: {e}")
+
+        # Loop through table fields
+        for field in table.fields:
+            try:
+                scopes_to_check = (
+                    field.scopes
+                    if field.scopes
+                    else table.scopes if table.scopes else dataset.scopes
+                )
+                if not scopes_to_check:
+                    yield (f"No scopes found for field {field.name}")
+            except ValueError as e:
+                yield (f"Scope on field does not exist: {e}")
 
 
 @_register_validator("exports")
