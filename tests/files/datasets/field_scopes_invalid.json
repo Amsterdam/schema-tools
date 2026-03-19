@@ -1,0 +1,63 @@
+{
+  "type": "dataset",
+  "id": "validationTest",
+  "title": "ScopesExistValidator Validation Test",
+  "description": "Schema for unit testing PublisherExistsValidator",
+  "auth": {
+    "$ref": "scopes/HARRY/harryscope1"
+  },
+  "reasonsNonPublic": ["5.1 1c: Bevat persoonsgegevens"],
+  "publisher": {
+    "$ref": "publishers/HARRY"
+  },
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": true,
+      "status": "stable",
+      "version": "1.2.3",
+      "tables": [
+        {
+          "id": "refers",
+          "type": "table",
+          "version": "1.2.3",
+          "auth": {
+                "$ref": "scopes/HARRY/harryscope2"
+          },
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": "id",
+            "required": [
+              "schema",
+              "id"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "string",
+                "auth": {
+                    "$ref": "scopes/HARRY/harryscope2"
+                },
+                "description": "Whatever"
+              },
+              "rel": {
+                "type": "string",
+                "description": "This should not be allowed",
+                "auth": {
+                    "$ref": "scopes/HARRY/nonexistingscope"
+                },
+                "relation": "relauth:base"
+              }
+            }
+          },
+          "status": "stable"
+        }
+      ]
+    }
+  }
+}
