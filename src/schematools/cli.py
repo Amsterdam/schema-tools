@@ -173,7 +173,7 @@ def create_export_context(
     export = Export(
         name="cli_export",
         tables=[dataset.get_table_by_id(table_id) for table_id in table_ids],
-        scope=Scope.from_string(scope),
+        scopes={Scope.from_string(scope)},
         filetype=filetype,
         _dataset_name=dataset.id,
         _version=version or dataset.default_version,
