@@ -1020,7 +1020,7 @@ class ExportContext:
     dataset: DatasetSchema
     folder: Path
     export: Export
-    client: StorageClient
+    client: StorageClient | None
     size: int | None = None
     temporal_date: datetime.datetime | None = None
 
@@ -1032,7 +1032,7 @@ class Export:
     name: str
     tables: list[DatasetTableSchema]
     scope: Scope
-    filetype: str
+    filetype: ExportFileType
     _dataset_name: str
     _version: str
 
