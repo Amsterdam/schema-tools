@@ -1,5 +1,5 @@
 {
-  "id": "meetbouten",
+  "id": "meet_bouten",
   "type": "dataset",
   "default_version": "2.0.0",
   "crs": "EPSG:28992",
@@ -98,11 +98,11 @@
               },
               "hoortbijmeetbout": {
                 "type": "string",
-                "relation": "meetbouten:meetbouten",
+                "relation": "meet_bouten:meetbouten",
                 "description": "De meetbout waarop de meting is gedaan"
               },
               "refereertaanreferentiepunten": {
-                "relation": "meetbouten:referentiepunten",
+                "relation": "meet_bouten:referentiepunten",
                 "type": "array",
                 "items": {
                   "type": "object",
