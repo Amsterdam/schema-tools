@@ -15,7 +15,7 @@ addopts = [
     "--nomigrations",
     "--reuse-db",
     "--cov=schematools",
-    "--cov-fail-under=67",
+    "--cov-fail-under=72",
 ]
 norecursedirs = ["node_modules", ".tox", ".git"]
 filterwarnings = [
@@ -63,7 +63,7 @@ github_url = "https://github.com/Amsterdam/schema-tools"
 
 [tool.ruff]
 line-length = 99
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [
@@ -125,3 +125,7 @@ max-complexity = 20  # TODO: lower this
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/*.py" = ["E501"]  # line too long
 "tests/**/*.py" = ["E501", "S101", "S105", "S106", "S314", "S608"]  # allow long lines, asserts, hardcoded passwords, SQL injection
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
