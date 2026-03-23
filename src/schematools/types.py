@@ -14,18 +14,23 @@ from collections import UserDict, namedtuple
 from collections.abc import Callable, Iterator
 from enum import Enum
 from functools import cached_property, total_ordering
+from io import BufferedReader
+from pathlib import Path
 from re import Pattern
 from typing import (
     Any,
     ClassVar,
+    Literal,
     NamedTuple,
     NoReturn,
+    Protocol,
     TypeVar,
     Union,
     cast,
 )
 
 from deepdiff import DeepDiff
+from sqlalchemy import Connection
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools._utils import cached_method
@@ -994,6 +999,30 @@ class DatasetVersionSchema(SchemaType):
                 for filetype in export["filetypes"]:
                     exports.append(Export.from_json(export, scope, filetype, self))
         return exports
+
+
+ExportFileType = Literal["csv", "jsonl", "gpkg", "geojson"]
+
+
+class BlobClient(Protocol):
+    def upload_blob(
+        self, data: BufferedReader, overwrite: bool, metadata: dict[str, Any] | None
+    ): ...
+class ContainerClient(Protocol):
+    def get_blob_client(self, blob_name: str) -> BlobClient: ...
+class StorageClient(Protocol):
+    def get_container_client(self, container_name: str) -> ContainerClient: ...
+
+
+@dataclasses.dataclass
+class ExportContext:
+    connection: Connection
+    dataset: DatasetSchema
+    folder: Path
+    export: Export
+    client: StorageClient
+    size: int | None = None
+    temporal_date: datetime.datetime | None = None
 
 
 @dataclasses.dataclass
