@@ -678,32 +678,22 @@ def _check_scopes_exist(dataset: DatasetSchema) -> Iterator[str]:
     Check that scopes assigned to datasets, tables and fields exist.
     """
     try:
-        scopes = dataset.scopes
-        if scopes is None:
-            yield f"No scopes found for dataset {dataset.id}"
+        _ = dataset.scopes
     except SchemaObjectNotFound as e:
         yield f"Scope on dataset does not exist: {e}"
 
     # Loop through dataset tables
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         try:
-            scopes_to_check = table.scopes if table.scopes else dataset.scopes
-            if not scopes_to_check:
-                yield f"No scopes found for table {table.id}"
+            _ = table.scopes
         except SchemaObjectNotFound as e:
             yield (f"Scope on table does not exist: {e}")
 
         # Loop through table fields
         for field in table.fields:
             try:
-                scopes_to_check = (
-                    field.scopes
-                    if field.scopes
-                    else table.scopes if table.scopes else dataset.scopes
-                )
-                if not scopes_to_check:
-                    yield (f"No scopes found for field {field.name}")
-            except ValueError as e:
+                _ = field.scopes
+            except SchemaObjectNotFound as e:
                 yield (f"Scope on field does not exist: {e}")
 
 
