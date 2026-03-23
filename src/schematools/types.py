@@ -1030,14 +1030,18 @@ class Export:
 
     name: str
     tables: list[DatasetTableSchema]
-    scope: Scope
+    scopes: set[Scope]
     filetype: ExportFileType
     _dataset_name: str
     _version: str
 
     @classmethod
     def from_json(
-        cls, export_json: dict, scope: str, filetype: str, version_schema: DatasetVersionSchema
+        cls,
+        export_json: dict,
+        scope: str,
+        filetype: ExportFileType,
+        version_schema: DatasetVersionSchema,
     ) -> Export:
         tables = []
         table_ids = export_json.get("tables", [])
@@ -1050,16 +1054,33 @@ class Export:
         return cls(
             name=export_json["name"],
             tables=tables,
-            scope=Scope.from_string(scope.upper()),
+            scopes={Scope.from_string(scope.upper())},
             filetype=filetype,
             _version=version_schema.version,
             _dataset_name=version_schema.schema.id,
         )
 
+    @classmethod
+    def from_table(
+        cls, table: DatasetTableSchema, filetype: ExportFileType, scopes: set[Scope]
+    ) -> Export:
+        return cls(
+            name=table.id,
+            tables=[table],
+            scopes=scopes,
+            filetype=filetype,
+            _version=table.schema.default_version,
+            _dataset_name=table.schema.id,
+        )
+
+    @property
+    def scopes_string(self) -> str:
+        return "_".join(sorted(scope.db_name for scope in self.scopes))
+
     @property
     def filename(self) -> str:
         return (
-            f"{self._dataset_name}_{self._version}_{self.name}_{self.scope.python_name}."
+            f"{self._dataset_name}_{self._version}_{self.name}_{self.scopes_string}."
             f"{self.filetype}.zip"
         )
 
@@ -1069,7 +1090,7 @@ class Export:
 
     def table_filename(self, table_id: str) -> str:
         return (
-            f"{self._dataset_name}_{self._version}_{table_id}_{self.scope.python_name}."
+            f"{self._dataset_name}_{self._version}_{table_id}_{self.scopes_string}."
             f"{self.filetype}"
         )
 
@@ -1078,7 +1099,7 @@ class Export:
 
     @property
     def is_public(self) -> bool:
-        return self.scope.name == _PUBLIC_SCOPE
+        return len(self.scopes) == 1 and next(iter(self.scopes)).name == _PUBLIC_SCOPE
 
 
 @dataclasses.dataclass

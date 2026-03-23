@@ -43,7 +43,7 @@ class BaseExporter:
         self.connection = context.connection
         self.dataset_schema = context.dataset
         self.export = context.export
-        self.scopes = set(context.export.scope)
+        self.scopes = context.export.scopes
         self.size = context.size
         self.temporal_date = context.temporal_date or datetime.now().astimezone()
 
