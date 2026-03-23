@@ -74,7 +74,9 @@ class TableFieldMapper:
         # When the table is a through-table, the GOB model fields need to be fetched elsewhere.
         self.through_field_map = {}
         if dataset_table.is_through_table:
-            for prefix, through_field in zip(("src", "dst"), dataset_table.through_fields):
+            for prefix, through_field in zip(
+                ("src", "dst"), dataset_table.through_fields, strict=True
+            ):
                 self.through_field_map[through_field.id] = [
                     # generate "srcId", "dstId" and "srcVolgnummer", "dstVolgnummer" fields.
                     (related_identifier, f"{prefix}{self.id_name_mapping[related_identifier]}")

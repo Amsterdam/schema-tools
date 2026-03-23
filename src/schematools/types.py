@@ -25,7 +25,6 @@ from typing import (
     NoReturn,
     Protocol,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -51,7 +50,7 @@ if typing.TYPE_CHECKING:
 
 ST = TypeVar("ST", bound="SchemaType")
 DTS = TypeVar("DTS", bound="DatasetTableSchema")
-Json = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
+Json = str | int | float | bool | None | dict[str, Any] | list[Any]
 Ref = str
 
 _PUBLIC_SCOPE = "OPENBAAR"
