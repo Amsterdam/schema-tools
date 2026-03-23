@@ -1032,7 +1032,7 @@ class Export:
     name: str
     tables: list[DatasetTableSchema]
     scope: Scope
-    _filetype: str
+    filetype: str
     _dataset_name: str
     _version: str
 
@@ -1052,14 +1052,30 @@ class Export:
             name=export_json["name"],
             tables=tables,
             scope=Scope.from_string(scope.upper()),
-            _filetype=filetype,
+            filetype=filetype,
             _version=version_schema.version,
             _dataset_name=version_schema.schema.id,
         )
 
     @property
     def filename(self) -> str:
-        return f"{self._dataset_name}_{self._version}_{self.name}.{self._filetype}"
+        return (
+            f"{self._dataset_name}_{self._version}_{self.name}_{self.scope.python_name}."
+            f"{self.filetype}.zip"
+        )
+
+    @property
+    def table_ids(self) -> list[str]:
+        return [table.id for table in self.tables]
+
+    def table_filename(self, table_id: str) -> str:
+        return (
+            f"{self._dataset_name}_{self._version}_{table_id}_{self.scope.python_name}."
+            f"{self.filetype}"
+        )
+
+    def table_paths(self, folder: Path) -> list[Path]:
+        return [folder / self.table_filename(table_id) for table_id in self.table_ids]
 
     @property
     def is_public(self) -> bool:

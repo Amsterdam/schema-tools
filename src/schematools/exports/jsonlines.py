@@ -6,15 +6,14 @@ from typing import IO, Any
 
 import jsonlines
 import orjson
-from geoalchemy2 import functions as func
 from sqlalchemy import Column, MetaData, select
-from sqlalchemy.engine import Connection
-from sqlalchemy.sql.elements import ClauseElement
+from sqlalchemy.sql import Select
+from sqlalchemy.sql.elements import ColumnElement
 
 from schematools.exports.base import BaseExporter
-from schematools.exports.csv import DatasetFieldSchema
+from schematools.exports.modifiers import geo_modifier_geojson, id_modifier
 from schematools.naming import toCamelCase
-from schematools.types import DatasetSchema, DatasetTableSchema
+from schematools.types import DatasetTableSchema
 
 metadata = MetaData()
 
@@ -31,25 +30,15 @@ def _dumps(obj: Any) -> str:
     Unfortunately, orjson does not support Decimal serialization,
     so we need this extra function.
     """
-    return orjson.dumps(obj, default=_default)
+    return orjson.dumps(obj, default=_default).decode("utf-8")
 
 
 class JsonLinesExporter(BaseExporter):  # noqa: D101
     extension = "jsonl"
 
-    def geo_modifier(field: DatasetFieldSchema, column):
-        if not field.is_geo:
-            return column
-        return func.ST_AsGeoJSON(func.ST_Transform(column, 4326)).label(field.db_name)
-
-    def id_modifier(field: DatasetFieldSchema, column):
-        if field.table.is_temporal and field.is_composite_key:
-            return func.split_part(column, ".", 1).label(field.db_name)
-        return column
-
     # We do not use the iso for datetime here, because json notation handles this.
 
-    processors = (geo_modifier, id_modifier)
+    processors = (geo_modifier_geojson, id_modifier)
 
     def _get_row_modifier(self, table: DatasetTableSchema):
         lookup = {}
@@ -66,12 +55,12 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
         file_handle: IO[str],
         table: DatasetTableSchema,
         columns: Iterable[Column],
-        temporal_clause: ClauseElement | None,
-        srid: str,
+        temporal_clause: ColumnElement[bool] | None,
+        srid: str | None,
     ):
-        writer = jsonlines.Writer(file_handle, dumps=_dumps)
+        writer = jsonlines.Writer(file_handle, dumps=_dumps)  # ty:ignore[unknown-argument]
         row_modifier = self._get_row_modifier(table)
-        query = select(*columns)
+        query: Select = select(*columns)
         if temporal_clause is not None:
             query = query.where(temporal_clause)
         if self.size is not None:
@@ -82,16 +71,3 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
             for partition in result.mappings().partitions():
                 for r in partition:
                     writer.write({toCamelCase(k): row_modifier[k](v) for k, v in r.items()})
-
-
-def export_jsonls(
-    connection: Connection,
-    dataset_schema: DatasetSchema,
-    output: str,
-    table_ids: list[str],
-    scopes: list[str],
-    size: int,
-):
-    """Utility function to wrap the Exporter."""
-    exporter = JsonLinesExporter(connection, dataset_schema, output, table_ids, scopes, size)
-    exporter.export_tables()
