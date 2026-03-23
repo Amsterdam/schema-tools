@@ -130,7 +130,7 @@ class TestExports:
         importer.generate_db_objects("buurten", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("wijken", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("stadsdelen", truncate=False, ind_extra_index=False)
-        importer.generate_db_objects("ggwgebieden", truncate=False, ind_extra_index=False)
+        importer.generate_db_objects("ggw_gebieden", truncate=False, ind_extra_index=False)
         importer = NDJSONImporter(meetbouten_export_schema, connection.engine)
         importer.generate_db_objects("meetbouten", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("metingen", truncate=False, ind_extra_index=False)
@@ -140,26 +140,26 @@ class TestExports:
             "gebieden_v1_buurten_openbaar.csv",
             "gebieden_v1_wijken_openbaar.csv",
             "gebieden_v1_stadsdelen_openbaar.csv",
-            "gebieden_v1_ggwgebieden_openbaar.csv",
+            "gebieden_v1_ggw_gebieden_openbaar.csv",
             "gebieden_v1_bouwblokken_openbaar.geojson",
             "gebieden_v1_buurten_openbaar.geojson",
             "gebieden_v1_wijken_openbaar.geojson",
             "gebieden_v1_stadsdelen_openbaar.geojson",
-            "gebieden_v1_ggwgebieden_openbaar.geojson",
+            "gebieden_v1_ggw_gebieden_openbaar.geojson",
             "gebieden_v1_stadsdelen_openbaar.gpkg",
-            "gebieden_v1_ggwgebieden_openbaar.gpkg",
+            "gebieden_v1_ggw_gebieden_openbaar.gpkg",
             "gebieden_v1_wijken_openbaar.gpkg",
             "gebieden_v1_stadsdelen_fp_mdw.gpkg",
-            "gebieden_v1_ggwgebieden_fp_mdw.gpkg",
+            "gebieden_v1_ggw_gebieden_fp_mdw.gpkg",
             "gebieden_v1_wijken_fp_mdw.gpkg",
             "gebieden_v1_bouwblokken_fp_mdw.csv",
             "gebieden_v1_buurten_fp_mdw.csv",
             "gebieden_v1_bouwblokken_fp_mdw.jsonl",
             "gebieden_v1_buurten_fp_mdw.jsonl",
-            "meetbouten_v1_meetbouten_openbaar.csv",
-            "meetbouten_v1_meetbouten_openbaar.gpkg",
-            "meetbouten_v1_meetbouten_openbaar.geojson",
-            "meetbouten_v1_meetbouten_openbaar.jsonl",
+            "meet_bouten_v1_meetbouten_openbaar.csv",
+            "meet_bouten_v1_meetbouten_openbaar.gpkg",
+            "meet_bouten_v1_meetbouten_openbaar.geojson",
+            "meet_bouten_v1_meetbouten_openbaar.jsonl",
         ]
         zip_files = [
             "gebieden_v1_alle_gebieden_openbaar.csv.zip",
@@ -168,10 +168,10 @@ class TestExports:
             "gebieden_v1_grote_gebieden_fp_mdw.gpkg.zip",
             "gebieden_v1_kleine_gebieden_fp_mdw.csv.zip",
             "gebieden_v1_kleine_gebieden_fp_mdw.jsonl.zip",
-            "meetbouten_v1_all_openbaar.csv.zip",
-            "meetbouten_v1_all_openbaar.geojson.zip",
-            "meetbouten_v1_all_openbaar.gpkg.zip",
-            "meetbouten_v1_all_openbaar.jsonl.zip",
+            "meet_bouten_v1_all_openbaar.csv.zip",
+            "meet_bouten_v1_all_openbaar.geojson.zip",
+            "meet_bouten_v1_all_openbaar.gpkg.zip",
+            "meet_bouten_v1_all_openbaar.jsonl.zip",
         ]
         for zip_file in zip_files:
             assert f"Created zip file {zip_file}." in caplog.text
@@ -195,7 +195,7 @@ class TestExports:
         export_definition = meetbouten_export_schema.versions["v1"].exports[0]
         context = create_context(meetbouten_export_schema, export_definition)
         CsvExporter(context).export_tables()
-        with open(context.folder / "meetbouten_v1_meetbouten_openbaar.csv") as out_file:
+        with open(context.folder / "meet_bouten_v1_meetbouten_openbaar.csv") as out_file:
             assert out_file.read() == (
                 "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie\n"
                 "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6)\n"
@@ -204,28 +204,28 @@ class TestExports:
     def test_csv_export_only_actual(self, gebieden_export_schema, create_context, connection):
         """Prove that csv export contains only the actual records, not the history."""
         importer = NDJSONImporter(gebieden_export_schema, connection.engine, logger=logger)
-        importer.generate_db_objects("ggwgebieden", truncate=True, ind_extra_index=False)
+        importer.generate_db_objects("ggw_gebieden", truncate=True, ind_extra_index=False)
         connection.execute(
             text(
-                "INSERT INTO gebieden_ggwgebieden_v1 (id, identificatie, volgnummer, "
-                "begin_geldigheid, eind_geldigheid) VALUES (1, 'ggwgebied1', 1, '2020-01-01', "
+                "INSERT INTO gebieden_ggw_gebieden_v1 (id, identificatie, volgnummer, "
+                "begin_geldigheid, eind_geldigheid) VALUES (1, 'ggw_gebied1', 1, '2020-01-01', "
                 "'2020-12-31')"
             )
         )
         connection.execute(
             text(
-                "INSERT INTO gebieden_ggwgebieden_v1 (id, identificatie, volgnummer, "
-                "begin_geldigheid, eind_geldigheid) VALUES (2, 'ggwgebied1', 2, '2021-01-01', NULL)"
+                "INSERT INTO gebieden_ggw_gebieden_v1 (id, identificatie, volgnummer, "
+                "begin_geldigheid, eind_geldigheid) VALUES (2, 'ggw_gebied1', 2, '2021-01-01', NULL)"
             )
         )
         export_definition = next(
             exp
             for exp in gebieden_export_schema.versions["v1"].exports
-            if exp.filetype == "csv" and "ggwgebieden" in exp.table_ids
+            if exp.filetype == "csv" and "ggw_gebieden" in exp.table_ids
         )
         context = create_context(gebieden_export_schema, export_definition)
         CsvExporter(context).export_tables()
-        with open(context.folder / "gebieden_v1_ggwgebieden_openbaar.csv") as out_file:
+        with open(context.folder / "gebieden_v1_ggw_gebieden_openbaar.csv") as out_file:
             lines = out_file.readlines()
             assert len(lines) == 2  # includes the headerline
             assert lines[1].split(",")[0] == "2"  # volgnummer == 2
@@ -239,7 +239,7 @@ class TestExports:
         )
         context = create_context(meetbouten_export_schema, export_definition)
         JsonLinesExporter(context).export_tables()
-        with open(context.folder / "meetbouten_v1_meetbouten_openbaar.jsonl") as out_file:
+        with open(context.folder / "meet_bouten_v1_meetbouten_openbaar.jsonl") as out_file:
             result = orjson.loads(out_file.read())
             result["geometrie"]["coordinates"][1] = round(result["geometrie"]["coordinates"][1], 5)
             result["geometrie"]["coordinates"][0] = round(result["geometrie"]["coordinates"][0], 5)
@@ -260,7 +260,7 @@ class TestExports:
         )
         context = create_context(meetbouten_export_schema, export_definition)
         GeopackageExporter(context).export_tables()
-        sqlite3_conn = sqlite3.connect(context.folder / "meetbouten_v1_meetbouten_openbaar.gpkg")
+        sqlite3_conn = sqlite3.connect(context.folder / "meet_bouten_v1_meetbouten_openbaar.gpkg")
         cursor = sqlite3_conn.cursor()
         cursor.execute("select * from rtree_sql_statement_geometrie")
         res = cursor.fetchall()
@@ -282,7 +282,7 @@ class TestExports:
         )
         context = create_context(meetbouten_export_schema, export_definition)
         GeoJsonExporter(context).export_tables()
-        with open(context.folder / "meetbouten_v1_meetbouten_openbaar.geojson") as out_file:
+        with open(context.folder / "meet_bouten_v1_meetbouten_openbaar.geojson") as out_file:
             result = orjson.loads(out_file.read())
             feature = result["features"][0]
             feature["geometry"]["coordinates"][1] = round(feature["geometry"]["coordinates"][1], 5)
@@ -308,7 +308,7 @@ class TestExports:
                 connection.engine.url.render_as_string(hide_password=False),
                 "--schema-url",
                 str(Path(__file__).parent / "files" / "exports"),
-                "meetbouten",
+                "meet_bouten",
                 "--table-ids",
                 "meetbouten",
                 "--filetype",
@@ -318,7 +318,7 @@ class TestExports:
             ],
         )
         assert result.exit_code == 0
-        path = Path("tmp/meetbouten_v1_meetbouten_openbaar.csv")
+        path = Path("tmp/meet_bouten_v1_meetbouten_openbaar.csv")
         with path.open() as out_file:
             assert out_file.read() == (
                 "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie\n"

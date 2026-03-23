@@ -20,7 +20,7 @@
         },
         {
           "name": "grote_gebieden",
-          "tables": ["stadsdelen", "ggwgebieden", "wijken"],
+          "tables": ["stadsdelen", "ggw_gebieden", "wijken"],
           "filetypes": ["gpkg"],
           "scopes": ["openbaar", "fp/mdw"]
         },
@@ -390,7 +390,7 @@
           "status": "stable"
         },
         {
-          "id": "ggwgebieden",
+          "id": "ggw_gebieden",
           "type": "table",
           "version": "1.0.0",
           "temporal": {
