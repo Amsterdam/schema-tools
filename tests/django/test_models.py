@@ -374,7 +374,7 @@ def dictfetchall(cursor):
     # Django's connection.cursor() doesn't offer a way to pass RealDictCursor.
     # This code is straight from the Django docs:
     columns = [col[0] for col in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    return [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
 
 
 @pytest.mark.django_db
