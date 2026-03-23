@@ -658,13 +658,13 @@ def test_exports_type(schema_loader):
     assert all(isinstance(export, Export) for export in v1.exports)
     filenames = [export.filename for export in v1.exports]
     assert filenames == [
-        "gebieden_v1_alle_gebieden.csv",
-        "gebieden_v1_alle_gebieden.geojson",
-        "gebieden_v1_grote_gebieden.gpkg",  # scope openbaar
-        "gebieden_v1_grote_gebieden.gpkg",  # scope fp/mdw
-        "gebieden_v1_kleine_gebieden.csv",
-        "gebieden_v1_kleine_gebieden.jsonl",
+        "gebieden_v1_alle_gebieden_openbaar.csv.zip",
+        "gebieden_v1_alle_gebieden_openbaar.geojson.zip",
+        "gebieden_v1_grote_gebieden_openbaar.gpkg.zip",
+        "gebieden_v1_grote_gebieden_fp_mdw.gpkg.zip",
+        "gebieden_v1_kleine_gebieden_fp_mdw.csv.zip",
+        "gebieden_v1_kleine_gebieden_fp_mdw.jsonl.zip",
     ]
     assert len(v1.exports[0].tables) == len(v1.get_tables())
     assert v1.exports[0].is_public
-    assert not v1.exports[5].is_public
+    assert not v1.exports[-1].is_public

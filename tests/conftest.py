@@ -249,6 +249,18 @@ def schema_loader_duplicate_scope(here) -> FileSystemSchemaLoader:
     return FileSystemSchemaLoader(here / "files/duplicate_tests/scopes")
 
 
+@pytest.fixture()
+def export_schema_loader(here) -> FileSystemSchemaLoader:
+    """A schema loader instance for export tests."""
+    return FileSystemSchemaLoader(here / "files/exports")
+
+
+@pytest.fixture()
+def gebieden_export_schema(export_schema_loader) -> DatasetSchema:
+    """A dataset schema for export tests."""
+    return export_schema_loader.get_dataset_from_file("gebieden/dataset.json")
+
+
 @pytest.fixture
 def aardgasverbruik_schema(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("aardgasverbruik.json")

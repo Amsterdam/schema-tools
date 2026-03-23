@@ -143,6 +143,12 @@ def metaschemav3_dataset(metaschemav3_schema: DatasetSchema) -> Dataset:
 
 
 @pytest.fixture
+def gebieden_export_dataset(gebieden_export_schema: DatasetSchema) -> Dataset:
+    """Create Gebieden export dataset."""
+    return Dataset.create_for_schema(gebieden_export_schema)
+
+
+@pytest.fixture
 def dataset_library(
     gebieden_schema: DatasetSchema,
     parkeervakken_schema: DatasetSchema,
