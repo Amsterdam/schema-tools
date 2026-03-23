@@ -10,6 +10,14 @@
       "enableAPI": true,
       "status": "stable",
       "version": "2.0.0",
+      "exports": [
+        {
+          "name": "all",
+          "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
+          "scopes": ["openbaar"],
+          "tables": ["meetbouten"]
+        }
+      ],
       "tables": [
         {
           "id": "meetbouten",
@@ -19,13 +27,8 @@
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "identificatie",
-              "schema"
-            ],
-            "identifier": [
-              "identificatie"
-            ],
+            "required": ["identificatie", "schema"],
+            "identifier": ["identificatie"],
             "mainGeometry": "geometrie",
             "properties": {
               "schema": {
@@ -82,13 +85,8 @@
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "additionalProperties": false,
-            "identifier": [
-              "identificatie"
-            ],
-            "required": [
-              "schema",
-              "identificatie"
-            ],
+            "identifier": ["identificatie"],
+            "required": ["schema", "identificatie"],
             "display": "identificatie",
             "properties": {
               "schema": {
@@ -130,10 +128,7 @@
             "type": "object",
             "additionalProperties": false,
             "identifier": "identificatie",
-            "required": [
-              "schema",
-              "id"
-            ],
+            "required": ["schema", "id"],
             "display": "id",
             "properties": {
               "schema": {
