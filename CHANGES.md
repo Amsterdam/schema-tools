@@ -1,3 +1,7 @@
+# 2026-03-09 (9.2.0)
+
+* Refactor exports, so that it uses the export definitions from the schema.
+
 # 2026-03-09 (9.1.16)
 
 * Add validation that publisher in publisher field and scopes in auth fields exist.
