@@ -1,82 +1,49 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
+import logging
+import subprocess
 
 from psycopg import sql
 
-from schematools.types import _PUBLIC_SCOPE, DatasetSchema, DatasetTableSchema
+from schematools.exports.base import BaseExporter
+
+logger = logging.getLogger(__name__)
 
 
-def export_geopackages(
-    connection,
-    dataset_schema: DatasetSchema,
-    output: str,
-    table_ids: list[str] | None = None,
-    scopes: list[str] | None = None,
-    size: int | None = None,
-) -> None:
-    """Export geopackages for all tables or an indicated subset in the dataset.
-
-    Args:
-        connection: SQLAlchemy connection object. Is needed for the SQL formatting.
-        dataset_schema: Schema that needs export as geopackage.
-        output: path on the filesystem where output should be stored.
-        table_ids: optional parameter for a subset for the tables of the datasetself.
-        scopes: Keycloak scopes that need to be taken into account.
-            The geopackage will be produced contains information that is only
-            accessible with these scopes.
-        size: To produce a subset of the rows, mainly for testing.
-    """
-
-    base_dir = Path(output)
-
-    pg_conn_str = (
-        f"host={connection.engine.url.host} "
-        f"port={connection.engine.url.port} "
-        f"dbname={connection.engine.url.database} "
-        f"user={connection.engine.url.username} "
-        f"password={connection.engine.url.password}"
-    )
-
-    tables = (
-        dataset_schema.tables
-        if not table_ids
-        else [dataset_schema.get_table_by_id(table_id) for table_id in table_ids]
-    )
-
-    for table in tables:
-        # For now we only output the default version.
-        output_path = base_dir / f"{table.db_name_variant(with_version=False)}.gpkg"
-        field_names = sql.SQL(",").join(
-            sql.Identifier(field.db_name)
-            for field in _get_fields(dataset_schema, table, scopes or [])
-            if field.db_name != "schema"
-        )
-        if not next(field_names.__iter__(), None):
-            continue
-
-        table_name = sql.Identifier(table.db_name)
-        query = sql.SQL("SELECT {field_names} from {table_name}").format(
-            field_names=field_names, table_name=table_name
-        )
-        if size is not None:
-            query = sql.SQL("{query} LIMIT {size}").format(query=query, size=sql.Literal(size))
-
-        with connection.connection.cursor() as cursor:
-            sql_stmt = query.as_string(cursor)
-
-        os.system(  # noqa: S605  # nosec: B605
-            f'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" -sql "{sql_stmt}"'
+class GeopackageExporter(BaseExporter):
+    def export_tables(self):
+        pg_conn_str = (
+            f"host={self.connection.engine.url.host} "
+            f"port={self.connection.engine.url.port} "
+            f"dbname={self.connection.engine.url.database} "
+            f"user={self.connection.engine.url.username} "
+            f"password={self.connection.engine.url.password}"
         )
 
+        for table in self.tables:
+            # For now we only output the default version.
+            filename = self.export.table_filename(table.id)
 
-def _get_fields(dataset_schema: DatasetSchema, table: DatasetTableSchema, scopes: list[str]):
-    parent_scopes = set(dataset_schema.auth | table.auth) - {_PUBLIC_SCOPE}
-    for field in table.fields:
-        if field.is_array:
-            continue
-        if field.is_internal:
-            continue
-        if parent_scopes | set(field.auth) - {_PUBLIC_SCOPE} <= set(scopes):
-            yield field
+            output_path = self.base_dir / filename
+            logger.info("Exporting %s.", filename)
+            field_names = sql.SQL(",").join(
+                sql.Identifier(field.db_name)
+                for field in self._get_fields(table)
+                if field.db_name != "schema"
+            )
+            if not next(field_names.__iter__(), None):
+                continue
+
+            table_name = sql.Identifier(table.db_name)
+            query = sql.SQL("SELECT {field_names} from {table_name}").format(
+                field_names=field_names, table_name=table_name
+            )
+            if self.size is not None:
+                query = sql.SQL("{query} LIMIT {size}").format(
+                    query=query, size=sql.Literal(self.size)
+                )
+
+            subprocess.run(  # noqa: S602
+                f'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" -sql "{query.as_string()}"',
+                shell=True,
+            )
