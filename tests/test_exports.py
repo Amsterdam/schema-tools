@@ -8,9 +8,11 @@ from typing import Any
 import orjson
 import pytest
 import sqlalchemy_utils
+from click.testing import CliRunner
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 
+from schematools.cli import export as export_cli
 from schematools.exports import export, logger
 from schematools.exports.csv import CsvExporter
 from schematools.exports.geojson import GeoJsonExporter
@@ -81,9 +83,9 @@ class TestExports:
         return DummyStorageClient()
 
     @pytest.fixture
-    def meetbouten_content(self, here, connection, meetbouten_schema):
+    def meetbouten_content(self, here, connection, meetbouten_export_schema):
         ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
-        importer = NDJSONImporter(meetbouten_schema, connection.engine)
+        importer = NDJSONImporter(meetbouten_export_schema, connection.engine)
         importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
         importer.load_file(ndjson_path)
 
@@ -118,6 +120,7 @@ class TestExports:
         connection,
         storage_client,
         gebieden_export_schema,
+        meetbouten_export_schema,
         export_schema_loader,
         caplog,
     ):
@@ -128,6 +131,9 @@ class TestExports:
         importer.generate_db_objects("wijken", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("stadsdelen", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("ggwgebieden", truncate=False, ind_extra_index=False)
+        importer = NDJSONImporter(meetbouten_export_schema, connection.engine)
+        importer.generate_db_objects("meetbouten", truncate=False, ind_extra_index=False)
+        importer.generate_db_objects("metingen", truncate=False, ind_extra_index=False)
         export(connection, storage_client, loader=export_schema_loader, cleanup=False)
         local_files = [
             "gebieden_v1_bouwblokken_openbaar.csv",
@@ -150,6 +156,10 @@ class TestExports:
             "gebieden_v1_buurten_fp_mdw.csv",
             "gebieden_v1_bouwblokken_fp_mdw.jsonl",
             "gebieden_v1_buurten_fp_mdw.jsonl",
+            "meetbouten_v1_meetbouten_openbaar.csv",
+            "meetbouten_v1_meetbouten_openbaar.gpkg",
+            "meetbouten_v1_meetbouten_openbaar.geojson",
+            "meetbouten_v1_meetbouten_openbaar.jsonl",
         ]
         zip_files = [
             "gebieden_v1_alle_gebieden_openbaar.csv.zip",
@@ -158,6 +168,10 @@ class TestExports:
             "gebieden_v1_grote_gebieden_fp_mdw.gpkg.zip",
             "gebieden_v1_kleine_gebieden_fp_mdw.csv.zip",
             "gebieden_v1_kleine_gebieden_fp_mdw.jsonl.zip",
+            "meetbouten_v1_all_openbaar.csv.zip",
+            "meetbouten_v1_all_openbaar.geojson.zip",
+            "meetbouten_v1_all_openbaar.gpkg.zip",
+            "meetbouten_v1_all_openbaar.jsonl.zip",
         ]
         for zip_file in zip_files:
             assert f"Created zip file {zip_file}." in caplog.text
@@ -176,10 +190,10 @@ class TestExports:
             assert "table_ids" in upload["metadata"]
             assert len(upload["data"]) > 0
 
-    def test_csv_export(self, meetbouten_schema, meetbouten_content, create_context):
+    def test_csv_export(self, meetbouten_export_schema, meetbouten_content, create_context):
         """Prove that csv export contains the correct content."""
-        export_definition = meetbouten_schema.versions["v1"].exports[0]
-        context = create_context(meetbouten_schema, export_definition)
+        export_definition = meetbouten_export_schema.versions["v1"].exports[0]
+        context = create_context(meetbouten_export_schema, export_definition)
         CsvExporter(context).export_tables()
         with open(context.folder / "meetbouten_v1_meetbouten_openbaar.csv") as out_file:
             assert out_file.read() == (
@@ -216,12 +230,14 @@ class TestExports:
             assert len(lines) == 2  # includes the headerline
             assert lines[1].split(",")[0] == "2"  # volgnummer == 2
 
-    def test_jsonlines_export(self, meetbouten_schema, meetbouten_content, create_context):
+    def test_jsonlines_export(self, meetbouten_export_schema, meetbouten_content, create_context):
         """Prove that jsonlines export contains the correct content."""
         export_definition = next(
-            exp for exp in meetbouten_schema.versions["v1"].exports if exp.filetype == "jsonl"
+            exp
+            for exp in meetbouten_export_schema.versions["v1"].exports
+            if exp.filetype == "jsonl"
         )
-        context = create_context(meetbouten_schema, export_definition)
+        context = create_context(meetbouten_export_schema, export_definition)
         JsonLinesExporter(context).export_tables()
         with open(context.folder / "meetbouten_v1_meetbouten_openbaar.jsonl") as out_file:
             result = orjson.loads(out_file.read())
@@ -235,12 +251,14 @@ class TestExports:
                 "geometrie": {"type": "Point", "coordinates": [4.86497, 52.37055]},
             }
 
-    def test_geopackage_export(self, meetbouten_schema, meetbouten_content, create_context):
+    def test_geopackage_export(self, meetbouten_export_schema, meetbouten_content, create_context):
         """Prove that geopackage export contains the correct content."""
         export_definition = next(
-            exp for exp in meetbouten_schema.versions["v1"].exports if exp.filetype == "gpkg"
+            exp
+            for exp in meetbouten_export_schema.versions["v1"].exports
+            if exp.filetype == "gpkg"
         )
-        context = create_context(meetbouten_schema, export_definition)
+        context = create_context(meetbouten_export_schema, export_definition)
         GeopackageExporter(context).export_tables()
         sqlite3_conn = sqlite3.connect(context.folder / "meetbouten_v1_meetbouten_openbaar.gpkg")
         cursor = sqlite3_conn.cursor()
@@ -255,12 +273,14 @@ class TestExports:
         res = cursor.fetchall()
         assert res == [(1, "10180001.1", "12", "De meetbout")]
 
-    def test_geojson_export(self, meetbouten_schema, meetbouten_content, create_context):
+    def test_geojson_export(self, meetbouten_export_schema, meetbouten_content, create_context):
         """Prove that geojson export contains the correct content."""
         export_definition = next(
-            exp for exp in meetbouten_schema.versions["v1"].exports if exp.filetype == "geojson"
+            exp
+            for exp in meetbouten_export_schema.versions["v1"].exports
+            if exp.filetype == "geojson"
         )
-        context = create_context(meetbouten_schema, export_definition)
+        context = create_context(meetbouten_export_schema, export_definition)
         GeoJsonExporter(context).export_tables()
         with open(context.folder / "meetbouten_v1_meetbouten_openbaar.geojson") as out_file:
             result = orjson.loads(out_file.read())
@@ -277,3 +297,32 @@ class TestExports:
                 },
                 "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
             }
+
+    def test_export_cli(self, connection, meetbouten_content):
+        """Test the export CLI command."""
+        runner = CliRunner()
+        result = runner.invoke(
+            export_cli,
+            [
+                "--db-url",
+                connection.engine.url.render_as_string(hide_password=False),
+                "--schema-url",
+                str(Path(__file__).parent / "files" / "exports"),
+                "meetbouten",
+                "--table-ids",
+                "meetbouten",
+                "--filetype",
+                "csv",
+                "--scopes",
+                "openbaar",
+            ],
+        )
+        assert result.exit_code == 0
+        path = Path("tmp/meetbouten_v1_meetbouten_openbaar.csv")
+        with path.open() as out_file:
+            assert out_file.read() == (
+                "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie\n"
+                "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6)\n"
+            )
+        path.unlink()
+        Path("tmp").rmdir()

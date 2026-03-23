@@ -261,6 +261,12 @@ def gebieden_export_schema(export_schema_loader) -> DatasetSchema:
     return export_schema_loader.get_dataset_from_file("gebieden/dataset.json")
 
 
+@pytest.fixture()
+def meetbouten_export_schema(export_schema_loader) -> DatasetSchema:
+    """A dataset schema for export tests."""
+    return export_schema_loader.get_dataset_from_file("meetbouten/dataset.json")
+
+
 @pytest.fixture
 def aardgasverbruik_schema(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("aardgasverbruik.json")
