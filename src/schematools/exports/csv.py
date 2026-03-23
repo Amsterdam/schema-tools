@@ -10,7 +10,7 @@ from sqlalchemy import Column, MetaData, func, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.sql.elements import ClauseElement
 
-from schematools.exports import BaseExporter
+from schematools.exports.base import BaseExporter
 from schematools.naming import toCamelCase
 from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetTableSchema
 

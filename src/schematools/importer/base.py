@@ -342,7 +342,6 @@ class BaseImporter:
         num_imported = 0
         insert_statements = {table_id: table.insert() for table_id, table in self.tables.items()}
         skipped_tables = set()
-
         last_record: Record | None = None
         for records in chunked(data_generator, size=batch_size):
             # every record is keyed on tablename + inside there is a list
