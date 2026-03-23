@@ -48,6 +48,7 @@ class BaseExporter:
         self.temporal_date = context.temporal_date or datetime.now().astimezone()
 
         self.base_dir = context.folder
+        self.base_dir.mkdir(exist_ok=True)
         self.tables = context.export.tables
         self.sa_tables = tables_factory(self.dataset_schema, metadata)
 

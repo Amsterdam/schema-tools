@@ -50,6 +50,8 @@ def zip_files(context: ExportContext) -> Path:
 
 def upload_to_storage(path: Path, context: ExportContext, metadata: dict[str, str]):
     container_name = "bulk-data" if context.export.is_public else "bulk-data-fp-mdw"
+    if not context.client:
+        raise RuntimeError("Storage client is required for uploading files.")
     container_client = context.client.get_container_client(container_name)
     with path.open("rb") as zf:
         blob_client = container_client.get_blob_client(context.export.filename)

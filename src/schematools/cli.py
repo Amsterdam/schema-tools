@@ -20,7 +20,7 @@ import requests
 import sqlalchemy
 from deepdiff import DeepDiff
 from jsonschema import draft7_format_checker
-from sqlalchemy import inspect
+from sqlalchemy import Connection, inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import create_engine
 
@@ -38,10 +38,7 @@ from schematools.exceptions import (
     ParserError,
     SchemaObjectNotFound,
 )
-from schematools.exports.csv import export_csvs
-from schematools.exports.geojson import export_geojsons
-from schematools.exports.geopackage import export_geopackages
-from schematools.exports.jsonlines import export_jsonls
+from schematools.exports import export_tables
 from schematools.loaders import (
     FileSystemSchemaLoader,
     get_profile_loader,
@@ -59,6 +56,9 @@ from schematools.provenance.create import ProvenanceIteration
 from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
+    Export,
+    ExportContext,
+    ExportFileType,
     ProfileSchema,
     Publisher,
     Scope,
@@ -152,9 +152,88 @@ def import_() -> None:
     """Subcommand to import data."""
 
 
-@schema.group("export")
-def export() -> None:
-    """Subcommand to export data."""
+def create_export_context(
+    connection: Connection,
+    dataset: DatasetSchema,
+    table_ids: list[str],
+    scope: str,
+    output: str,
+    filetype: ExportFileType,
+    version: str | None = None,
+    size: int | None = None,
+) -> ExportContext:
+    """Create an export context for the given dataset schema.
+
+    Args:
+        connection: connection to the database to export from.
+        dataset_schema: dataset schema to export.
+        table_ids: only export tables with these ids. If empty, all tables are exported.
+        scopes: only export tables with these scopes. If empty, all tables are exported.
+    """
+    export = Export(
+        name="cli_export",
+        tables=[dataset.get_table_by_id(table_id) for table_id in table_ids],
+        scope=Scope.from_string(scope),
+        filetype=filetype,
+        _dataset_name=dataset.id,
+        _version=version or dataset.default_version,
+    )
+    return ExportContext(
+        connection=connection,
+        dataset=dataset,
+        folder=Path(output or "tmp"),
+        client=None,
+        export=export,
+        size=size,
+    )
+
+
+@schema.command("export")
+@option_db_url
+@option_schema_url
+@argument_dataset_id
+@click.option("--output", "-o", default="tmp", help="Output folder, default = tmp")
+@click.option("--table-ids", "-t", multiple=True, help="Tables that need to be exported.")
+@click.option(
+    "--scopes",
+    "-s",
+    multiple=True,
+    help="Scopes for which the export must be created, can be 'openbaar' and/or 'fp/mdw.",
+)
+@click.option("--size", type=int, help="Number of records to be exported.")
+@click.option(
+    "--filetype",
+    "-f",
+    type=str,
+    default="csv",
+    help="Filetype for the export, valid options: csv, gpkg, geojson, jsonl.",
+)
+def export(
+    db_url: str,
+    schema_url: str,
+    dataset_id: str,
+    output: str,
+    table_ids: list[str],
+    scopes: list[str],
+    size: int,
+    filetype: ExportFileType,
+) -> None:
+    """Command to export data."""
+    engine = _get_engine(db_url)
+    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
+    with engine.begin() as connection:
+        for scope in scopes:
+            context = create_export_context(
+                connection,
+                dataset_schema,
+                table_ids,
+                scope=scope,
+                output=output,
+                filetype=filetype,
+                version=None,
+                size=size,
+            )
+            export_tables(context)
 
 
 @schema.group("tocase")
@@ -1009,129 +1088,6 @@ def diff_schemas(schema_url: str, diff_schema_url: str) -> None:
     schemas = get_schema_loader(schema_url).get_all_datasets()
     diff_schemas = get_schema_loader(diff_schema_url).get_all_datasets()
     click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
-
-
-@export.command("geopackage")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
-@click.option("--table-ids", "-t", multiple=True)
-@click.option(
-    "--scopes",
-    "-s",
-    multiple=True,
-    help="Scopes option has been disabled for now, only public data can be exported.",
-)
-@click.option("--size")
-def export_geopackages_for(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    output: str,
-    table_ids: list[str],
-    scopes: list[str],
-    size: int,
-) -> None:
-    """Export geopackages from postgres."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    with engine.begin() as connection:
-        export_geopackages(
-            connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size
-        )
-
-
-@export.command("csv")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
-@click.option("--table-ids", "-t", multiple=True)
-@click.option(
-    "--scopes",
-    "-s",
-    multiple=True,
-    help="Scopes option has been disabled for now, only public data can be exported.",
-)
-@click.option("--size", type=int)
-def export_csvs_for(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    output: str,
-    table_ids: list[str],
-    scopes: list[str],
-    size: int,
-) -> None:
-    """Export csv files from postgres."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    with engine.begin() as connection:
-        export_csvs(connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size)
-
-
-@export.command("jsonlines")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
-@click.option("--size")
-@click.option("--table-ids", "-t", multiple=True)
-@click.option(
-    "--scopes",
-    "-s",
-    multiple=True,
-    help="Scopes option has been disabled for now, only public data can be exported.",
-)
-@click.option("--size")
-def export_jsonls_for(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    output: str,
-    table_ids: list[str],
-    scopes: list[str],
-    size: int,
-) -> None:
-    """Export csv files from postgres."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    with engine.begin() as connection:
-        export_jsonls(
-            connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size
-        )
-
-
-@export.command("geojson")
-@option_db_url
-@option_schema_url
-@argument_dataset_id
-@click.option("--output", "-o", default="/tmp")  # noqa: S108  # nosec: B108
-@click.option("--table-ids", "-t", multiple=True)
-@click.option(
-    "--scopes",
-    "-s",
-    multiple=True,
-    help="Scopes option has been disabled for now, only public data can be exported.",
-)
-@click.option("--size")
-def export_geojsons_for(
-    db_url: str,
-    schema_url: str,
-    dataset_id: str,
-    output: str,
-    table_ids: list[str],
-    scopes: list[str],
-    size: int,
-) -> None:
-    """Export GeoJSON files from postgres."""
-    engine = _get_engine(db_url)
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    with engine.begin() as connection:
-        export_geojsons(
-            connection, dataset_schema, output, table_ids=table_ids, scopes=[], size=size
-        )
 
 
 @tocase.command("camel")
