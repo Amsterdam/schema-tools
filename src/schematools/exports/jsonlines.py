@@ -11,7 +11,7 @@ from sqlalchemy import Column, MetaData, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.sql.elements import ClauseElement
 
-from schematools.exports import BaseExporter
+from schematools.exports.base import BaseExporter
 from schematools.exports.csv import DatasetFieldSchema
 from schematools.naming import toCamelCase
 from schematools.types import DatasetSchema, DatasetTableSchema
