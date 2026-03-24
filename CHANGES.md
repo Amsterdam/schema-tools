@@ -1,8 +1,12 @@
-# 2026-03-09 (9.2.1)
+# 2026-03-24 (9.2.2)
+
+* Bugfix: Ensure metadata only contains string values.
+
+# 2026-03-24 (9.2.1)
 
 * Bugfix: Ensure exports end up in the right folder in the storage container.
 
-# 2026-03-09 (9.2.0)
+# 2026-03-23 (9.2.0)
 
 * Refactor exports, so that it uses the export definitions from the schema.
 
