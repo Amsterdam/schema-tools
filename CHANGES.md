@@ -1,3 +1,7 @@
+# 2026-03-09 (9.2.1)
+
+* Bugfix: Ensure exports end up in the right folder in the storage container.
+
 # 2026-03-09 (9.2.0)
 
 * Refactor exports, so that it uses the export definitions from the schema.
