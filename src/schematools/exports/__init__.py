@@ -62,7 +62,7 @@ def upload_to_storage(path: Path, context: ExportContext, metadata: dict[str, st
         blob_client.upload_blob(
             zf,
             overwrite=True,
-            metadata={**metadata, "table_ids": context.export.table_ids},
+            metadata={**metadata, "table_ids": " ".join(context.export.table_ids)},
         )
         logger.info(
             "Uploaded %s to storage container %s.", context.export.filename, container_name
