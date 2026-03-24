@@ -78,7 +78,10 @@ class TestExports:
                 return DummyContainerClient(container_name, self)
 
             def upload_blob(self, blob_name, data, metadata):
-                self.uploaded_blobs[blob_name] = {"data": data, "metadata": metadata}
+                folder, filename = blob_name.split("/", 1)
+                if folder not in self.uploaded_blobs:
+                    self.uploaded_blobs[folder] = {}
+                self.uploaded_blobs[folder][filename] = {"data": data, "metadata": metadata}
 
         return DummyStorageClient()
 
@@ -161,19 +164,33 @@ class TestExports:
             "meet_bouten_v1_meetbouten_openbaar.geojson",
             "meet_bouten_v1_meetbouten_openbaar.jsonl",
         ]
-        zip_files = [
-            "gebieden_v1_alle_gebieden_openbaar.csv.zip",
-            "gebieden_v1_alle_gebieden_openbaar.geojson.zip",
-            "gebieden_v1_grote_gebieden_openbaar.gpkg.zip",
-            "gebieden_v1_grote_gebieden_fp_mdw.gpkg.zip",
-            "gebieden_v1_kleine_gebieden_fp_mdw.csv.zip",
-            "gebieden_v1_kleine_gebieden_fp_mdw.jsonl.zip",
-            "meet_bouten_v1_all_openbaar.csv.zip",
-            "meet_bouten_v1_all_openbaar.geojson.zip",
-            "meet_bouten_v1_all_openbaar.gpkg.zip",
-            "meet_bouten_v1_all_openbaar.jsonl.zip",
-        ]
-        for zip_file in zip_files:
+        storage_files = {
+            "csv": [
+                "gebieden_v1_alle_gebieden_openbaar.csv.zip",
+                "gebieden_v1_kleine_gebieden_fp_mdw.csv.zip",
+                "meet_bouten_v1_all_openbaar.csv.zip",
+            ],
+            "geojson": [
+                "gebieden_v1_alle_gebieden_openbaar.geojson.zip",
+                "meet_bouten_v1_all_openbaar.geojson.zip",
+            ],
+            "geopackage": [
+                "gebieden_v1_grote_gebieden_openbaar.gpkg.zip",
+                "gebieden_v1_grote_gebieden_fp_mdw.gpkg.zip",
+                "meet_bouten_v1_all_openbaar.gpkg.zip",
+            ],
+            "jsonlines": [
+                "gebieden_v1_kleine_gebieden_fp_mdw.jsonl.zip",
+                "meet_bouten_v1_all_openbaar.jsonl.zip",
+            ],
+        }
+
+        for zip_file in (
+            storage_files["csv"]
+            + storage_files["geojson"]
+            + storage_files["geopackage"]
+            + storage_files["jsonlines"]
+        ):
             assert f"Created zip file {zip_file}." in caplog.text
             assert f"Uploaded {zip_file} to storage container" in caplog.text
             assert f"Removed local file {zip_file}." in caplog.text
@@ -185,10 +202,12 @@ class TestExports:
             path.unlink()
             # assert f"Removed local file {file}." in caplog.text
         Path("tmp").rmdir()
-        assert list(storage_client.uploaded_blobs.keys()) == zip_files
-        for upload in storage_client.uploaded_blobs.values():
-            assert "table_ids" in upload["metadata"]
-            assert len(upload["data"]) > 0
+        for key in storage_files:
+            assert list(storage_client.uploaded_blobs[key].keys()) == storage_files[key]
+        for folder in storage_client.uploaded_blobs.values():
+            for upload in folder.values():
+                assert "table_ids" in upload["metadata"]
+                assert len(upload["data"]) > 0
 
     def test_csv_export(self, meetbouten_export_schema, meetbouten_content, create_context):
         """Prove that csv export contains the correct content."""

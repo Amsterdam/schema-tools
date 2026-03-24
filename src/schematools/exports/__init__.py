@@ -26,6 +26,8 @@ FILETYPE_TO_EXPORTER: dict[ExportFileType, type[BaseExporter]] = {
     "geojson": GeoJsonExporter,
 }
 
+STORAGE_FOLDER = {"gpkg": "geopackage", "jsonl": "jsonlines", "csv": "csv", "geojson": "geojson"}
+
 
 def sanitize(input_string):
     # Remove any characters not supported by 'latin-1' encoding
@@ -54,7 +56,9 @@ def upload_to_storage(path: Path, context: ExportContext, metadata: dict[str, st
         raise RuntimeError("Storage client is required for uploading files.")
     container_client = context.client.get_container_client(container_name)
     with path.open("rb") as zf:
-        blob_client = container_client.get_blob_client(context.export.filename)
+        blob_client = container_client.get_blob_client(
+            f"{STORAGE_FOLDER[context.export.filetype]}/{context.export.filename}"
+        )
         blob_client.upload_blob(
             zf,
             overwrite=True,
