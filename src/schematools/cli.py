@@ -175,8 +175,8 @@ def create_export_context(
         tables=[dataset.get_table_by_id(table_id) for table_id in table_ids],
         scopes={Scope.from_string(scope)},
         filetype=filetype,
+        version=version or dataset.default_version,
         _dataset_name=dataset.id,
-        _version=version or dataset.default_version,
     )
     return ExportContext(
         connection=connection,

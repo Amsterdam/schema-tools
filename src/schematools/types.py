@@ -1032,12 +1032,12 @@ class Export:
     tables: list[DatasetTableSchema]
     scopes: set[Scope]
     filetype: ExportFileType
+    version: str
     _dataset_name: str
-    _version: str
 
     def __str__(self) -> str:
         return (
-            f"<Export: {self.name} ({self.filetype}) for {self._dataset_name} {self._version} "
+            f"<Export: {self.name} ({self.filetype}) for {self._dataset_name} {self.version} "
             f"with scopes {', '.join(scope.name for scope in self.scopes)}>"
         )
 
@@ -1062,7 +1062,7 @@ class Export:
             tables=tables,
             scopes={Scope.from_string(scope.upper())},
             filetype=filetype,
-            _version=version_schema.version,
+            version=version_schema.version,
             _dataset_name=version_schema.schema.id,
         )
 
@@ -1075,7 +1075,7 @@ class Export:
             tables=[table],
             scopes=scopes,
             filetype=filetype,
-            _version=table.schema.default_version,
+            version=table.schema.default_version,
             _dataset_name=table.schema.id,
         )
 
@@ -1086,7 +1086,7 @@ class Export:
     @property
     def filename(self) -> str:
         return (
-            f"{self._dataset_name}_{self._version}_{self.name}_{self.scopes_string}."
+            f"{self._dataset_name}_{self.version}_{self.name}_{self.scopes_string}."
             f"{self.filetype}.zip"
         )
 
@@ -1096,7 +1096,7 @@ class Export:
 
     def table_filename(self, table_id: str) -> str:
         return (
-            f"{self._dataset_name}_{self._version}_{table_id}_{self.scopes_string}."
+            f"{self._dataset_name}_{self.version}_{table_id}_{self.scopes_string}."
             f"{self.filetype}"
         )
 
