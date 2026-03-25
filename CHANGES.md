@@ -1,3 +1,8 @@
+# 2026-03-24 (9.2.3)
+
+* Bugfix: Compare scopes with scopes, not strings with scopes.
+* Added __str__ method to Export for better logging.
+
 # 2026-03-24 (9.2.2)
 
 * Bugfix: Ensure metadata only contains string values.
