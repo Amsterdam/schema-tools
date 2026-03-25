@@ -1035,6 +1035,12 @@ class Export:
     _dataset_name: str
     _version: str
 
+    def __str__(self) -> str:
+        return (
+            f"<Export: {self.name} ({self.filetype}) for {self._dataset_name} {self._version} "
+            f"with scopes {', '.join(scope.name for scope in self.scopes)}>"
+        )
+
     @classmethod
     def from_json(
         cls,
