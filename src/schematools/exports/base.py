@@ -14,6 +14,7 @@ from schematools.types import (
     DatasetFieldSchema,
     DatasetTableSchema,
     ExportContext,
+    Scope,
 )
 
 metadata = MetaData()
@@ -54,13 +55,14 @@ class BaseExporter:
 
     def _get_fields(self, table: DatasetTableSchema):
         dataset = self.dataset_schema
-        parent_scopes = set(dataset.auth | table.auth) - {_PUBLIC_SCOPE}
+        public_scope = Scope.from_string(_PUBLIC_SCOPE)
+        parent_scopes = set(dataset.scopes | table.scopes) - {public_scope}
         for field in table.fields:
             if field.is_array and not (self.extension == "geojson" or self.extension == "jsonl"):
                 continue
             if field.is_internal:
                 continue
-            if parent_scopes | set(field.auth) - {_PUBLIC_SCOPE} <= self.scopes:
+            if parent_scopes | set(field.scopes) - {public_scope} <= self.scopes:
                 yield field
 
     def _get_column(self, sa_table: Table, field: DatasetFieldSchema) -> Column:
