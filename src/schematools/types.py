@@ -997,7 +997,7 @@ class DatasetVersionSchema(SchemaType):
             for scope in export["scopes"]:
                 for filetype in export["filetypes"]:
                     exports.append(Export.from_json(export, scope, filetype, self))
-        return exports
+        return sorted(exports, key=lambda e: (e.filetype, len(e.tables)))
 
 
 ExportFileType = Literal["csv", "jsonl", "gpkg", "geojson"]

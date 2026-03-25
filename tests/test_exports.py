@@ -166,8 +166,8 @@ class TestExports:
         ]
         storage_files = {
             "csv": [
-                "gebieden_v1_alle_gebieden_openbaar.csv.zip",
                 "gebieden_v1_kleine_gebieden_fp_mdw.csv.zip",
+                "gebieden_v1_alle_gebieden_openbaar.csv.zip",
                 "meet_bouten_v1_all_openbaar.csv.zip",
             ],
             "geojson": [
