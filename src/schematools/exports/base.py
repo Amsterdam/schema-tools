@@ -51,7 +51,9 @@ class BaseExporter:
         self.base_dir = context.folder
         self.base_dir.mkdir(exist_ok=True)
         self.tables = context.export.tables
-        self.sa_tables = tables_factory(self.dataset_schema, metadata)
+        self.sa_tables = tables_factory(
+            self.dataset_schema, metadata, version=context.export.version
+        )
 
     def _get_fields(self, table: DatasetTableSchema):
         dataset = self.dataset_schema
