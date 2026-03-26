@@ -1,4 +1,9 @@
-# 2026-03-24 (9.2.3)
+# 2026-03-26 (9.2.4)
+
+* Bugfix: exports can now refer to a non-default version, the code now reflects that.
+* Order exports such that uploads are done as soon as possible.
+
+# 2026-03-25 (9.2.3)
 
 * Bugfix: Compare scopes with scopes, not strings with scopes.
 * Added __str__ method to Export for better logging.
