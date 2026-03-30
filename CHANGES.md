@@ -1,3 +1,7 @@
+# 2026-03-30 (9.3.0)
+
+* Add enableGeoSearch flag to be able to configure the geosearch functionality in the schema.
+
 # 2026-03-26 (9.2.4)
 
 * Bugfix: exports can now refer to a non-default version, the code now reflects that.
