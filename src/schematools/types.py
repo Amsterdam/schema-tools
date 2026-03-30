@@ -537,6 +537,14 @@ class DatasetSchema(SchemaType):
         return any(version.enable_api for _, version in self.versions.items())
 
     @property
+    def has_an_available_geosearch_version(self) -> bool:
+        """
+        Whether the Dataset has an available version which should be exposed on
+        the Geosearch API.
+        """
+        return any(version.enable_geosearch for _, version in self.versions.items())
+
+    @property
     def tables(self) -> list[DatasetTableSchema]:
         """Access the tables within the file."""
         version = self.get_version(self.default_version)
@@ -889,6 +897,10 @@ class DatasetVersionSchema(SchemaType):
     @property
     def enable_api(self) -> bool:
         return self.data.get("enableAPI")
+
+    @property
+    def enable_geosearch(self) -> bool:
+        return self.data.get("enableGeosearch", False)
 
     @property
     def end_support_date(self) -> datetime.date | None:
