@@ -735,6 +735,79 @@ def _check_exports(dataset: DatasetSchema) -> Iterator[str]:
                     )
 
 
+@_register_validator("export scopes")
+def _check_export_scopes(dataset: DatasetSchema) -> Iterator[str]:
+    """
+    Check that the each table included in an export has at least one field with the scope of
+    the export.
+    """
+    for version in dataset.versions.values():
+        for export in version.data.get("exports", []):
+            if export["tables"] == "*":
+                tables = version.get_tables()
+            else:
+                tables = []
+                for table_id in export["tables"]:
+                    try:
+                        tables.append(version.get_table_by_id(table_id))
+                    except DatasetTableNotFound:
+                        # handled by `exports` validator.
+                        continue
+            for scope in export["scopes"]:
+                if scope == "openbaar":
+                    # Dataset should be public.
+                    if dataset.auth != {"OPENBAAR"}:
+                        yield (
+                            f"Export '{export['name']}' in dataset '{dataset.id}' versie "
+                            f"'{version.version}' heeft scope 'openbaar', maar de dataset is niet "
+                            "openbaar."
+                        )
+                        continue
+                    for table in tables:
+                        # Each table should be public.
+                        if table.auth != {"OPENBAAR"}:
+                            yield (
+                                f"Export '{export['name']}' in dataset '{dataset.id}' versie "
+                                f"'{version.version}' heeft scope 'openbaar', maar tabel "
+                                f"'{table.id}' is niet openbaar."
+                            )
+                            continue
+                        # Each table should have at least one public field
+                        # (besides `schema` and `id`)
+                        if not any(
+                            field.auth == {"OPENBAAR"} and field.id not in ["schema", "id"]
+                            for field in table.fields
+                        ):
+                            yield (
+                                f"Export '{export['name']}' in dataset '{dataset.id}' versie "
+                                f"'{version.version}' heeft scope 'openbaar', maar tabel "
+                                f"'{table.id}' heeft geen enkel openbaar veld."
+                            )
+                else:
+                    export_scope = scope.upper()
+                    for table in tables:
+                        # Some field should have the required scope:
+                        # 1. Field has the scope.
+                        # 2. Field is public and table has the scope.
+                        # 3. Field is public, table is public and dataset has the scope.
+                        if not any(
+                            field.auth == {export_scope}
+                            or (field.auth == {"OPENBAAR"} and table.auth == {export_scope})
+                            or (
+                                field.auth == {"OPENBAAR"}
+                                and table.auth == {"OPENBAAR"}
+                                and dataset.auth == {export_scope}
+                            )
+                            for field in table.fields
+                            if field.id not in ["schema", "id"]
+                        ):
+                            yield (
+                                f"Export '{export['name']}' in dataset '{dataset.id}' versie "
+                                f"'{version.version}' heeft scope '{scope}', maar tabel "
+                                f"'{table.id}' heeft geen enkel veld met deze scope."
+                            )
+
+
 def validate_dataset(
     previous_tables: list[dict[str, str]],
     current_tables: list[dict[str, str]],
