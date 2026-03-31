@@ -1,3 +1,7 @@
+# 2026-03-31 (9.3.1)
+
+* Add extra validation for export scopes, ensuring the tables in an export have at least one field with the given scope.
+
 # 2026-03-30 (9.3.0)
 
 * Add enableGeoSearch flag to be able to configure the geosearch functionality in the schema.
