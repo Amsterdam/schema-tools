@@ -14,9 +14,24 @@
       "status": "stable",
       "version": "0.0.1",
       "exports": [
-        {"name": "alle_gebieden", "tables": "*", "filetypes": ["csv","geojson"], "scopes": ["openbaar"]},
-        {"name": "grote_gebieden", "tables": ["stadsdelen","ggwgebieden","wijken"],"filetypes": ["gpkg"], "scopes": ["openbaar", "fp/mdw"]},
-        {"name": "kleine_gebieden", "tables": ["bouwblokken", "buurten"], "filetypes": ["csv","jsonl"], "scopes": ["fp/mdw"]}
+        {
+          "name": "alle_gebieden",
+          "tables": "*",
+          "filetypes": ["csv", "geojson"],
+          "scopes": ["openbaar"]
+        },
+        {
+          "name": "grote_gebieden",
+          "tables": ["stadsdelen", "ggwgebieden", "wijken"],
+          "filetypes": ["gpkg"],
+          "scopes": ["openbaar", "fp/mdw"]
+        },
+        {
+          "name": "kleine_gebieden",
+          "tables": ["bouwblokken", "buurten"],
+          "filetypes": ["csv", "jsonl"],
+          "scopes": ["fp/mdw"]
+        }
       ],
       "tables": [
         {
@@ -26,10 +41,7 @@
           "temporal": {
             "identifier": "volgnummer",
             "dimensions": {
-              "geldigOp": [
-                "beginGeldigheid",
-                "eindGeldigheid"
-              ]
+              "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
             }
           },
           "zoom": {
@@ -42,15 +54,8 @@
             "type": "object",
             "additionalProperties": false,
             "mainGeometry": "geometrie",
-            "identifier": [
-              "identificatie",
-              "volgnummer"
-            ],
-            "required": [
-              "schema",
-              "identificatie",
-              "volgnummer"
-            ],
+            "identifier": ["identificatie", "volgnummer"],
+            "required": ["schema", "identificatie", "volgnummer"],
             "display": "id",
             "properties": {
               "schema": {
@@ -71,7 +76,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "Offici\u00eble code van het object."
+                "description": "Offici\u00eble code van het object.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",
@@ -133,10 +139,7 @@
           "temporal": {
             "identifier": "volgnummer",
             "dimensions": {
-              "geldigOp": [
-                "beginGeldigheid",
-                "eindGeldigheid"
-              ]
+              "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
             }
           },
           "schema": {
@@ -145,15 +148,8 @@
             "type": "object",
             "additionalProperties": false,
             "mainGeometry": "geometrie",
-            "identifier": [
-              "identificatie",
-              "volgnummer"
-            ],
-            "required": [
-              "schema",
-              "identificatie",
-              "volgnummer"
-            ],
+            "identifier": ["identificatie", "volgnummer"],
+            "required": ["schema", "identificatie", "volgnummer"],
             "display": "id",
             "properties": {
               "schema": {
@@ -178,7 +174,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",
@@ -231,10 +228,7 @@
           "temporal": {
             "identifier": "volgnummer",
             "dimensions": {
-              "geldigOp": [
-                "beginGeldigheid",
-                "eindGeldigheid"
-              ]
+              "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
             }
           },
           "schema": {
@@ -243,15 +237,8 @@
             "type": "object",
             "additionalProperties": false,
             "mainGeometry": "geometrie",
-            "identifier": [
-              "identificatie",
-              "volgnummer"
-            ],
-            "required": [
-              "schema",
-              "identificatie",
-              "volgnummer"
-            ],
+            "identifier": ["identificatie", "volgnummer"],
+            "required": ["schema", "identificatie", "volgnummer"],
             "display": "id",
             "properties": {
               "schema": {
@@ -276,7 +263,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",
@@ -337,10 +325,7 @@
           "temporal": {
             "identifier": "volgnummer",
             "dimensions": {
-              "geldigOp": [
-                "beginGeldigheid",
-                "eindGeldigheid"
-              ]
+              "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
             }
           },
           "schema": {
@@ -349,15 +334,8 @@
             "type": "object",
             "additionalProperties": false,
             "mainGeometry": "geometrie",
-            "identifier": [
-              "identificatie",
-              "volgnummer"
-            ],
-            "required": [
-              "schema",
-              "identificatie",
-              "volgnummer"
-            ],
+            "identifier": ["identificatie", "volgnummer"],
+            "required": ["schema", "identificatie", "volgnummer"],
             "display": "id",
             "properties": {
               "schema": {
@@ -382,7 +360,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",
@@ -423,10 +402,7 @@
           "temporal": {
             "identifier": "volgnummer",
             "dimensions": {
-              "geldigOp": [
-                "beginGeldigheid",
-                "eindGeldigheid"
-              ]
+              "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
             }
           },
           "schema": {
@@ -435,15 +411,8 @@
             "type": "object",
             "additionalProperties": false,
             "mainGeometry": "geometrie",
-            "identifier": [
-              "identificatie",
-              "volgnummer"
-            ],
-            "required": [
-              "schema",
-              "identificatie",
-              "volgnummer"
-            ],
+            "identifier": ["identificatie", "volgnummer"],
+            "required": ["schema", "identificatie", "volgnummer"],
             "display": "id",
             "properties": {
               "schema": {
@@ -468,7 +437,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "De code van het object."
+                "description": "De code van het object.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",

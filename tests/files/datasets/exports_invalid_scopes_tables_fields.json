@@ -17,19 +17,19 @@
         {
           "name": "alle_gebieden",
           "tables": "*",
-          "filetypes": ["csv"],
+          "filetypes": ["csv", "geojson"],
           "scopes": ["openbaar"]
         },
         {
-          "name": "gebieden",
-          "tables": ["stadsdelen", "ggwgebieden", "steden", "landen"],
-          "filetypes": ["csv"],
+          "name": "grote_gebieden",
+          "tables": ["stadsdelen", "ggwgebieden", "wijken"],
+          "filetypes": ["gpkg"],
           "scopes": ["openbaar", "fp/mdw"]
         },
         {
-          "name": "gebieden",
+          "name": "kleine_gebieden",
           "tables": ["bouwblokken", "buurten"],
-          "filetypes": ["csv"],
+          "filetypes": ["csv", "jsonl"],
           "scopes": ["fp/mdw"]
         }
       ],
@@ -44,6 +44,8 @@
               "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
             }
           },
+          "auth": "FP/MDW",
+          "reasonsNonPublic": ["5.1 1c: Bevat persoonsgegevens"],
           "zoom": {
             "min": 20,
             "max": 28
@@ -156,47 +158,57 @@
               },
               "volgnummer": {
                 "type": "integer",
-                "description": "Uniek volgnummer van de toestand van het object."
+                "description": "Uniek volgnummer van de toestand van het object.",
+                "auth": "HR/R"
               },
               "registratiedatum": {
                 "type": "string",
                 "format": "date-time",
-                "description": "De datum waarop de toestand is geregistreerd."
+                "description": "De datum waarop de toestand is geregistreerd.",
+                "auth": "HR/R"
               },
               "identificatie": {
                 "type": "string",
-                "description": "Unieke identificatie van het object."
+                "description": "Unieke identificatie van het object.",
+                "auth": "HR/R"
               },
               "naam": {
                 "type": "string",
-                "description": "De naam van het object."
+                "description": "De naam van het object.",
+                "auth": "HR/R"
               },
               "code": {
                 "type": "string",
-                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode.",
+                "auth": "HR/R"
               },
               "beginGeldigheid": {
                 "type": "string",
                 "format": "date",
-                "description": "De datum waarop het object is gecre\u00eberd."
+                "description": "De datum waarop het object is gecre\u00eberd.",
+                "auth": "HR/R"
               },
               "eindGeldigheid": {
                 "type": "string",
                 "format": "date",
-                "description": "De datum waarop het object is komen te vervallen."
+                "description": "De datum waarop het object is komen te vervallen.",
+                "auth": "HR/R"
               },
               "documentdatum": {
                 "type": "string",
                 "format": "date",
-                "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+                "description": "De datum waarop het document is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden.",
+                "auth": "HR/R"
               },
               "documentnummer": {
                 "type": "string",
-                "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden."
+                "description": "De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van het object heeft plaatsgevonden.",
+                "auth": "HR/R"
               },
               "cbsCode": {
                 "type": "string",
-                "description": "De CBS-code van het object."
+                "description": "De CBS-code van het object.",
+                "auth": "HR/R"
               },
               "ligtInWijk": {
                 "type": "object",
@@ -209,11 +221,13 @@
                   }
                 },
                 "relation": "gebieden:wijken",
-                "description": "De wijk waar de buurt in ligt."
+                "description": "De wijk waar de buurt in ligt.",
+                "auth": "HR/R"
               },
               "geometrie": {
                 "$ref": "https://geojson.org/schema/Geometry.json",
-                "description": "Geometrische beschrijving van een object."
+                "description": "Geometrische beschrijving van een object.",
+                "auth": "HR/R"
               }
             }
           },
@@ -357,7 +371,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",
@@ -433,7 +448,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "De code van het object."
+                "description": "De code van het object.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",
@@ -502,6 +518,37 @@
               "geometrie": {
                 "$ref": "https://geojson.org/schema/Geometry.json",
                 "description": "Geometrische beschrijving van een object."
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "ggpgebieden",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/ggpgebieden.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": ["identificatie", "volgnummer"],
+            "required": ["schema", "identificatie", "volgnummer"],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object.",
+                "auth": "FP/MDW"
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object.",
+                "auth": "FP/MDW"
               }
             }
           },

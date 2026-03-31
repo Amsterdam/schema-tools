@@ -12,6 +12,8 @@ from schematools.types import DatasetSchema
 from schematools.validation import (
     PROPERTIES_INTRODUCING_BREAKING_CHANGES,
     _check_display,
+    _check_export_scopes,
+    _check_exports,
     _check_maingeometry,
     _check_scopes_exist,
     _identifier_properties,
@@ -422,7 +424,7 @@ def test_subresource(schema_loader) -> None:
 
 def test_exports_invalid(schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("exports_invalid.json")
-    errors = [v.message for v in validation.run(dataset)]
+    errors = list(_check_exports(dataset))
 
     assert len(errors) == 3
     assert errors == [
@@ -435,9 +437,39 @@ def test_exports_invalid(schema_loader) -> None:
     ]
 
 
+def test_exports_invalid_scope_tables_fields(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("exports_invalid_scopes_tables_fields.json")
+    errors = list(_check_export_scopes(dataset))
+
+    assert len(errors) == 5
+    assert errors == [
+        "Export 'alle_gebieden' in dataset 'gebieden' versie 'v1' heeft scope 'openbaar', maar "
+        "tabel 'bouwblokken' is niet openbaar.",
+        "Export 'alle_gebieden' in dataset 'gebieden' versie 'v1' heeft scope 'openbaar', maar "
+        "tabel 'buurten' heeft geen enkel openbaar veld.",
+        "Export 'alle_gebieden' in dataset 'gebieden' versie 'v1' heeft scope 'openbaar', maar "
+        "tabel 'ggpgebieden' heeft geen enkel openbaar veld.",
+        "Export 'grote_gebieden' in dataset 'gebieden' versie 'v1' heeft scope 'fp/mdw', maar "
+        "tabel 'wijken' heeft geen enkel veld met deze scope.",
+        "Export 'kleine_gebieden' in dataset 'gebieden' versie 'v1' heeft scope 'fp/mdw', maar "
+        "tabel 'buurten' heeft geen enkel veld met deze scope.",
+    ]
+
+
+def test_exports_invalid_scopes_dataset(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("exports_invalid_scopes_dataset.json")
+    errors = list(_check_export_scopes(dataset))
+
+    assert len(errors) == 1
+    assert errors == [
+        "Export 'alle_gebieden' in dataset 'gebieden' versie 'v1' heeft scope 'openbaar', maar "
+        "de dataset is niet openbaar.",
+    ]
+
+
 def test_exports_valid(schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("exports_valid.json")
-    errors = list(validation.run(dataset))
+    errors = list(_check_exports(dataset)) + list(_check_export_scopes(dataset))
 
     assert len(errors) == 0
 

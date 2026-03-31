@@ -7,6 +7,7 @@
   "publisher": {
     "$ref": "publishers/HARRY"
   },
+  "auth": "FP/MDW",
   "defaultVersion": "v1",
   "versions": {
     "v1": {
@@ -17,19 +18,13 @@
         {
           "name": "alle_gebieden",
           "tables": "*",
-          "filetypes": ["csv"],
+          "filetypes": ["csv", "geojson"],
           "scopes": ["openbaar"]
         },
         {
-          "name": "gebieden",
-          "tables": ["stadsdelen", "ggwgebieden", "steden", "landen"],
-          "filetypes": ["csv"],
-          "scopes": ["openbaar", "fp/mdw"]
-        },
-        {
-          "name": "gebieden",
+          "name": "kleine_gebieden",
           "tables": ["bouwblokken", "buurten"],
-          "filetypes": ["csv"],
+          "filetypes": ["csv", "jsonl"],
           "scopes": ["fp/mdw"]
         }
       ],
@@ -44,6 +39,8 @@
               "geldigOp": ["beginGeldigheid", "eindGeldigheid"]
             }
           },
+          "auth": "FP/MDW",
+          "reasonsNonPublic": ["5.1 1c: Bevat persoonsgegevens"],
           "zoom": {
             "min": 20,
             "max": 28
@@ -357,7 +354,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode."
+                "description": "Volledige, samengestelde, code, bestaande uit stadsdeelcode en wijkcode.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",
@@ -433,7 +431,8 @@
               },
               "code": {
                 "type": "string",
-                "description": "De code van het object."
+                "description": "De code van het object.",
+                "auth": "FP/MDW"
               },
               "beginGeldigheid": {
                 "type": "string",
@@ -502,6 +501,37 @@
               "geometrie": {
                 "$ref": "https://geojson.org/schema/Geometry.json",
                 "description": "Geometrische beschrijving van een object."
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "ggpgebieden",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$id": "https://github.com/Amsterdam/schemas/gebieden/ggpgebieden.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "mainGeometry": "geometrie",
+            "identifier": ["identificatie", "volgnummer"],
+            "required": ["schema", "identificatie", "volgnummer"],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "identificatie": {
+                "type": "string",
+                "description": "Unieke identificatie van het object.",
+                "auth": "FP/MDW"
+              },
+              "volgnummer": {
+                "type": "integer",
+                "description": "Uniek volgnummer van de toestand van het object.",
+                "auth": "FP/MDW"
               }
             }
           },
