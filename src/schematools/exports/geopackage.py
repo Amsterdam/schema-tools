@@ -21,10 +21,12 @@ class GeopackageExporter(BaseExporter):
         )
 
         for table in self.tables:
-            # For now we only output the default version.
             filename = self.export.table_filename(table.id)
 
             output_path = self.base_dir / filename
+            if output_path.exists():
+                logger.warning("File %s already exists. It will be skipped.", output_path.name)
+                continue
             logger.info("Exporting %s.", filename)
             field_names = sql.SQL(",").join(
                 sql.Identifier(field.db_name)
