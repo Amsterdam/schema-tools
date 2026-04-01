@@ -19,6 +19,8 @@ class GeopackageExporter(BaseExporter):
             f"user={self.connection.engine.url.username} "
             f"password={self.connection.engine.url.password}"
         )
+        consolidated_file = self.base_dir / self.export.filename_without_zip
+        logger.info("Exporting %s.", self.export.filename_without_zip)
 
         for table in self.tables:
             filename = self.export.table_filename(table.id)
@@ -47,5 +49,12 @@ class GeopackageExporter(BaseExporter):
 
             subprocess.run(  # noqa: S602
                 f'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" -sql "{query.as_string()}"',
+                shell=True,
+            )
+        for table, idx in zip(self.tables, range(len(self.tables)), strict=True):
+            flag = "" if idx == 0 else "-update"
+            subprocess.run(  # noqa: S602
+                f'ogr2ogr -f "GPKG" {flag} {consolidated_file} {output_path} '
+                f"-nln {table.db_name_variant(with_dataset_prefix=False)}",
                 shell=True,
             )
