@@ -1,3 +1,7 @@
+# 2026-03-31 (9.4.0-rc1)
+
+* Merge geopackage exports into one file with multiple layers.
+
 # 2026-03-31 (9.3.1)
 
 * Add extra validation for export scopes, ensuring the tables in an export have at least one field with the given scope.
