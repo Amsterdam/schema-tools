@@ -1103,6 +1103,13 @@ class Export:
         )
 
     @property
+    def filename_without_zip(self) -> str:
+        return (
+            f"{self._dataset_name}_{self.version}_{self.name}_{self.scopes_string}."
+            f"{self.filetype}"
+        )
+
+    @property
     def table_ids(self) -> list[str]:
         return [table.id for table in self.tables]
 

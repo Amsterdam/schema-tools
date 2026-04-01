@@ -44,8 +44,15 @@ def zip_files(context: ExportContext) -> Path:
     output_path = context.folder / context.export.filename
     Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output_path, "a", compression=zipfile.ZIP_DEFLATED) as zipf:
-        for file_path in context.export.table_paths(context.folder):
-            zipf.write(file_path, file_path.name)
+        if context.export.filetype == "gpkg":
+            # For geopackage we only zip the final merged file, not the individual table files.
+            zipf.write(
+                context.folder / context.export.filename_without_zip,
+                context.export.filename_without_zip,
+            )
+        else:
+            for file_path in context.export.table_paths(context.folder):
+                zipf.write(file_path, file_path.name)
     logger.info("Created zip file %s.", output_path.name)
     return output_path
 
@@ -97,7 +104,7 @@ def export(
         dataset_metadata: dict[str, str] = {
             k: sanitize(v) for k, v in dataset.data.items() if isinstance(v, str)
         }
-        file_paths = []
+        file_paths: list[Path] = []
         for version in dataset.versions.values():
             for export in version.exports:
                 context = ExportContext(
@@ -112,6 +119,7 @@ def export(
                 zip_path = zip_files(context)
                 upload_to_storage(zip_path, context, dataset_metadata)
                 file_paths.extend(context.export.table_paths(context.folder))
+                file_paths.append(context.folder / context.export.filename_without_zip)
 
         if cleanup:
             remove_files(file_paths)
