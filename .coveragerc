@@ -6,7 +6,7 @@ omit =
     tests/*
 
 [report]
-fail_under = 72
+fail_under = 73
 exclude_also =
     if "debug_toolbar" in settings.INSTALLED_APPS:
     if settings.DEBUG:
