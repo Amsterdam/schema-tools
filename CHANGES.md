@@ -1,4 +1,8 @@
-# 2026-03-31 (9.4.0-rc1)
+# 2026-04-07 (9.4.0-rc2)
+
+* Bugfix: set correct output_path in merge logic.
+
+# 2026-04-02 (9.4.0-rc1)
 
 * Merge geopackage exports into one file with multiple layers.
 
