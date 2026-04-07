@@ -65,7 +65,10 @@ class BaseExporter:
             if field.is_internal:
                 continue
             if parent_scopes | set(field.scopes) - {public_scope} <= self.scopes:
-                yield field
+                if field.is_object and not field.is_relation:
+                    yield from field.subfields
+                else:
+                    yield field
 
     def _get_column(self, sa_table: Table, field: DatasetFieldSchema) -> Column:
         column = getattr(sa_table.c, field.db_name)
