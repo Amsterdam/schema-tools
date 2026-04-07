@@ -1,3 +1,7 @@
+# 2026-04-07 (9.4.0-rc3)
+
+* Bugfix: correct the exporting of subfields (which have their own db column).
+
 # 2026-04-07 (9.4.0-rc2)
 
 * Bugfix: set correct output_path in merge logic.
