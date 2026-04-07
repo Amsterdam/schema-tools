@@ -24,7 +24,6 @@ class GeopackageExporter(BaseExporter):
 
         for table in self.tables:
             filename = self.export.table_filename(table.id)
-
             output_path = self.base_dir / filename
             if output_path.exists():
                 logger.warning("File %s already exists. It will be skipped.", output_path.name)
@@ -53,6 +52,8 @@ class GeopackageExporter(BaseExporter):
             )
         for table, idx in zip(self.tables, range(len(self.tables)), strict=True):
             flag = "" if idx == 0 else "-update"
+            filename = self.export.table_filename(table.id)
+            output_path = self.base_dir / filename
             subprocess.run(  # noqa: S602
                 f'ogr2ogr -f "GPKG" {flag} {consolidated_file} {output_path} '
                 f"-nln {table.db_name_variant(with_dataset_prefix=False)}",
