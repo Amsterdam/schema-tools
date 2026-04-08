@@ -11,9 +11,11 @@ from schematools.contrib.django.factories import DjangoModelFactory
 from schematools.contrib.django.models import (
     Dataset,
     DatasetTable,
+    DatasetVersion,
     LooseRelationField,
     LooseRelationManyToManyField,
 )
+from schematools.types import DatasetVersionSchema
 
 
 class TestDjangoModelFactory:
@@ -398,3 +400,13 @@ def test_dataset_with_compound_pk_has_correct_id_field(gebieden_dataset):
     """Prove that Datasettable has correct id_field for table with compound PK."""
     gebieden_dst = DatasetTable.objects.get(name="bouwblokken")
     assert gebieden_dst.id_field == "id"
+
+
+@pytest.mark.django_db
+def test_datasetversion_status_choices(meetbouten_dataset):
+    """Prove that the status field of DatasetVersion has the correct choices."""
+    schema = meetbouten_dataset.schema
+    assert schema.versions["v1"]["status"] == DatasetVersionSchema.Status.stable.value
+    assert schema.versions["v2"]["status"] == DatasetVersionSchema.Status.deprecated.value
+    assert meetbouten_dataset.versions.first().status == DatasetVersion.Status.STABLE
+    assert meetbouten_dataset.versions.last().status == DatasetVersion.Status.DEPRECATED
