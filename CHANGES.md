@@ -1,3 +1,7 @@
+# 2026-04-08 (9.4.1)
+
+* Add deprecated state to DatasetVersion Django model.
+
 # 2026-04-08 (9.4.0)
 
 * Merge Geopackage exports into one file with multiple layers if multiple tables are selected.
