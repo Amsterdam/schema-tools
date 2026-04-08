@@ -1,4 +1,9 @@
-# 2026-04-07 (9.4.0-rc4)
+# 2026-04-08 (9.4.0)
+
+* Merge Geopackage exports into one file with multiple layers if multiple tables are selected.
+* Bugfix: correct the export of subfields (which have their own db column).
+
+# 2026-04-08 (9.4.0-rc4)
 
 * Bugfix: correct the exporting of subfields for jsonlines.
 
