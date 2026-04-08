@@ -65,7 +65,9 @@ class BaseExporter:
             if field.is_internal:
                 continue
             if parent_scopes | set(field.scopes) - {public_scope} <= self.scopes:
-                if field.is_object and not field.is_relation:
+                # Nested fields are handled by the jsonlines exporter, other exporters need
+                # them to be flattened.
+                if field.is_nested_object and self.extension != "jsonl":
                     yield from field.subfields
                 else:
                     yield field
