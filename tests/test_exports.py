@@ -218,8 +218,8 @@ class TestExports:
         CsvExporter(context).export_tables()
         with open(context.folder / "meet_bouten_v1_meetbouten_openbaar.csv") as out_file:
             assert out_file.read() == (
-                "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie\n"
-                "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6)\n"
+                "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie,Genesteinfonaam,Genesteinfonummer\n"
+                "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6),,\n"
             )
 
     def test_csv_export_only_actual(self, gebieden_export_schema, create_context, connection):
@@ -341,6 +341,8 @@ class TestExports:
                     "ligtInBuurtId": "10180001.1",
                     "merkCode": "12",
                     "merkOmschrijving": "De meetbout",
+                    "genesteInfoNaam": None,
+                    "genesteInfoNummer": None,
                 },
                 "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
             }
@@ -368,8 +370,8 @@ class TestExports:
         path = Path("tmp/meet_bouten_v1_meetbouten_openbaar.csv")
         with path.open() as out_file:
             assert out_file.read() == (
-                "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie\n"
-                "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6)\n"
+                "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie,Genesteinfonaam,Genesteinfonummer\n"
+                "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6),,\n"
             )
         path.unlink()
         Path("tmp").rmdir()

@@ -71,6 +71,17 @@
               "geometrie": {
                 "$ref": "https://geojson.org/schema/Point.json",
                 "description": "Geometrie"
+              },
+              "genesteInfo": {
+                "type": "object",
+                "properties": {
+                  "naam": {
+                    "type": "string"
+                  },
+                  "nummer": {
+                    "type": "integer"
+                  }
+                }
               }
             }
           },
