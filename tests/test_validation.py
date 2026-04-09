@@ -15,6 +15,7 @@ from schematools.validation import (
     _check_export_scopes,
     _check_exports,
     _check_maingeometry,
+    _check_relation_suffix,
     _check_scopes_exist,
     _identifier_properties,
     validate_dataset,
@@ -558,6 +559,18 @@ def test_check_superseded_version(schema_loader) -> None:
         "Dataset version (v1) cannot have a status of 'superseded' without an endSupportDate."
         in errors[0].message
     )
+
+
+def test_relation_suffix(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("relation_suffix.json")
+    errors = list(_check_relation_suffix(dataset))
+    assert len(errors) == 2
+    assert errors == [
+        "Field 'buurtId' on table 'bouwblokken' has a 'relation' property but ends with 'Id'. "
+        "Fields with a 'relation' property should not end with 'Id'.",
+        "Field 'stadsdeelId' on table 'ggwgebieden' has a 'relation' property but ends with 'Id'. "
+        "Fields with a 'relation' property should not end with 'Id'.",
+    ]
 
 
 @pytest.mark.parametrize(
