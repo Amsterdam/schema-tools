@@ -808,6 +808,19 @@ def _check_export_scopes(dataset: DatasetSchema) -> Iterator[str]:
                             )
 
 
+@_register_validator("relation suffix")
+def _check_relation_suffix(dataset: DatasetSchema) -> Iterator[str]:
+    """Check that fields with a 'relation' property does not end with 'Id'. This is added by us
+    in the database column."""
+    for table in dataset.tables:
+        for field in table.fields:
+            if "relation" in field and field.id.endswith("Id"):
+                yield (
+                    f"Field {field.id!r} on table {table.id!r} has a 'relation' property but "
+                    "ends with 'Id'. Fields with a 'relation' property should not end with 'Id'."
+                )
+
+
 def validate_dataset(
     previous_tables: list[dict[str, str]],
     current_tables: list[dict[str, str]],
@@ -994,8 +1007,7 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
         expected_version.patch = 0
         if current_version != expected_version:
             return [
-                f"Table '{table_id}' added fields, expecting new version "
-                f"to be {expected_version}."
+                f"Table '{table_id}' added fields, expecting new version to be {expected_version}."
             ]
         else:
             # If there is a minor version bump, we don't need to check for metadata changes
