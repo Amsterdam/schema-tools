@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 class GeopackageExporter(BaseExporter):
     def export_tables(self):
         pg_conn_str = (
-            f"host={self.connection.engine.url.host} "
-            f"port={self.connection.engine.url.port} "
-            f"dbname={self.connection.engine.url.database} "
-            f"user={self.connection.engine.url.username} "
-            f"password={self.connection.engine.url.password}"
+            f"host={self.engine.url.host} "
+            f"port={self.engine.url.port} "
+            f"dbname={self.engine.url.database} "
+            f"user={self.engine.url.username} "
+            f"password={self.engine.url.password}"
         )
         consolidated_file = self.base_dir / self.export.filename_without_zip
         logger.info("Exporting %s.", self.export.filename_without_zip)

@@ -32,16 +32,16 @@ class BaseExporter:
         """Constructor.
 
         Args:
-        connection: SQLAlchemy connection object.
-        dataset_schema: Schema that needs export as geopackage.
-        output: path on the filesystem where output should be stored.
-        table_ids: optional parameter for a subset for the tables of the dataset.
-        scopes: Keycloak scopes that need to be taken into account.
-            The geopackage will be produced contains information that is only
-            accessible with these scopes.
-        size: To produce a subset of the rows, mainly for testing.
+        context: ExportContext object containing all necessary information for the export, such as
+            engine: SQLAlchemy engine object.
+            dataset: Schema that needs export as geopackage.
+            folder: Path on the filesystem where output should be stored.
+            export: Export definition.
+            client: Storage client to upload the produced files.
+            size: To produce a subset of the rows, mainly for testing.
+            temporal_date: To produce a subset of the rows based on the temporal dimension.
         """
-        self.connection = context.connection
+        self.engine = context.engine
         self.dataset_schema = context.dataset
         self.export = context.export
         self.scopes = context.export.scopes

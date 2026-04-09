@@ -29,7 +29,7 @@ from typing import (
 )
 
 from deepdiff import DeepDiff
-from sqlalchemy import Connection
+from sqlalchemy import Engine
 
 from schematools import MAX_TABLE_NAME_LENGTH
 from schematools._utils import cached_method
@@ -1019,15 +1019,19 @@ class BlobClient(Protocol):
     def upload_blob(
         self, data: BufferedReader, overwrite: bool, metadata: dict[str, Any] | None
     ): ...
+
+
 class ContainerClient(Protocol):
     def get_blob_client(self, blob_name: str) -> BlobClient: ...
+
+
 class StorageClient(Protocol):
     def get_container_client(self, container_name: str) -> ContainerClient: ...
 
 
 @dataclasses.dataclass
 class ExportContext:
-    connection: Connection
+    engine: Engine
     dataset: DatasetSchema
     folder: Path
     export: Export
@@ -1105,8 +1109,7 @@ class Export:
     @property
     def filename_without_zip(self) -> str:
         return (
-            f"{self._dataset_name}_{self.version}_{self.name}_{self.scopes_string}."
-            f"{self.filetype}"
+            f"{self._dataset_name}_{self.version}_{self.name}_{self.scopes_string}.{self.filetype}"
         )
 
     @property
@@ -1115,8 +1118,7 @@ class Export:
 
     def table_filename(self, table_id: str) -> str:
         return (
-            f"{self._dataset_name}_{self.version}_{table_id}_{self.scopes_string}."
-            f"{self.filetype}"
+            f"{self._dataset_name}_{self.version}_{table_id}_{self.scopes_string}.{self.filetype}"
         )
 
     def table_paths(self, folder: Path) -> list[Path]:

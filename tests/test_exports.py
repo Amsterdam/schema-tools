@@ -105,13 +105,10 @@ class TestExports:
     @pytest.fixture
     def create_context(self, engine, storage_client, tmp_folder):
         """Factory fixture to create ExportContext objects for testing."""
-        connections = []
 
         def create(dataset, export):
-            connection = engine.connect()
-            connections.append(connection)
             return ExportContext(
-                connection=connection,
+                engine=engine,
                 client=storage_client,
                 dataset=dataset,
                 export=export,
@@ -119,10 +116,7 @@ class TestExports:
                 size=1,
             )
 
-        yield create
-
-        for connection in connections:
-            connection.close()
+        return create
 
     def test_export(
         self,
@@ -310,7 +304,7 @@ class TestExports:
         context = create_context(gebieden_export_schema, export_definition)
 
         # Ensure the DB tables exist so ogr2ogr can create layers.
-        importer = NDJSONImporter(gebieden_export_schema, context.connection.engine)
+        importer = NDJSONImporter(gebieden_export_schema, context.engine)
         for table_id in ("stadsdelen", "ggw_gebieden", "wijken"):
             importer.generate_db_objects(table_id, truncate=False, ind_extra_index=False)
 
