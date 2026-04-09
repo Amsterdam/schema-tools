@@ -7,7 +7,7 @@ import re
 import zipfile
 from pathlib import Path
 
-from sqlalchemy import Connection
+from sqlalchemy import Engine
 
 from schematools.exports.base import BaseExporter
 from schematools.exports.csv import CsvExporter
@@ -88,7 +88,7 @@ def remove_files(file_paths: list[Path]):
 
 
 def export(
-    connection: Connection,
+    engine: Engine,
     storage_client: StorageClient,
     output_path: str = "tmp",
     *,
@@ -107,19 +107,20 @@ def export(
         file_paths: list[Path] = []
         for version in dataset.versions.values():
             for export in version.exports:
-                context = ExportContext(
-                    connection=connection,
-                    dataset=dataset,
-                    folder=path,
-                    export=export,
-                    client=storage_client,
-                )
-                logger.info("Exporting %s", export)
-                export_tables(context)
-                zip_path = zip_files(context)
-                upload_to_storage(zip_path, context, dataset_metadata)
-                file_paths.extend(context.export.table_paths(context.folder))
-                file_paths.append(context.folder / context.export.filename_without_zip)
+                with engine.connect() as connection:
+                    context = ExportContext(
+                        connection=connection,
+                        dataset=dataset,
+                        folder=path,
+                        export=export,
+                        client=storage_client,
+                    )
+                    logger.info("Exporting %s", export)
+                    export_tables(context)
+                    zip_path = zip_files(context)
+                    upload_to_storage(zip_path, context, dataset_metadata)
+                    file_paths.extend(context.export.table_paths(context.folder))
+                    file_paths.append(context.folder / context.export.filename_without_zip)
 
         if cleanup:
             remove_files(file_paths)
