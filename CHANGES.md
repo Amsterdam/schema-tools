@@ -1,3 +1,7 @@
+# 2026-04-09 (9.4.2)
+
+* Add validation for fields with a relation: these should NOT end with "Id".
+
 # 2026-04-08 (9.4.1)
 
 * Add deprecated state to DatasetVersion Django model.
