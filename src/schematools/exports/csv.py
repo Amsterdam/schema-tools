@@ -39,8 +39,11 @@ class CsvExporter(BaseExporter):  # noqa: D101
             query = query.limit(self.size)
 
         # Use server-side cursor with small batches
-        with self.connection.execution_options(stream_results=True, max_row_buffer=1000).execute(
-            query
-        ) as result:
+        with (
+            self.engine.execution_options(
+                stream_results=True, max_row_buffer=1000
+            ).connect() as connection,
+            connection.execute(query) as result,
+        ):
             for partition in result.mappings().partitions(size=1000):
                 writer.writerows(dict(row) for row in partition)

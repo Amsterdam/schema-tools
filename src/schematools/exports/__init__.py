@@ -107,20 +107,19 @@ def export(
         file_paths: list[Path] = []
         for version in dataset.versions.values():
             for export in version.exports:
-                with engine.connect() as connection:
-                    context = ExportContext(
-                        connection=connection,
-                        dataset=dataset,
-                        folder=path,
-                        export=export,
-                        client=storage_client,
-                    )
-                    logger.info("Exporting %s", export)
-                    export_tables(context)
-                    zip_path = zip_files(context)
-                    upload_to_storage(zip_path, context, dataset_metadata)
-                    file_paths.extend(context.export.table_paths(context.folder))
-                    file_paths.append(context.folder / context.export.filename_without_zip)
+                context = ExportContext(
+                    engine=engine,
+                    dataset=dataset,
+                    folder=path,
+                    export=export,
+                    client=storage_client,
+                )
+                logger.info("Exporting %s", export)
+                export_tables(context)
+                zip_path = zip_files(context)
+                upload_to_storage(zip_path, context, dataset_metadata)
+                file_paths.extend(context.export.table_paths(context.folder))
+                file_paths.append(context.folder / context.export.filename_without_zip)
 
         if cleanup:
             remove_files(file_paths)

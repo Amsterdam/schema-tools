@@ -20,7 +20,7 @@ import requests
 import sqlalchemy
 from deepdiff import DeepDiff
 from jsonschema import draft7_format_checker
-from sqlalchemy import Connection, inspect
+from sqlalchemy import Engine, inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import create_engine
 
@@ -153,7 +153,7 @@ def import_() -> None:
 
 
 def create_export_context(
-    connection: Connection,
+    engine: Engine,
     dataset: DatasetSchema,
     table_ids: list[str],
     scope: str,
@@ -179,7 +179,7 @@ def create_export_context(
         _dataset_name=dataset.id,
     )
     return ExportContext(
-        connection=connection,
+        engine=engine,
         dataset=dataset,
         folder=Path(output or "tmp"),
         client=None,
@@ -221,19 +221,18 @@ def export(
     """Command to export data."""
     engine = _get_engine(db_url)
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    with engine.begin() as connection:
-        for scope in scopes:
-            context = create_export_context(
-                connection,
-                dataset_schema,
-                table_ids,
-                scope=scope,
-                output=output,
-                filetype=filetype,
-                version=None,
-                size=size,
-            )
-            export_tables(context)
+    for scope in scopes:
+        context = create_export_context(
+            engine,
+            dataset_schema,
+            table_ids,
+            scope=scope,
+            output=output,
+            filetype=filetype,
+            version=None,
+            size=size,
+        )
+        export_tables(context)
 
 
 @schema.group("tocase")
