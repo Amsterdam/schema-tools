@@ -24,7 +24,7 @@ from schematools.types import ExportContext
 
 class TestExports:
     @pytest.fixture
-    def connection(self, db_url, sqlalchemy_keep_db):
+    def engine(self, db_url, sqlalchemy_keep_db):
         """Use a separate db for these tests, as they can interfere with the tests using the main
         test database."""
         engine = create_engine(
@@ -44,7 +44,7 @@ class TestExports:
             with engine.connect() as connection:
                 connection.execute(text("CREATE EXTENSION postgis"))
                 connection.commit()
-                yield connection
+            yield engine
         sqlalchemy_utils.functions.drop_database(engine.url)
         engine.dispose()
 
@@ -86,9 +86,9 @@ class TestExports:
         return DummyStorageClient()
 
     @pytest.fixture
-    def meetbouten_content(self, here, connection, meetbouten_export_schema):
+    def meetbouten_content(self, here, engine, meetbouten_export_schema):
         ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
-        importer = NDJSONImporter(meetbouten_export_schema, connection.engine)
+        importer = NDJSONImporter(meetbouten_export_schema, engine)
         importer.generate_db_objects("meetbouten", truncate=True, ind_extra_index=False)
         importer.load_file(ndjson_path)
 
@@ -103,10 +103,13 @@ class TestExports:
         path.rmdir()
 
     @pytest.fixture
-    def create_context(self, connection, storage_client, tmp_folder):
+    def create_context(self, engine, storage_client, tmp_folder):
         """Factory fixture to create ExportContext objects for testing."""
+        connections = []
 
         def create(dataset, export):
+            connection = engine.connect()
+            connections.append(connection)
             return ExportContext(
                 connection=connection,
                 client=storage_client,
@@ -116,11 +119,14 @@ class TestExports:
                 size=1,
             )
 
-        return create
+        yield create
+
+        for connection in connections:
+            connection.close()
 
     def test_export(
         self,
-        connection,
+        engine,
         storage_client,
         gebieden_export_schema,
         meetbouten_export_schema,
@@ -128,16 +134,16 @@ class TestExports:
         caplog,
     ):
         caplog.set_level(logging.INFO)
-        importer = NDJSONImporter(gebieden_export_schema, connection.engine)
+        importer = NDJSONImporter(gebieden_export_schema, engine)
         importer.generate_db_objects("bouwblokken", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("buurten", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("wijken", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("stadsdelen", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("ggw_gebieden", truncate=False, ind_extra_index=False)
-        importer = NDJSONImporter(meetbouten_export_schema, connection.engine)
+        importer = NDJSONImporter(meetbouten_export_schema, engine)
         importer.generate_db_objects("meetbouten", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("metingen", truncate=False, ind_extra_index=False)
-        export(connection, storage_client, loader=export_schema_loader, cleanup=False)
+        export(engine, storage_client, loader=export_schema_loader, cleanup=False)
         local_files = [
             "gebieden_v1_bouwblokken_openbaar.csv",
             "gebieden_v1_buurten_openbaar.csv",
@@ -222,23 +228,25 @@ class TestExports:
                 "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6),,\n"
             )
 
-    def test_csv_export_only_actual(self, gebieden_export_schema, create_context, connection):
+    def test_csv_export_only_actual(self, gebieden_export_schema, create_context, engine):
         """Prove that csv export contains only the actual records, not the history."""
-        importer = NDJSONImporter(gebieden_export_schema, connection.engine, logger=logger)
+        importer = NDJSONImporter(gebieden_export_schema, engine, logger=logger)
         importer.generate_db_objects("ggw_gebieden", truncate=True, ind_extra_index=False)
-        connection.execute(
-            text(
-                "INSERT INTO gebieden_ggw_gebieden_v1 (id, identificatie, volgnummer, "
-                "begin_geldigheid, eind_geldigheid) VALUES (1, 'ggw_gebied1', 1, '2020-01-01', "
-                "'2020-12-31')"
+        with engine.connect() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO gebieden_ggw_gebieden_v1 (id, identificatie, volgnummer, "
+                    "begin_geldigheid, eind_geldigheid) VALUES (1, 'ggw_gebied1', 1, '2020-01-01', "
+                    "'2020-12-31')"
+                )
             )
-        )
-        connection.execute(
-            text(
-                "INSERT INTO gebieden_ggw_gebieden_v1 (id, identificatie, volgnummer, "
-                "begin_geldigheid, eind_geldigheid) VALUES (2, 'ggw_gebied1', 2, '2021-01-01', NULL)"
+            connection.execute(
+                text(
+                    "INSERT INTO gebieden_ggw_gebieden_v1 (id, identificatie, volgnummer, "
+                    "begin_geldigheid, eind_geldigheid) VALUES (2, 'ggw_gebied1', 2, '2021-01-01', NULL)"
+                )
             )
-        )
+            connection.commit()
         export_definition = next(
             exp
             for exp in gebieden_export_schema.versions["v1"].exports
@@ -347,14 +355,14 @@ class TestExports:
                 "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
             }
 
-    def test_export_cli(self, connection, meetbouten_content):
+    def test_export_cli(self, engine, meetbouten_content):
         """Test the export CLI command."""
         runner = CliRunner()
         result = runner.invoke(
             export_cli,
             [
                 "--db-url",
-                connection.engine.url.render_as_string(hide_password=False),
+                engine.url.render_as_string(hide_password=False),
                 "--schema-url",
                 str(Path(__file__).parent / "files" / "exports"),
                 "meet_bouten",
