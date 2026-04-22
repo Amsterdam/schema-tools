@@ -34,6 +34,24 @@ def test_import_schema_twice(here):
 
 
 @pytest.mark.django_db()
+def test_import_schema_update_default_version(here):
+    gebieden = here / "files/datasets/gebieden.json"
+    bag = here / "files/datasets/bag_verblijfsobjecten.json"
+    afval = here / "files/datasets/huishoudelijkafval/dataset.json"
+    args = [gebieden, bag, afval]
+    call_command("import_schemas", *args, create_tables=1, create_views=1, dry_run=False)
+    assert models.Dataset.objects.count() == 3
+    assert models.Dataset.objects.get(name="huishoudelijkafval").schema.default_version == "v1"
+
+    afval_v2 = here / "files/datasets/huishoudelijkafval/dataset_v2.json"
+    args = [gebieden, bag, afval_v2]
+    # Changing the default version should not fail
+    call_command("import_schemas", *args, create_tables=1, create_views=1, dry_run=False)
+    assert models.Dataset.objects.count() == 3
+    assert models.Dataset.objects.get(name="huishoudelijkafval").schema.default_version == "v2"
+
+
+@pytest.mark.django_db()
 def test_import_schema_update_runs_migrations(here):
     """Prove that importing a dataset schema twice does not fail"""
     verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
