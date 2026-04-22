@@ -1,3 +1,7 @@
+# 2026-04-22 (9.4.3)
+
+* Bugfix: Do not migrate any table that doesn't change its version.
+
 # 2026-04-09 (9.4.2)
 
 * Add validation for fields with a relation: these should NOT end with "Id".
