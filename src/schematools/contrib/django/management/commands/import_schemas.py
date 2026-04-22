@@ -196,6 +196,9 @@ class Command(BaseCommand):
                 updated_table = updated_dataset.schema.get_table_by_id(
                     current_table.id, include_nested=False, include_through=False
                 )
+                if current_table.version == updated_table.version:
+                    # No migration necessary, as any change would have resulted in a version bump.
+                    continue
                 if current_table.version.vmajor == updated_table.version.vmajor:
                     # If the table is under_development and there are breaking changes to
                     # the table, drop the table
