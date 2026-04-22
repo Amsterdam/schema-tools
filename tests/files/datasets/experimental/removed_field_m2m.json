@@ -14,17 +14,14 @@
           "id": "experimentaltable",
           "title": "Table to test experimental tables with m2m relations in a stable version",
           "type": "table",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "status": "under_development",
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "identifier": "id",
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "id",
-              "schema"
-            ],
+            "required": ["id", "schema"],
             "display": "id",
             "properties": {
               "schema": {
@@ -53,10 +50,7 @@
             "identifier": "id",
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "id",
-              "schema"
-            ],
+            "required": ["id", "schema"],
             "display": "id",
             "properties": {
               "schema": {
