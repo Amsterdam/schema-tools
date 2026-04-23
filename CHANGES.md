@@ -1,3 +1,8 @@
+# 2026-04-23 (9.5.0)
+
+* Refactor exports so that it does not reuse the same db connection for all exports. Instead pass
+  in the db engine and create a connection for each export.
+
 # 2026-04-22 (9.4.3)
 
 * Bugfix: Do not migrate any table that doesn't change its version.
