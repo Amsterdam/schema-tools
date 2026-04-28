@@ -195,7 +195,6 @@ def create_views(
     command: BaseCommand,
     datasets: Iterable[Dataset],
     base_app_name: str | None = None,
-    dry_run: bool = False,
 ) -> None:
     """Create views. This is a separate function to allow easy reuse."""
     errors = 0
@@ -238,10 +237,6 @@ def create_views(
                 )
 
                 if _check_required_permissions_exist(view_dataset_auth, required_permissions):
-                    if dry_run:
-                        command.stdout.write("  The following sql would be executed:")
-                        command.stdout.write(f"  {view_sql}")
-                        continue
                     try:
                         with connection.cursor() as cursor:
                             _create_users(cursor, write_role_name, view_owner_name)

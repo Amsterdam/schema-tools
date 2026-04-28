@@ -13,7 +13,7 @@ def test_import_schema(here):
     """Prove that dataset schema gets imported correctly"""
     hr_json_path = here / "files/datasets/hr.json"
     args = [hr_json_path]
-    call_command("import_schemas", *args, dry_run=False)
+    call_command("import_schemas", *args)
     assert models.Dataset.objects.count() == 1
     assert models.Dataset.objects.first().name == "hr"
     assert models.DatasetTable.objects.count() == 4
@@ -27,8 +27,8 @@ def test_import_schema_twice(here):
     gebieden = here / "files/datasets/gebieden.json"
     hr_json_path = here / "files/datasets/hr.json"
     args = [hr_json_path, verblijfsobjecten, gebieden]
-    call_command("import_schemas", *args, dry_run=False)
-    call_command("import_schemas", *args, dry_run=False)
+    call_command("import_schemas", *args)
+    call_command("import_schemas", *args)
     assert models.Dataset.objects.count() == 3
     assert models.Dataset.objects.get(name="hr") is not None
 
@@ -39,14 +39,14 @@ def test_import_schema_update_default_version(here):
     bag = here / "files/datasets/bag_verblijfsobjecten.json"
     afval = here / "files/datasets/huishoudelijkafval/dataset.json"
     args = [gebieden, bag, afval]
-    call_command("import_schemas", *args, create_tables=1, create_views=1, dry_run=False)
+    call_command("import_schemas", *args, create_tables=1, create_views=1)
     assert models.Dataset.objects.count() == 3
     assert models.Dataset.objects.get(name="huishoudelijkafval").schema.default_version == "v1"
 
     afval_v2 = here / "files/datasets/huishoudelijkafval/dataset_v2.json"
     args = [gebieden, bag, afval_v2]
     # Changing the default version should not fail
-    call_command("import_schemas", *args, create_tables=1, create_views=1, dry_run=False)
+    call_command("import_schemas", *args, create_tables=1, create_views=1)
     assert models.Dataset.objects.count() == 3
     assert models.Dataset.objects.get(name="huishoudelijkafval").schema.default_version == "v2"
 
@@ -64,7 +64,6 @@ def test_import_schema_update_runs_migrations(here):
         hr_json_path,
         create_tables=1,
         create_views=1,
-        dry_run=False,
     )
     activiteiten_table = models.DatasetTable.objects.get(name="maatschappelijkeactiviteiten")
     with connection.cursor() as cursor:
@@ -87,7 +86,6 @@ def test_import_schema_update_runs_migrations(here):
         gebieden,
         verblijfsobjecten,
         verbosity=3,
-        dry_run=False,
     )
     activiteiten_table = models.DatasetTable.objects.get(name="maatschappelijkeactiviteiten")
     with connection.cursor() as cursor:
@@ -105,44 +103,6 @@ def test_import_schema_update_runs_migrations(here):
 
 
 @pytest.mark.django_db()
-def test_import_schema_update_has_dry_run(here, capsys):
-    """Prove that importing a dataset schema twice does not fail"""
-    verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
-    gebieden = here / "files/datasets/gebieden.json"
-    hr_json_path = here / "files/datasets/hr.json"
-    call_command(
-        "import_schemas",
-        gebieden,
-        verblijfsobjecten,
-        hr_json_path,
-        create_tables=1,
-        create_views=1,
-        dry_run=False,
-    )
-    updated_hr_json_path = here / "files/datasets/hr_updated.json"
-    call_command("import_schemas", updated_hr_json_path, gebieden, verblijfsobjecten, "--dry-run")
-    activiteiten_table = models.DatasetTable.objects.get(name="maatschappelijkeactiviteiten")
-    with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
-                column_name
-            FROM
-                information_schema.columns
-            WHERE
-                table_name = '{activiteiten_table.db_table}'
-            """
-        )
-        columns = [col for row in cursor.fetchall() for col in row]
-        assert "activiteit_type" not in columns
-    captured = capsys.readouterr()
-    assert "DRY RUN" in captured.out
-    assert (
-        """ALTER TABLE "hr_activiteiten_v1" ADD COLUMN "activiteit_type" varchar NULL;"""
-        in captured.out
-    )
-
-
-@pytest.mark.django_db()
 def test_import_schema_with_table_migrations(here, capsys):
     """Prove that importing a dataset schema with migrate tables runs migrations"""
     verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"
@@ -153,7 +113,6 @@ def test_import_schema_with_table_migrations(here, capsys):
         hr_json_path,
         gebieden,
         verblijfsobjecten,
-        "--execute",
         "--create-tables",
         "--migrate-tables",
     )
@@ -163,7 +122,6 @@ def test_import_schema_with_table_migrations(here, capsys):
         updated_hr_json_path,
         gebieden,
         verblijfsobjecten,
-        "--execute",
         "--migrate-tables",
     )
     captured = capsys.readouterr()
@@ -181,7 +139,6 @@ def test_import_schema_with_no_table_migrations(here, capsys):
         hr_json_path,
         gebieden,
         verblijfsobjecten,
-        "--execute",
         "--no-migrate-tables",
     )
     updated_hr_json_path = here / "files/datasets/hr_updated.json"
@@ -190,7 +147,6 @@ def test_import_schema_with_no_table_migrations(here, capsys):
         updated_hr_json_path,
         gebieden,
         verblijfsobjecten,
-        "--execute",
         "--no-migrate-tables",
     )
     captured = capsys.readouterr()
@@ -206,10 +162,9 @@ def test_import_schema_does_not_alter_column(here, capsys):
         gebieden,
         create_tables=1,
         create_views=1,
-        dry_run=False,
     )
     updated_gebieden_json_path = here / "files/datasets/gebieden_updated_comment.json"
-    call_command("import_schemas", updated_gebieden_json_path, "--dry-run")
+    call_command("import_schemas", updated_gebieden_json_path)
     captured = capsys.readouterr()
     assert (
         """ALTER TABLE "gebieden_bouwblokken_v1" ALTER COLUMN "identificatie" TYPE varchar;"""
@@ -218,7 +173,7 @@ def test_import_schema_does_not_alter_column(here, capsys):
 
 
 @pytest.mark.django_db()
-def test_import_schema_escapes_percentage_in_comment(here, capsys):
+def test_import_schema_works_with_percentage_in_comment(here, capsys):
     """Prove that % signs are escaped in generated SQL"""
     gebieden = here / "files/datasets/gebieden.json"
     call_command(
@@ -226,15 +181,23 @@ def test_import_schema_escapes_percentage_in_comment(here, capsys):
         gebieden,
         create_tables=1,
         create_views=1,
-        dry_run=False,
     )
     updated_gebieden_json_path = here / "files/datasets/gebieden_updated_comment.json"
-    call_command("import_schemas", updated_gebieden_json_path, "--dry-run")
-    captured = capsys.readouterr()
-    assert (
-        """COMMENT ON COLUMN "gebieden_bouwblokken_v1"."identificatie" IS 'Unieke identificatie """
-        """van het object. Gewijzigd voor db_comment met %%.';""" in captured.out
-    )
+    call_command("import_schemas", updated_gebieden_json_path)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """SELECT
+                column_name, col_description(format('%s.%s', table_schema, table_name)::regclass::oid, ordinal_position) AS column_comment
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = 'gebieden_bouwblokken_v1'
+            """
+        )
+        columns = [row for row in cursor.fetchall() if row[0] == "identificatie"]
+        assert (
+            "Unieke identificatie van het object. Gewijzigd voor db_comment met %." in columns[0]
+        )
 
 
 @pytest.mark.django_db
@@ -247,7 +210,7 @@ def test_import_schema_enables_and_disables_api_based_on_status(here):
     hr_json_path = here / "files/datasets/hr.json"
     woonplaatsen_json_path = here / "files/datasets/woonplaatsen.json"
     args = [hr_json_path, woonplaatsen_json_path]
-    call_command("import_schemas", *args, dry_run=False)
+    call_command("import_schemas", *args)
     assert models.Dataset.objects.count() == 2
     assert models.Dataset.objects.get(name="hr").enable_api is True
     assert models.Dataset.objects.get(name="woonplaatsen").enable_api is False
@@ -256,7 +219,7 @@ def test_import_schema_enables_and_disables_api_based_on_status(here):
 @pytest.mark.django_db
 def test_import_schema_drops_experimental_table_with_breaking_change(here):
     original = here / "files/datasets/experimental/original.json"
-    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    call_command("import_schemas", original, create_tables=1)
 
     assert models.Dataset.objects.count() == 1
     table = models.DatasetTable.objects.get(name="experimentaltable")
@@ -274,7 +237,7 @@ def test_import_schema_drops_experimental_table_with_breaking_change(here):
         assert "other" in columns
 
     updated = here / "files/datasets/experimental/removed_field.json"
-    call_command("import_schemas", updated, dry_run=False, create_tables=1)
+    call_command("import_schemas", updated, create_tables=1)
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -295,52 +258,23 @@ def test_import_schema_drops_experimental_table_with_breaking_change_no_create_t
     here, capsys
 ):
     original = here / "files/datasets/experimental/original.json"
-    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    call_command("import_schemas", original, create_tables=1)
     assert models.Dataset.objects.count() == 1
 
     updated = here / "files/datasets/experimental/removed_field.json"
-    call_command("import_schemas", updated, dry_run=False, create_tables=False)
+    call_command("import_schemas", updated, create_tables=False)
     captured = capsys.readouterr()
     assert """Not dropping table, as create_tables is set to false.""" in captured.out
 
 
 @pytest.mark.django_db
-def test_import_schema_drops_experimental_table_with_breaking_change_dry_run(here, capsys):
-    original = here / "files/datasets/experimental/original.json"
-    call_command("import_schemas", original, dry_run=False, create_tables=1)
-    assert models.Dataset.objects.count() == 1
-
-    updated = here / "files/datasets/experimental/removed_field.json"
-    call_command("import_schemas", updated, dry_run=True, create_tables=1)
-    captured = capsys.readouterr()
-    assert """Would drop and replace table experimental_experimentaltable_v1.""" in captured.out
-
-
-@pytest.mark.django_db
-def test_import_schema_doesnt_drop_experimental_table_with_non_breaking_change_dry_run(
-    here, capsys
-):
-    original = here / "files/datasets/experimental/original.json"
-    call_command("import_schemas", original, dry_run=False, create_tables=1)
-    assert models.Dataset.objects.count() == 1
-
-    updated = here / "files/datasets/experimental/new_field.json"
-    call_command("import_schemas", updated, dry_run=True, create_tables=1)
-    captured = capsys.readouterr()
-    assert (
-        """ALTER TABLE "experimental_experimentaltable_v1" ADD COLUMN "another" bigint NULL;"""
-        in captured.out
-    )
-
-
-@pytest.mark.django_db
 def test_import_schema_updates_experimental_table_with_non_breaking_change(here):
     original = here / "files/datasets/experimental/original.json"
-    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    call_command("import_schemas", original, create_tables=1)
     assert models.Dataset.objects.count() == 1
 
     updated = here / "files/datasets/experimental/new_field.json"
-    call_command("import_schemas", updated, dry_run=False, create_tables=1)
+    call_command("import_schemas", updated, create_tables=1)
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -359,7 +293,7 @@ def test_import_schema_updates_experimental_table_with_non_breaking_change(here)
 @pytest.mark.django_db
 def test_import_schema_drop_experimental_table_with_m2m_also_drops_through_table(here, capsys):
     original = here / "files/datasets/experimental/original_m2m.json"
-    call_command("import_schemas", original, dry_run=False, create_tables=1)
+    call_command("import_schemas", original, create_tables=1)
     assert models.Dataset.objects.count() == 1
 
     # There's a through table
@@ -369,7 +303,7 @@ def test_import_schema_drop_experimental_table_with_m2m_also_drops_through_table
         assert "experimental_experimentaltable_ligt_in_other_table_v1" in tables
 
     updated = here / "files/datasets/experimental/removed_field_m2m.json"
-    call_command("import_schemas", updated, dry_run=False, create_tables=1)
+    call_command("import_schemas", updated, create_tables=1)
 
     # Through table has been deleted
     with connection.cursor() as cursor:
@@ -428,7 +362,7 @@ def test_missing_datasets_import(here, dataset_library, capsys):
     afval = here / "files/datasets/afval.json"
     args = [gebieden, afval]
 
-    call_command("import_schemas", *args, dry_run=False)
+    call_command("import_schemas", *args)
 
     captured = capsys.readouterr()
     assert """Deleted the following datasets: {'parkeervakken'}""" in captured.out

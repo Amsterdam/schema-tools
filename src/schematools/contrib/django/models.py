@@ -214,7 +214,6 @@ class Dataset(models.Model):
         schema: DatasetSchema,
         path: str | None = None,
         enable_db: bool = True,
-        save: bool = True,
     ) -> Dataset:
         """Create the schema based on the Amsterdam Schema JSON input"""
         name = cls.name_from_schema(schema)
@@ -233,12 +232,11 @@ class Dataset(models.Model):
             enable_db=enable_db,
         )
         obj._loader = schema.loader  # retain collection on saving
-        if save:
-            obj.save()
+        obj.save()
         obj.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
         return obj
 
-    def save_for_schema(self, schema: DatasetSchema, path: str, save: bool = True) -> bool:
+    def save_for_schema(self, schema: DatasetSchema, path: str) -> bool:
         """Update this model with schema data"""
         self.schema_data = schema.json(
             inline_tables=True, inline_publishers=True, inline_scopes=True
@@ -253,7 +251,7 @@ class Dataset(models.Model):
         self.path = path
         self._loader = schema.loader  # retain collection on saving
 
-        if changed and save:
+        if changed:
             self.save(
                 update_fields=[
                     "schema_data",

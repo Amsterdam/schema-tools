@@ -125,7 +125,6 @@ class Command(BaseCommand):
             table1,
             table2,
             real_apps=real_apps,
-            dry_run=True,  # We do not apply the migrations here, just show the SQL.
             database=options["database"],
         )
 

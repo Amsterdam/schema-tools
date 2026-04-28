@@ -37,17 +37,13 @@ class Command(BaseCommand):
         parser.add_argument("--create-tables", dest="create_tables", action="store_true")
         parser.add_argument("--create-views", dest="create_views", action="store_true")
         parser.add_argument("--no-create-tables", dest="create_tables", action="store_false")
-        parser.add_argument("--dry-run", dest="dry_run", action="store_true")
-        parser.add_argument("--execute", dest="dry_run", action="store_false")
         parser.add_argument("--migrate-tables", dest="migrate_tables", action="store_true")
         parser.add_argument("--no-migrate-tables", dest="migrate_tables", action="store_false")
         parser.set_defaults(create_tables=False)
         parser.set_defaults(create_views=False)
-        parser.set_defaults(dry_run=True)
         parser.set_defaults(migrate_tables=True)
 
     def handle(self, *args, **options):
-        self.dry_run = options["dry_run"]
         self.verbosity = options["verbosity"]
         self.schema_dependencies = deque()
         current_datasets = {
@@ -70,7 +66,6 @@ class Command(BaseCommand):
                         self.stdout.write(f"Missing dataset: {dataset.name}")
                         call_command("remove_schemas", dataset.name)
 
-            # Contains unsaved Dataset objects if dry_run.
             updated_datasets = self._run_import(schemas)
             if not updated_datasets:
                 self.stdout.write("No new datasets imported")
@@ -82,10 +77,10 @@ class Command(BaseCommand):
             # Reasons for not creating tables directly are to manually configure the
             # "Datasets" model flags first. E.g. disable "enable_db".
             if options["create_tables"]:
-                create_tables(self, updated_datasets, allow_unmanaged=True, dry_run=self.dry_run)
+                create_tables(self, updated_datasets, allow_unmanaged=True)
 
             if options["create_views"]:
-                create_views(self, updated_datasets, dry_run=self.dry_run)
+                create_views(self, updated_datasets)
 
     def get_missing_datasets(
         self, current_datasets: dict[str, Dataset], schemas: dict[str, DatasetSchema]
@@ -213,10 +208,6 @@ class Command(BaseCommand):
                                 self.stdout.write(
                                     "Not dropping table, as create_tables is set to false."
                                 )
-                            elif self.dry_run:
-                                self.stdout.write(
-                                    f"Would drop and replace table {current_table.db_name}."
-                                )
                             else:
                                 # drop the table and rely on create_tables to create it again.
                                 for field in current_table.fields:
@@ -238,7 +229,6 @@ class Command(BaseCommand):
                         current_table,
                         updated_table,
                         real_apps,
-                        dry_run=self.dry_run,
                     )
 
     def _run_import(self, dataset_schemas: dict[str, DatasetSchema]) -> list[Dataset]:
@@ -256,13 +246,13 @@ class Command(BaseCommand):
         """Import a single dataset schema."""
         try:
             dataset = Dataset.objects.get(name=Dataset.name_from_schema(schema))
-            updated = dataset.save_for_schema(schema, path, save=not self.dry_run)
+            updated = dataset.save_for_schema(schema, path)
             if updated:
                 self.stdout.write(f"  Updated {schema.id}")
                 return dataset
         except Dataset.DoesNotExist:
             # Create new dataset
-            dataset = Dataset.create_for_schema(schema, path, save=not self.dry_run)
+            dataset = Dataset.create_for_schema(schema, path)
             self.stdout.write(f"  Created {schema.id}")
             return dataset
 
