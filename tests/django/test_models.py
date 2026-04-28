@@ -108,7 +108,6 @@ class TestDjangoModelFactory:
             "import_schemas",
             here / "files/datasets/aardgasverbruik.json",
             create_tables=True,
-            dry_run=False,
         )
         factory = DjangoModelFactory(aardgasverbruik_dataset)
         MraLiander, PostcodeRangeModel, _ = factory.build_models()
@@ -329,7 +328,6 @@ class TestDjangoModelFactory:
             "import_schemas",
             here / "files/datasets/parkeervakken.json",
             create_tables=True,
-            dry_run=False,
         )
         factory = DjangoModelFactory(parkeervakken_dataset)
         model_dict = {cls._meta.model_name: cls for cls in factory.build_models()}

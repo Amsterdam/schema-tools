@@ -24,7 +24,6 @@ def migrate(
     current_table: DatasetTableSchema,
     updated_table: DatasetTableSchema,
     real_apps: list[str],
-    dry_run: bool = True,
     database: str = DEFAULT_DB_ALIAS,
     project_state: ProjectState = None,
 ):
@@ -66,9 +65,7 @@ def migrate(
     connection = connections[database]
     for _app, app_migrations in migrations.items():
         for migration in app_migrations:
-            start_state = execute_migration(
-                command, connection, start_state, migration, dry_run=dry_run
-            )
+            start_state = execute_migration(command, connection, start_state, migration)
     return start_state
 
 
@@ -93,7 +90,7 @@ def get_base_project_state(
     project_state = ProjectState(real_apps=set(real_apps))
 
     # Generate model states for all other tables in the dataset
-    for table in dataset_model.schema.get_tables(include_nested=True, include_through=True):
+    for table in dataset_model.schema.get_all_tables(include_nested=True, include_through=True):
         # Exclude the actual table that changes, including any nested/through tables.
         if table.id == exclude_table or (
             table.has_parent_table and table.parent_table.id == exclude_table
@@ -161,7 +158,6 @@ def execute_migration(
     connection: BaseDatabaseWrapper,
     start_state: ProjectState,
     migration: Migration,
-    dry_run: bool = True,
 ) -> ProjectState:
     """Print the SQL statements for a migration"""
     with connection.schema_editor(collect_sql=True, atomic=migration.atomic) as schema_editor:
@@ -185,12 +181,8 @@ def execute_migration(
             command.stdout.write("-- No actual SQL statements generated, skipping this migration")
             return start_state
 
-        if dry_run:
-            command.stdout.write("-- DRY RUN - the following would be executed:")
-            command.stdout.write("\n".join(collected_sql))
-        else:
-            schema_editor.collect_sql = False
-            schema_editor.execute("\n".join(collected_sql))
+        schema_editor.collect_sql = False
+        schema_editor.execute("\n".join(collected_sql))
     return start_state
 
 
