@@ -165,7 +165,6 @@ class Dataset(models.Model):
     # Settings for publishing the schema:
     enable_api = models.BooleanField(default=True)
     enable_db = models.BooleanField(default=True)
-    enable_export = models.BooleanField(default=False)
     path = models.TextField(unique=True, blank=False, validators=[URLPathValidator()])
     auth = models.CharField(_("Authorization"), blank=True, null=True, max_length=250)
     ordering = models.IntegerField(_("Ordering"), default=1)
@@ -418,7 +417,6 @@ class DatasetTable(models.Model):
 
     # Exposed metadata from the jsonschema, so other apps (e.g. geosearch) can query these
     auth = models.CharField(max_length=250, blank=True, null=True)
-    enable_export = models.BooleanField(default=False)
     enable_geosearch = models.BooleanField(default=True)
     db_table = models.CharField(max_length=100, unique=True)
     display_field = models.CharField(max_length=50, null=True, blank=True)
