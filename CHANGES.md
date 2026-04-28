@@ -1,3 +1,8 @@
+# 2026-04-28 (9.6.0)
+
+* Remove dry-run/execute flag from import schemas command as this is unused.
+* Remove export_enabled column, as exports are now defined in the schema.
+
 # 2026-04-23 (9.5.0)
 
 * Refactor exports so that it does not reuse the same db connection for all exports. Instead pass
