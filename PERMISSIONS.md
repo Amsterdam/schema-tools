@@ -45,7 +45,8 @@ Examples of CLI usage:
 ### Typical use case to create and/or update all read and write roles
 ```shell script
 schema permissions apply --auto --revoke --create-roles --execute
-````
+```
+Please note that grants are on table and column level, not role level.
 
 ### Postgres user authorization
 ```shell script
