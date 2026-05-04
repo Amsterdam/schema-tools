@@ -1,3 +1,7 @@
+# 2026-05-04 (9.6.2)
+
+* Fix bug in migration logic when table with same name exists in multiple versions.
+
 # 2026-05-04 (9.6.1)
 
 * Fix bug in migration logic when default version is changed.
