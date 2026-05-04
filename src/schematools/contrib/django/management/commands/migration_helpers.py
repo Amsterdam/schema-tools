@@ -93,14 +93,15 @@ def get_base_project_state(
     project_state = ProjectState(real_apps=set(real_apps))
 
     # Generate model states for all other tables in the dataset
-    for table in dataset_model.schema.get_all_tables(include_nested=True, include_through=True):
-        # Exclude the actual table that changes, including any nested/through tables.
-        if table.id == exclude_table or (
-            table.has_parent_table and table.parent_table.id == exclude_table
-        ):
-            continue
+    for vmajor, version in dataset_model.schema.versions.items():
+        for table in version.get_tables(include_nested=True, include_through=True):
+            # Exclude the actual table that changes, including any nested/through tables.
+            if table.id == exclude_table or (
+                table.has_parent_table and table.parent_table.id == exclude_table
+            ):
+                continue
 
-        project_state.add_model(get_model_state(dataset_model, table))
+            project_state.add_model(get_model_state(dataset_model, table, vmajor=vmajor))
 
     return project_state
 
@@ -112,25 +113,36 @@ def get_versioned_project_state(
     This clones the base state, so other related models are only created once.
     """
     project_state = base_state.clone()
-    project_state.add_model(get_model_state(dataset_model, table))
+    for vmajor, version in dataset_model.schema.versions.items():
+        if version.get_table_by_id(table.id) is not None:
+            project_state.add_model(get_model_state(dataset_model, table, vmajor=vmajor))
 
-    # Add any nested tables and through tables,
-    # that are also part of this table schema.
-    for field in table.fields:
-        if (through_table := field.through_table) is not None:
-            project_state.add_model(get_model_state(dataset_model, through_table))
-        elif (nested_table := field.nested_table) is not None:
-            project_state.add_model(get_model_state(dataset_model, nested_table))
+            # Add any nested tables and through tables,
+            # that are also part of this table schema.
+            for field in table.fields:
+                if (through_table := field.through_table) is not None:
+                    project_state.add_model(
+                        get_model_state(dataset_model, through_table, vmajor=vmajor)
+                    )
+                elif (nested_table := field.nested_table) is not None:
+                    project_state.add_model(
+                        get_model_state(dataset_model, nested_table, vmajor=vmajor)
+                    )
 
     return project_state
 
 
-def get_model_state(dataset_model: Dataset, table: DatasetTableSchema, managed=True) -> ModelState:
+def get_model_state(
+    dataset_model: Dataset, table: DatasetTableSchema, managed=True, vmajor=None
+) -> ModelState:
     """Generate the model state for a table."""
     # The migration-engine will only consider models that have "managed=True".
     # This is turned off by default for the DjangoModelFactory.build_model() logic,
     # and needs to be overwritten here (patching model._meta and its original_attrs is nasty).
     factory = DjangoModelFactory(dataset_model)
+    if vmajor is not None:
+        factory.set_version(vmajor)
+
     model_class = factory.build_model(table, meta_options={"managed": managed})
 
     # Generate the model. exclude_rels=True because M2M-through tables are generated manually.
