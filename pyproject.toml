@@ -21,6 +21,7 @@ norecursedirs = ["node_modules", ".tox", ".git"]
 filterwarnings = [
     "once::DeprecationWarning",
     "once::PendingDeprecationWarning",
+    "ignore::RuntimeWarning",
 ]
 
 # ==== Coverage ====
