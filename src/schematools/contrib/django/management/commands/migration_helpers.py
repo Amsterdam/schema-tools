@@ -14,6 +14,7 @@ from django.db.migrations.state import ModelState, ProjectState
 
 from schematools.contrib.django.factories import DjangoModelFactory
 from schematools.contrib.django.models import Dataset
+from schematools.exceptions import DatasetTableNotFound
 from schematools.types import DatasetTableSchema
 
 
@@ -114,7 +115,8 @@ def get_versioned_project_state(
     """
     project_state = base_state.clone()
     for vmajor, version in dataset_model.schema.versions.items():
-        if version.get_table_by_id(table.id) is not None:
+        try:
+            version.get_table_by_id(table.id)
             project_state.add_model(get_model_state(dataset_model, table, vmajor=vmajor))
 
             # Add any nested tables and through tables,
@@ -128,6 +130,9 @@ def get_versioned_project_state(
                     project_state.add_model(
                         get_model_state(dataset_model, nested_table, vmajor=vmajor)
                     )
+        except DatasetTableNotFound:
+            # This table is not part of the dataset version, so we ignore it.
+            continue
 
     return project_state
 
