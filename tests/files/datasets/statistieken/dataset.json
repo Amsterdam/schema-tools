@@ -1,0 +1,567 @@
+{
+  "type": "dataset",
+  "id": "statistieken",
+  "title": "statistieken",
+  "description": "Statistieken van Onderzoek & Statistiek, gepubliceerd in een generieke model",
+  "owner": "Gemeente Amsterdam",
+  "publisher": {
+    "$ref": "publishers/GLEBZ"
+  },
+  "crs": "EPSG:28992",
+  "creator": "Onderzoek en Statistiek",
+  "homepage": "https://onderzoek.amsterdam.nl",
+  "auth": "OPENBAAR",
+  "authorizationGrantor": "basisstatistiek.ois@amsterdam.nl",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "version": "1.0.0",
+      "status": "stable",
+      "enableAPI": true,
+      "enableGeosearch": true,
+      "tables": [
+        {
+          "id": "indicatoren",
+          "type": "table",
+          "version": "1.0.0",
+          "description": "Alle indicatoren (variabelen) en hun metadata",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": ["schema", "id", "naam", "label", "definitie", "thema"],
+            "display": "naam",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v4.0.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer",
+                "title": "id",
+                "description": "Unieke identificatie van de indicator"
+              },
+              "naam": {
+                "type": "string",
+                "title": "naam",
+                "description": "Unieke naam van de indicator"
+              },
+              "label": {
+                "type": "string",
+                "title": "label",
+                "description": "Beknopte label van de indicator t.b.v. weergave"
+              },
+              "labelUk": {
+                "type": "string",
+                "title": "labelUk",
+                "description": "Beknopte label van de indicator in het Brits-Engels t.b.v. weergave"
+              },
+              "definitie": {
+                "type": "string",
+                "title": "definitie",
+                "description": "Definitie, die ten grondslag ligt van de indicator"
+              },
+              "definitieUk": {
+                "type": "string",
+                "title": "definitieUk",
+                "description": "Definitie in het Brits-Engels, die ten grondslag ligt van de indicator"
+              },
+              "beschrijving": {
+                "type": "string",
+                "title": "beschrijving",
+                "description": "Beschrijving en overige informatie over de indicator"
+              },
+              "berekening": {
+                "type": "string",
+                "title": "berekening",
+                "description": "Rekenformule, die is gebruikt om de waarde van de indicator te berekenen"
+              },
+              "bron": {
+                "type": "string",
+                "title": "bron",
+                "description": "Herkomst van de indicator en bijhorende definitie"
+              },
+              "thema": {
+                "type": "string",
+                "title": "thema",
+                "description": "Thematische indeling waaronder de indicator valt"
+              },
+              "eenheid": {
+                "type": "string",
+                "title": "eenheid",
+                "description": "Eenheid waarin de indicator wordt uitgedrukt"
+              },
+              "symbool": {
+                "type": "string",
+                "title": "symbool",
+                "description": "Symbool, behorende bij de eenheid"
+              },
+              "decimalen": {
+                "type": "integer",
+                "title": "decimalen",
+                "description": "Aantal decimalen, waarin de waarde van de indicator moet worden gepubliceerd"
+              },
+              "dimensieNaam": {
+                "type": "string",
+                "title": "dimensieNaam",
+                "description": "Naam van de dimensie, waartoe de indicator behoort"
+              },
+              "dimensieCode": {
+                "type": "string",
+                "title": "dimensieCode",
+                "description": "Code van de dimensie, waartoe de dimensie behoort"
+              },
+              "dimensieBeschrijving": {
+                "type": "string",
+                "title": "dimensieBeschrijving",
+                "description": "Beschrijving van de dimensie, waartoe de dimensie behoort"
+              },
+              "extraAttributen": {
+                "type": "object",
+                "format": "json",
+                "title": "extraAttributen",
+                "description": "Vrij veld om aanvullende attributen met hun waarde op te slaan, die nodig kunnen zijn voor verdere visualisatie"
+              },
+              "parent": {
+                "type": "string",
+                "title": "parent",
+                "description": "Naam van een indicator, waartoe de indicator behoort"
+              },
+              "verantwoordelijke": {
+                "type": "string",
+                "title": "verantwoordelijke",
+                "description": "Naam van het team binnen de organisatie, dat verantwoordelijk is voor de indicator"
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "cijfers",
+          "type": "table",
+          "version": "1.0.0",
+          "description": "Alle cijfers, gerelateerd aan de bijhorende indicatoren en dimensies",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": [
+              "schema",
+              "id",
+              "ruimtelijkeDimensieType",
+              "ruimtelijkeDimensieCode",
+              "ruimtelijkeDimensieNaam",
+              "temporeleDimensieType",
+              "begindatum",
+              "einddatum",
+              "indicator",
+              "waarde"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v4.0.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer",
+                "title": "id",
+                "description": "Unieke identificatie van het cijfer i.c.m. de bijhorende indicator en dimensies"
+              },
+              "ruimtelijkeDimensieType": {
+                "type": "string",
+                "title": "ruimtelijkeDimensieType",
+                "description": "Type ruimtelijke indeling"
+              },
+              "ruimtelijkeDimensieDatum": {
+                "type": "string",
+                "format": "date",
+                "title": "ruimtelijkeDimensieDatum",
+                "description": "Datum waarop de ruimtelijke indeling van kracht is geworden"
+              },
+              "ruimtelijkeDimensieCode": {
+                "type": "string",
+                "title": "ruimtelijkeDimensieCode",
+                "description": "Unieke code van de ruimtelijke indeling binnen hetzelfde type en datum"
+              },
+              "ruimtelijkeDimensieNaam": {
+                "type": "string",
+                "title": "ruimtelijkeDimensieNaam",
+                "description": "Unieke naam van de ruimtelijke indeling binnen hetzelfde type en datum"
+              },
+              "temporeleDimensieType": {
+                "type": "string",
+                "title": "temporeleDimensieType",
+                "description": "Type van de tijddimensie. Dit kan een vaste peildatum zijn of een periode"
+              },
+              "begindatum": {
+                "type": "string",
+                "format": "date-time",
+                "title": "begindatum",
+                "description": "Begindatum waarop de tijddimensie is begonnen"
+              },
+              "einddatum": {
+                "type": "string",
+                "format": "date-time",
+                "title": "einddatum",
+                "description": "Einddatum waarop de tijddimensie is geëindigd"
+              },
+              "indicator": {
+                "type": "string",
+                "title": "indicator",
+                "description": "Naam van de indicator waarop het cijfer betrekking heeft"
+              },
+              "waarde": {
+                "type": "number",
+                "title": "waarde",
+                "description": "Waarde van het cijfer met het aantal decimalen, zoals vastgelegd bij de indicator"
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "toepassingen",
+          "type": "table",
+          "version": "1.0.0",
+          "description": "Alle cijfers, gerelateerd aan de bijhorende indicatoren en dimensies",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": [
+              "schema",
+              "id",
+              "naam",
+              "versie",
+              "ruimtelijkeDimensie",
+              "temporeleDimensie",
+              "indicator"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v4.0.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer",
+                "title": "id",
+                "description": "Unieke identificatie"
+              },
+              "naam": {
+                "type": "string",
+                "title": "naam",
+                "description": "Naam van de toepassing"
+              },
+              "versie": {
+                "type": "string",
+                "title": "versie",
+                "description": "Versie van de toepassing"
+              },
+              "ruimtelijkeDimensie": {
+                "type": "string",
+                "title": "ruimtelijkeDimensie",
+                "description": "Ruimtelijke indeling"
+              },
+              "temporeleDimensie": {
+                "type": "string",
+                "title": "temporeleDimensie",
+                "description": "Type van de tijddimensie. Dit kan een vaste peildatum zijn of een periode"
+              },
+              "indicator": {
+                "type": "string",
+                "title": "indicator",
+                "description": "Naam van de indicator"
+              }
+            }
+          },
+          "status": "stable"
+        }
+      ]
+    },
+    "v2": {
+      "version": "2.0.0",
+      "status": "under_development",
+      "enableAPI": true,
+      "tables": [
+        {
+          "id": "indicatoren",
+          "title": "indicatoren",
+          "description": "Alle indicatoren (variabelen) en hun metadata",
+          "type": "table",
+          "version": "2.0.0",
+          "status": "under_development",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["naam"],
+            "required": [
+              "schema",
+              "naam",
+              "label",
+              "definitie",
+              "thema",
+              "status"
+            ],
+            "display": "naam",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v4.1.0#/definitions/schema"
+              },
+              "naam": {
+                "type": "string",
+                "title": "naam",
+                "description": "Unieke naam van de indicator"
+              },
+              "label": {
+                "type": "string",
+                "title": "label",
+                "description": "Beknopte label van de indicator t.b.v. weergave"
+              },
+              "labelUk": {
+                "type": "string",
+                "title": "labelUk",
+                "description": "Beknopte label van de indicator in het Brits-Engels t.b.v. weergave"
+              },
+              "definitie": {
+                "type": "string",
+                "title": "definitie",
+                "description": "Definitie, die ten grondslag ligt van de indicator"
+              },
+              "definitieUk": {
+                "type": "string",
+                "title": "definitieUk",
+                "description": "Definitie in het Brits-Engels, die ten grondslag ligt van de indicator"
+              },
+              "beschrijving": {
+                "type": "string",
+                "title": "beschrijving",
+                "description": "Beschrijving en overige informatie over de indicator"
+              },
+              "thema": {
+                "type": "array",
+                "title": "thema",
+                "description": "Thematische indeling waaronder de indicator valt",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "eenheid": {
+                "type": "object",
+                "title": "eenheid",
+                "description": "Eenheid waarin de indicator wordt uitgedrukt",
+                "properties": {
+                  "naam": {
+                    "type": "string"
+                  },
+                  "symbool": {
+                    "type": "string"
+                  }
+                }
+              },
+              "decimalen": {
+                "type": "integer",
+                "title": "decimalen",
+                "description": "Aantal decimalen, waarin de waarde van de indicator moet worden gepubliceerd"
+              },
+              "privacygevoelig": {
+                "type": "boolean",
+                "title": "privacygevoelig",
+                "description": "Indicatie of indicator privacygevoelig is/kan zijn"
+              },
+              "status": {
+                "type": "object",
+                "title": "status",
+                "description": "Status van de indicator. De indicator kan vervallen zijn en niet meer actief worden bijgehouden",
+                "properties": {
+                  "vervallen": {
+                    "type": "boolean"
+                  },
+                  "vervaldatum": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "vervalreden": {
+                    "type": "string"
+                  }
+                }
+              },
+              "bron": {
+                "type": "array",
+                "title": "bron",
+                "description": "Herkomst van de indicator en bijhorende definitie",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "extraAttributen": {
+                "type": "object",
+                "format": "json",
+                "title": "extraAttributen",
+                "description": "Vrij veld om aanvullende attributen met hun waarde op te slaan, die nodig kunnen zijn voor verdere visualisatie"
+              }
+            }
+          }
+        },
+        {
+          "id": "cijfers",
+          "title": "cijfers",
+          "description": "Alle cijfers, gerelateerd aan de bijhorende indicatoren en dimensies",
+          "type": "table",
+          "version": "2.0.0",
+          "status": "under_development",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": [
+              "schema",
+              "id",
+              "gebiedstype",
+              "gebiedsdatum",
+              "gebiedscode",
+              "type",
+              "begindatum",
+              "einddatum",
+              "indicator",
+              "waarde"
+            ],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v4.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer",
+                "title": "id",
+                "description": "Unieke identificatie van het cijfer i.c.m. de bijhorende indicator en dimensies"
+              },
+              "gebiedstype": {
+                "type": "string",
+                "title": "gebiedstype",
+                "description": "Type ruimtelijke indeling"
+              },
+              "gebiedsdatum": {
+                "type": "string",
+                "format": "date",
+                "title": "gebiedsdatum",
+                "description": "Datum waarop de ruimtelijke indeling van kracht is geworden"
+              },
+              "gebiedscode": {
+                "type": "string",
+                "title": "gebiedscode",
+                "description": "Unieke code van de ruimtelijke indeling binnen hetzelfde type en datum"
+              },
+              "gebiedsnaam": {
+                "type": "string",
+                "title": "gebiedsnaam",
+                "description": "Unieke naam van de ruimtelijke indeling binnen hetzelfde type en datum"
+              },
+              "tijdseenheid": {
+                "type": "string",
+                "title": "tijdseenheid",
+                "description": "Eenheid van de tijddimensie. Dit kan een vaste peildatum zijn of een periode"
+              },
+              "jaartal": {
+                "type": "integer",
+                "title": "jaartal",
+                "description": "Jaar waarop het cijfer betrekking heeft"
+              },
+              "begindatum": {
+                "type": "string",
+                "format": "date",
+                "title": "begindatum",
+                "description": "Begindatum waarop de tijddimensie is begonnen"
+              },
+              "einddatum": {
+                "type": "string",
+                "format": "date",
+                "title": "einddatum",
+                "description": "Einddatum waarop de tijddimensie is geëindigd"
+              },
+              "indicator": {
+                "type": "string",
+                "title": "indicator",
+                "description": "Naam van de indicator waarop het cijfer betrekking heeft",
+                "relation": "statistieken:indicatoren"
+              },
+              "waarde": {
+                "type": "number",
+                "title": "waarde",
+                "description": "Waarde van het cijfer met het aantal decimalen, zoals vastgelegd bij de indicator"
+              }
+            }
+          }
+        },
+        {
+          "id": "kengetallen",
+          "type": "table",
+          "version": "2.0.0",
+          "status": "under_development",
+          "description": "De spreidings- en centrummaten van de cijfers",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": ["schema", "indicator", "jaartal", "begindatum"],
+            "display": "id",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v4.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer",
+                "title": "id",
+                "description": "Unieke identificatie van het cijfer i.c.m. de bijhorende indicator en dimensies"
+              },
+              "indicator": {
+                "type": "string",
+                "title": "indicator",
+                "description": "Naam van de indicator waarop het kengetal betrekking heeft",
+                "relation": "statistieken:indicatoren"
+              },
+              "jaartal": {
+                "type": "integer",
+                "title": "jaartal",
+                "description": "Jaar waarop het kengetal betrekking heeft"
+              },
+              "begindatum": {
+                "type": "string",
+                "format": "date",
+                "title": "begindatum",
+                "description": "Begindatum waarop de tijddimensie is begonnen"
+              },
+              "gebiedstype": {
+                "type": "string",
+                "title": "gebiedstype",
+                "description": "Gebiedstype, die als bron dient voor de kengetallen"
+              },
+              "gemiddelde": {
+                "type": "number",
+                "title": "gemiddelde",
+                "description": "Berekende gemiddelde van de indicator / begindatum"
+              },
+              "standaarddeviatie": {
+                "type": "number",
+                "title": "standaarddeviatie",
+                "description": "Berekende standaarddeviatie van de indicator / begindatum"
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "name": "all",
+          "tables": "*",
+          "filetypes": ["csv", "geojson"],
+          "scopes": ["openbaar"]
+        }
+      ]
+    }
+  }
+}
