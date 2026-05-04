@@ -1,3 +1,9 @@
+# 2026-05-04 (9.6.1)
+
+* Fix bug in migration logic when default version is changed.
+* Fix deprecation warning about jsonschema format checker.
+* Mute RuntimeWarnings in tests.
+
 # 2026-04-28 (9.6.0)
 
 * Remove dry-run/execute flag from import schemas command as this is unused.
