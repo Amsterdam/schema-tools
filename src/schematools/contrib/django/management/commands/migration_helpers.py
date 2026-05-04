@@ -25,7 +25,7 @@ def migrate(
     updated_table: DatasetTableSchema,
     real_apps: list[str],
     database: str = DEFAULT_DB_ALIAS,
-    project_state: ProjectState = None,
+    project_state: ProjectState | None = None,
 ):
     """
     Creates a project state for both the current dataset and the updated dataset.
@@ -55,7 +55,10 @@ def migrate(
     migrations = get_migrations(
         current_state,
         updated_state,
-        app_name=f"{current_dataset.schema.id}_{current_dataset.schema.default_version}",
+        apps={
+            f"{current_dataset.schema.id}_{vmajor}" for vmajor in current_dataset.schema.versions
+        },
+        migration_name=f"{current_dataset.schema.id}_{current_dataset.schema.default_version}",
     )
     if not migrations:
         command.stdout.write(f"  No changes detected for table {current_table.id}")
@@ -135,21 +138,21 @@ def get_model_state(dataset_model: Dataset, table: DatasetTableSchema, managed=T
 
 
 def get_migrations(
-    state1: ProjectState, state2: ProjectState, app_name: str
+    state1: ProjectState, state2: ProjectState, apps: set[str], migration_name: str
 ) -> dict[str, list[Migration]]:
     """Generate a migration object for the given table versions."""
     detector = MigrationAutodetector(
         from_state=state1,
         to_state=state2,
-        questioner=InteractiveMigrationQuestioner(specified_apps=[app_name]),
+        questioner=InteractiveMigrationQuestioner(specified_apps=apps),
     )
     # The dependency graph remains empty here, as we assume all other models are still
     # in place. We only compare the changes between 2 models of the same table.
     dependency_graph = MigrationGraph()
     return detector.changes(
         dependency_graph,
-        trim_to_apps=[app_name],
-        migration_name=app_name,
+        trim_to_apps=apps,
+        migration_name=migration_name,
     )
 
 
@@ -182,6 +185,8 @@ def execute_migration(
             return start_state
 
         schema_editor.collect_sql = False
+        if command.verbosity >= 2:
+            command.stdout.write("\n".join(collected_sql))
         schema_editor.execute("\n".join(collected_sql))
     return start_state
 
