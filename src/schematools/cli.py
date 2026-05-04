@@ -19,7 +19,7 @@ import jsonschema
 import requests
 import sqlalchemy
 from deepdiff import DeepDiff
-from jsonschema import draft7_format_checker
+from jsonschema.validators import Draft7Validator
 from sqlalchemy import Engine, inspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import create_engine
@@ -503,7 +503,7 @@ def validate(
             jsonschema.validate(
                 instance=dataset.json_data(inline_tables=True, inline_publishers=False),
                 schema=meta_schema,
-                format_checker=draft7_format_checker,
+                format_checker=Draft7Validator.FORMAT_CHECKER,
             )
         except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
             click.echo("Structural validation: ", nl=False)
@@ -628,7 +628,7 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
                 jsonschema.validate(
                     instance=publisher.json_data(),
                     schema=meta_schema,
-                    format_checker=draft7_format_checker,
+                    format_checker=Draft7Validator.FORMAT_CHECKER,
                 )
             except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
                 click.echo("Structural validation: ", nl=False)
@@ -684,7 +684,7 @@ def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
                 jsonschema.validate(
                     instance=scope.json_data(),
                     schema=meta_schema,
-                    format_checker=draft7_format_checker,
+                    format_checker=Draft7Validator.FORMAT_CHECKER,
                 )
             except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
                 click.echo("Structural validation: ", nl=False)
@@ -823,7 +823,7 @@ def batch_validate(
         meta_schema = _fetch_json(url)
         validator_class = jsonschema.validators.validator_for(meta_schema)
         validator_class.check_schema(meta_schema)
-        validator = validator_class(meta_schema, format_checker=draft7_format_checker)
+        validator = validator_class(meta_schema, format_checker=Draft7Validator.FORMAT_CHECKER)
         validators[meta_schema_version] = validator
 
     done = set()
