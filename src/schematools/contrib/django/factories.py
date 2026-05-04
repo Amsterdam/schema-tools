@@ -128,6 +128,12 @@ class DjangoModelFactory:
         # Set _current_version to default in case we directly call `build_model()`
         self._current_version: str = self.schema.default_version
 
+    def set_version(self, version: str) -> None:
+        """Set the current version for the factory, so that relations are properly linked."""
+        if version not in self.schema.versions:
+            raise ValueError(f"Version {version} not found in dataset schema.")
+        self._current_version = version
+
     def build_models(self) -> list[type[M]]:
         """Main entrypoint, creates a list of django models for a dataset.
 
@@ -455,8 +461,7 @@ class DjangoModelFactory:
             **self._get_basic_kwargs(field),
             "related_name": related_name,
             "through": (
-                f"{self.get_app_label(through_table.dataset)}."
-                f"{self.get_model_name(through_table)}"
+                f"{self.get_app_label(through_table.dataset)}.{self.get_model_name(through_table)}"
             ),
             "through_fields": through_fields,
         }
