@@ -1,0 +1,79 @@
+{
+  "type": "dataset",
+  "id": "relationadd",
+  "title": "relationadd",
+  "crs": "EPSG:28992",
+  "publisher": "unknown",
+  "auth": "OPENBAAR",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": true,
+      "status": "stable",
+      "version": "1.0.1",
+      "tables": [
+        {
+          "id": "authors",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$id": "https://example.invalid/schemas/relationadd/authors.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": ["schema", "id", "name"],
+            "display": "name",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer",
+                "description": "Primary key"
+              },
+              "name": {
+                "type": "string",
+                "description": "Author name"
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "books",
+          "type": "table",
+          "version": "1.1.0",
+          "schema": {
+            "$id": "https://example.invalid/schemas/relationadd/books.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": ["schema", "id", "title"],
+            "display": "title",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer",
+                "description": "Primary key"
+              },
+              "title": {
+                "type": "string",
+                "description": "Book title"
+              },
+              "author": {
+                "type": "integer",
+                "relation": "relationadd:authors",
+                "description": "Relation to an author"
+              }
+            }
+          },
+          "status": "stable"
+        }
+      ]
+    }
+  }
+}
