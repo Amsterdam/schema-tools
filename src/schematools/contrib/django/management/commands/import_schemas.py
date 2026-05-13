@@ -12,6 +12,7 @@ from schematools import validation
 from schematools.contrib.django.factories import DjangoModelFactory
 from schematools.contrib.django.management.commands.migration_helpers import drop_table, migrate
 from schematools.contrib.django.models import Dataset
+from schematools.exceptions import DatasetTableNotFound
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
 from schematools.types import DatasetSchema, DatasetTableSchema
 
@@ -192,50 +193,75 @@ class Command(BaseCommand):
                 continue
 
             real_apps = self._load_dependencies(updated_dataset.schema, updated_dataset)
-            for current_table in current_dataset.schema.get_all_tables():
-                updated_table = updated_dataset.schema.get_table_by_id(
-                    current_table.id,
-                    table_version=current_table.version.vmajor,
-                    include_nested=False,
-                    include_through=False,
-                )
-                if options.get("table_id") and options["table_id"] != current_table.id:
+            processed: set[tuple[str, str]] = set()
+            table_filter = options.get("table_id")
+            for ds_version, current_version in current_dataset.schema.versions.items():
+                updated_version = updated_dataset.schema.versions.get(ds_version)
+                if updated_version is None:
+                    self.stdout.write(
+                        f"Version {ds_version} deleted in updated dataset, skipping..."
+                    )
                     continue
-                # If the table is under_development and there are breaking changes to
-                # the table, drop the table
-                if current_table.status == DatasetTableSchema.Status.under_development:
-                    previous_fields = current_table.json_data()["schema"]["properties"]
-                    next_fields = updated_table.json_data()["schema"]["properties"]
-                    table_errors = validation.validate_table(previous_fields, next_fields)
-                    if len(table_errors) > 0:
-                        for error in table_errors:
-                            self.stdout.write(f"  [ERROR]: {error}")
-                        if not options["create_tables"]:
-                            self.stdout.write(
-                                "Not dropping table, as create_tables is set to false."
-                            )
-                        else:
-                            # drop the table and rely on create_tables to create it again.
-                            for field in current_table.fields:
-                                if through_table := field.through_table:
-                                    drop_table(through_table.db_name)
-                            drop_table(current_table.db_name)
-                            self.stdout.write(
-                                f"Dropped table {current_table.db_name} due to breaking "
-                                "changes while under development."
-                            )
-                        # do not migrate in this case.
+
+                for current_table in current_version.get_tables(
+                    include_nested=False, include_through=False
+                ):
+                    if table_filter and table_filter != current_table.id:
                         continue
 
-                # Migrate the table, no breaking changes
-                migrate(
-                    self,
-                    current_dataset,
-                    updated_dataset,
-                    current_table,
-                    updated_table,
-                    real_apps,
-                )
+                    table_key = (current_table.id, current_table.version.vmajor)
+                    if table_key in processed:
+                        continue
+                    processed.add(table_key)
+
+                    try:
+                        updated_table = updated_version.get_table_by_id(
+                            current_table.id,
+                            include_nested=False,
+                            include_through=False,
+                        )
+                    except DatasetTableNotFound:
+                        self.stdout.write(
+                            f"Table {current_table.id} deleted in updated dataset version "
+                            f"{ds_version}, skipping..."
+                        )
+                        continue
+
+                    # If the table is under_development and there are breaking changes to
+                    # the table, drop the table
+                    if current_table.status == DatasetTableSchema.Status.under_development:
+                        previous_fields = current_table.json_data()["schema"]["properties"]
+                        next_fields = updated_table.json_data()["schema"]["properties"]
+                        table_errors = validation.validate_table(previous_fields, next_fields)
+                        if len(table_errors) > 0:
+                            for error in table_errors:
+                                self.stdout.write(f"  [ERROR]: {error}")
+                            if not options["create_tables"]:
+                                self.stdout.write(
+                                    "Not dropping table, as create_tables is set to false."
+                                )
+                            else:
+                                # Drop the table and rely on create_tables to create it again.
+                                for field in current_table.fields:
+                                    if through_table := field.through_table:
+                                        drop_table(through_table.db_name)
+                                drop_table(current_table.db_name)
+                                self.stdout.write(
+                                    f"Dropped table {current_table.db_name} due to breaking "
+                                    "changes while under development."
+                                )
+                            # Do not migrate in this case.
+                            continue
+
+                    # Migrate the table, no breaking changes
+                    migrate(
+                        self,
+                        current_dataset,
+                        updated_dataset,
+                        current_table,
+                        updated_table,
+                        real_apps,
+                    )
 
     def _run_import(self, dataset_schemas: dict[str, DatasetSchema]) -> list[Dataset]:
         datasets = []
