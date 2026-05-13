@@ -67,9 +67,12 @@ def migrate(
 
     # Generate SQL per migration file, just like `manage.py sqlmigrate` does:
     connection = connections[database]
+    seen_sql_statements = []
     for _app, app_migrations in migrations.items():
         for migration in app_migrations:
-            start_state = execute_migration(command, connection, start_state, migration)
+            start_state, seen_sql_statements = execute_migration(
+                command, connection, start_state, migration, seen_sql_statements
+            )
     return start_state
 
 
@@ -150,8 +153,7 @@ def get_model_state(
 
     model_class = factory.build_model(table, meta_options={"managed": managed})
 
-    # Generate the model. exclude_rels=True because M2M-through tables are generated manually.
-    return PatchedModelState.from_model(model_class, exclude_rels=True)
+    return PatchedModelState.from_model(model_class)
 
 
 def get_migrations(
@@ -178,7 +180,8 @@ def execute_migration(
     connection: BaseDatabaseWrapper,
     start_state: ProjectState,
     migration: Migration,
-) -> ProjectState:
+    seen_sql_statements: list,
+) -> tuple[ProjectState, list]:
     """Print the SQL statements for a migration"""
     with connection.schema_editor(collect_sql=True, atomic=migration.atomic) as schema_editor:
         command.stdout.write(f"-- Migration {migration.name} for dataset {migration.app_label}")
@@ -195,17 +198,24 @@ def execute_migration(
         collected_sql = _filter_alter_type_statements(schema_editor.collected_sql)
         # Escape % signs
         collected_sql = _escape_comment_statements(collected_sql)
+        # Remove already executed sql statements
+        collected_sql, seen_sql_statements = _remove_seen_statements(
+            collected_sql, seen_sql_statements
+        )
 
         # If we've only got comments left, skip this migration
         if all(statement.startswith("--") for statement in collected_sql):
             command.stdout.write("-- No actual SQL statements generated, skipping this migration")
-            return start_state
+            return start_state, seen_sql_statements
 
         schema_editor.collect_sql = False
         if command.verbosity >= 2:
+            command.stdout.write("Collected SQL")
             command.stdout.write("\n".join(collected_sql))
+            command.stdout.write("Skipped:")
+            command.stdout.write("\n".join(seen_sql_statements))
         schema_editor.execute("\n".join(collected_sql))
-    return start_state
+    return start_state, seen_sql_statements
 
 
 def _filter_alter_type_statements(sql: list) -> list:
@@ -223,6 +233,18 @@ def _escape_comment_statements(sql: list) -> list:
     when executing this on the database.
     """
     return [s.replace("%", "%%") if re.search(r"COMMENT.+", s) else s for s in sql]
+
+
+def _remove_seen_statements(sql: list, seen_sql_statements: list) -> tuple[list, list]:
+    """Deduplicate SQL statements since the migration engine can generate duplicates
+    when there are tables that exist in multiple versions.
+    """
+    deduped_sql = []
+    for statement in sql:
+        if statement not in seen_sql_statements:
+            deduped_sql.append(statement)
+            seen_sql_statements.append(statement)
+    return deduped_sql, seen_sql_statements
 
 
 class PatchedModelState(ModelState):

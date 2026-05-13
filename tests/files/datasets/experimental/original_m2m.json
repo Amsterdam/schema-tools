@@ -21,10 +21,7 @@
             "identifier": "id",
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "id",
-              "schema"
-            ],
+            "required": ["id", "schema"],
             "display": "id",
             "properties": {
               "schema": {
@@ -40,12 +37,21 @@
                 "type": "string"
               },
               "ligtInOtherTable": {
-                "type": "object",
-                "properties": {
-                  "identificatie": {"type": "string"},
-                  "volgnummer": {"type": "integer"},
-                  "beginGeldigheid": {"type": "string", "format": "date-time"},
-                  "eindGeldigheid": {"type": "string", "format": "date-time"}
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "identificatie": { "type": "string" },
+                    "volgnummer": { "type": "integer" },
+                    "beginGeldigheid": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "eindGeldigheid": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
                 },
                 "relation": "experimental:othertable",
                 "title": "ligt in other table",
@@ -65,10 +71,7 @@
             "identifier": "id",
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "id",
-              "schema"
-            ],
+            "required": ["id", "schema"],
             "display": "id",
             "properties": {
               "schema": {
