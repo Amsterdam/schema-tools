@@ -612,7 +612,7 @@ class DatasetSchema(SchemaType):
     def get_table_by_id(
         self,
         table_id: str,
-        table_version: str | None = None,
+        version: str | None = None,
         include_nested: bool = True,
         include_through: bool = True,
     ) -> DatasetTableSchema:
@@ -624,7 +624,6 @@ class DatasetSchema(SchemaType):
                 include_nested=include_nested, include_through=include_through
             )
             if to_snake_case(table.id) == to_snake_case(table_id)
-            and (table_version is None or table.version.vmajor == table_version)
         )
 
     @property
