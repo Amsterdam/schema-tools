@@ -103,6 +103,93 @@ def test_import_schema_update_runs_migrations(here):
 
 
 @pytest.mark.django_db()
+def test_import_schema_update_add_relation_field_creates_db_column(here):
+    original = here / "files/datasets/relationadd_original.json"
+    call_command("import_schemas", original, create_tables=1)
+
+    books_table = models.DatasetTable.objects.get(dataset__name="relationadd", name="books")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""SELECT
+                column_name
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{books_table.db_table}'
+            """
+        )
+        columns = [col for row in cursor.fetchall() for col in row]
+        assert "author_id" not in columns
+
+    updated = here / "files/datasets/relationadd_updated.json"
+    call_command("import_schemas", updated)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""SELECT
+                column_name
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{books_table.db_table}'
+            """
+        )
+        columns = [col for row in cursor.fetchall() for col in row]
+        assert "author_id" in columns
+
+
+@pytest.mark.django_db()
+def test_import_schema_add_field_on_table_existing_in_multiple_versions_does_not_error(here):
+    original = here / "files/datasets/multiversionadd_original.json"
+    call_command("import_schemas", original, create_tables=1)
+
+    tables = list(
+        models.DatasetTable.objects.filter(dataset__name="multiversionadd", name="items")
+    )
+    assert len(tables) == 2
+    tables_by_version = {"v1": None, "v2": None}
+    for table in tables:
+        if table.db_table.endswith("_v1"):
+            tables_by_version["v1"] = table
+        elif table.db_table.endswith("_v2"):
+            tables_by_version["v2"] = table
+
+    assert tables_by_version["v1"] is not None
+    assert tables_by_version["v2"] is not None
+
+    for table in (tables_by_version["v1"], tables_by_version["v2"]):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""SELECT
+                    column_name
+                FROM
+                    information_schema.columns
+                WHERE
+                    table_name = '{table.db_table}'
+                """
+            )
+            columns = [col for row in cursor.fetchall() for col in row]
+            assert "extra" not in columns
+
+    updated = here / "files/datasets/multiversionadd_updated.json"
+    call_command("import_schemas", updated)
+
+    for table in (tables_by_version["v1"], tables_by_version["v2"]):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""SELECT
+                    column_name
+                FROM
+                    information_schema.columns
+                WHERE
+                    table_name = '{table.db_table}'
+                """
+            )
+            columns = [col for row in cursor.fetchall() for col in row]
+            assert "extra" in columns
+
+
+@pytest.mark.django_db()
 def test_import_schema_with_table_migrations(here, capsys):
     """Prove that importing a dataset schema with migrate tables runs migrations"""
     verblijfsobjecten = here / "files/datasets/verblijfsobjecten.json"

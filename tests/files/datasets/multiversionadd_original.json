@@ -1,0 +1,77 @@
+{
+  "type": "dataset",
+  "id": "multiversionadd",
+  "title": "multiversionadd",
+  "crs": "EPSG:28992",
+  "publisher": "unknown",
+  "auth": "OPENBAAR",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": true,
+      "status": "stable",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "items",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$id": "https://example.invalid/schemas/multiversionadd/items.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": ["schema", "id", "name"],
+            "display": "name",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "status": "stable"
+        }
+      ]
+    },
+    "v2": {
+      "enableAPI": true,
+      "status": "stable",
+      "version": "2.0.0",
+      "tables": [
+        {
+          "id": "items",
+          "type": "table",
+          "version": "2.0.0",
+          "schema": {
+            "$id": "https://example.invalid/schemas/multiversionadd/items.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": ["id"],
+            "required": ["schema", "id", "name"],
+            "display": "name",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "status": "stable"
+        }
+      ]
+    }
+  }
+}
