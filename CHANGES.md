@@ -1,3 +1,8 @@
+# 2026-05-04 (9.6.3)
+
+* Fix bug in migration logic for adding relations.
+* Fix bug in migration logic for adding field on table present in multiple versions.
+
 # 2026-05-04 (9.6.2)
 
 * Fix bug in migration logic when table with same name exists in multiple versions.
