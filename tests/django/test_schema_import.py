@@ -139,6 +139,43 @@ def test_import_schema_update_add_relation_field_creates_db_column(here):
 
 
 @pytest.mark.django_db()
+def test_import_schema_update_add_relation_to_other_dataset_creates_db_column(here):
+    gebieden = here / "files/datasets/gebieden.json"
+    original = here / "files/datasets/relationadd_original.json"
+    call_command("import_schemas", gebieden, original, create_tables=1)
+
+    books_table = models.DatasetTable.objects.get(dataset__name="relationadd", name="books")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""SELECT
+                column_name
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{books_table.db_table}'
+            """
+        )
+        columns = [col for row in cursor.fetchall() for col in row]
+        assert "location_id" not in columns
+
+    updated = here / "files/datasets/relationadd_external.json"
+    call_command("import_schemas", gebieden, updated)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""SELECT
+                column_name
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{books_table.db_table}'
+            """
+        )
+        columns = [col for row in cursor.fetchall() for col in row]
+        assert "location_id" in columns
+
+
+@pytest.mark.django_db()
 def test_import_schema_add_field_on_table_existing_in_multiple_versions_does_not_error(here):
     original = here / "files/datasets/multiversionadd_original.json"
     call_command("import_schemas", original, create_tables=1)
