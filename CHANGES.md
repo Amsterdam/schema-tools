@@ -1,3 +1,7 @@
+# 2026-05-04 (9.6.4)
+
+* Fix bug in migration logic for adding relations to other datasets.
+
 # 2026-05-04 (9.6.3)
 
 * Fix bug in migration logic for adding relations.
