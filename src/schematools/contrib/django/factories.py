@@ -134,7 +134,7 @@ class DjangoModelFactory:
             raise ValueError(f"Version {version} not found in dataset schema.")
         self._current_version = version
 
-    def build_models(self) -> list[type[M]]:
+    def build_models(self, *, use_fk_fields: bool = True) -> list[type[M]]:
         """Main entrypoint, creates a list of django models for a dataset.
 
         Ensures relations are built properly between versions.
@@ -142,12 +142,16 @@ class DjangoModelFactory:
         for vmajor, version in self.schema.versions.items():
             self._current_version = vmajor
             for table in version.get_tables(include_nested=True, include_through=True):
-                self.models.append(self.build_model(table))
+                self.models.append(self.build_model(table, use_fk_fields=use_fk_fields))
 
         return self.models
 
     def build_model(
-        self, table_schema: DatasetTableSchema, meta_options: dict[str, Any] | None = None
+        self,
+        table_schema: DatasetTableSchema,
+        meta_options: dict[str, Any] | None = None,
+        *,
+        use_fk_fields: bool = True,
     ) -> type[M]:
         """Generate a Django model class from a JSON Schema definition."""
         app_label = self.get_app_label(self.schema)
@@ -169,7 +173,7 @@ class DjangoModelFactory:
             ):
                 continue
 
-            model_field = self._model_field_factory(field)
+            model_field = self._model_field_factory(field, use_fk_fields=use_fk_fields)
 
             model_field.name = field.python_name  # Generate name, fix if needed.
             model_field.field_schema = field  # avoid extra lookups.
@@ -250,14 +254,37 @@ class DjangoModelFactory:
         else:
             return f"{schema.id}_{schema.default_version}"
 
-    def _model_field_factory(self, field: DatasetFieldSchema) -> models.Field:
+    def _model_field_factory(
+        self, field: DatasetFieldSchema, *, use_fk_fields: bool
+    ) -> models.Field:
         """Construct the Django model field for a schema field."""
         if field.relation:
-            return self._fk_field_factory(field)
+            if use_fk_fields:
+                return self._fk_field_factory(field)
+            return self._basic_relation_field_factory(field)
         elif field.nm_relation:
             return self._nm_field_factory(field)
         else:
             return self._basic_field_factory(field)
+
+    def _basic_relation_field_factory(self, field: DatasetFieldSchema) -> models.Field:
+        """Construct a non-relational field for a schema 1:N relation.
+
+        This is intended for scenarios like migrations, where we want to create/alter
+        the underlying database column (with the schema-defined `db_column`, typically
+        with an `_id` suffix) but we do not require an actual database FK constraint.
+        """
+        try:
+            field_cls = self._get_model_field_class(field)
+        except RuntimeError:
+            # Composite relations can be modeled as an object. In that case, use
+            # the first identifier field of the related table for type derivation.
+            if field.related_table is None:
+                raise
+            target_id_field = field.related_table.identifier_fields[0]
+            field_cls = self._get_model_field_class(target_id_field)
+
+        return field_cls(**self._get_basic_kwargs(field))
 
     def _get_model_field_class(self, field: DatasetFieldSchema) -> type[models.Field]:
         type_ = field.type

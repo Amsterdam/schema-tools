@@ -25,6 +25,7 @@ def migrate(
     current_table: DatasetTableSchema,
     updated_table: DatasetTableSchema,
     real_apps: list[str],
+    version: str | None = None,
     database: str = DEFAULT_DB_ALIAS,
     project_state: ProjectState | None = None,
 ):
@@ -52,12 +53,19 @@ def migrate(
 
     start_state = current_state
 
+    if command.verbosity >= 2:
+        command.stdout.write(f"Current state for {current_dataset.name}")
+        command.stdout.write(str({k: v.fields for k, v in current_state.models.items()}))
+        command.stdout.write(f"Updated state for {updated_dataset.name}")
+        command.stdout.write(str({k: v.fields for k, v in updated_state.models.items()}))
+
     # Let the migration engine perform its magic, similar to `manage.py makemigrations`:
+    name = f"{current_dataset.schema.id}_{version or current_dataset.schema.default_version}"
     migrations = get_migrations(
         current_state,
         updated_state,
-        apps={f"{current_dataset.schema.id}_{vmajor}"},
-        migration_name=f"{current_dataset.schema.id}_{current_dataset.schema.default_version}",
+        apps={name},
+        migration_name=name,
     )
     if not migrations:
         command.stdout.write(f"  No changes detected for table {current_table.id}")
@@ -146,9 +154,14 @@ def get_model_state(
     if vmajor is not None:
         factory.set_version(vmajor)
 
-    model_class = factory.build_model(table, meta_options={"managed": managed})
+    model_class = factory.build_model(
+        table,
+        meta_options={"managed": managed},
+        use_fk_fields=False,
+    )
 
-    return PatchedModelState.from_model(model_class)
+    # Keep exclude_rels=True to avoid pulling M2M relations into the migration state.
+    return PatchedModelState.from_model(model_class, exclude_rels=True)
 
 
 def get_migrations(
@@ -183,9 +196,7 @@ def execute_migration(
             start_state = migration.apply(start_state, schema_editor, collect_sql=True)
         except Exception:
             # On crashes, still show the generated statements so far
-            command.stdout.write(
-                "\n".join(_filter_alter_type_statements(schema_editor.collected_sql))
-            )
+            command.stdout.write("\n".join(schema_editor.collected_sql))
             raise
 
         # Filter out ALTER COLUMN statements
