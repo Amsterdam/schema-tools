@@ -174,12 +174,32 @@ class Command(BaseCommand):
 
             if self.verbosity >= 2:
                 self.stdout.write(f"-- Building models for {dependency_schema.id}")
-            DjangoModelFactory(dataset).build_models()
+            DjangoModelFactory(self._get_dummy_dataset_model(dependency_schema)).build_models()
             real_apps.extend(
                 [f"{dependency_schema.id}_{vmajor}" for vmajor in dependency_schema.versions]
             )
 
         return real_apps
+
+    def _get_dummy_dataset_model(self, dataset_schema: DatasetSchema) -> Dataset:
+        """Generate a dummy Dataset instance for model factory usage.
+
+        This avoids creating DB rows for dependency schemas while still allowing
+        DjangoModelFactory to build and register the virtual app models.
+        """
+        dummy = Dataset(
+            name=dataset_schema.id,
+            schema_data=dataset_schema.json(inline_tables=True),
+            view_data=dataset_schema.get_view_sql(),
+            auth=" ".join(dataset_schema.auth),
+            path=dataset_schema.id,
+            default_version=dataset_schema.default_version,
+            enable_api=dataset_schema.has_an_available_version,
+            enable_db=True,
+        )
+        dummy._loader = dataset_schema.loader
+        dummy.__dict__["schema"] = dataset_schema
+        return dummy
 
     def _migrate_tables(
         self, current_datasets: dict[str, Dataset], updated_datasets: Iterable[Dataset], options
@@ -261,6 +281,7 @@ class Command(BaseCommand):
                         current_table,
                         updated_table,
                         real_apps,
+                        version=ds_version,
                     )
 
     def _run_import(self, dataset_schemas: dict[str, DatasetSchema]) -> list[Dataset]:
