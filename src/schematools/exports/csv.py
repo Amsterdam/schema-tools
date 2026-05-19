@@ -9,7 +9,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from schematools.exports.base import BaseExporter
 from schematools.exports.modifiers import datetime_modifier, geo_modifier_ewkt, id_modifier
-from schematools.naming import toCamelCase
+from schematools.naming import to_snake_case, toCamelCase
 from schematools.types import DatasetTableSchema
 
 metadata = MetaData()
@@ -32,6 +32,11 @@ class CsvExporter(BaseExporter):  # noqa: D101
         # Use capitalize() on headers, because csv export does the same
         writer.writerow({fn: toCamelCase(fn).capitalize() for fn in field_names})
 
+        array_string_fields = {
+            to_snake_case(field.id)
+            for field in table.fields
+            if (field.is_array and field.get("items", {}).get("type") == "string")
+        }
         query = select(*columns)
         if temporal_clause is not None:
             query = query.where(temporal_clause)
@@ -46,4 +51,14 @@ class CsvExporter(BaseExporter):  # noqa: D101
             connection.execute(query) as result,
         ):
             for partition in result.mappings().partitions(size=1000):
-                writer.writerows(dict(row) for row in partition)
+                writer.writerows(
+                    {
+                        key: (
+                            ",".join(map(str, value))
+                            if key in array_string_fields and isinstance(value, list)
+                            else value
+                        )
+                        for key, value in dict(row).items()
+                    }
+                    for row in partition
+                )

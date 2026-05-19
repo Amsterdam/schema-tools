@@ -1,3 +1,7 @@
+# 2026-05-19 (9.7.0)
+
+* Added handling for array fields in csv exports.
+
 # 2026-05-04 (9.6.4)
 
 * Fix bug in migration logic for adding relations to other datasets.
