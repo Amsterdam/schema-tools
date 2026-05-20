@@ -267,6 +267,12 @@ def meetbouten_export_schema(export_schema_loader) -> DatasetSchema:
     return export_schema_loader.get_dataset_from_file("meetbouten/dataset.json")
 
 
+@pytest.fixture()
+def fietspaaltjes_export_schema(export_schema_loader) -> DatasetSchema:
+    """A dataset schema for export tests."""
+    return export_schema_loader.get_dataset_from_file("fietspaaltjes/dataset.json")
+
+
 @pytest.fixture
 def aardgasverbruik_schema(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("aardgasverbruik.json")
@@ -329,6 +335,11 @@ def hr_schema_auth(schema_loader) -> DatasetSchema:
 def meetbouten_schema(schema_loader, gebieden_schema) -> DatasetSchema:
     # gebieden_schema is listed as dependency to resolve relations
     return schema_loader.get_dataset_from_file("meetbouten.json")
+
+
+@pytest.fixture
+def fietspaaltjes_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("fietspaaltjes.json")
 
 
 @pytest.fixture

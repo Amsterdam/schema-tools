@@ -93,6 +93,13 @@ class TestExports:
         importer.load_file(ndjson_path)
 
     @pytest.fixture
+    def fietspaaltjes_content(self, here, engine, fietspaaltjes_export_schema):
+        ndjson_path = here / "files" / "data" / "fietspaaltjes.ndjson"
+        importer = NDJSONImporter(fietspaaltjes_export_schema, engine)
+        importer.generate_db_objects("fietspaaltjes", truncate=True, ind_extra_index=False)
+        importer.load_file(ndjson_path)
+
+    @pytest.fixture
     def tmp_folder(self):
         """Creates a temporary folder for exports and cleans it up after the test."""
         path = Path("tmp")
@@ -124,6 +131,7 @@ class TestExports:
         storage_client,
         gebieden_export_schema,
         meetbouten_export_schema,
+        fietspaaltjes_export_schema,
         export_schema_loader,
         caplog,
     ):
@@ -137,6 +145,8 @@ class TestExports:
         importer = NDJSONImporter(meetbouten_export_schema, engine)
         importer.generate_db_objects("meetbouten", truncate=False, ind_extra_index=False)
         importer.generate_db_objects("metingen", truncate=False, ind_extra_index=False)
+        importer = NDJSONImporter(fietspaaltjes_export_schema, engine)
+        importer.generate_db_objects("fietspaaltjes", truncate=False, ind_extra_index=False)
         export(engine, storage_client, loader=export_schema_loader, cleanup=False)
         local_files = [
             "gebieden_v1_bouwblokken_openbaar.csv",
@@ -166,9 +176,11 @@ class TestExports:
             "meet_bouten_v1_meetbouten_openbaar.gpkg",
             "meet_bouten_v1_meetbouten_openbaar.geojson",
             "meet_bouten_v1_meetbouten_openbaar.jsonl",
+            "fietspaaltjes_v1_fietspaaltjes_openbaar.csv",
         ]
         storage_files = {
             "csv": [
+                "fietspaaltjes_v1_all_openbaar.csv.zip",
                 "gebieden_v1_kleine_gebieden_fp_mdw.csv.zip",
                 "gebieden_v1_alle_gebieden_openbaar.csv.zip",
                 "meet_bouten_v1_all_openbaar.csv.zip",
@@ -220,6 +232,33 @@ class TestExports:
             assert out_file.read() == (
                 "Identificatie,Ligtinbuurtid,Merkcode,Merkomschrijving,Geometrie,Genesteinfonaam,Genesteinfonummer\n"
                 "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6),,\n"
+            )
+
+    def test_csv_array_fields(
+        self, fietspaaltjes_export_schema, fietspaaltjes_content, create_context
+    ):
+        """Prove that csv export handles array of strings fields correctly
+        and array of object fields get filtered out."""
+        export_definition = fietspaaltjes_export_schema.versions["v1"].exports[0]
+        context = create_context(fietspaaltjes_export_schema, export_definition)
+
+        CsvExporter(context).export_tables()
+        with open(context.folder / "fietspaaltjes_v1_fietspaaltjes_openbaar.csv") as out_file:
+            assert out_file.read() == (
+                "Id,Geometry,Street,At,Area,Score2013,Scorecurrent,Count,Paaltjesweg,Soortpaaltje"
+                ",Uiterlijk,Type,Ruimte,Markering,Beschadigingen,Veiligheid,Zichtindonker,Soortweg,Noodzaak\n"
+                "Fietsplaatje record met display"
+                ",SRID=28992;POINT(119434 487092.6)"
+                ",Weesperplein,Geschutswerf,Amsterdam-Centrum,,reference for DISPLAY FIELD,6"
+                ",nu paaltje(s)"  # paaltjes_weg: 1 item
+                ',"paaltje(s) ong. 75cm hoog,verwijderde paaltjes"'  # soort_paaltje: array of 2
+                ",rood/wit"  # uiterlijk
+                ',"vast,uitneembaar"'  # type, array of 2
+                ",Voldoende: 1.6m of meer"  # ruimte, 1 item
+                ',"markering ontbreekt,onvoldoende markering"'  # markering: array of 2
+                ",,overzichtelijke locatie,onvoldoende reflectie op paal"
+                ',"rijbaan fiets+auto,fietspad"'  # soort_weg: array of 2
+                ",nodig tegen sluipverkeer\n"  # noodzaak: 1 item
             )
 
     def test_csv_export_only_actual(self, gebieden_export_schema, create_context, engine):

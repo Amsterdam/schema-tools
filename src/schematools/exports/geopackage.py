@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class GeopackageExporter(BaseExporter):
+    extension = "gpkg"
+
     def export_tables(self):
         pg_conn_str = (
             f"host={self.engine.url.host} "

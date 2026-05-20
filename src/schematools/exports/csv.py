@@ -9,7 +9,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from schematools.exports.base import BaseExporter
 from schematools.exports.modifiers import datetime_modifier, geo_modifier_ewkt, id_modifier
-from schematools.naming import toCamelCase
+from schematools.naming import to_snake_case, toCamelCase
 from schematools.types import DatasetTableSchema
 
 metadata = MetaData()
@@ -18,6 +18,21 @@ metadata = MetaData()
 class CsvExporter(BaseExporter):  # noqa: D101
     extension = "csv"
     processors = (geo_modifier_ewkt, id_modifier, datetime_modifier)
+
+    def _serialize_array_rows(
+        self,
+        row,
+        array_fields: set[str],
+    ) -> dict:
+        row_dict = dict(row)
+
+        # iterate over array fields instead of checking all columns
+        for field in array_fields:
+            value = row_dict.get(field)
+            if value is not None:
+                row_dict[field] = ",".join(value)
+
+        return row_dict
 
     def write_rows(
         self,
@@ -32,6 +47,7 @@ class CsvExporter(BaseExporter):  # noqa: D101
         # Use capitalize() on headers, because csv export does the same
         writer.writerow({fn: toCamelCase(fn).capitalize() for fn in field_names})
 
+        array_fields = {to_snake_case(field.id) for field in table.fields if field.is_array}
         query = select(*columns)
         if temporal_clause is not None:
             query = query.where(temporal_clause)
@@ -46,4 +62,6 @@ class CsvExporter(BaseExporter):  # noqa: D101
             connection.execute(query) as result,
         ):
             for partition in result.mappings().partitions(size=1000):
-                writer.writerows(dict(row) for row in partition)
+                writer.writerows(
+                    self._serialize_array_rows(dict(row), array_fields) for row in partition
+                )

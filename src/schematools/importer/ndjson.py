@@ -162,6 +162,9 @@ class TableFieldMapper:
             # JSONPath or alias.
             return self.cached_provenance[field.provenance].resolve(source)
         else:
+            if field.db_name in source:
+                return source[field.db_name]
+
             # camelCase name
             return source[field.id]
 
@@ -178,6 +181,14 @@ class TableFieldMapper:
             return json.dumps(value)
         elif field.is_json_object:
             return value
+        elif field.type == "array":
+            if value is None:
+                return None
+
+            if isinstance(value, list):
+                return value
+
+            return [value]
         elif isinstance(value, (dict, list)):
             raise ValueError(
                 f"Value of '{field.qualified_id}' should resolve to a scalar, not: {value!r}"

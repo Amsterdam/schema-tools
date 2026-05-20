@@ -60,7 +60,7 @@ class BaseExporter:
         public_scope = Scope.from_string(_PUBLIC_SCOPE)
         parent_scopes = set(dataset.scopes | table.scopes) - {public_scope}
         for field in table.fields:
-            if field.is_array and not (self.extension == "geojson" or self.extension == "jsonl"):
+            if field.is_array and self.extension == "gpkg":
                 continue
             if field.is_internal:
                 continue
