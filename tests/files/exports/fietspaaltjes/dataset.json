@@ -127,6 +127,22 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "gebruiksdoel": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject, zoals dit door de overheid als zodanig is toegestaan. code"
+                    },
+                    "omschrijving": {
+                      "type": "string",
+                      "description": "Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject, zoals dit door de overheid als zodanig is toegestaan. omschrijving"
+                    }
+                  }
+                }
               }
             }
           },

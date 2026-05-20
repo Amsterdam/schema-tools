@@ -237,7 +237,8 @@ class TestExports:
     def test_csv_array_fields(
         self, fietspaaltjes_export_schema, fietspaaltjes_content, create_context
     ):
-        """Prove that csv export handles array fields correctly."""
+        """Prove that csv export handles array of strings fields correctly
+        and array of object fields get filtered out."""
         export_definition = fietspaaltjes_export_schema.versions["v1"].exports[0]
         context = create_context(fietspaaltjes_export_schema, export_definition)
 
