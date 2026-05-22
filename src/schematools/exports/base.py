@@ -126,18 +126,10 @@ class BaseExporter:
             if table.has_geometry_fields and srid is None:
                 failures.append(
                     ExportTableFailure(
-                        dataset_id=self.dataset_schema.id,
-                        dataset_version=self.export.version,
-                        export_name=self.export.name,
-                        scopes=self.export.scopes_string,
-                        filetype=self.export.filetype,
+                        filename=self.export.filename_without_zip,
                         table_id=table.id,
-                        output_path=str(path),
-                        attempts=1,
-                        error={
-                            "type": "ValueError",
-                            "message": "Table has geo fields, but srid is None.",
-                        },
+                        error_type="ValueError",
+                        error_message="Table has geo fields, but srid is None.",
                     )
                 )
                 break
@@ -170,15 +162,10 @@ class BaseExporter:
             if last_exc is not None:
                 failures.append(
                     ExportTableFailure(
-                        dataset_id=self.dataset_schema.id,
-                        dataset_version=self.export.version,
-                        export_name=self.export.name,
-                        scopes=self.export.scopes_string,
-                        filetype=self.export.filetype,
+                        filename=self.export.filename_without_zip,
                         table_id=table.id,
-                        output_path=str(path),
-                        attempts=max_attempts,
-                        error={"type": type(last_exc).__name__, "message": str(last_exc)},
+                        error_type=type(last_exc).__name__,
+                        error_message=str(last_exc),
                     )
                 )
                 path.unlink()  # remove incomplete file
