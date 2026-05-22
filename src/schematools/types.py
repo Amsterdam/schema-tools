@@ -1040,6 +1040,27 @@ class ExportContext:
     temporal_date: datetime.datetime | None = None
 
 
+@dataclasses.dataclass(frozen=True)
+class ExportTableFailure:
+    """A structured failure for exporting a single table.
+
+    This is intentionally JSON-serializable (only primitives + nested dataclasses).
+    """
+
+    dataset_id: str
+    dataset_version: str
+    export_name: str
+    scopes: str
+    filetype: ExportFileType
+    table_id: str
+    output_path: str
+    attempts: int
+    error: dict[str, str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return dataclasses.asdict(self)
+
+
 @dataclasses.dataclass
 class Export:
     """Class that models the export definitions in the dataset schema."""

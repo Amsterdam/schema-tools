@@ -14,6 +14,7 @@ from schematools.types import (
     DatasetFieldSchema,
     DatasetTableSchema,
     ExportContext,
+    ExportTableFailure,
     Scope,
 )
 
@@ -103,29 +104,46 @@ class BaseExporter:
             )
         return None
 
-    def export_tables(self):
+    def export_tables(self) -> list[ExportTableFailure]:
+        failures: list[ExportTableFailure] = []
         for table in self.tables:
-            srid = table.crs.split(":")[1] if table.crs else None
-            if table.has_geometry_fields and srid is None:
-                raise ValueError("Table has geo fields, but srid is None.")
-            sa_table = self.sa_tables[table.id]
-            columns = list(self._get_columns(sa_table, table))
-            if not columns:
-                continue
             path = self.base_dir / self.export.table_filename(table.id)
-            if path.exists() and path.stat().st_size > 0:
-                logger.warning("File %s already exists. It will be skipped.", path.name)
-                continue
-            logger.info("Exporting %s.", path.name)
-            path.touch()
-            with path.open("w", encoding="utf8") as file_handle:
-                self.write_rows(
-                    file_handle,
-                    table,
-                    columns,
-                    self._get_temporal_clause(sa_table, table),
-                    srid,
+            try:
+                srid = table.crs.split(":")[1] if table.crs else None
+                if table.has_geometry_fields and srid is None:
+                    raise ValueError("Table has geo fields, but srid is None.")
+                sa_table = self.sa_tables[table.id]
+                columns = list(self._get_columns(sa_table, table))
+                if not columns:
+                    continue
+                if path.exists() and path.stat().st_size > 0:
+                    logger.warning("File %s already exists. It will be skipped.", path.name)
+                    continue
+                logger.info("Exporting %s.", path.name)
+                path.touch()
+                with path.open("w", encoding="utf8") as file_handle:
+                    self.write_rows(
+                        file_handle,
+                        table,
+                        columns,
+                        self._get_temporal_clause(sa_table, table),
+                        srid,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                failures.append(
+                    ExportTableFailure(
+                        dataset_id=self.dataset_schema.id,
+                        dataset_version=self.export.version,
+                        export_name=self.export.name,
+                        scopes=self.export.scopes_string,
+                        filetype=self.export.filetype,
+                        table_id=table.id,
+                        output_path=str(path),
+                        attempts=1,
+                        error={"type": type(exc).__name__, "message": str(exc)},
+                    )
                 )
+        return failures
 
     def write_rows(  # noqa: D102
         self,
