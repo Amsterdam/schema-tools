@@ -1,3 +1,9 @@
+# 2026-05-22 (9.8.0)
+
+* Add retry logic and failure capture to exports. Failures now do not result in the end of the
+  whole export flow, just that specific export. Subsequent exports are executed. The export
+  function returns a list of ExportTableFailures.
+
 # 2026-05-19 (9.7.0)
 
 * Added handling for array fields in csv exports.
