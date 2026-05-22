@@ -286,6 +286,70 @@ class TestExports:
         # When cleanup=True, artifacts for failed exports should be removed.
         assert not (tmp_folder / "fietspaaltjes_v1_fietspaaltjes_openbaar.csv").exists()
 
+    def test_export_continues_after_export_failure(
+        self,
+        engine,
+        storage_client,
+        export_schema_loader,
+        meetbouten_export_schema,
+        meetbouten_content,
+        tmp_folder,
+        monkeypatch,
+        caplog,
+    ):
+        """If a single export fails, the batch run should continue with the next export."""
+        caplog.set_level(logging.INFO)
+
+        # Limit the batch export to a single dataset to keep the test focused.
+        monkeypatch.setattr(
+            export_schema_loader,
+            "get_all_datasets",
+            lambda: {"meet_bouten": meetbouten_export_schema},
+        )
+
+        version = meetbouten_export_schema.versions[meetbouten_export_schema.default_version]
+        csv_export = next(exp for exp in version.exports if exp.filetype == "csv")
+        jsonl_export = next(exp for exp in version.exports if exp.filetype == "jsonl")
+
+        # Ensure deterministic ordering: first export fails, second should still succeed.
+        monkeypatch.setattr(version, "exports", [csv_export, jsonl_export])
+
+        # Ensure all tables referenced by these exports exist in the DB.
+        importer = NDJSONImporter(meetbouten_export_schema, engine)
+        for table_id in sorted(set(csv_export.table_ids + jsonl_export.table_ids)):
+            if table_id == "meetbouten":
+                continue  # already created + populated by meetbouten_content
+            importer.generate_db_objects(table_id, truncate=False, ind_extra_index=False)
+
+        def _boom(*_args, **_kwargs):
+            raise RuntimeError("forced exporter failure")
+
+        monkeypatch.setattr(CsvExporter, "write_rows", _boom)
+
+        failures = export(
+            engine,
+            storage_client,
+            output_path=str(tmp_folder),
+            loader=export_schema_loader,
+            cleanup=True,
+        )
+
+        # First export (CSV) failed and was reported.
+        assert any(
+            f.filename == csv_export.filename_without_zip
+            and f.error_type == "RuntimeError"
+            and f.error_message == "forced exporter failure"
+            for f in failures
+        )
+
+        # Second export (JSONL) still got published.
+        assert "Uploaded" in caplog.text
+        assert f"Uploaded {jsonl_export.filename} to storage container" in caplog.text
+        assert f"Uploaded {csv_export.filename} to storage container" not in caplog.text
+
+        assert "csv" not in storage_client.uploaded_blobs
+        assert list(storage_client.uploaded_blobs["jsonlines"].keys()) == [jsonl_export.filename]
+
     def test_base_exporter_retries_and_writes_atomically(
         self,
         gebieden_export_schema,
