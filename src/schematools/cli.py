@@ -232,7 +232,12 @@ def export(
             version=None,
             size=size,
         )
-        export_tables(context)
+        failures = export_tables(context)
+    for failure in failures:
+        click.echo(str(failure), err=True)
+
+    if failures:
+        sys.exit(1)
 
 
 @schema.group("tocase")
