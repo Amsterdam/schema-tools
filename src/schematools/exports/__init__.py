@@ -15,7 +15,12 @@ from schematools.exports.geojson import GeoJsonExporter
 from schematools.exports.geopackage import GeopackageExporter
 from schematools.exports.jsonlines import JsonLinesExporter
 from schematools.loaders import CachedSchemaLoader, get_schema_loader
-from schematools.types import ExportContext, ExportFileType, StorageClient
+from schematools.types import (
+    ExportContext,
+    ExportFileType,
+    ExportTableFailure,
+    StorageClient,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +39,10 @@ def sanitize(input_string):
     return re.sub(r"[^\x00-\x7F]+", "", input_string)
 
 
-def export_tables(context: ExportContext):
+def export_tables(context: ExportContext) -> list[ExportTableFailure]:
     exporter_class = FILETYPE_TO_EXPORTER[context.export.filetype]
     exporter = exporter_class(context)
-    exporter.export_tables()
+    return exporter.export_tables()
 
 
 def zip_files(context: ExportContext) -> Path:
@@ -94,11 +99,12 @@ def export(
     *,
     loader: CachedSchemaLoader | None = None,  # For testing purposes.
     cleanup: bool = True,  # For testing purposes.
-):
+) -> list[ExportTableFailure]:
     """Exports all defined exports from the database to the configured storage."""
     loader = loader or get_schema_loader()
     path = Path(output_path)
     path.mkdir(parents=True, exist_ok=True)
+    all_failures: list[ExportTableFailure] = []
     for dataset_name, dataset in loader.get_all_datasets().items():
         logger.info("Exporting dataset %s.", dataset_name)
         dataset_metadata: dict[str, str] = {
@@ -115,12 +121,23 @@ def export(
                     client=storage_client,
                 )
                 logger.info("Exporting %s", export)
-                export_tables(context)
-                zip_path = zip_files(context)
-                upload_to_storage(zip_path, context, dataset_metadata)
+                failures = export_tables(context)
                 file_paths.extend(context.export.table_paths(context.folder))
                 file_paths.append(context.folder / context.export.filename_without_zip)
+                if failures:
+                    all_failures.extend(failures)
+                    logger.error(
+                        "Export %s had %s table export failures; skipping publish.",
+                        export,
+                        len(failures),
+                    )
+                    continue
+
+                zip_path = zip_files(context)
+                upload_to_storage(zip_path, context, dataset_metadata)
 
         if cleanup:
             remove_files(file_paths)
             gc.collect()
+
+    return all_failures

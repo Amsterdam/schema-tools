@@ -6,6 +6,7 @@ import subprocess
 from psycopg import sql
 
 from schematools.exports.base import BaseExporter
+from schematools.types import ExportTableFailure
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,8 @@ logger = logging.getLogger(__name__)
 class GeopackageExporter(BaseExporter):
     extension = "gpkg"
 
-    def export_tables(self):
+    def export_tables(self) -> list[ExportTableFailure]:
+        failures: list[ExportTableFailure] = []
         pg_conn_str = (
             f"host={self.engine.url.host} "
             f"port={self.engine.url.port} "
@@ -24,11 +26,14 @@ class GeopackageExporter(BaseExporter):
         consolidated_file = self.base_dir / self.export.filename_without_zip
         logger.info("Exporting %s.", self.export.filename_without_zip)
 
+        exported_table_ids: set[str] = set()
+
         for table in self.tables:
             filename = self.export.table_filename(table.id)
             output_path = self.base_dir / filename
             if output_path.exists():
                 logger.warning("File %s already exists. It will be skipped.", output_path.name)
+                exported_table_ids.add(table.id)
                 continue
             logger.info("Exporting %s.", filename)
             field_names = sql.SQL(",").join(
@@ -48,16 +53,67 @@ class GeopackageExporter(BaseExporter):
                     query=query, size=sql.Literal(self.size)
                 )
 
-            subprocess.run(  # noqa: S602
-                f'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" -sql "{query.as_string()}"',
-                shell=True,
-            )
-        for table, idx in zip(self.tables, range(len(self.tables)), strict=True):
-            flag = "" if idx == 0 else "-update"
+            try:
+                export_cmd = (
+                    f'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" '
+                    f'-sql "{query.as_string()}"'
+                )
+                subprocess.run(  # noqa: S602
+                    export_cmd,
+                    shell=True,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                exported_table_ids.add(table.id)
+            except Exception as exc:  # noqa: BLE001
+                failures.append(
+                    ExportTableFailure(
+                        dataset_id=self.dataset_schema.id,
+                        dataset_version=self.export.version,
+                        export_name=self.export.name,
+                        scopes=self.export.scopes_string,
+                        filetype=self.export.filetype,
+                        table_id=table.id,
+                        output_path=str(output_path),
+                        attempts=1,
+                        error={"type": type(exc).__name__, "message": str(exc)},
+                    )
+                )
+
+        merged_any = False
+        for table in self.tables:
+            if table.id not in exported_table_ids:
+                continue
             filename = self.export.table_filename(table.id)
             output_path = self.base_dir / filename
-            subprocess.run(  # noqa: S602
-                f'ogr2ogr -f "GPKG" {flag} {consolidated_file} {output_path} '
-                f"-nln {table.db_name_variant(with_dataset_prefix=False)}",
-                shell=True,
-            )
+            flag = "" if not merged_any else "-update"
+            try:
+                merge_cmd = (
+                    f'ogr2ogr -f "GPKG" {flag} {consolidated_file} {output_path} '
+                    f"-nln {table.db_name_variant(with_dataset_prefix=False)}"
+                )
+                subprocess.run(  # noqa: S602
+                    merge_cmd,
+                    shell=True,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                merged_any = True
+            except Exception as exc:  # noqa: BLE001
+                failures.append(
+                    ExportTableFailure(
+                        dataset_id=self.dataset_schema.id,
+                        dataset_version=self.export.version,
+                        export_name=self.export.name,
+                        scopes=self.export.scopes_string,
+                        filetype=self.export.filetype,
+                        table_id=table.id,
+                        output_path=str(consolidated_file),
+                        attempts=1,
+                        error={"type": type(exc).__name__, "message": str(exc)},
+                    )
+                )
+
+        return failures

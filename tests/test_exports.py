@@ -234,6 +234,50 @@ class TestExports:
                 "1,10180001.1,12,De meetbout,SRID=28992;POINT(119434 487091.6),,\n"
             )
 
+    def test_export_failure_skips_publish_and_returns_failures(
+        self,
+        engine,
+        storage_client,
+        export_schema_loader,
+        fietspaaltjes_export_schema,
+        fietspaaltjes_content,
+        tmp_folder,
+        monkeypatch,
+        caplog,
+    ):
+        caplog.set_level(logging.INFO)
+
+        # Limit the batch export to a single dataset/export to keep the test focused.
+        monkeypatch.setattr(
+            export_schema_loader,
+            "get_all_datasets",
+            lambda: {"fietspaaltjes": fietspaaltjes_export_schema},
+        )
+
+        def _boom(*_args, **_kwargs):
+            raise RuntimeError("forced exporter failure")
+
+        monkeypatch.setattr(CsvExporter, "write_rows", _boom)
+
+        failures = export(
+            engine,
+            storage_client,
+            output_path=str(tmp_folder),
+            loader=export_schema_loader,
+            cleanup=True,
+        )
+
+        assert failures, "Expected a non-empty failure report"
+        assert failures[0].dataset_id == "fietspaaltjes"
+
+        # Publishing must be skipped when any table export fails.
+        assert storage_client.uploaded_blobs == {}
+        assert "Created zip file fietspaaltjes_v1_all_openbaar.csv.zip." not in caplog.text
+        assert "Uploaded fietspaaltjes_v1_all_openbaar.csv.zip" not in caplog.text
+
+        # When cleanup=True, artifacts for failed exports should be removed.
+        assert not (tmp_folder / "fietspaaltjes_v1_fietspaaltjes_openbaar.csv").exists()
+
     def test_csv_array_fields(
         self, fietspaaltjes_export_schema, fietspaaltjes_content, create_context
     ):
