@@ -1,6 +1,8 @@
-# 2026-05-28 (9.7.1)
+# 2026-05-22 (9.8.0)
 
-* Fix bug validation for relations to temporal tables.
+* Add retry logic and failure capture to exports. Failures now do not result in the end of the
+  whole export flow, just that specific export. Subsequent exports are executed. The export
+  function returns a list of ExportTableFailures.
 
 # 2026-05-19 (9.7.0)
 
