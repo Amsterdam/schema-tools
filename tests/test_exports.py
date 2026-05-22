@@ -278,6 +278,79 @@ class TestExports:
         # When cleanup=True, artifacts for failed exports should be removed.
         assert not (tmp_folder / "fietspaaltjes_v1_fietspaaltjes_openbaar.csv").exists()
 
+    def test_base_exporter_retries_and_writes_atomically(
+        self,
+        gebieden_export_schema,
+        create_context,
+        monkeypatch,
+    ):
+        export_definition = next(
+            exp
+            for exp in gebieden_export_schema.versions["v1"].exports
+            if exp.name == "kleine_gebieden" and exp.filetype == "csv"
+        )
+        context = create_context(gebieden_export_schema, export_definition)
+
+        first_table_id = export_definition.table_ids[0]
+        call_counts: dict[str, int] = {}
+
+        def _flaky_write_rows(self, file_handle, table, *_args, **_kwargs):
+            call_counts[table.id] = call_counts.get(table.id, 0) + 1
+            if table.id == first_table_id and call_counts[table.id] < 3:
+                file_handle.write("partial\n")
+                raise RuntimeError("boom")
+            file_handle.write("ok\n")
+
+        monkeypatch.setattr(CsvExporter, "write_rows", _flaky_write_rows)
+
+        failures = CsvExporter(context).export_tables(max_attempts=3, delay_seconds=0.0)
+        assert failures == []
+
+        out_path = context.folder / context.export.table_filename(first_table_id)
+        assert out_path.exists() and out_path.stat().st_size > 0
+        assert out_path.read_text(encoding="utf8") == "ok\n"
+        assert call_counts[first_table_id] == 3
+
+    def test_base_exporter_aborts_after_retries_exhausted(
+        self,
+        gebieden_export_schema,
+        create_context,
+        monkeypatch,
+    ):
+        export_definition = next(
+            exp
+            for exp in gebieden_export_schema.versions["v1"].exports
+            if exp.name == "kleine_gebieden" and exp.filetype == "csv"
+        )
+        context = create_context(gebieden_export_schema, export_definition)
+
+        first_table_id, second_table_id = export_definition.table_ids[:2]
+        call_counts: dict[str, int] = {}
+
+        def _always_fail_first_table(self, file_handle, table, *_args, **_kwargs):
+            call_counts[table.id] = call_counts.get(table.id, 0) + 1
+            if table.id == first_table_id:
+                file_handle.write("partial\n")
+                raise RuntimeError("boom")
+            file_handle.write("ok\n")
+
+        monkeypatch.setattr(CsvExporter, "write_rows", _always_fail_first_table)
+
+        failures = CsvExporter(context).export_tables(max_attempts=3, delay_seconds=0.0)
+        assert len(failures) == 1
+        assert failures[0].table_id == first_table_id
+        assert failures[0].attempts == 3
+
+        first_out = context.folder / context.export.table_filename(first_table_id)
+        second_out = context.folder / context.export.table_filename(second_table_id)
+        assert not first_out.exists()
+        assert not second_out.exists()
+
+        assert call_counts[first_table_id] == 3
+        assert second_table_id not in call_counts
+
+        assert list(context.folder.iterdir()) == []
+
     def test_csv_array_fields(
         self, fietspaaltjes_export_schema, fietspaaltjes_content, create_context
     ):
