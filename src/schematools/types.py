@@ -1047,18 +1047,16 @@ class ExportTableFailure:
     This is intentionally JSON-serializable (only primitives + nested dataclasses).
     """
 
-    dataset_id: str
-    dataset_version: str
-    export_name: str
-    scopes: str
-    filetype: ExportFileType
+    filename: str
     table_id: str
-    output_path: str
-    attempts: int
-    error: dict[str, str]
+    error_type: str
+    error_message: str
 
-    def to_dict(self) -> dict[str, Any]:
-        return dataclasses.asdict(self)
+    def __str__(self):
+        return (
+            f"Failed to export table '{self.table_id}' for export '{self.filename}': "
+            f"{self.error_type} - {self.error_message}"
+        )
 
 
 @dataclasses.dataclass

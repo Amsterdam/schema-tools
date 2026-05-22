@@ -96,15 +96,10 @@ class GeopackageExporter(BaseExporter):
             if last_exc is not None:
                 return [
                     ExportTableFailure(
-                        dataset_id=self.dataset_schema.id,
-                        dataset_version=self.export.version,
-                        export_name=self.export.name,
-                        scopes=self.export.scopes_string,
-                        filetype=self.export.filetype,
+                        filename=self.export.filename_without_zip,
                         table_id=table.id,
-                        output_path=str(output_path),
-                        attempts=max_attempts,
-                        error={"type": type(last_exc).__name__, "message": str(last_exc)},
+                        error_type=type(last_exc).__name__,
+                        error_message=str(last_exc),
                     )
                 ]
 
@@ -157,15 +152,10 @@ class GeopackageExporter(BaseExporter):
         if last_exc is not None:
             return [
                 ExportTableFailure(
-                    dataset_id=self.dataset_schema.id,
-                    dataset_version=self.export.version,
-                    export_name=self.export.name,
-                    scopes=self.export.scopes_string,
-                    filetype=self.export.filetype,
+                    filename=self.export.filename_without_zip,
                     table_id=last_table_id,
-                    output_path=str(consolidated_file),
-                    attempts=max_attempts,
-                    error={"type": type(last_exc).__name__, "message": str(last_exc)},
+                    error_type=type(last_exc).__name__,
+                    error_message=str(last_exc),
                 )
             ]
 

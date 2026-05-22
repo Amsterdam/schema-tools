@@ -268,7 +268,15 @@ class TestExports:
         )
 
         assert failures, "Expected a non-empty failure report"
-        assert failures[0].dataset_id == "fietspaaltjes"
+        failure = failures[0]
+        assert failure.filename == "fietspaaltjes_v1_all_openbaar.csv"
+        assert failure.table_id == "fietspaaltjes"
+        assert failure.error_type == "RuntimeError"
+        assert failure.error_message == "forced exporter failure"
+        assert str(failure) == (
+            "Failed to export table 'fietspaaltjes' for export 'fietspaaltjes_v1_all_openbaar.csv':"
+            " RuntimeError - forced exporter failure"
+        )
 
         # Publishing must be skipped when any table export fails.
         assert storage_client.uploaded_blobs == {}
@@ -338,8 +346,11 @@ class TestExports:
 
         failures = CsvExporter(context).export_tables(max_attempts=3, delay_seconds=0)
         assert len(failures) == 1
-        assert failures[0].table_id == first_table_id
-        assert failures[0].attempts == 3
+        failure = failures[0]
+        assert failure.filename == export_definition.filename_without_zip
+        assert failure.table_id == first_table_id
+        assert failure.error_type == "RuntimeError"
+        assert failure.error_message == "boom"
 
         first_out = context.folder / context.export.table_filename(first_table_id)
         second_out = context.folder / context.export.table_filename(second_table_id)
@@ -603,8 +614,10 @@ class TestExports:
         failures = GeopackageExporter(context).export_tables(max_attempts=3, delay_seconds=0)
         assert len(failures) == 1
         failure = failures[0]
-        assert failure.attempts == 3
+        assert failure.filename == export_definition.filename_without_zip
         assert failure.table_id == export_definition.tables[0].id
+        assert failure.error_type == "RuntimeError"
+        assert failure.error_message == "boom"
 
         assert len(calls) == 3  # aborts before merge
         consolidated = context.folder / export_definition.filename_without_zip
