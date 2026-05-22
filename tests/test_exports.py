@@ -19,7 +19,7 @@ from schematools.exports.geojson import GeoJsonExporter
 from schematools.exports.geopackage import GeopackageExporter
 from schematools.exports.jsonlines import JsonLinesExporter
 from schematools.importer.ndjson import NDJSONImporter
-from schematools.types import ExportContext
+from schematools.types import Export, ExportContext
 
 
 class TestExports:
@@ -303,7 +303,7 @@ class TestExports:
 
         monkeypatch.setattr(CsvExporter, "write_rows", _flaky_write_rows)
 
-        failures = CsvExporter(context).export_tables(max_attempts=3, delay_seconds=0.0)
+        failures = CsvExporter(context).export_tables(max_attempts=3, delay_seconds=0)
         assert failures == []
 
         out_path = context.folder / context.export.table_filename(first_table_id)
@@ -336,7 +336,7 @@ class TestExports:
 
         monkeypatch.setattr(CsvExporter, "write_rows", _always_fail_first_table)
 
-        failures = CsvExporter(context).export_tables(max_attempts=3, delay_seconds=0.0)
+        failures = CsvExporter(context).export_tables(max_attempts=3, delay_seconds=0)
         assert len(failures) == 1
         assert failures[0].table_id == first_table_id
         assert failures[0].attempts == 3
@@ -533,3 +533,79 @@ class TestExports:
             )
         path.unlink()
         Path("tmp").rmdir()
+
+    def test_geopackage_export_retries_then_succeeds(
+        self,
+        meetbouten_export_schema,
+        create_context,
+        monkeypatch,
+    ) -> None:
+        base_export_definition = next(
+            exp
+            for exp in meetbouten_export_schema.versions["v1"].exports
+            if exp.filetype == "gpkg" and len(exp.tables) == 1
+        )
+
+        # Use a custom export name so the consolidated file differs from the per-table file.
+        export_definition = Export(
+            name="retry_test",
+            tables=base_export_definition.tables,
+            scopes=base_export_definition.scopes,
+            filetype=base_export_definition.filetype,
+            version=base_export_definition.version,
+            _dataset_name=meetbouten_export_schema.id,
+        )
+        context = create_context(meetbouten_export_schema, export_definition)
+
+        calls: list[str] = []
+
+        def fake_run(cmd, *_args, **_kwargs):
+            calls.append(cmd)
+            if len(calls) == 1:
+                raise RuntimeError("boom")
+            return None
+
+        monkeypatch.setattr("schematools.exports.geopackage.subprocess.run", fake_run)
+
+        failures = GeopackageExporter(context).export_tables(max_attempts=2, delay_seconds=0)
+        assert failures == []
+        assert len(calls) >= 3  # 2x export (retry) + 1x merge
+
+    def test_geopackage_export_retries_then_fails_permanently(
+        self,
+        meetbouten_export_schema,
+        create_context,
+        monkeypatch,
+    ) -> None:
+        base_export_definition = next(
+            exp
+            for exp in meetbouten_export_schema.versions["v1"].exports
+            if exp.filetype == "gpkg" and len(exp.tables) == 1
+        )
+        export_definition = Export(
+            name="retry_test",
+            tables=base_export_definition.tables,
+            scopes=base_export_definition.scopes,
+            filetype=base_export_definition.filetype,
+            version=base_export_definition.version,
+            _dataset_name=meetbouten_export_schema.id,
+        )
+        context = create_context(meetbouten_export_schema, export_definition)
+
+        calls: list[str] = []
+
+        def fake_run(cmd, *, shell, check, **_kwargs):
+            calls.append(cmd)
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr("schematools.exports.geopackage.subprocess.run", fake_run)
+
+        failures = GeopackageExporter(context).export_tables(max_attempts=3, delay_seconds=0)
+        assert len(failures) == 1
+        failure = failures[0]
+        assert failure.attempts == 3
+        assert failure.table_id == export_definition.tables[0].id
+
+        assert len(calls) == 3  # aborts before merge
+        consolidated = context.folder / export_definition.filename_without_zip
+        assert not consolidated.exists()
