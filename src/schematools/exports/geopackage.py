@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import time
 
 from psycopg import sql
 
@@ -14,8 +15,12 @@ logger = logging.getLogger(__name__)
 class GeopackageExporter(BaseExporter):
     extension = "gpkg"
 
-    def export_tables(self) -> list[ExportTableFailure]:
-        failures: list[ExportTableFailure] = []
+    def export_tables(
+        self,
+        *,
+        max_attempts: int = 3,
+        delay_seconds: int = 1,
+    ) -> list[ExportTableFailure]:
         pg_conn_str = (
             f"host={self.engine.url.host} "
             f"port={self.engine.url.port} "
@@ -31,10 +36,13 @@ class GeopackageExporter(BaseExporter):
         for table in self.tables:
             filename = self.export.table_filename(table.id)
             output_path = self.base_dir / filename
-            if output_path.exists():
+            if output_path.exists() and output_path.stat().st_size > 0:
                 logger.warning("File %s already exists. It will be skipped.", output_path.name)
                 exported_table_ids.add(table.id)
                 continue
+            if output_path.exists():
+                # Remove zero-byte/partial artifacts from previous runs.
+                output_path.unlink()
             logger.info("Exporting %s.", filename)
             field_names = sql.SQL(",").join(
                 sql.Identifier(field.db_name)
@@ -53,21 +61,40 @@ class GeopackageExporter(BaseExporter):
                     query=query, size=sql.Literal(self.size)
                 )
 
-            try:
-                export_cmd = (
-                    f'ogr2ogr -f "GPKG" {output_path} PG:"{pg_conn_str}" '
-                    f'-sql "{query.as_string()}"'
-                )
-                subprocess.run(  # noqa: S602
-                    export_cmd,
-                    shell=True,
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-                exported_table_ids.add(table.id)
-            except Exception as exc:  # noqa: BLE001
-                failures.append(
+            query_string = query.as_string()
+            last_exc: Exception | None = None
+
+            export_cmd = (
+                f'ogr2ogr -f "GPKG" "{output_path}" PG:"{pg_conn_str}" -sql "{query_string}"'
+            )
+
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    subprocess.run(  # noqa: S602
+                        export_cmd,
+                        shell=True,
+                        check=True,
+                    )
+                    exported_table_ids.add(table.id)
+                    last_exc = None
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    last_exc = exc
+                    logger.error(
+                        "ogr2ogr export failed for %s (attempt %s/%s): %s",
+                        table.id,
+                        attempt,
+                        max_attempts,
+                        exc,
+                    )
+
+                    if output_path.exists():
+                        output_path.unlink()
+                    if attempt < max_attempts:
+                        time.sleep(delay_seconds)
+
+            if last_exc is not None:
+                return [
                     ExportTableFailure(
                         dataset_id=self.dataset_schema.id,
                         dataset_version=self.export.version,
@@ -76,44 +103,70 @@ class GeopackageExporter(BaseExporter):
                         filetype=self.export.filetype,
                         table_id=table.id,
                         output_path=str(output_path),
-                        attempts=1,
-                        error={"type": type(exc).__name__, "message": str(exc)},
+                        attempts=max_attempts,
+                        error={"type": type(last_exc).__name__, "message": str(last_exc)},
                     )
-                )
+                ]
 
-        merged_any = False
-        for table in self.tables:
-            if table.id not in exported_table_ids:
-                continue
-            filename = self.export.table_filename(table.id)
-            output_path = self.base_dir / filename
-            flag = "" if not merged_any else "-update"
+        tables_to_merge = [table for table in self.tables if table.id in exported_table_ids]
+        if not tables_to_merge:
+            return []
+
+        # Ensure we never leave a stale/broken consolidated output around on failure.
+        if consolidated_file.exists():
+            consolidated_file.unlink()
+
+        last_exc: Exception | None = None
+        last_table_id = tables_to_merge[0].id
+
+        for attempt in range(1, max_attempts + 1):
             try:
-                merge_cmd = (
-                    f'ogr2ogr -f "GPKG" {flag} {consolidated_file} {output_path} '
-                    f"-nln {table.db_name_variant(with_dataset_prefix=False)}"
-                )
-                subprocess.run(  # noqa: S602
-                    merge_cmd,
-                    shell=True,
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-                merged_any = True
-            except Exception as exc:  # noqa: BLE001
-                failures.append(
-                    ExportTableFailure(
-                        dataset_id=self.dataset_schema.id,
-                        dataset_version=self.export.version,
-                        export_name=self.export.name,
-                        scopes=self.export.scopes_string,
-                        filetype=self.export.filetype,
-                        table_id=table.id,
-                        output_path=str(consolidated_file),
-                        attempts=1,
-                        error={"type": type(exc).__name__, "message": str(exc)},
+                merged_any = False
+                for table in tables_to_merge:
+                    last_table_id = table.id
+                    input_path = self.base_dir / self.export.table_filename(table.id)
+
+                    flag = "" if not merged_any else "-update"
+                    merge_cmd = (
+                        f'ogr2ogr -f "GPKG" {flag} {consolidated_file} {input_path} '
+                        f"-nln {table.db_name_variant(with_dataset_prefix=False)}"
                     )
+                    subprocess.run(  # noqa: S602
+                        merge_cmd,
+                        shell=True,
+                        check=True,
+                    )
+                    merged_any = True
+                last_exc = None
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                logger.error(
+                    "Merge failed for %s (attempt %s/%s): %s",
+                    last_table_id,
+                    attempt,
+                    max_attempts,
+                    exc,
                 )
 
-        return failures
+                if consolidated_file.exists():
+                    consolidated_file.unlink()
+                if attempt < max_attempts:
+                    time.sleep(delay_seconds)
+
+        if last_exc is not None:
+            return [
+                ExportTableFailure(
+                    dataset_id=self.dataset_schema.id,
+                    dataset_version=self.export.version,
+                    export_name=self.export.name,
+                    scopes=self.export.scopes_string,
+                    filetype=self.export.filetype,
+                    table_id=last_table_id,
+                    output_path=str(consolidated_file),
+                    attempts=max_attempts,
+                    error={"type": type(last_exc).__name__, "message": str(last_exc)},
+                )
+            ]
+
+        return []
