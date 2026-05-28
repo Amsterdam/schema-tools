@@ -17,6 +17,7 @@ from schematools.validation import (
     _check_maingeometry,
     _check_relation_suffix,
     _check_scopes_exist,
+    _check_temp_relation,
     _identifier_properties,
     validate_dataset,
     validate_dataset_versions_version,
@@ -570,6 +571,17 @@ def test_relation_suffix(schema_loader) -> None:
         "Fields with a 'relation' property should not end with 'Id'.",
         "Field 'stadsdeelId' on table 'ggwgebieden' has a 'relation' property but ends with 'Id'. "
         "Fields with a 'relation' property should not end with 'Id'.",
+    ]
+
+
+def test_temp_relation(schema_loader):
+    dataset = schema_loader.get_dataset_from_file("relation_to_temporal.json")
+    dataset_temp_relation_errors = _check_temp_relation(dataset)
+    assert len(dataset_temp_relation_errors) == 1
+    assert dataset_temp_relation_errors == [
+        "Field rolcontainer.bagVerblijfsobject must "
+        "be of type 'object' and define 'properties' for relation "
+        "to temporal table bag:verblijfsobjecten."
     ]
 
 

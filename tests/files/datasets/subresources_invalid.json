@@ -252,17 +252,14 @@
                 "description": "De CBS-code van het object."
               },
               "heeftBuurten": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
+                "type": "object",
+                "properties": {
                     "identificatie": {
                       "type": "string"
                     },
                     "volgnummer": {
                       "type": "integer"
                     }
-                  }
                 },
                 "relation": "gebieden:buurten",
                 "description": "De buurten in de wijk."
