@@ -821,6 +821,28 @@ def _check_relation_suffix(dataset: DatasetSchema) -> Iterator[str]:
                 )
 
 
+@_register_validator("tempRelation")
+def _check_temp_relation(dataset: dict) -> list[str]:
+    """Relation to a temporal table should have a property object defined."""
+    print(f"table prin test: {dataset.tables}")
+    for table in dataset.tables:
+        print(f"table prin test: {table}")
+        for field in table.get_fields(include_subfields=True):
+            rel_table = field.related_table
+
+            if (
+                rel_table
+                and rel_table.is_temporal
+                and (field.get("type") != "object" or not field.get("properties"))
+            ):
+                return [
+                    f"Field {table.id}.{field.id} must be of type "
+                    f"'object' and define 'properties' for relation "
+                    f"to temporal table {field.relation}."
+                ]
+    return []
+
+
 def validate_dataset(
     previous_tables: list[dict[str, str]],
     current_tables: list[dict[str, str]],
