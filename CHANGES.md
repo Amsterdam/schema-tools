@@ -1,3 +1,7 @@
+# 2026-05-28 (9.7.1)
+
+* Fix bug validation for relations to temporal tables.
+
 # 2026-05-22 (9.8.0)
 
 * Add retry logic and failure capture to exports. Failures now do not result in the end of the
