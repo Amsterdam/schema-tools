@@ -824,9 +824,7 @@ def _check_relation_suffix(dataset: DatasetSchema) -> Iterator[str]:
 @_register_validator("tempRelation")
 def _check_temp_relation(dataset: dict) -> list[str]:
     """Relation to a temporal table should have a property object defined."""
-    print(f"table prin test: {dataset.tables}")
     for table in dataset.tables:
-        print(f"table prin test: {table}")
         for field in table.get_fields(include_subfields=True):
             rel_table = field.related_table
 
