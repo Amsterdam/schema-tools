@@ -1,3 +1,7 @@
+# 2026-05-28 (9.7.1)
+
+* Fix bug validation for relations to temporal tables.
+
 # 2026-05-19 (9.7.0)
 
 * Added handling for array fields in csv exports.
