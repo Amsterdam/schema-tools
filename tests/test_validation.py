@@ -17,13 +17,13 @@ from schematools.validation import (
     _check_maingeometry,
     _check_relation_suffix,
     _check_scopes_exist,
-    _check_temp_relation,
     _identifier_properties,
     validate_dataset,
     validate_dataset_versions_version,
     validate_schema_identifier,
     validate_table,
     validate_table_version,
+    validate_temporal_relations,
 )
 
 
@@ -576,12 +576,13 @@ def test_relation_suffix(schema_loader) -> None:
 
 def test_temp_relation(schema_loader):
     dataset = schema_loader.get_dataset_from_file("relation_to_temporal.json")
-    dataset_temp_relation_errors = _check_temp_relation(dataset)
-    assert len(dataset_temp_relation_errors) == 1
+    dataset_temp_relation_errors = validate_temporal_relations(dataset)
+    assert len(dataset_temp_relation_errors) == 2
     assert dataset_temp_relation_errors == [
-        "Field rolcontainer.bagVerblijfsobject must "
-        "be of type 'object' and define 'properties' for relation "
-        "to temporal table bag:verblijfsobjecten."
+        "Incorrect type and/or properties for relational field container.bagHoofdadresVerblijfsobject. "
+        "Names and types should match identifier and temporal of object bag:verblijfsobjecten.",
+        "Incorrect type and/or properties for relational field rolcontainer.bagVerblijfsobject. "
+        "Names and types should match identifier and temporal of object bag:verblijfsobjecten.",
     ]
 
 

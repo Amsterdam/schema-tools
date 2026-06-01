@@ -821,24 +821,46 @@ def _check_relation_suffix(dataset: DatasetSchema) -> Iterator[str]:
                 )
 
 
-@_register_validator("tempRelation")
-def _check_temp_relation(dataset: dict) -> list[str]:
+def _has_invalid_temporal_relation(field):
+    related_table = field.related_table
+    properties = field.get("properties", {})
+
+    if field.get("type") != "object" or not isinstance(properties, dict):
+        return True
+
+    if properties.get("identificatie", {}).get("type") != related_table.get_field_by_id(
+        "identificatie"
+    ).get("type"):
+        return True
+
+    identifiers = related_table.get("schema", {}).get("identifier", [])
+
+    return any(
+        properties.get(identifier, {}).get("type")
+        != related_table.get_field_by_id(identifier).get("type")
+        for identifier in identifiers
+    )
+
+
+@_register_validator("temporal relations")
+def validate_temporal_relations(dataset: dict) -> list[str]:
     """Relation to a temporal table should have a property object defined."""
+    errors = []
+
     for table in dataset.tables:
         for field in table.get_fields(include_subfields=True):
-            rel_table = field.related_table
-
             if (
-                rel_table
-                and rel_table.is_temporal
-                and (field.get("type") != "object" or not field.get("properties"))
+                field.related_table
+                and field.related_table.is_temporal
+                and _has_invalid_temporal_relation(field)
             ):
-                return [
-                    f"Field {table.id}.{field.id} must be of type "
-                    f"'object' and define 'properties' for relation "
-                    f"to temporal table {field.relation}."
-                ]
-    return []
+                errors.append(
+                    f"Incorrect type and/or properties for relational field "
+                    f"{table.id}.{field.id}. Names and types should match "
+                    f"identifier and temporal of object {field.relation}."
+                )
+
+    return errors
 
 
 def validate_dataset(

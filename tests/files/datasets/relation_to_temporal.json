@@ -163,7 +163,7 @@
                       "type": "string"
                     },
                     "volgnummer": {
-                      "type": "integer"
+                      "type": "string"
                     }
                 }
               },
