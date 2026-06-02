@@ -38,7 +38,7 @@ from schematools.exceptions import (
 )
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.auth import RLA_SCOPE
-from schematools.types import DatasetSchema, DatasetVersionSchema, SemVer
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetVersionSchema, SemVer
 
 
 @dataclass(frozen=True)
@@ -821,7 +821,7 @@ def _check_relation_suffix(dataset: DatasetSchema) -> Iterator[str]:
                 )
 
 
-def _has_invalid_temporal_relation(field):
+def _has_invalid_temporal_relation(field: DatasetFieldSchema) -> bool:
     related_table = field.related_table
     properties = field.get("properties", {})
 
