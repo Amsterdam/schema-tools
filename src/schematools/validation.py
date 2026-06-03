@@ -38,7 +38,7 @@ from schematools.exceptions import (
 )
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.auth import RLA_SCOPE
-from schematools.types import DatasetSchema, DatasetVersionSchema, SemVer
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetVersionSchema, SemVer
 
 
 @dataclass(frozen=True)
@@ -819,6 +819,48 @@ def _check_relation_suffix(dataset: DatasetSchema) -> Iterator[str]:
                     f"Field {field.id!r} on table {table.id!r} has a 'relation' property but "
                     "ends with 'Id'. Fields with a 'relation' property should not end with 'Id'."
                 )
+
+
+def _has_invalid_temporal_relation(field: DatasetFieldSchema) -> bool:
+    related_table = field.related_table
+    properties = field.get("properties", {})
+
+    if field.get("type") != "object" or not isinstance(properties, dict):
+        return True
+
+    if properties.get("identificatie", {}).get("type") != related_table.get_field_by_id(
+        "identificatie"
+    ).get("type"):
+        return True
+
+    identifiers = related_table.get("schema", {}).get("identifier", [])
+
+    return any(
+        properties.get(identifier, {}).get("type")
+        != related_table.get_field_by_id(identifier).get("type")
+        for identifier in identifiers
+    )
+
+
+@_register_validator("temporal relations")
+def validate_temporal_relations(dataset: dict) -> list[str]:
+    """Relation to a temporal table should have a property object defined."""
+    errors = []
+
+    for table in dataset.tables:
+        for field in table.get_fields(include_subfields=True):
+            if (
+                field.related_table
+                and field.related_table.is_temporal
+                and _has_invalid_temporal_relation(field)
+            ):
+                errors.append(
+                    f"Incorrect type and/or properties for relational field "
+                    f"{table.id}.{field.id}. Names and types should match "
+                    f"identifier and temporal of object {field.relation}."
+                )
+
+    return errors
 
 
 def validate_dataset(

@@ -573,6 +573,7 @@ def validate_datasets(paths: tuple[str], prefix: str):
                     previous["id"], previous_version, current_version
                 )
             )
+            dataset_errors.extend(validation.validate_temporal_relations(current_version))
             if len(dataset_errors) > 0:
                 has_errors = True
                 click.echo("FAIL")

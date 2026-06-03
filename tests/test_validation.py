@@ -23,6 +23,7 @@ from schematools.validation import (
     validate_schema_identifier,
     validate_table,
     validate_table_version,
+    validate_temporal_relations,
 )
 
 
@@ -570,6 +571,18 @@ def test_relation_suffix(schema_loader) -> None:
         "Fields with a 'relation' property should not end with 'Id'.",
         "Field 'stadsdeelId' on table 'ggwgebieden' has a 'relation' property but ends with 'Id'. "
         "Fields with a 'relation' property should not end with 'Id'.",
+    ]
+
+
+def test_temp_relation(schema_loader):
+    dataset = schema_loader.get_dataset_from_file("relation_to_temporal.json")
+    dataset_temp_relation_errors = validate_temporal_relations(dataset)
+    assert len(dataset_temp_relation_errors) == 2
+    assert dataset_temp_relation_errors == [
+        "Incorrect type and/or properties for relational field container.bagHoofdadresVerblijfsobject. "
+        "Names and types should match identifier and temporal of object bag:verblijfsobjecten.",
+        "Incorrect type and/or properties for relational field rolcontainer.bagVerblijfsobject. "
+        "Names and types should match identifier and temporal of object bag:verblijfsobjecten.",
     ]
 
 
