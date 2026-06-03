@@ -1,3 +1,7 @@
+# 2026-05-28 (9.8.2)
+
+* Rollback from validate datasets for relations to temporal tables.
+
 # 2026-05-28 (9.8.1)
 
 * Fix bug for relations to temporal tables.
