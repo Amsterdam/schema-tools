@@ -220,8 +220,16 @@ def test_main_geometry_is_relation(schema_loader) -> None:
     monumenten = schema_loader.get_dataset_from_file("monumenten.json")
     bag = schema_loader.get_dataset_from_file("bag.json")
 
-    assert list(_check_maingeometry(monumenten)) == []
-    assert list(validation.run(monumenten)) == []
+    # Set mainGeo of related table to None
+    bag.get_table_by_id("panden")["schema"]["mainGeometry"] = None
+    error = next(validation.run(monumenten))
+    assert "'mainGeometry' is required but not defined in table" in error.message
+
+    # Set mainGeo of related table to a non-existent field
+    bag.get_table_by_id("panden")["schema"]["mainGeometry"] = "non_existent_field"
+    error = next(validation.run(monumenten))
+    assert "mainGeometry = 'non_existent_field'" in error.message
+    assert "Field 'non_existent_field' does not exist" in error.message
 
     # Set mainGeo of related table to a non-geo type
     bag.get_table_by_id("panden")["schema"]["mainGeometry"] = "beginGeldigheid"
