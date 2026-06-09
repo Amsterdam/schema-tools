@@ -38,7 +38,13 @@ from schematools.exceptions import (
 )
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.auth import RLA_SCOPE
-from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetVersionSchema, SemVer
+from schematools.types import (
+    DatasetFieldSchema,
+    DatasetSchema,
+    DatasetTableSchema,
+    DatasetVersionSchema,
+    SemVer,
+)
 
 
 @dataclass(frozen=True)
@@ -342,28 +348,39 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
 @_register_validator("mainGeometry")
 def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
     for table in dataset.tables:
-        # We can't use table.main_geometry here, because it has a default value
-        # "geometry". We can't rely on that always existing.
-        main_geo = table["schema"].get("mainGeometry")
-        if main_geo is None:
-            # mainGeometry should exist if a geometry field exists
-            # but none of the geometry fields is called "geometry"
-            if table.has_geometry_fields and not any(
-                field.is_geo and field.id == "geometry" for field in table.fields
-            ):
-                yield (
-                    f"'mainGeometry' is required but not defined in table ${table.id}."
-                    "This table has fields of type geometry,"
-                    "but none of these fields is called 'geometry'."
-                )
-            continue
+        yield from _check_maingeometry_table(table)
 
-        try:
-            field = table.get_field_by_id(main_geo)
-            if not field.is_geo:
-                yield f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}"
-        except SchemaObjectNotFound as e:
-            yield f"mainGeometry = {main_geo!r}, but: {e}"
+
+def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
+    # We can't use table.main_geometry here, because it has a default value
+    # "geometry". We can't rely on that always existing.
+    main_geo = table["schema"].get("mainGeometry")
+    if main_geo is None:
+        # mainGeometry should exist if a geometry field exists
+        # but none of the geometry fields is called "geometry"
+        if table.has_geometry_fields and not any(
+            field.is_geo and field.id == "geometry" for field in table.fields
+        ):
+            yield (
+                f"'mainGeometry' is required but not defined in table ${table.id}."
+                "This table has fields of type geometry,"
+                "but none of these fields is called 'geometry'."
+            )
+        return
+
+    # If mainGeometry is defined:
+    try:
+        field = table.get_field_by_id(main_geo)
+
+        # If mainGeoField is a relation
+        if field.related_table:
+            yield from _check_maingeometry_table(field.related_table)
+            return
+
+        if not field.is_geo:
+            yield (f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}")
+    except SchemaObjectNotFound as e:
+        yield (f"mainGeometry = {main_geo!r}, but: {e}")
 
 
 @_register_validator("crs")
