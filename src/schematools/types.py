@@ -1267,7 +1267,7 @@ class DatasetTableSchema(SchemaType):
             element["auth"] = self.schema.loader.get_scope(element["auth"]["$ref"]).json_data()
         if isinstance(element.get("auth"), list):
             element["auth"] = [
-                (self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a)
+                self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a
                 for a in element["auth"]
             ]
         if element.get("type") == "object":
@@ -1581,12 +1581,22 @@ class DatasetTableSchema(SchemaType):
         """The main geometry field, if there is a geometry field available.
         Default to "geometry" for existing schemas without a mainGeometry field.
         """
-        return str(self["schema"].get("mainGeometry", "geometry"))
+        main_geo = self["schema"].get("mainGeometry", None)
+        if not main_geo:
+            return "geometry" if "geometry" in self["schema"]["properties"] else None
+        return main_geo
 
     @property
     def main_geometry_field(self) -> DatasetFieldSchema:
         """The main geometry as field object"""
-        return self.get_field_by_id(self.main_geometry)
+        field = self.get_field_by_id(self.main_geometry)
+
+        # if main geo is a relation, get that field from related table
+        if field.related_table:
+            return field.related_table.get_field_by_id(
+                field.related_table.main_geometry
+            )
+        return field
 
     @property
     def identifier(self) -> list[str]:
@@ -1689,7 +1699,7 @@ class DatasetTableSchema(SchemaType):
 
     @cached_property
     def has_geometry_fields(self) -> bool:
-        return any(field.is_geo for field in self.fields)
+        return any(field.is_geo for field in self.fields) or self.main_geometry
 
     @cached_property
     def db_name(self) -> str:
