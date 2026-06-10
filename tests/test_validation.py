@@ -222,8 +222,8 @@ def test_main_geometry_is_relation(schema_loader) -> None:
     monumenten = schema_loader.get_dataset_from_file("monumenten.json")
     bag = schema_loader.get_dataset_from_file("bag.json")
 
-    # Set mainGeo of related table to None
-    bag.get_table_by_id("panden")["schema"]["mainGeometry"] = None
+    # Remove mainGeo of related table
+    bag.get_table_by_id("panden")["schema"].pop("mainGeometry")
     error = next(validation.run(monumenten))
     assert "'mainGeometry' is required but not defined in table" in error.message
 

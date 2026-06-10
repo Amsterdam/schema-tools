@@ -365,7 +365,7 @@ def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
 def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
     # We can't use table.main_geometry here, because it has a default value
     # "geometry". We can't rely on that always existing.
-    main_geo = table["schema"].get("mainGeometry")
+    main_geo = table.main_geometry
     if main_geo is None:
         # mainGeometry should exist if a geometry field exists
         # but none of the geometry fields is called "geometry"
@@ -373,23 +373,55 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
             field.is_geo and field.id == "geometry" for field in table.fields
         ):
             yield (
-                f"'mainGeometry' is required but not defined in table ${table.id}."
-                "This table has fields of type geometry,"
-                "but none of these fields is called 'geometry'."
+                f"'mainGeometry' is required but not defined in table {table.id}. "
+                f"This table has fields of type geometry, "
+                f"but none of these fields is called 'geometry'."
             )
         return
-
     # If mainGeometry is defined:
     try:
         field = table.get_field_by_id(main_geo)
 
         # If mainGeoField is a relation
-        if field.related_table:
-            yield from _check_maingeometry_table(field.related_table)
-            return
+        if rel_table := field.related_table:
+            main_geo = rel_table.main_geometry
+            if main_geo is None:
+                # mainGeometry should exist if a geometry field exists
+                # but none of the geometry fields is called "geometry"
+                if rel_table.has_geometry_fields and not any(
+                    field.is_geo and field.id == "geometry"
+                    for field in rel_table.fields
+                ):
+                    yield (
+                        f"'mainGeometry' is required but not defined in table {rel_table.id}. "
+                        f"This table has fields of type geometry, "
+                        f"but none of these fields is called 'geometry'."
+                    )
+                return
+
+            try:
+                rel_field = rel_table.get_field_by_id(main_geo)
+
+                # if rel table main geo also has rel table, yield error to refer directly
+                if rel_rel_table := rel_field.related_table:
+                    yield (
+                        f"mainGeometry of related table {rel_table} is a relation too: "
+                        f"{rel_rel_table}. Please refer to that relation directly."
+                    )
+
+                if not rel_field.is_geo:
+                    yield (
+                        f"mainGeometry = {rel_field.id!r} is not a geometry field, "
+                        f"type = {rel_field.type!r}"
+                    )
+
+            except SchemaObjectNotFound as e:
+                yield (f"mainGeometry = {main_geo!r}, but: {e}")
 
         if not field.is_geo:
-            yield (f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}")
+            yield (
+                f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}"
+            )
     except SchemaObjectNotFound as e:
         yield (f"mainGeometry = {main_geo!r}, but: {e}")
 
