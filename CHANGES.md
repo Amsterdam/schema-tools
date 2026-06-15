@@ -1,3 +1,12 @@
+# 2026-06-15 (9.9.0)
+
+* Upgrade toolchain to use `uv`.
+  * Pin all dependencies
+  * Clean up docker setup
+  * Update Makefile
+  * Update github workflows
+  * Update README.md
+
 # 2026-06-15 (9.8.3)
 
 * Bugfix for geopackage exports where the sole table of an export had the same id as the name of the
