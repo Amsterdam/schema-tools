@@ -1,3 +1,8 @@
+# 2026-06-15 (9.8.3)
+
+* Bugfix for geopackage exports where the sole table of an export had the same id as the name of the
+  export.
+
 # 2026-05-28 (9.8.2)
 
 * Rollback from validate datasets for relations to temporal tables.
