@@ -1,9 +1,85 @@
-[build-system]
-requires = [
-  "setuptools >= 42",
-  "wheel",
+[project]
+name = "amsterdam-schema-tools"
+version = "9.8.3"
+description = "Tools to work with Amsterdam Schema."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MPL-2.0"
+authors = [
+    { name = "Team Data Diensten, van het Dataplatform onder de Directie Digitale Voorzieningen (Gemeente Amsterdam)", email = "datapunt@amsterdam.nl" },
 ]
-build-backend = "setuptools.build_meta"
+keywords = ["jsonschema", "schema", "json", "amsterdam", "validation", "code-generation"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "click==8.4.1",
+    "deepdiff==9.1.0",
+    "factory_boy==3.3.3",
+    "geoalchemy2==0.20.0",
+    "jinja2==3.1.6",
+    "jsonlines==4.0.0",
+    "jsonpath-rw==1.4.0",
+    "jsonschema[format]==4.26.0",
+    "mappyfile==1.2.0",
+    "more-ds==0.0.6",
+    "more-itertools==11.1.0",
+    "orjson==3.11.9",
+    "pg-grant==0.4.0",
+    "psycopg==3.3.4",
+    "python-dateutil==2.9.0.post0",
+    "python-string-utils==1.0.0",
+    "remote-pdb==2.1.0",
+    "requests==2.34.2",
+    "shapely==2.1.2",
+    "sqlalchemy==2.0.50",
+    "sqlparse==0.5.5",
+]
+
+[project.optional-dependencies]
+tests = [
+    "ruff==0.15.17",
+    "ty==0.0.49",
+    "types-requests==2.33.0.20260518",
+    "types-click==7.1.8",
+    "types-python-dateutil==2.9.0.20260518",
+    "pytest==9.1.0",
+    "pytest-cov==7.1.0",
+    "pytest-django==4.12.0",
+    "pytest-sqlalchemy==0.3.0",
+    "requests-mock==1.12.1",
+    # Breaking change was introduced in 0.42:
+    # https://github.com/kvesteri/sqlalchemy-utils/issues/791
+    "sqlalchemy-utils == 0.41.2",
+]
+django = [
+    "django >= 4.2, < 6.0, != 5.0, !=5.1",
+    "django-gisserver >= 1.2.7",
+    "django-environ==0.13.0",
+    "factory_boy==3.3.3",
+]
+
+[project.scripts]
+schema = "schematools.cli:main"
+django = "schematools.contrib.django.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/amsterdam/schema-tools"
+Repository = "https://github.com/amsterdam/schema-tools"
+
+[build-system]
+requires = ["uv_build>=0.11.21,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "schematools"
+module-root = "src"
 
 # ==== pytest ====
 [tool.pytest.ini_options]
@@ -12,16 +88,17 @@ django_find_project = false
 pythonpath = "./"
 testpaths = ["tests"]
 addopts = [
+    "--doctest-modules",
     "--nomigrations",
     "--reuse-db",
     "--cov=schematools",
     "--cov-fail-under=73",
 ]
-norecursedirs = ["node_modules", ".tox", ".git"]
+norecursedirs = ["node_modules", ".tox", ".git", "dist", "build", "venv", ".venv"]
 filterwarnings = [
     "once::DeprecationWarning",
     "once::PendingDeprecationWarning",
-    "ignore::RuntimeWarning",
+    "ignore:Model '.*' was already registered. Reloading models is not advised.*:RuntimeWarning",
 ]
 
 # ==== Coverage ====
@@ -39,28 +116,6 @@ exclude_also = [
     "logger",
     "warnings.warn",
 ]
-
-[tool.black]
-line-length = 99
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
-
-[tool.bandit]
-skips = ["B101", "B404"]
-
-github_url = "https://github.com/Amsterdam/schema-tools"
 
 [tool.ruff]
 line-length = 99
