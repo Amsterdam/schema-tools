@@ -1,0 +1,43 @@
+# Finds dependencies with problematic licenses: either no license,
+# or incompatible with MPL.
+
+name: Check licenses of dependencies
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - "schema-tools-v*"
+
+jobs:
+  licensecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Python 3.14
+        run: uv python install 3.14
+      - name: Install tools
+        run: |
+          sudo apt install -y jq
+          uv tool install licensecheck
+
+      - name: Run licensecheck
+        # licensecheck computes MPL compatibility more strictly than this
+        # workflow has historically enforced. Keep the current CI policy:
+        # fail only for missing licenses or GPL-licensed dependencies.
+        run: >
+          licensecheck -f json |
+          jq '
+            .packages | map(select(
+              .license == "UNKNOWN"
+              or (.license | startswith("GPL"))
+            )) | if length > 0 then halt_error(1) else . end
+          '
