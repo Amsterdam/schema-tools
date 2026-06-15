@@ -1,32 +1,33 @@
 .PHONY: install
 install:
-	pip install -e '.[dev,tests,django]'
-	pip install pre-commit
-	pre-commit install
+	if ! command -v uv >/dev/null 2>&1; \
+	then echo "uv not found, installing..." \
+	&& curl -LsSf https://astral.sh/uv/install.sh | sh; \
+	fi
+	uv sync --extra django
+	uv run pre-commit install
 
 .PHONY: test
 test:
-	pytest -v
+	uv run pytest -v
 
 .PHONY: restest
 retest:
-	pytest -vv --lf
+	uv run pytest -vv --lf
 
 .PHONY: coverage
 coverage:
-	pytest -vv --cov --cov-report=term-missing
+	uv run pytest -vv --cov --cov-report=term-missing
 
 .PHONY: format
 format:
-	pre-commit run -a
+	uv run ruff check --fix-only .
+	uv run pre-commit run -a
 
-.PHONY: clean
-clean:
-	find . -type d -name __pycache__ -exec rm -r {} \+
-	rm -rf build dist
+.PHONY: lint
+lint:
+	uv run ruff check .
 
-.PHONY: build
-build: clean
-	python -m build --sdist --wheel .
-
-version := $(shell awk '/^version = / {print $$3}' setup.cfg)
+.PHONY: typecheck
+typecheck:
+	uv run ty check
