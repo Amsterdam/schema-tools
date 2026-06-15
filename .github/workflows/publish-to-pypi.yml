@@ -6,47 +6,31 @@ permissions:
 on:
   push:
     tags:
-      - 'v*.*.*'
-      - 'v*.*.*-rc*'
+      - "v*.*.*"
+      - "v*.*.*-rc*"
 
 jobs:
-  build:
-    name: Build distribution
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.14"
-    - name: Install build tools
-      run: python3 -m pip install build --user
-    - name: Build the package
-      run: python3 -m build
-    - name: Store the packages
-      uses: actions/upload-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
-
   publish-to-pypi:
-    name: Upload to PyPI
-    needs:
-      - build
+    name: Publish package to PyPI
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/project/amsterdam-schema-tools/
     permissions:
+      contents: read
       id-token: write
-
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
+      - name: Checkout code
+        uses: actions/checkout@v5
 
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Python 3.14
+        run: uv python install 3.14
+
+      - name: Build
+        run: uv build
+
+      - name: Publish
+        run: uv publish
