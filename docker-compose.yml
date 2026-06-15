@@ -1,7 +1,4 @@
-# This compose file is supplied for local dev
-# Since there is no running process, it just starts a bash
-# session in order to run tests etc.
-version: "3.0"
+# This compose file is supplied for local dev tests to spin up a postgres container with postgis
 services:
   database:
     image: postgis/postgis:14-3.2
@@ -11,18 +8,3 @@ services:
       POSTGRES_DB: dataservices
       POSTGRES_USER: dataservices
       POSTGRES_PASSWORD: insecure
-
-  app:
-    build: .
-    links:
-      - database
-    environment:
-      SECRET_KEY: insecure
-      # In order to use local datasets
-      SCHEMA_URL: /tmp/ams-schema/datasets
-      DATABASE_URL: "postgresql://dataservices:insecure@database/dataservices"
-    env_file: .env
-    volumes:
-      - ".:/app"
-    command: >
-      bash
