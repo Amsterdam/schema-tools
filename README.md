@@ -2,8 +2,8 @@
 
 Set of libraries and tools to work with Amsterdam schema.
 
-Install the package with: `pip install amsterdam-schema-tools`. This installs
-the library and a command-line tool called `schema`, with various subcommands.
+Install the package with: `pip install amsterdam-schema-tools` or `uv add amsterdam-schema-tools`.
+This installs the library and a command-line tool called `schema`, with various subcommands.
 A listing can be obtained from `schema --help`.
 
 Subcommands that talk to a PostgreSQL database expect either a `DATABASE_URL`
@@ -113,7 +113,8 @@ but also commit a tag with the version number; see below.
 
 We use GitHub pull requests. If your PR should produce a new release of
 schema-tools, make sure one of the commit increments the version number in
-``setup.cfg`` appropriately. Then,
+``pyproject.toml`` appropriately, and an entry is added to CHANGES.md.
+Then,
 
 * merge the commit in GitHub, after review;
 * pull the code from GitHub and merge it into the master branch,
