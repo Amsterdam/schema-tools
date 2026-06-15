@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shlex
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -611,6 +612,38 @@ class TestExports:
 
     def test_geopackage_export_retries_then_succeeds(
         self,
+        gebieden_export_schema,
+        create_context,
+        monkeypatch,
+    ) -> None:
+        export_definition = next(
+            exp for exp in gebieden_export_schema.versions["v1"].exports if exp.filetype == "gpkg"
+        )
+        context = create_context(gebieden_export_schema, export_definition)
+
+        calls: list[str] = []
+
+        def fake_run(cmd, *_args, **_kwargs):
+            calls.append(cmd)
+            if len(calls) == 1:
+                raise RuntimeError("boom")
+            args = shlex.split(cmd)
+            if "-nln" in args:  # noqa: SIM108
+                output_path_index = 4 if "-update" in args else 3
+            else:
+                output_path_index = 3
+            Path(args[output_path_index]).touch()
+            return None
+
+        monkeypatch.setattr("schematools.exports.geopackage.subprocess.run", fake_run)
+
+        failures = GeopackageExporter(context).export_tables(max_attempts=2, delay_seconds=0)
+        assert failures == []
+        assert any("-nln" in call for call in calls)
+        assert len(calls) == (len(export_definition.tables) * 2) + 1
+
+    def test_geopackage_export_skips_merge_for_single_table(
+        self,
         meetbouten_export_schema,
         create_context,
         monkeypatch,
@@ -620,10 +653,8 @@ class TestExports:
             for exp in meetbouten_export_schema.versions["v1"].exports
             if exp.filetype == "gpkg" and len(exp.tables) == 1
         )
-
-        # Use a custom export name so the consolidated file differs from the per-table file.
         export_definition = Export(
-            name="retry_test",
+            name="meetbouten",
             tables=base_export_definition.tables,
             scopes=base_export_definition.scopes,
             filetype=base_export_definition.filetype,
@@ -634,17 +665,20 @@ class TestExports:
 
         calls: list[str] = []
 
-        def fake_run(cmd, *_args, **_kwargs):
+        def fake_run(cmd, *, shell, check, **_kwargs):
             calls.append(cmd)
-            if len(calls) == 1:
-                raise RuntimeError("boom")
+            args = shlex.split(cmd)
+            Path(args[3]).touch()
             return None
 
         monkeypatch.setattr("schematools.exports.geopackage.subprocess.run", fake_run)
 
-        failures = GeopackageExporter(context).export_tables(max_attempts=2, delay_seconds=0)
+        failures = GeopackageExporter(context).export_tables(max_attempts=1, delay_seconds=0)
+
         assert failures == []
-        assert len(calls) >= 3  # 2x export (retry) + 1x merge
+        assert len(calls) == 1
+        assert "-nln" not in calls[0]
+        assert (context.folder / export_definition.filename_without_zip).exists()
 
     def test_geopackage_export_retries_then_fails_permanently(
         self,

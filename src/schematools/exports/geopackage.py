@@ -65,7 +65,8 @@ class GeopackageExporter(BaseExporter):
             last_exc: Exception | None = None
 
             export_cmd = (
-                f'ogr2ogr -f "GPKG" "{output_path}" PG:"{pg_conn_str}" -sql "{query_string}"'
+                f'ogr2ogr -f "GPKG" "{output_path}" PG:"{pg_conn_str}" -sql "{query_string}" '
+                f"{table.db_name_variant(with_dataset_prefix=False)}"
             )
 
             for attempt in range(1, max_attempts + 1):
@@ -107,10 +108,6 @@ class GeopackageExporter(BaseExporter):
         if not tables_to_merge:
             return []
 
-        # Ensure we never leave a stale/broken consolidated output around on failure.
-        if consolidated_file.exists():
-            consolidated_file.unlink()
-
         last_exc: Exception | None = None
         last_table_id = tables_to_merge[0].id
 
@@ -120,6 +117,8 @@ class GeopackageExporter(BaseExporter):
                 for table in tables_to_merge:
                     last_table_id = table.id
                     input_path = self.base_dir / self.export.table_filename(table.id)
+                    if input_path == consolidated_file:
+                        continue
 
                     flag = "" if not merged_any else "-update"
                     merge_cmd = (
