@@ -38,7 +38,7 @@ dependencies = [
     "remote-pdb==2.1.0",
     "requests==2.34.2",
     "shapely==2.1.2",
-    "sqlalchemy==2.0.50",
+    "sqlalchemy==2.0.51",
     "sqlparse==0.5.5",
 ]
 
@@ -57,7 +57,7 @@ dev = [
     "requests-mock==1.12.1",
     # Breaking change was introduced in 0.42:
     # https://github.com/kvesteri/sqlalchemy-utils/issues/791
-    "sqlalchemy-utils == 0.41.2",
+    "sqlalchemy-utils==0.42.1",
 ]
 
 [project.optional-dependencies]
