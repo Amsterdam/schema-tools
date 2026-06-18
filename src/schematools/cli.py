@@ -116,6 +116,34 @@ argument_role = click.argument(
 )
 
 
+class ValidationIssue:
+    def __init__(self, message: str):
+        self.message = message
+
+    @classmethod
+    def from_string(cls, error_str: str) -> ValidationIssue:
+        return cls(error_str)
+
+    @classmethod
+    def from_jsonschema_error(
+        cls, e: jsonschema.SchemaError | jsonschema.ValidationError
+    ) -> ValidationIssue:
+        return cls(
+            f"{e.json_path}: {e.message or '. '.join([ec.message.strip() for ec in e.context])}"
+        )
+
+    @classmethod
+    def from_validation_error(cls, e: validation.ValidationError) -> ValidationIssue:
+        return cls(str(e))
+
+    @classmethod
+    def from_exception(cls, e: Exception) -> ValidationIssue:
+        return cls(str(e))
+
+    def as_markdown_todo(self):
+        return f"- [ ] {self.message}"
+
+
 def _get_engine(db_url: str, pg_schemas: list[str] | None = None) -> sqlalchemy.engine.Engine:
     """Initialize the SQLAlchemy engine, and report click errors."""
     kwargs = {"pool_pre_ping": True}
@@ -531,6 +559,42 @@ def validate(
     sys.exit(exit_status)
 
 
+def _get_prefixed_path(path: str, prefix: str) -> str:
+    path_parts = path.split("/")
+    path_parts[-1] = f"{prefix}-{path_parts[-1]}"
+    return "/".join(path_parts)
+
+
+def _echo_grouped_validation_errors(header: str, errors: dict[str, list[ValidationIssue]]) -> None:
+    if not errors:
+        return
+
+    click.echo(header, err=True)
+    for path, issues in errors.items():
+        click.echo(f"## {path}", err=True)
+        for issue in issues:
+            click.echo(issue.as_markdown_todo(), err=True)
+
+
+def _validate_schema_objects_against_metaschema(
+    objects: dict[str, Publisher | Scope],
+    meta_schema: dict[str, Any],
+) -> dict[str, list[ValidationIssue]]:
+    errors: defaultdict[str, list[ValidationIssue]] = defaultdict(list)
+    for object_id, schema_object in objects.items():
+        click.echo(f"Validating {type(schema_object).__name__} with id {object_id}")
+        try:
+            jsonschema.validate(
+                instance=schema_object.json_data(),
+                schema=meta_schema,
+                format_checker=Draft7Validator.FORMAT_CHECKER,
+            )
+        except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
+            errors[object_id].append(ValidationIssue.from_jsonschema_error(e))
+
+    return errors
+
+
 @schema.command()
 @click.argument(
     "paths",
@@ -545,12 +609,10 @@ def validate_datasets(paths: tuple[str], prefix: str):
     """
     Compares two versions of a dataset to ensure no tables are changed on a stable dataset.
     """
-    has_errors = False
+    errors: defaultdict[str, list[ValidationIssue]] = defaultdict(list)
 
     for path in paths:
-        path_parts = path.split("/")
-        path_parts[-1] = f"{prefix}-{path_parts[-1]}"
-        previous_path = "/".join(path_parts)
+        previous_path = _get_prefixed_path(path, prefix)
         previous = read_json_path(previous_path)
         current = read_json_path(path)
         for vmajor, current_version in current.get("versions").items():
@@ -565,21 +627,24 @@ def validate_datasets(paths: tuple[str], prefix: str):
 
             click.echo("Validating stable dataset for changes. Only additions are allowed.")
 
-            dataset_errors = validation.validate_dataset(
-                previous_version["tables"], current_version["tables"]
-            )
+            dataset_errors = [
+                ValidationIssue.from_string(ve)
+                for ve in validation.validate_dataset(
+                    previous_version["tables"], current_version["tables"]
+                )
+            ]
             dataset_errors.extend(
-                validation.validate_dataset_versions_version(
+                ValidationIssue.from_string(ve)
+                for ve in validation.validate_dataset_versions_version(
                     previous["id"], previous_version, current_version
                 )
             )
-            if len(dataset_errors) > 0:
-                has_errors = True
+            if dataset_errors:
+                errors[path].extend(dataset_errors)
                 click.echo("FAIL")
-                for error in dataset_errors:
-                    click.echo(f"\t- {error}", err=True)
 
-    if has_errors:
+    if errors:
+        _echo_grouped_validation_errors("# Datasets Validation Errors", errors)
         click.echo("Breaking changes detected. Validation failed.")
         sys.exit(1)
     else:
@@ -625,22 +690,10 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
 
         click.echo(f"Validating against metaschema {meta_schema_version}")
         publishers = _get_publishers(schema_url)
+        errors = _validate_schema_objects_against_metaschema(publishers, meta_schema)
 
-        structural_errors = False
-        for id_, publisher in publishers.items():
-            try:
-                click.echo(f"Validating publisher with id {id_}")
-                jsonschema.validate(
-                    instance=publisher.json_data(),
-                    schema=meta_schema,
-                    format_checker=Draft7Validator.FORMAT_CHECKER,
-                )
-            except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
-                click.echo("Structural validation: ", nl=False)
-                structural_errors = True
-                click.echo(format_schema_error(e), err=True)
-
-        if structural_errors:
+        if errors:
+            _echo_grouped_validation_errors("# Publishers Validation Errors", errors)
             continue
         click.echo(f"All publishers are structurally valid against {meta_schema_version}")
         sys.exit(0)
@@ -682,21 +735,10 @@ def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
 
         click.echo(f"Validating against metaschema {meta_schema_version}")
         scopes = _get_scopes(schema_url)
-        structural_errors = False
-        for id_, scope in scopes.items():
-            try:
-                click.echo(f"Validating scope with id {id_}")
-                jsonschema.validate(
-                    instance=scope.json_data(),
-                    schema=meta_schema,
-                    format_checker=Draft7Validator.FORMAT_CHECKER,
-                )
-            except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
-                click.echo("Structural validation: ", nl=False)
-                structural_errors = True
-                click.echo(format_schema_error(e), err=True)
+        errors = _validate_schema_objects_against_metaschema(scopes, meta_schema)
 
-        if structural_errors:
+        if errors:
+            _echo_grouped_validation_errors("# Scopes Validation Errors", errors)
             continue
         click.echo(f"All scopes are structurally valid against {meta_schema_version}.")
         sys.exit(0)
@@ -718,12 +760,10 @@ def validate_tables(paths: tuple[str], prefix: str):
     """
     Compares two versions of a table to ensure no breaking changes are introduced.
     """
-    has_errors = False
+    errors: defaultdict[str, list[ValidationIssue]] = defaultdict(list)
 
     for path in paths:
-        path_parts = path.split("/")
-        path_parts[-1] = f"{prefix}-{path_parts[-1]}"
-        previous_path = "/".join(path_parts)
+        previous_path = _get_prefixed_path(path, prefix)
         previous: dict = read_json_path(previous_path)
         current: dict = read_json_path(path)
         # We can skip checks as long as the previous version was under_development.
@@ -735,26 +775,34 @@ def validate_tables(paths: tuple[str], prefix: str):
             # Validate table schema id (=optional)
             prev_id = previous["schema"].get("identifier", None)
             curr_id = current["schema"].get("identifier", None)
-            table_errors = validation.validate_schema_identifier(prev_id, curr_id)
+            table_errors = [
+                ValidationIssue.from_string(ve)
+                for ve in validation.validate_schema_identifier(prev_id, curr_id)
+            ]
 
             previous_fields = previous["schema"]["properties"]
             current_fields = current["schema"]["properties"]
-            table_errors.extend(validation.validate_table(previous_fields, current_fields))
+            table_errors.extend(
+                ValidationIssue.from_string(ve)
+                for ve in validation.validate_table(previous_fields, current_fields)
+            )
 
-            table_errors.extend(validation.validate_table_version(previous, current))
+            table_errors.extend(
+                ValidationIssue.from_string(ve)
+                for ve in validation.validate_table_version(previous, current)
+            )
 
-            if len(table_errors) > 0:
-                has_errors = True
+            if table_errors:
+                errors[path].extend(table_errors)
                 click.echo("FAIL")
-                for error in table_errors:
-                    click.echo(f"\t- {error}", err=True)
             else:
                 click.echo("PASSED")
         except KeyError:
-            has_errors = True
+            errors[path].append(ValidationIssue("Malformed json-file."))
             click.echo("FAIL")
-            click.echo("\t- Malformed json-file.")
-    if has_errors:
+
+    if errors:
+        _echo_grouped_validation_errors("# Tables Validation Errors", errors)
         click.echo("Breaking changes detected. Validation failed.")
         sys.exit(1)
     else:
@@ -799,7 +847,9 @@ def batch_validate(
         META_SCHEMA_URL: the URL to the Amsterdam meta schema
         SCHEMA_FILES: one or more schema files to be validated
     """  # noqa: D301,D412,D417
-    errors: defaultdict[str, defaultdict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+    errors: defaultdict[str, defaultdict[str, list[ValidationIssue]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
 
     # Find the root "datasets" directory.
     datasets_dir = Path(schema_files[0]).absolute().resolve()
@@ -850,7 +900,7 @@ def batch_validate(
             try:
                 dataset = loader.get_dataset_from_file(main_file)
             except ValueError as ve:
-                errors[schema_file][meta_schema_version].append(str(ve))
+                errors[schema_file][meta_schema_version].append(ValidationIssue.from_exception(ve))
                 # No sense in continuing if we can't read the schema file.
                 break
 
@@ -858,11 +908,15 @@ def batch_validate(
             validator = validators[meta_schema_version]
             struct_error = jsonschema.exceptions.best_match(validator.iter_errors(instance))
             if struct_error and struct_error.message not in IGNORED_ERRORS:
-                errors[schema_file][meta_schema_version].append(format_schema_error(struct_error))
+                errors[schema_file][meta_schema_version].append(
+                    ValidationIssue.from_jsonschema_error(struct_error)
+                )
 
             for sem_error in validation.run(dataset, main_file):
                 if str(sem_error) not in IGNORED_ERRORS:
-                    errors[schema_file][meta_schema_version].append(str(sem_error))
+                    errors[schema_file][meta_schema_version].append(
+                        ValidationIssue.from_validation_error(sem_error)
+                    )
 
             if not errors[schema_file][meta_schema_version]:
                 click.echo(f"{schema_file} is valid against meta schema {meta_schema_version}")
@@ -872,13 +926,18 @@ def batch_validate(
         done.add(main_file)
 
     if errors:
+        click.echo("# Dataset Schema Validation Errors", err=True)
         width = len(max(errors.keys(), key=lambda x: len(x)))
         for schema_file, versions in errors.items():
+            click.echo(f"## {schema_file}", err=True)
             click.echo(f"{schema_file} is invalid against all metaschema versions")
             version_width = len(max(versions.keys(), key=lambda x: len(x)))
-            for version_, err_msgs in versions.items():
-                for msg in err_msgs:
-                    click.echo(f"{schema_file:>{width}} - {version_:>{version_width}}: {msg}")
+            for version, issues in versions.items():
+                for issue in issues:
+                    click.echo(
+                        f"{schema_file:>{width}} - {version:>{version_width}}: {issue.message}"
+                    )
+                    click.echo(issue.as_markdown_todo(), err=True)
         sys.exit(1)
 
 
