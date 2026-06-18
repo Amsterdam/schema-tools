@@ -1,3 +1,7 @@
+# 2026-06-15 (9.10.0)
+
+* Output validation errors as markdown todos from CLI commands.
+
 # 2026-06-15 (9.9.0)
 
 * Upgrade toolchain to use `uv`.
@@ -6,6 +10,7 @@
   * Update Makefile
   * Update github workflows
   * Update README.md
+  * Add dependabot
 
 # 2026-06-15 (9.8.3)
 
