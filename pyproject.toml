@@ -95,7 +95,7 @@ addopts = [
     "--nomigrations",
     "--reuse-db",
     "--cov=schematools",
-    "--cov-fail-under=73",
+    "--cov-fail-under=76",
 ]
 norecursedirs = ["node_modules", ".tox", ".git", "dist", "build", "venv", ".venv"]
 filterwarnings = [
