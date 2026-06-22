@@ -49,8 +49,8 @@ def test_validate_tables_aggregates_errors_on_stderr(tmp_path: Path) -> None:
     result = runner.invoke(validate_tables, [str(current_table)])
 
     assert result.exit_code == 1
-    assert "# Tables Validation Errors" in result.stderr
-    assert f"## {current_table}" in result.stderr
+    assert "## Tables Validation Errors" in result.stderr
+    assert f"### {current_table}" in result.stderr
     assert "- [ ] Column field would be deleted." in result.stderr
     assert "FAIL" in result.stdout
 
@@ -91,8 +91,8 @@ def test_validate_datasets_aggregates_errors_on_stderr(tmp_path: Path) -> None:
     result = runner.invoke(validate_datasets, [str(current_dataset)])
 
     assert result.exit_code == 1
-    assert "# Datasets Validation Errors" in result.stderr
-    assert f"## {current_dataset}" in result.stderr
+    assert "## Datasets Validation Errors" in result.stderr
+    assert f"### {current_dataset}" in result.stderr
     assert "- [ ] Table table1 has been removed." in result.stderr
     assert "FAIL" in result.stdout
 
@@ -105,8 +105,8 @@ def test_batch_validate_aggregates_errors_on_stderr(tmp_path: Path, monkeypatch)
 
     meta_schema = {
         "type": "object",
-        "properties": {"id": {"type": "string"}},
-        "required": ["id"],
+        "properties": {"id": {"type": "string"}, "version": {"type": "integer"}},
+        "required": ["id", "version"],
     }
     dataset = SimpleNamespace(json_data=lambda **_kwargs: {})
     loader = SimpleNamespace(get_dataset_from_file=lambda _path: dataset)
@@ -119,9 +119,10 @@ def test_batch_validate_aggregates_errors_on_stderr(tmp_path: Path, monkeypatch)
     result = runner.invoke(batch_validate, ["schema@v4.2.0", str(dataset_file)])
 
     assert result.exit_code == 1
-    assert "# Dataset Schema Validation Errors" in result.stderr
-    assert f"## {dataset_file}" in result.stderr
+    assert "## Dataset Schema Validation Errors" in result.stderr
+    assert f"### {dataset_file}" in result.stderr
     assert "- [ ] $: 'id' is a required property" in result.stderr
+    assert "- [ ] $: 'version' is a required property" in result.stderr
     assert f"Validating {dataset_file} against 4.2.0" in result.stdout
 
 
@@ -141,7 +142,7 @@ def test_validate_tables_does_not_write_error_header_without_errors(tmp_path: Pa
 
     assert result.exit_code == 0
     assert result.stderr == ""
-    assert "# Tables Validation Errors" not in result.output
+    assert "## Tables Validation Errors" not in result.output
 
 
 def test_validate_datasets_does_not_write_error_header_without_errors(tmp_path: Path) -> None:
@@ -184,7 +185,7 @@ def test_validate_datasets_does_not_write_error_header_without_errors(tmp_path: 
 
     assert result.exit_code == 0
     assert result.stderr == ""
-    assert "# Datasets Validation Errors" not in result.output
+    assert "## Datasets Validation Errors" not in result.output
 
 
 def test_validate_publishers_aggregates_errors_on_stderr(monkeypatch) -> None:
@@ -205,8 +206,8 @@ def test_validate_publishers_aggregates_errors_on_stderr(monkeypatch) -> None:
     )
 
     assert result.exit_code == 1
-    assert "# Publishers Validation Errors" in result.stderr
-    assert "## publisher-one" in result.stderr
+    assert "## Publishers Validation Errors" in result.stderr
+    assert "### publisher-one" in result.stderr
     assert "- [ ] $: 'id' is a required property" in result.stderr
     assert "Validating Publisher with id publisher-one" in result.stdout
 
@@ -230,7 +231,7 @@ def test_validate_publishers_does_not_write_error_header_without_errors(monkeypa
 
     assert result.exit_code == 0
     assert result.stderr == ""
-    assert "# Publishers Validation Errors" not in result.output
+    assert "## Publishers Validation Errors" not in result.output
 
 
 def test_validate_scopes_aggregates_errors_on_stderr(monkeypatch) -> None:
@@ -251,8 +252,8 @@ def test_validate_scopes_aggregates_errors_on_stderr(monkeypatch) -> None:
     )
 
     assert result.exit_code == 1
-    assert "# Scopes Validation Errors" in result.stderr
-    assert "## scope-one" in result.stderr
+    assert "## Scopes Validation Errors" in result.stderr
+    assert "### scope-one" in result.stderr
     assert "- [ ] $: 'id' is a required property" in result.stderr
     assert "Validating Scope with id scope-one" in result.stdout
 
@@ -276,4 +277,4 @@ def test_validate_scopes_does_not_write_error_header_without_errors(monkeypatch)
 
     assert result.exit_code == 0
     assert result.stderr == ""
-    assert "# Scopes Validation Errors" not in result.output
+    assert "## Scopes Validation Errors" not in result.output
