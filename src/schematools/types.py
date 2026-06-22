@@ -782,9 +782,9 @@ class DatasetSchema(SchemaType):
         # We also need to add a shortname for the individual FK fields
         # pointing to left en right table in the M2M
         if field.has_shortname:
-            sub_table_schema["schema"]["properties"][target_field_id][
-                "shortname"
-            ] = field.shortname
+            sub_table_schema["schema"]["properties"][target_field_id]["shortname"] = (
+                field.shortname
+            )
         if table.has_shortname:
             sub_table_schema["schema"]["properties"][left_table_id]["shortname"] = table.shortname
 
@@ -1053,9 +1053,10 @@ class ExportTableFailure:
     error_message: str
 
     def __str__(self):
+        message = re.sub(r'password=[^"]*"', 'password=***"', self.error_message)
         return (
             f"Failed to export table '{self.table_id}' for export '{self.filename}': "
-            f"{self.error_type} - {self.error_message}"
+            f"{self.error_type} - {message}"
         )
 
 
@@ -2282,8 +2283,7 @@ class DatasetFieldSchema(JsonDict):
                 and (
                     # The "is_composite_key" check is a performance win,
                     # as that avoids having to fetch the related table object.
-                    self.is_composite_key
-                    or self.related_table.is_temporal
+                    self.is_composite_key or self.related_table.is_temporal
                 )
             )
         )
