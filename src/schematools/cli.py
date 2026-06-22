@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import heapq
 import io
 import json
 import logging
@@ -143,6 +144,47 @@ class ValidationIssue:
 
     def as_markdown_todo(self):
         return f"- [ ] {self.message}"
+
+
+
+def _best_jsonschema_errors(
+    error: jsonschema.SchemaError | jsonschema.ValidationError,
+) -> list[jsonschema.SchemaError | jsonschema.ValidationError]:
+    if not error.context:
+        return [error]
+
+    if error.validator not in {"anyOf", "oneOf"}:
+        smallest = heapq.nsmallest(2, error.context, key=relevance)
+        if len(smallest) == 2 and relevance(smallest[0]) == relevance(smallest[1]):
+            return [error]
+        return _best_jsonschema_errors(smallest[0])
+
+    matches_by_child = [
+        _best_jsonschema_errors(child_error)
+        for child_error in sorted(error.context, key=relevance)
+    ]
+    deepest_match = max(
+        max(len(match.absolute_path) for match in matches)
+        for matches in matches_by_child
+    )
+    return _dedupe_jsonschema_errors(
+        match
+        for matches in matches_by_child
+        if max(len(match.absolute_path) for match in matches) == deepest_match
+        for match in matches
+    )
+
+
+def _dedupe_jsonschema_errors(errors):
+    seen = set()
+    unique_errors = []
+    for error in errors:
+        marker = (tuple(error.absolute_path), error.message)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        unique_errors.append(error)
+    return unique_errors
 
 
 def _get_engine(db_url: str, pg_schemas: list[str] | None = None) -> sqlalchemy.engine.Engine:
@@ -909,9 +951,11 @@ def batch_validate(
             validator = validators[meta_schema_version]
             validation_errors = sorted(validator.iter_errors(instance), key=relevance)
             for struct_error in validation_errors:
-                if struct_error.message not in IGNORED_ERRORS:
+                for leaf_error in _best_jsonschema_errors(struct_error):
+                    if leaf_error.message in IGNORED_ERRORS:
+                        continue
                     errors[schema_file][meta_schema_version].append(
-                        ValidationIssue.from_jsonschema_error(struct_error)
+                        ValidationIssue.from_jsonschema_error(leaf_error)
                     )
 
             for sem_error in validation.run(dataset, main_file):

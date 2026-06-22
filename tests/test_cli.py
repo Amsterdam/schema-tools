@@ -126,6 +126,73 @@ def test_batch_validate_aggregates_errors_on_stderr(tmp_path: Path, monkeypatch)
     assert f"Validating {dataset_file} against 4.2.0" in result.stdout
 
 
+def test_batch_validate_reports_nested_anyof_errors(tmp_path: Path, monkeypatch) -> None:
+    dataset_dir = tmp_path / "datasets" / "example"
+    dataset_dir.mkdir(parents=True)
+    dataset_file = dataset_dir / "dataset.json"
+    dataset_file.write_text("{}")
+
+    meta_schema = {
+        "type": "object",
+        "anyOf": [
+            {"required": ["id"]},
+            {"required": ["version"]},
+        ],
+    }
+    dataset = SimpleNamespace(json_data=lambda **_kwargs: {})
+    loader = SimpleNamespace(get_dataset_from_file=lambda _path: dataset)
+
+    monkeypatch.setattr("schematools.cli._fetch_json", lambda _url: meta_schema)
+    monkeypatch.setattr("schematools.cli.FileSystemSchemaLoader", lambda _path: loader)
+    monkeypatch.setattr("schematools.cli.validation.run", lambda *_args, **_kwargs: [])
+
+    runner = CliRunner()
+    result = runner.invoke(batch_validate, ["schema@v4.2.0", str(dataset_file)])
+
+    assert result.exit_code == 1
+    assert "- [ ] $: 'id' is a required property" in result.stderr
+    assert "- [ ] $: 'version' is a required property" in result.stderr
+    assert "is not valid under any of the given schemas" not in result.stderr
+
+
+def test_batch_validate_prefers_deeper_anyof_errors(tmp_path: Path, monkeypatch) -> None:
+    dataset_dir = tmp_path / "datasets" / "example"
+    dataset_dir.mkdir(parents=True)
+    dataset_file = dataset_dir / "dataset.json"
+    dataset_file.write_text("{}")
+
+    meta_schema = {
+        "type": "object",
+        "anyOf": [
+            {
+                "type": "object",
+                "properties": {
+                    "foo": {
+                        "type": "object",
+                        "properties": {"bar": {"type": "string"}},
+                        "required": ["bar"],
+                    }
+                },
+                "required": ["foo"],
+            },
+            {"type": "object", "required": ["baz"]},
+        ],
+    }
+    dataset = SimpleNamespace(json_data=lambda **_kwargs: {"foo": {}})
+    loader = SimpleNamespace(get_dataset_from_file=lambda _path: dataset)
+
+    monkeypatch.setattr("schematools.cli._fetch_json", lambda _url: meta_schema)
+    monkeypatch.setattr("schematools.cli.FileSystemSchemaLoader", lambda _path: loader)
+    monkeypatch.setattr("schematools.cli.validation.run", lambda *_args, **_kwargs: [])
+
+    runner = CliRunner()
+    result = runner.invoke(batch_validate, ["schema@v4.2.0", str(dataset_file)])
+
+    assert result.exit_code == 1
+    assert "'bar' is a required property" in result.stderr
+    assert "'baz' is a required property" not in result.stderr
+
+
 def test_validate_tables_does_not_write_error_header_without_errors(tmp_path: Path) -> None:
     previous_table = tmp_path / "previous-table.json"
     current_table = tmp_path / "table.json"
