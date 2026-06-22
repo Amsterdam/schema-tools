@@ -1,3 +1,8 @@
+# 2026-06-22 (9.10.2)
+
+* Bugfix: output the leaf nodes of the ErrorTree rather than the root in case of anyOf/oneOf
+  validation.
+
 # 2026-06-22 (9.10.1)
 
 * Bugfix: output all validation errors, not just the best match.
