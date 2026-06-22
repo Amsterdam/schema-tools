@@ -1,6 +1,7 @@
 # 2026-06-22 (9.10.1)
 
 * Bugfix: output all validation errors, not just the best match.
+* Bugfix: remove temporary token from error logging.
 * Adjust markdown output for better readability.
 
 # 2026-06-15 (9.10.0)
