@@ -19,6 +19,7 @@ import jsonschema
 import requests
 import sqlalchemy
 from deepdiff import DeepDiff
+from jsonschema.exceptions import relevance
 from jsonschema.validators import Draft7Validator
 from sqlalchemy import Engine, inspect
 from sqlalchemy.exc import SQLAlchemyError
@@ -906,11 +907,12 @@ def batch_validate(
 
             instance = dataset.json_data(inline_tables=True, inline_publishers=False)
             validator = validators[meta_schema_version]
-            struct_error = jsonschema.exceptions.best_match(validator.iter_errors(instance))
-            if struct_error and struct_error.message not in IGNORED_ERRORS:
-                errors[schema_file][meta_schema_version].append(
-                    ValidationIssue.from_jsonschema_error(struct_error)
-                )
+            validation_errors = sorted(validator.iter_errors(instance), key=relevance)
+            for struct_error in validation_errors:
+                if struct_error.message not in IGNORED_ERRORS:
+                    errors[schema_file][meta_schema_version].append(
+                        ValidationIssue.from_jsonschema_error(struct_error)
+                    )
 
             for sem_error in validation.run(dataset, main_file):
                 if str(sem_error) not in IGNORED_ERRORS:
