@@ -572,7 +572,7 @@ def _echo_grouped_validation_errors(header: str, errors: dict[str, list[Validati
 
     click.echo(header, err=True)
     for path, issues in errors.items():
-        click.echo(f"## {path}", err=True)
+        click.echo(f"### {path}", err=True)
         for issue in issues:
             click.echo(issue.as_markdown_todo(), err=True)
 
@@ -645,7 +645,7 @@ def validate_datasets(paths: tuple[str], prefix: str):
                 click.echo("FAIL")
 
     if errors:
-        _echo_grouped_validation_errors("# Datasets Validation Errors", errors)
+        _echo_grouped_validation_errors("## Datasets Validation Errors", errors)
         click.echo("Breaking changes detected. Validation failed.")
         sys.exit(1)
     else:
@@ -694,7 +694,7 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
         errors = _validate_schema_objects_against_metaschema(publishers, meta_schema)
 
         if errors:
-            _echo_grouped_validation_errors("# Publishers Validation Errors", errors)
+            _echo_grouped_validation_errors("## Publishers Validation Errors", errors)
             continue
         click.echo(f"All publishers are structurally valid against {meta_schema_version}")
         sys.exit(0)
@@ -739,7 +739,7 @@ def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
         errors = _validate_schema_objects_against_metaschema(scopes, meta_schema)
 
         if errors:
-            _echo_grouped_validation_errors("# Scopes Validation Errors", errors)
+            _echo_grouped_validation_errors("## Scopes Validation Errors", errors)
             continue
         click.echo(f"All scopes are structurally valid against {meta_schema_version}.")
         sys.exit(0)
@@ -803,7 +803,7 @@ def validate_tables(paths: tuple[str], prefix: str):
             click.echo("FAIL")
 
     if errors:
-        _echo_grouped_validation_errors("# Tables Validation Errors", errors)
+        _echo_grouped_validation_errors("## Tables Validation Errors", errors)
         click.echo("Breaking changes detected. Validation failed.")
         sys.exit(1)
     else:
@@ -928,10 +928,10 @@ def batch_validate(
         done.add(main_file)
 
     if errors:
-        click.echo("# Dataset Schema Validation Errors", err=True)
+        click.echo("## Dataset Schema Validation Errors", err=True)
         width = len(max(errors.keys(), key=lambda x: len(x)))
         for schema_file, versions in errors.items():
-            click.echo(f"## {schema_file}", err=True)
+            click.echo(f"### {schema_file}", err=True)
             click.echo(f"{schema_file} is invalid against all metaschema versions")
             version_width = len(max(versions.keys(), key=lambda x: len(x)))
             for version, issues in versions.items():
