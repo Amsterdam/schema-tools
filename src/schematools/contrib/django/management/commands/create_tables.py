@@ -8,7 +8,7 @@ from django.core.management import BaseCommand, CommandError
 from django.db import DatabaseError, connection, router, transaction
 
 from schematools.contrib.django.factories import DjangoModelFactory
-from schematools.contrib.django.models import Dataset
+from schematools.contrib.django.models import Dataset, DatasetTable
 
 
 class Command(BaseCommand):
@@ -63,6 +63,9 @@ def create_tables(
     for model in models:
         models_by_table[model._meta.db_table].append(model)
 
+    # Track which tables have been deleted before
+    recreated_tables = set()
+
     # Create all tables
     with connection.schema_editor() as schema_editor:
         for db_table_name, models_group in models_by_table.items():
@@ -102,6 +105,18 @@ def create_tables(
                     errors += 1
             else:
                 command.stdout.write(f"* Created table {model._meta.db_table}")
+                created_tables = DatasetTable.objects.filter(db_table=model._meta.db_table)
+                for table in created_tables:
+                    if table.delete_date is not None:
+                        recreated_tables.add(table)
+
+    # Set delete_date to null for recreated tables
+    if recreated_tables:
+        with transaction.atomic():
+            for table in recreated_tables:
+                table.delete_date = None
+                command.stdout.write(f"* Setting delete date for table {table} back to NULL")
+            DatasetTable.objects.bulk_update(recreated_tables, ["delete_date"])
 
     if errors:
         raise CommandError("Not all tables could be created")

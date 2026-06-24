@@ -146,7 +146,6 @@ class ValidationIssue:
         return f"- [ ] {self.message}"
 
 
-
 def _best_jsonschema_errors(
     error: jsonschema.SchemaError | jsonschema.ValidationError,
 ) -> list[jsonschema.SchemaError | jsonschema.ValidationError]:
@@ -187,7 +186,9 @@ def _dedupe_jsonschema_errors(errors):
     return unique_errors
 
 
-def _get_engine(db_url: str, pg_schemas: list[str] | None = None) -> sqlalchemy.engine.Engine:
+def _get_engine(
+    db_url: str, pg_schemas: list[str] | None = None
+) -> sqlalchemy.engine.Engine:
     """Initialize the SQLAlchemy engine, and report click errors."""
     kwargs = {"pool_pre_ping": True}
     if pg_schemas is not None:
@@ -264,7 +265,9 @@ def create_export_context(
 @option_schema_url
 @argument_dataset_id
 @click.option("--output", "-o", default="tmp", help="Output folder, default = tmp")
-@click.option("--table-ids", "-t", multiple=True, help="Tables that need to be exported.")
+@click.option(
+    "--table-ids", "-t", multiple=True, help="Tables that need to be exported."
+)
 @click.option(
     "--scopes",
     "-s",
@@ -400,7 +403,9 @@ def permissions_revoke(db_url: str, role: str, verbose: int) -> None:
     default=True,
     help="Set dataset-level write permissions [default=write]",
 )
-@click.option("--create-roles", is_flag=True, default=False, help="Create missing postgres roles")
+@click.option(
+    "--create-roles", is_flag=True, default=False, help="Create missing postgres roles"
+)
 @click.option(
     "--revoke",
     is_flag=True,
@@ -534,7 +539,10 @@ def _fetch_json(location: str) -> dict[str, Any]:
 )
 @click.argument("meta_schema_url", nargs=-1)
 def validate(
-    schema_url: str, dataset_id: str, additional_schemas: list[str], meta_schema_url: tuple[str]
+    schema_url: str,
+    dataset_id: str,
+    additional_schemas: list[str],
+    meta_schema_url: tuple[str],
 ) -> None:
     """Validate a schema against the Amsterdam Schema meta schema.
 
@@ -608,7 +616,9 @@ def _get_prefixed_path(path: str, prefix: str) -> str:
     return "/".join(path_parts)
 
 
-def _echo_grouped_validation_errors(header: str, errors: dict[str, list[ValidationIssue]]) -> None:
+def _echo_grouped_validation_errors(
+    header: str, errors: dict[str, list[ValidationIssue]]
+) -> None:
     if not errors:
         return
 
@@ -646,7 +656,9 @@ def _validate_schema_objects_against_metaschema(
 @click.option(
     "--prefix",
     default="previous",
-    help=("Prefix of the file that the files in the paths should be validated against."),
+    help=(
+        "Prefix of the file that the files in the paths should be validated against."
+    ),
 )
 def validate_datasets(paths: tuple[str], prefix: str):
     """
@@ -665,10 +677,15 @@ def validate_datasets(paths: tuple[str], prefix: str):
                 click.echo("Dataset has no previous version")
                 continue
             # We can skip checks as long as the previous version was under_development.
-            if previous_version["status"] == DatasetTableSchema.Status.under_development.value:
+            if (
+                previous_version["status"]
+                == DatasetTableSchema.Status.under_development.value
+            ):
                 continue
 
-            click.echo("Validating stable dataset for changes. Only additions are allowed.")
+            click.echo(
+                "Validating stable dataset for changes. Only additions are allowed."
+            )
 
             dataset_errors = [
                 ValidationIssue.from_string(ve)
@@ -738,9 +755,13 @@ def validate_publishers(schema_url: str, meta_schema_url: tuple[str]) -> None:
         if errors:
             _echo_grouped_validation_errors("## Publishers Validation Errors", errors)
             continue
-        click.echo(f"All publishers are structurally valid against {meta_schema_version}")
+        click.echo(
+            f"All publishers are structurally valid against {meta_schema_version}"
+        )
         sys.exit(0)
-    click.echo("Publishers are structurally invalid against all supplied metaschema versions")
+    click.echo(
+        "Publishers are structurally invalid against all supplied metaschema versions"
+    )
     sys.exit(1)
 
 
@@ -785,7 +806,9 @@ def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
             continue
         click.echo(f"All scopes are structurally valid against {meta_schema_version}.")
         sys.exit(0)
-    click.echo("Scopes are structurally invalid against all supplied metaschema versions")
+    click.echo(
+        "Scopes are structurally invalid against all supplied metaschema versions"
+    )
     sys.exit(1)
 
 
@@ -797,7 +820,9 @@ def validate_scopes(schema_url: str, meta_schema_url: tuple[str]) -> None:
 @click.option(
     "--prefix",
     default="previous",
-    help=("Prefix of the file that the files in the paths should be validated against."),
+    help=(
+        "Prefix of the file that the files in the paths should be validated against."
+    ),
 )
 def validate_tables(paths: tuple[str], prefix: str):
     """
@@ -849,7 +874,9 @@ def validate_tables(paths: tuple[str], prefix: str):
         click.echo("Breaking changes detected. Validation failed.")
         sys.exit(1)
     else:
-        click.echo("All tables are backwards compatible against previous non-major versions.")
+        click.echo(
+            "All tables are backwards compatible against previous non-major versions."
+        )
         sys.exit(0)
 
 
@@ -902,7 +929,9 @@ def batch_validate(
     try:
         datasets_idx = path_parts.index("datasets")
     except ValueError:
-        raise ValueError("dataset files do not live in a common 'datasets' dir") from None
+        raise ValueError(
+            "dataset files do not live in a common 'datasets' dir"
+        ) from None
 
     # Find out if we need to go up the directory tree to get at `datasets` dir
     # This could be needed if we are only checking one dataset,
@@ -921,7 +950,9 @@ def batch_validate(
         meta_schema = _fetch_json(url)
         validator_class = jsonschema.validators.validator_for(meta_schema)
         validator_class.check_schema(meta_schema)
-        validator = validator_class(meta_schema, format_checker=Draft7Validator.FORMAT_CHECKER)
+        validator = validator_class(
+            meta_schema, format_checker=Draft7Validator.FORMAT_CHECKER
+        )
         validators[meta_schema_version] = validator
 
     done = set()
@@ -943,7 +974,9 @@ def batch_validate(
             try:
                 dataset = loader.get_dataset_from_file(main_file)
             except ValueError as ve:
-                errors[schema_file][meta_schema_version].append(ValidationIssue.from_exception(ve))
+                errors[schema_file][meta_schema_version].append(
+                    ValidationIssue.from_exception(ve)
+                )
                 # No sense in continuing if we can't read the schema file.
                 break
 
@@ -965,7 +998,9 @@ def batch_validate(
                     )
 
             if not errors[schema_file][meta_schema_version]:
-                click.echo(f"{schema_file} is valid against meta schema {meta_schema_version}")
+                click.echo(
+                    f"{schema_file} is valid against meta schema {meta_schema_version}"
+                )
                 # We dont show errors if the file is valid against one of the metaschemas
                 errors.pop(schema_file)
                 break
@@ -1027,7 +1062,7 @@ def to_ckan(schema_url: str, upload_url: str):
         try:
             data.append(ckan.from_dataset(ds, path))
         except Exception as e:  # noqa: BLE001
-            logger.error("in dataset %s: %s", ds.identifier, str(e))  # noqa: G200
+            logger.error("in dataset %s: %s", ds.identifier, str(e))
             status = 1
 
     if upload_url is None:
@@ -1133,7 +1168,9 @@ def show_scopes(schema_url: str, dataset_id: str) -> None:
     dataset_schema = _get_dataset_schema(dataset_id, schema_url)
     scopes = set(dataset_schema.auth)
     for table in dataset_schema.tables:
-        scopes |= set(table.auth) | reduce(operator.or_, (set(f.auth) for f in table.fields))
+        scopes |= set(table.auth) | reduce(
+            operator.or_, (set(f.auth) for f in table.fields)
+        )
     click.echo(" ".join(str(scope) for scope in scopes - {"OPENBAAR"}))
 
 

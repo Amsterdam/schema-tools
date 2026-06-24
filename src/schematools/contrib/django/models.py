@@ -168,6 +168,7 @@ class Dataset(models.Model):
     path = models.TextField(unique=True, blank=False, validators=[URLPathValidator()])
     auth = models.CharField(_("Authorization"), blank=True, null=True, max_length=250)
     ordering = models.IntegerField(_("Ordering"), default=1)
+    delete_date = models.DateTimeField(null=True, blank=True)
 
     objects = managers.DatasetQuerySet.as_manager()
 
@@ -422,6 +423,7 @@ class DatasetTable(models.Model):
     geometry_field_type = models.CharField(max_length=50, null=True, blank=True)
     is_temporal = models.BooleanField(null=False, blank=False, default=False)
     id_field = models.CharField(max_length=50, blank=False, default="id")
+    delete_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ("name",)

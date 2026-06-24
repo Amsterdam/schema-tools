@@ -5,6 +5,7 @@ import io
 from django.core.management import BaseCommand, CommandError
 from django.db import connection
 from django.db.utils import ProgrammingError
+from django.utils import timezone
 from psycopg import sql
 
 from schematools.contrib.django.models import Dataset, DatasetTable
@@ -25,10 +26,10 @@ class Command(BaseCommand):
             help="Schemas that need to be dropped",
         )
         parser.add_argument(
-            "--drop-tables",
+            "--hard-delete",
             action="store_true",
             default=False,
-            help="Also drop the tables associated with the schemas",
+            help="Remove schemas and tables from dataset",
         )
 
     def handle(self, *args, **options):
@@ -52,7 +53,22 @@ class Command(BaseCommand):
             raise CommandError(msg.getvalue())
 
         dataset_qs = datasets.filter(name__in=drop_schemas)
-        if options["drop_tables"]:
+
+        tables = DatasetTable.objects.filter(dataset__in=dataset_qs)
+        for table in tables:
+            name = table.db_table
+            if table.delete_date is None:
+                table.delete_date = timezone.now()
+                table.save(update_fields=["delete_date"])
+                self.stdout.write(f"Added delete date to table {name}")
+
+        for dataset in dataset_qs:
+            dataset.delete_date = timezone.now()
+            dataset.save(update_fields=["delete_date"])
+            self.stdout.write(f"Added delete date to dataset: {drop_schemas}")
+
+        # Deze wordt alleen aangeroepen door de cronjob
+        if options["hard_delete"]:
             tables = DatasetTable.objects.filter(dataset__in=dataset_qs)
             with connection.cursor() as cursor:
                 for table in tables:
@@ -71,7 +87,7 @@ class Command(BaseCommand):
                         # We only need to attempt to clean it here.
                         self.stdout.write(f"Failed to delete table {name}. Error: {e}")
                         continue
-
-        dataset_qs.delete()
-        if options["verbosity"] > 0:
-            self.stdout.write(f"Deleted the following datasets: {drop_schemas}")
+            # Delete datasets
+            dataset_qs.delete()
+            if options["verbosity"] > 0:
+                self.stdout.write(f"Deleted the following datasets: {drop_schemas}")

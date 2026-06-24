@@ -9,7 +9,7 @@ from schematools.contrib.django.factories import DjangoModelFactory
 
 
 @pytest.mark.django_db
-def test_remove_schema_and_tables(here):
+def test_remove_schema_and_tables(here, capsys):
     """Prove that dataset schema gets imported correctly"""
     afval_json_path = here / "files/datasets/afvalwegingen.json"
     parkeervakken_json_path = here / "files/datasets/parkeervakken.json"
@@ -43,7 +43,7 @@ def test_remove_schema_and_tables(here):
             assert factory.build_model(table_schema).objects.count() == 0
 
     # Delete dataset and tables
-    call_command("remove_schemas", "afvalwegingen", drop_tables=True)
+    call_command("remove_schemas", "afvalwegingen", hard_delete=True)
 
     assert models.Dataset.objects.count() == 3
     assert models.DatasetTable.objects.count() == 9
@@ -53,17 +53,22 @@ def test_remove_schema_and_tables(here):
 
     assert afvalweging_tables.isdisjoint(connection.introspection.table_names())
 
-    # dont delete the tables
-    call_command("remove_schemas", "parkeervakken")
+    # Delete dataset and tables
+    call_command("remove_schemas", "parkeervakken", hard_delete=True)
 
+    captured = capsys.readouterr()
     assert models.Dataset.objects.count() == 2
     assert models.DatasetVersion.objects.count() == 2
     assert models.DatasetTable.objects.count() == 7
 
-    assert parkeervak_tables.issubset(connection.introspection.table_names())
+    assert not parkeervak_tables.issubset(connection.introspection.table_names())
+    assert """Deleted the following datasets: {'parkeervakken'}""" in captured.out
 
-    # Delete last two datasets
-    call_command("remove_schemas", "verblijfsobjecten", "gebieden")
+    # Soft delete the other datasets
+    call_command("remove_schemas", "verblijfsobjecten")
 
-    assert models.Dataset.objects.count() == 0
-    assert models.DatasetVersion.objects.count() == 0
+    captured = capsys.readouterr()
+    assert models.Dataset.objects.count() == 2
+    assert models.DatasetVersion.objects.count() == 2
+    assert """Added delete date to dataset: {'verblijfsobjecten'}""" in captured.out
+    assert models.Dataset.objects.filter(name="verblijfsobjecten").exists()
