@@ -164,7 +164,9 @@ def test_import_schema_update_add_relation_to_other_dataset_creates_db_column(he
 
 
 @pytest.mark.django_db()
-def test_import_schema_add_field_on_table_existing_in_multiple_versions_does_not_error(here):
+def test_import_schema_add_field_on_table_existing_in_multiple_versions_does_not_error(
+    here,
+):
     original = here / "files/datasets/multiversionadd_original.json"
     call_command("import_schemas", original, create_tables=1)
 
@@ -447,8 +449,14 @@ def test_missing_datasets_if_match(
     """Prove that missing_datasets is empty when datasets match"""
     command = Command()
 
-    current = {"verblijfsobjecten": verblijfsobjecten_dataset, "gebieden": gebieden_dataset}
-    updated = {"verblijfsobjecten": verblijfsobjecten_schema, "gebieden": gebieden_schema}
+    current = {
+        "verblijfsobjecten": verblijfsobjecten_dataset,
+        "gebieden": gebieden_dataset,
+    }
+    updated = {
+        "verblijfsobjecten": verblijfsobjecten_schema,
+        "gebieden": gebieden_schema,
+    }
 
     missing_datasets = command.get_missing_datasets(current, updated)
 
@@ -471,7 +479,10 @@ def test_missing_datasets(
         "gebieden": gebieden_dataset,
         "hr": hr_dataset,
     }
-    updated = {"verblijfsobjecten": verblijfsobjecten_schema, "gebieden": gebieden_schema}
+    updated = {
+        "verblijfsobjecten": verblijfsobjecten_schema,
+        "gebieden": gebieden_schema,
+    }
 
     missing_datasets = command.get_missing_datasets(current, updated)
 
@@ -520,7 +531,10 @@ def test_delete_date_back_to_null(here, dataset_library, capsys):
     parkeer_table = models.DatasetTable.objects.get(db_table="parkeervakken_parkeervakken_v1")
     parkeer_dataset = models.Dataset.objects.get(name="parkeervakken")
     captured = capsys.readouterr()
-    assert "Setting delete date for dataset parkeervakken back to NULL" in captured.out
-    assert "Setting delete date for table parkeervakken back to NULL" in captured.out
+    assert "Setting delete date for recreated dataset parkeervakken back to NULL" in captured.out
+    assert (
+        "Setting delete date for recreated table parkeervakken_parkeervakken_v1 back to NULL"
+        in captured.out
+    )
     assert parkeer_table.delete_date is None
     assert parkeer_dataset.delete_date is None

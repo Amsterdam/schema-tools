@@ -105,18 +105,18 @@ def create_tables(
                     errors += 1
             else:
                 command.stdout.write(f"* Created table {model._meta.db_table}")
-                created_tables = DatasetTable.objects.filter(db_table=model._meta.db_table)
-                for table in created_tables:
-                    if table.delete_date is not None:
-                        recreated_tables.add(table)
+                created_table = DatasetTable.objects.filter(db_table=model._meta.db_table).first()
+                if created_table and created_table.delete_date is not None:
+                    recreated_tables.add(created_table.db_table)
 
     # Set delete_date to null for recreated tables
     if recreated_tables:
         with transaction.atomic():
+            DatasetTable.objects.filter(db_table__in=recreated_tables).update(delete_date=None)
             for table in recreated_tables:
-                table.delete_date = None
-                command.stdout.write(f"* Setting delete date for table {table} back to NULL")
-            DatasetTable.objects.bulk_update(recreated_tables, ["delete_date"])
+                command.stdout.write(
+                    f"* Setting delete date for recreated table {table} back to NULL"
+                )
 
     if errors:
         raise CommandError("Not all tables could be created")

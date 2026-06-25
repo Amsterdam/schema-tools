@@ -53,23 +53,10 @@ class Command(BaseCommand):
             raise CommandError(msg.getvalue())
 
         dataset_qs = datasets.filter(name__in=drop_schemas)
-
         tables = DatasetTable.objects.filter(dataset__in=dataset_qs)
-        for table in tables:
-            name = table.db_table
-            if table.delete_date is None:
-                table.delete_date = timezone.now()
-                table.save(update_fields=["delete_date"])
-                self.stdout.write(f"Added delete date to table {name}")
-
-        for dataset in dataset_qs:
-            dataset.delete_date = timezone.now()
-            dataset.save(update_fields=["delete_date"])
-            self.stdout.write(f"Added delete date to dataset: {drop_schemas}")
 
         # Deze wordt alleen aangeroepen door de cronjob
         if options["hard_delete"]:
-            tables = DatasetTable.objects.filter(dataset__in=dataset_qs)
             with connection.cursor() as cursor:
                 for table in tables:
                     name = table.db_table
@@ -91,3 +78,16 @@ class Command(BaseCommand):
             dataset_qs.delete()
             if options["verbosity"] > 0:
                 self.stdout.write(f"Deleted the following datasets: {drop_schemas}")
+        else:
+            # set delete date to soft delete tables and datasets
+            for table in tables:
+                name = table.db_table
+                if table.delete_date is None:
+                    table.delete_date = timezone.now()
+                    table.save(update_fields=["delete_date"])
+                    self.stdout.write(f"Added delete date to table {name}")
+
+            for dataset in dataset_qs:
+                dataset.delete_date = timezone.now()
+                dataset.save(update_fields=["delete_date"])
+                self.stdout.write(f"Added delete date to dataset: {drop_schemas}")
