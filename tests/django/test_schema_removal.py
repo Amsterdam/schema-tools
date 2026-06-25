@@ -63,6 +63,7 @@ def test_remove_schema_and_tables(here, capsys):
 
     assert not parkeervak_tables.issubset(connection.introspection.table_names())
     assert """Deleted the following datasets: {'parkeervakken'}""" in captured.out
+    assert "Deleted table parkeervakken_parkeervakken_v1" in captured.out
 
     # Soft delete the other datasets
     call_command("remove_schemas", "verblijfsobjecten")
