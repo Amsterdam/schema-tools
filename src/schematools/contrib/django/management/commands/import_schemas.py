@@ -10,7 +10,10 @@ from django.db import transaction
 
 from schematools import validation
 from schematools.contrib.django.factories import DjangoModelFactory
-from schematools.contrib.django.management.commands.migration_helpers import drop_table, migrate
+from schematools.contrib.django.management.commands.migration_helpers import (
+    drop_table,
+    migrate,
+)
 from schematools.contrib.django.models import Dataset
 from schematools.exceptions import DatasetTableNotFound
 from schematools.loaders import FileSystemSchemaLoader, get_schema_loader
@@ -52,9 +55,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.verbosity = options["verbosity"]
         self.schema_dependencies = deque()
-        current_datasets = {
-            Dataset.name_from_schema(ds.schema): ds for ds in Dataset.objects.all()
-        }
+        all_datasets = Dataset.objects.all()
+        current_datasets = {Dataset.name_from_schema(ds.schema): ds for ds in all_datasets}
 
         if options["schema"]:
             schemas = self.get_schemas_from_files(options["schema"])
@@ -65,6 +67,24 @@ class Command(BaseCommand):
             if schemas and current_datasets:
                 # Check if there are datasets missing
                 missing_datasets = self.get_missing_datasets(current_datasets, schemas)
+
+                missing_set = set(missing_datasets)
+                datasets_to_restore = [
+                    ds
+                    for ds in all_datasets
+                    if ds not in missing_set and ds.delete_date is not None
+                ]
+
+                if datasets_to_restore:
+                    with transaction.atomic():
+                        Dataset.objects.filter(name__in=datasets_to_restore).update(
+                            delete_date=None
+                        )
+                        for ds in datasets_to_restore:
+                            self.stdout.write(
+                                f"* Setting delete date for recreated dataset "
+                                f"{ds.name} back to NULL"
+                            )
 
                 if missing_datasets:
                     # If missing, delete these schemas from datasets_dataset table
@@ -182,7 +202,10 @@ class Command(BaseCommand):
         return real_apps
 
     def _migrate_tables(
-        self, current_datasets: dict[str, Dataset], updated_datasets: Iterable[Dataset], options
+        self,
+        current_datasets: dict[str, Dataset],
+        updated_datasets: Iterable[Dataset],
+        options,
     ):
         # Loop over updated datasets and perform migrations.
         for updated_dataset in updated_datasets:

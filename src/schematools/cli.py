@@ -146,7 +146,6 @@ class ValidationIssue:
         return f"- [ ] {self.message}"
 
 
-
 def _best_jsonschema_errors(
     error: jsonschema.SchemaError | jsonschema.ValidationError,
 ) -> list[jsonschema.SchemaError | jsonschema.ValidationError]:
@@ -164,8 +163,7 @@ def _best_jsonschema_errors(
         for child_error in sorted(error.context, key=relevance)
     ]
     deepest_match = max(
-        max(len(match.absolute_path) for match in matches)
-        for matches in matches_by_child
+        max(len(match.absolute_path) for match in matches) for matches in matches_by_child
     )
     return _dedupe_jsonschema_errors(
         match
@@ -534,7 +532,10 @@ def _fetch_json(location: str) -> dict[str, Any]:
 )
 @click.argument("meta_schema_url", nargs=-1)
 def validate(
-    schema_url: str, dataset_id: str, additional_schemas: list[str], meta_schema_url: tuple[str]
+    schema_url: str,
+    dataset_id: str,
+    additional_schemas: list[str],
+    meta_schema_url: tuple[str],
 ) -> None:
     """Validate a schema against the Amsterdam Schema meta schema.
 
@@ -1027,7 +1028,7 @@ def to_ckan(schema_url: str, upload_url: str):
         try:
             data.append(ckan.from_dataset(ds, path))
         except Exception as e:  # noqa: BLE001
-            logger.error("in dataset %s: %s", ds.identifier, str(e))  # noqa: G200
+            logger.error("in dataset %s: %s", ds.identifier, str(e))
             status = 1
 
     if upload_url is None:
