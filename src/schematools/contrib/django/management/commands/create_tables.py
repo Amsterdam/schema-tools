@@ -25,7 +25,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         skip = options.get("skip")
-        create_tables(self, Dataset.objects.db_enabled(), allow_unmanaged=True, skip=skip)
+        create_tables(
+            self, Dataset.objects.db_enabled(), allow_unmanaged=True, skip=skip
+        )
 
 
 def create_tables(
@@ -64,7 +66,7 @@ def create_tables(
         models_by_table[model._meta.db_table].append(model)
 
     # Track which tables have been deleted before
-    recreated_tables = set()
+    all_created_tables = set()
 
     # Create all tables
     with connection.schema_editor() as schema_editor:
@@ -89,34 +91,44 @@ def create_tables(
 
             router_allows = router.allow_migrate_model(model._meta.app_label, model)
             if not router_allows:
-                command.stdout.write(f"  Skipping externally managed table: {db_table_name}")
+                command.stdout.write(
+                    f"  Skipping externally managed table: {db_table_name}"
+                )
                 continue
 
             if not allow_unmanaged and not model._meta.can_migrate(connection):
-                command.stderr.write(f"  Skipping non-managed model: {model._meta.db_table}")
+                command.stderr.write(
+                    f"  Skipping non-managed model: {model._meta.db_table}"
+                )
                 continue
 
             try:
                 with transaction.atomic():
                     schema_editor.create_model(model)
             except (DatabaseError, ValueError) as e:
-                command.stderr.write(f"  Cannot create table {model._meta.db_table}: {e}")
+                command.stderr.write(
+                    f"  Cannot create table {model._meta.db_table}: {e}"
+                )
                 if not re.search(r'relation "[^"]+" already exists', str(e)):
                     errors += 1
             else:
                 command.stdout.write(f"* Created table {model._meta.db_table}")
-                created_table = DatasetTable.objects.filter(db_table=model._meta.db_table).first()
-                if created_table and created_table.delete_date is not None:
-                    recreated_tables.add(created_table.db_table)
+                created_table = DatasetTable.objects.filter(
+                    db_table=model._meta.db_table
+                ).first()
+                if created_table:
+                    all_created_tables.add(created_table.db_table)
 
     # Set delete_date to null for recreated tables
-    if recreated_tables:
-        with transaction.atomic():
-            DatasetTable.objects.filter(db_table__in=recreated_tables).update(delete_date=None)
-            for table in recreated_tables:
-                command.stdout.write(
-                    f"* Setting delete date for recreated table {table} back to NULL"
-                )
+    recreated_qs = DatasetTable.objects.filter(
+        db_table__in=all_created_tables, delete_date__isnull=False
+    )
+    if recreated_qs:
+        command.stdout.write(
+            f"* Setting delete date for recreated tables "
+            f"{', '.join(table.db_table for table in recreated_qs)} back to NULL"
+        )
+        recreated_qs.update(delete_date=None)
 
     if errors:
         raise CommandError("Not all tables could be created")
