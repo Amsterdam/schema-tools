@@ -67,6 +67,9 @@ django = [
     "django-environ==0.14.0",
     "factory_boy==3.3.3",
 ]
+databricks = [
+    "databricks-sdk==0.120.0"
+]
 
 [project.scripts]
 schema = "schematools.cli:main"
