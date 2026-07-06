@@ -67,15 +67,13 @@ def test_import_schema_update_runs_migrations(here):
     )
     activiteiten_table = models.DatasetTable.objects.get(name="maatschappelijkeactiviteiten")
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
+        cursor.execute(f"""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{activiteiten_table.db_table}'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "activiteit_type" not in columns
 
@@ -89,15 +87,13 @@ def test_import_schema_update_runs_migrations(here):
     )
     activiteiten_table = models.DatasetTable.objects.get(name="maatschappelijkeactiviteiten")
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
+        cursor.execute(f"""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{activiteiten_table.db_table}'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "activiteit_type" in columns
 
@@ -109,15 +105,13 @@ def test_import_schema_update_add_relation_field_creates_db_column(here):
 
     books_table = models.DatasetTable.objects.get(dataset__name="relationadd", name="books")
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
+        cursor.execute(f"""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{books_table.db_table}'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "author_id" not in columns
 
@@ -125,15 +119,13 @@ def test_import_schema_update_add_relation_field_creates_db_column(here):
     call_command("import_schemas", updated)
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
+        cursor.execute(f"""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{books_table.db_table}'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "author_id" in columns
 
@@ -146,15 +138,13 @@ def test_import_schema_update_add_relation_to_other_dataset_creates_db_column(he
 
     books_table = models.DatasetTable.objects.get(dataset__name="relationadd", name="books")
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
+        cursor.execute(f"""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{books_table.db_table}'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "location_id" not in columns
 
@@ -162,21 +152,21 @@ def test_import_schema_update_add_relation_to_other_dataset_creates_db_column(he
     call_command("import_schemas", gebieden, updated)
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
+        cursor.execute(f"""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{books_table.db_table}'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "location_id" in columns
 
 
 @pytest.mark.django_db()
-def test_import_schema_add_field_on_table_existing_in_multiple_versions_does_not_error(here):
+def test_import_schema_add_field_on_table_existing_in_multiple_versions_does_not_error(
+    here,
+):
     original = here / "files/datasets/multiversionadd_original.json"
     call_command("import_schemas", original, create_tables=1)
 
@@ -196,15 +186,13 @@ def test_import_schema_add_field_on_table_existing_in_multiple_versions_does_not
 
     for table in (tables_by_version["v1"], tables_by_version["v2"]):
         with connection.cursor() as cursor:
-            cursor.execute(
-                f"""SELECT
+            cursor.execute(f"""SELECT
                     column_name
                 FROM
                     information_schema.columns
                 WHERE
                     table_name = '{table.db_table}'
-                """
-            )
+                """)
             columns = [col for row in cursor.fetchall() for col in row]
             assert "extra" not in columns
 
@@ -213,15 +201,13 @@ def test_import_schema_add_field_on_table_existing_in_multiple_versions_does_not
 
     for table in (tables_by_version["v1"], tables_by_version["v2"]):
         with connection.cursor() as cursor:
-            cursor.execute(
-                f"""SELECT
+            cursor.execute(f"""SELECT
                     column_name
                 FROM
                     information_schema.columns
                 WHERE
                     table_name = '{table.db_table}'
-                """
-            )
+                """)
             columns = [col for row in cursor.fetchall() for col in row]
             assert "extra" in columns
 
@@ -309,15 +295,13 @@ def test_import_schema_works_with_percentage_in_comment(here, capsys):
     updated_gebieden_json_path = here / "files/datasets/gebieden_updated_comment.json"
     call_command("import_schemas", updated_gebieden_json_path)
     with connection.cursor() as cursor:
-        cursor.execute(
-            """SELECT
+        cursor.execute("""SELECT
                 column_name, col_description(format('%s.%s', table_schema, table_name)::regclass::oid, ordinal_position) AS column_comment
             FROM
                 information_schema.columns
             WHERE
                 table_name = 'gebieden_bouwblokken_v1'
-            """
-        )
+            """)
         columns = [row for row in cursor.fetchall() if row[0] == "identificatie"]
         assert (
             "Unieke identificatie van het object. Gewijzigd voor db_comment met %." in columns[0]
@@ -348,15 +332,13 @@ def test_import_schema_drops_experimental_table_with_breaking_change(here):
     assert models.Dataset.objects.count() == 1
     table = models.DatasetTable.objects.get(name="experimentaltable")
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
+        cursor.execute(f"""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{table.db_table}'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "other" in columns
 
@@ -364,15 +346,13 @@ def test_import_schema_drops_experimental_table_with_breaking_change(here):
     call_command("import_schemas", updated, create_tables=1)
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""SELECT
+        cursor.execute(f"""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{table.db_table}'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "other" not in columns
 
@@ -426,15 +406,13 @@ def test_import_schema_updates_experimental_table_with_non_breaking_change(here)
     call_command("import_schemas", updated, create_tables=1)
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            """SELECT
+        cursor.execute("""SELECT
                 column_name
             FROM
                 information_schema.columns
             WHERE
                 table_name = 'experimental_experimentaltable_v1'
-            """
-        )
+            """)
         columns = [col for row in cursor.fetchall() for col in row]
         assert "another" in columns
 
@@ -471,8 +449,14 @@ def test_missing_datasets_if_match(
     """Prove that missing_datasets is empty when datasets match"""
     command = Command()
 
-    current = {"verblijfsobjecten": verblijfsobjecten_dataset, "gebieden": gebieden_dataset}
-    updated = {"verblijfsobjecten": verblijfsobjecten_schema, "gebieden": gebieden_schema}
+    current = {
+        "verblijfsobjecten": verblijfsobjecten_dataset,
+        "gebieden": gebieden_dataset,
+    }
+    updated = {
+        "verblijfsobjecten": verblijfsobjecten_schema,
+        "gebieden": gebieden_schema,
+    }
 
     missing_datasets = command.get_missing_datasets(current, updated)
 
@@ -495,7 +479,10 @@ def test_missing_datasets(
         "gebieden": gebieden_dataset,
         "hr": hr_dataset,
     }
-    updated = {"verblijfsobjecten": verblijfsobjecten_schema, "gebieden": gebieden_schema}
+    updated = {
+        "verblijfsobjecten": verblijfsobjecten_schema,
+        "gebieden": gebieden_schema,
+    }
 
     missing_datasets = command.get_missing_datasets(current, updated)
 
@@ -513,7 +500,41 @@ def test_missing_datasets_import(here, dataset_library, capsys):
 
     call_command("import_schemas", *args)
 
+    # Soft deleted parkeervakken dataset
     captured = capsys.readouterr()
-    assert """Deleted the following datasets: {'parkeervakken'}""" in captured.out
-    assert models.Dataset.objects.count() == 2
-    assert not models.Dataset.objects.filter(name="parkeervakken").exists()
+    assert """Added delete date to dataset parkeervakken""" in captured.out
+    assert models.Dataset.objects.count() == 3
+    assert models.Dataset.objects.filter(name="parkeervakken").exists()
+
+
+@pytest.mark.django_db
+def test_delete_date_back_to_null(here, dataset_library, capsys):
+    # Pass only two schemas
+    gebieden = here / "files/datasets/gebieden.json"
+    afval = here / "files/datasets/afval.json"
+    args = [gebieden, afval]
+
+    call_command("import_schemas", *args)
+    parkeer_table = models.DatasetTable.objects.get(db_table="parkeervakken_parkeervakken_v1")
+    parkeer_dataset = models.Dataset.objects.get(name="parkeervakken")
+
+    # Soft deleted parkeervakken dataset
+    captured = capsys.readouterr()
+    assert "Added delete date to table parkeervakken_parkeervakken_v1" in captured.out
+    assert """Added delete date to dataset parkeervakken""" in captured.out
+    assert parkeer_table.delete_date is not None
+    assert parkeer_dataset.delete_date is not None
+
+    # Add parkeervakken dataset and set delete date back to NULL
+    parkeervakken = here / "files/datasets/parkeervakken.json"
+    call_command("import_schemas", parkeervakken, create_tables=1)
+    parkeer_table = models.DatasetTable.objects.get(db_table="parkeervakken_parkeervakken_v1")
+    parkeer_dataset = models.Dataset.objects.get(name="parkeervakken")
+    captured = capsys.readouterr()
+    assert "Setting delete date for recreated dataset parkeervakken back to NULL" in captured.out
+    assert (
+        "Setting delete date for recreated tables parkeervakken_parkeervakken_v1, parkeervakken_parkeervakken_regimes_v1 back to NULL"
+        in captured.out
+    )
+    assert parkeer_table.delete_date is None
+    assert parkeer_dataset.delete_date is None

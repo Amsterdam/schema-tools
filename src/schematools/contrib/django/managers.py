@@ -31,7 +31,7 @@ class DatasetQuerySet(QuerySet):
 
     def db_enabled(self):
         """Return all datasets for which models should be created."""
-        return self.filter(enable_db=True)
+        return self.filter(enable_db=True, delete_date=None)
 
     def api_enabled(self):
         """Return only datasets that should get an API."""
