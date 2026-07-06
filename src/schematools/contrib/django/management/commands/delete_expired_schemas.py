@@ -12,9 +12,7 @@ from schematools.contrib.django.models import Dataset, DatasetTable
 
 
 class Command(BaseCommand):
-    help = (
-        "Delete datasets and tables whose delete_date is more than 29 days in the past"
-    )
+    help = "Delete datasets and tables whose delete_date is more than 29 days in the past"
 
     def handle(self, *args, **options):
         cutoff = timezone.now() - timedelta(days=30)

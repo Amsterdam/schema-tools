@@ -46,7 +46,7 @@ def test_soft_delete_schema_and_tables(here, capsys):
             assert factory.build_model(table_schema).objects.count() == 0
 
     # Add delete_date to dataset and tables
-    call_command("remove_schemas", "afvalwegingen", "parkeervakken")
+    call_command("soft_delete_schemas", "afvalwegingen", "parkeervakken")
 
     assert models.Dataset.objects.count() == 4
     assert models.DatasetTable.objects.count() == 13
@@ -85,12 +85,13 @@ def test_hard_delete_schema_and_tables(here, capsys):
             assert factory.build_model(table_schema).objects.count() == 0
 
     # Add delete_date to dataset and tables
-    call_command("remove_schemas", "verblijfsobjecten", "gebieden")
+    call_command("soft_delete_schemas", "verblijfsobjecten", "gebieden")
 
-    assert "Added delete date to dataset gebieden"
-    assert "Added delete date to table gebieden_buurten_v1"
-    assert "Added delete date to table verblijfsobjecten_verblijfsobjecten_v1"
-    assert "Added delete date to dataset verblijfsobjecten"
+    captured = capsys.readouterr()
+    assert "Added delete date to dataset gebieden" in captured.out
+    assert "Added delete date to table gebieden_buurten_v1" in captured.out
+    assert "Added delete date to table verblijfsobjecten_verblijfsobjecten_v1" in captured.out
+    assert "Added delete date to dataset verblijfsobjecten" in captured.out
 
     # set delete_date for dataset and tables to cutoff dates
 

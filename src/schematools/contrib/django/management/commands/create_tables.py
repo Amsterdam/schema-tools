@@ -25,9 +25,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         skip = options.get("skip")
-        create_tables(
-            self, Dataset.objects.db_enabled(), allow_unmanaged=True, skip=skip
-        )
+        create_tables(self, Dataset.objects.db_enabled(), allow_unmanaged=True, skip=skip)
 
 
 def create_tables(
@@ -91,31 +89,23 @@ def create_tables(
 
             router_allows = router.allow_migrate_model(model._meta.app_label, model)
             if not router_allows:
-                command.stdout.write(
-                    f"  Skipping externally managed table: {db_table_name}"
-                )
+                command.stdout.write(f"  Skipping externally managed table: {db_table_name}")
                 continue
 
             if not allow_unmanaged and not model._meta.can_migrate(connection):
-                command.stderr.write(
-                    f"  Skipping non-managed model: {model._meta.db_table}"
-                )
+                command.stderr.write(f"  Skipping non-managed model: {model._meta.db_table}")
                 continue
 
             try:
                 with transaction.atomic():
                     schema_editor.create_model(model)
             except (DatabaseError, ValueError) as e:
-                command.stderr.write(
-                    f"  Cannot create table {model._meta.db_table}: {e}"
-                )
+                command.stderr.write(f"  Cannot create table {model._meta.db_table}: {e}")
                 if not re.search(r'relation "[^"]+" already exists', str(e)):
                     errors += 1
             else:
                 command.stdout.write(f"* Created table {model._meta.db_table}")
-                created_table = DatasetTable.objects.filter(
-                    db_table=model._meta.db_table
-                ).first()
+                created_table = DatasetTable.objects.filter(db_table=model._meta.db_table).first()
                 if created_table:
                     all_created_tables.add(created_table.db_table)
 

@@ -29,9 +29,7 @@ class Command(BaseCommand):
         imported_datasets = {d.name for d in datasets}
         drop_schemas = set(options.get("schemas", []))
 
-        impossible_schemas = [
-            ident for ident in drop_schemas if ident not in imported_datasets
-        ]
+        impossible_schemas = [ident for ident in drop_schemas if ident not in imported_datasets]
         if impossible_schemas:
             msg = io.StringIO()
             msg.write("These schemas do not exist:\n")

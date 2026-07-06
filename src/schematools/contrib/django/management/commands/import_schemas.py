@@ -90,7 +90,7 @@ class Command(BaseCommand):
                     # If missing, delete these schemas from datasets_dataset table
                     for dataset in missing_datasets:
                         self.stdout.write(f"Missing dataset: {dataset.name}")
-                        call_command("remove_schemas", dataset.name)
+                        call_command("soft_delete_schemas", dataset.name)
 
             updated_datasets = self._run_import(schemas)
             if not updated_datasets:
