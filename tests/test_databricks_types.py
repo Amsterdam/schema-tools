@@ -80,7 +80,7 @@ def test_databricks_info_validates_and_renders_table_json() -> None:
         "Mutually exclusive tags for geometry: schema:type and schema:$ref",
     ]
 
-    payload = json.loads(info.to_table_json())
+    payload = json.loads(info.json)
 
     assert payload["id"] == "buildings"
     assert payload["version"] == "1.2.3"

@@ -45,7 +45,7 @@ jobs:
         run: |
           sudo apt update -y
           sudo apt install -y libgdal34t64 gdal-bin
-          uv sync --extra django
+          uv sync --extra django --extra databricks
       - name: Test
         run: |
           uv run pytest tests
