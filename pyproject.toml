@@ -1,6 +1,6 @@
 [project]
 name = "amsterdam-schema-tools"
-version = "9.11.0"
+version = "9.12.0-rc1"
 description = "Tools to work with Amsterdam Schema."
 readme = "README.md"
 requires-python = ">=3.10"
