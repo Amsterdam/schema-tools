@@ -1234,9 +1234,10 @@ def ingest(dataset_file: str) -> None:
                 click.echo(f"Ingesting table {provenance}")
                 db_info = get_databricks_info(provenance[3:])
 
-                errors[(db_info.table_id, provenance[3:])] = [
-                    ValidationIssue.from_string(e) for e in db_info.errors
-                ]
+                if db_info.errors:
+                    errors[(db_info.table_id, provenance[3:])] = [
+                        ValidationIssue.from_string(e) for e in db_info.errors
+                    ]
 
                 table_version = f"v{db_info.dict['version'].split('.')[0]}"
                 filename = Path(db_info.table_id, f"{table_version}.json")

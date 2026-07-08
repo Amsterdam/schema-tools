@@ -337,7 +337,7 @@ class DatabricksInfo:
         for column in self.table_info.columns or []:
             if column.name is None:
                 continue
-            schema["schema"]["properties"][column.name.lower()] = self._build_column_schema(
+            schema["schema"]["properties"][toCamelCase(column.name)] = self._build_column_schema(
                 column.name
             )
         return schema
