@@ -33,6 +33,7 @@ from schematools import (
     ckan,
     validation,
 )
+from schematools.contrib.databricks.client import get_databricks_info
 from schematools.exceptions import (
     DatasetNotFound,
     DuplicateScopeId,
@@ -1216,3 +1217,30 @@ def convert_to_snake_case(input_str: str) -> str:
 
 if __name__ == "__main__":
     main()
+
+
+@schema.command("ingest")
+@click.argument("dataset_file", type=click.Path(exists=True))
+def ingest(dataset_file: str) -> None:
+    """Ingest tables from databricks."""
+    click.echo(f"Ingesting dataset from {dataset_file}")
+    dataset: dict = read_json_path(dataset_file)
+
+    for ds_version in dataset.get("versions", {}).values():
+        for table in ds_version.get("tables", []):
+            provenance: str | None = table.get("provenance")
+            if provenance is not None and provenance.startswith("uc:"):
+                click.echo(f"Ingesting table {provenance}")
+                db_info = get_databricks_info(provenance[3:])
+                table_version = f"v{db_info.dict['version'].split('.')[0]}"
+
+                filename = Path(db_info.table_id, f"{table_version}.json")
+                click.echo(f"Writing table to {filename}")
+                filename.parent.mkdir(parents=True, exist_ok=True)
+                with open(filename, "w") as f:
+                    f.write(db_info.json)
+
+                table["id"] = db_info.table_id
+                table["$ref"] = f"{db_info.table_id}/{table_version}"
+    with open(dataset_file, "w") as df:
+        df.write(json.dumps(dataset, indent=2))

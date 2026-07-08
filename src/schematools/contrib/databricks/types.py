@@ -3,9 +3,12 @@ from collections.abc import Callable, Iterable
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import cached_property
 from typing import Literal
 
 from databricks.sdk.service.catalog import EntityTagAssignment, TableInfo
+
+from schematools.naming import toCamelCase
 
 
 @dataclass
@@ -319,11 +322,16 @@ class DatabricksInfo:
 
     @property
     def table_id(self) -> str:
-        return self.table_tags["id"] or self.table_name
+        return toCamelCase(self.table_tags["id"] or self.table_name)
 
-    @property
-    def json(self) -> str:
-        schema = deepcopy(BASE_TABLE_SCHEMA)
+    def get_base_schema(self) -> dict:
+        schema = {"id": self.table_id}
+        schema.update(deepcopy(BASE_TABLE_SCHEMA))
+        return schema
+
+    @cached_property
+    def dict(self) -> dict:
+        schema = self.get_base_schema()
         self._apply_tag_specs(schema["schema"], self.table_tags, TABLE_SCHEMA_ATTRIBUTES)
         self._apply_tag_specs(schema, self.table_tags, TABLE_ATTRIBUTES)
         for column in self.table_info.columns or []:
@@ -332,4 +340,8 @@ class DatabricksInfo:
             schema["schema"]["properties"][column.name.lower()] = self._build_column_schema(
                 column.name
             )
-        return json.dumps(schema, indent=2)
+        return schema
+
+    @cached_property
+    def json(self) -> str:
+        return json.dumps(self.dict, indent=2)
