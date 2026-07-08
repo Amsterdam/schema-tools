@@ -179,7 +179,6 @@ extend-function-names = ["gettext_lazy", "ngettext_lazy", "pgettext", "pgettext_
 
 [tool.ruff.lint.isort]
 known-first-party = ["schematools"]
-required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 20  # TODO: lower this
