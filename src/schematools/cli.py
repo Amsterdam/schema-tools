@@ -1225,6 +1225,7 @@ def ingest(dataset_file: str) -> None:
     """Ingest tables from databricks."""
     click.echo(f"Ingesting dataset from {dataset_file}")
     dataset: dict = read_json_path(dataset_file)
+    errors = {}
 
     for ds_version in dataset.get("versions", {}).values():
         for table in ds_version.get("tables", []):
@@ -1232,8 +1233,12 @@ def ingest(dataset_file: str) -> None:
             if provenance is not None and provenance.startswith("uc:"):
                 click.echo(f"Ingesting table {provenance}")
                 db_info = get_databricks_info(provenance[3:])
-                table_version = f"v{db_info.dict['version'].split('.')[0]}"
 
+                errors[(db_info.table_id, provenance[3:])] = [
+                    ValidationIssue.from_string(e) for e in db_info.errors
+                ]
+
+                table_version = f"v{db_info.dict['version'].split('.')[0]}"
                 filename = Path(db_info.table_id, f"{table_version}.json")
                 click.echo(f"Writing table to {filename}")
                 filename.parent.mkdir(parents=True, exist_ok=True)
@@ -1244,3 +1249,12 @@ def ingest(dataset_file: str) -> None:
                 table["$ref"] = f"{db_info.table_id}/{table_version}"
     with open(dataset_file, "w") as df:
         df.write(json.dumps(dataset, indent=2))
+
+    if errors:
+        click.echo("## Unity Catalog Ingestion Errors", err=True)
+        for (table_id, provenance), issues in errors.items():
+            click.echo(f"### {table_id} ({provenance})", err=True)
+            for issue in issues:
+                click.echo(f"{table_id}: {issue.message}")
+                click.echo(issue.as_markdown_todo(), err=True)
+        sys.exit(1)
