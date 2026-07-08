@@ -1,3 +1,7 @@
+# 2026-07-08 (9.12.0-rc1)
+
+* Create schema files based on Unity Catalog tables.
+
 # 2026-06-24 (9.11.0)
 
 * Added soft and hard delete functionalities to delete tables after grace period.
