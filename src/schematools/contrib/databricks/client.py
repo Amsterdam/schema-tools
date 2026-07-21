@@ -15,7 +15,7 @@ def get_databricks_info(full_name: str) -> DatabricksInfo:
     """
     client = WorkspaceClient()
     catalog, schema, table_name = full_name.split(".")
-    table_info = client.tables.get(full_name)
+    table_info = client.tables.get(full_name, include_browse=True)
     table_tags = Tags.from_tag_assignments(client.entity_tag_assignments.list("tables", full_name))
     column_tags = {
         col.name: Tags.from_tag_assignments(
