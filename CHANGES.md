@@ -1,3 +1,7 @@
+# 2026-07-21 (9.12.0-rc2)
+
+* Create schema files based on Unity Catalog tables.
+
 # 2026-07-08 (9.12.0-rc1)
 
 * Create schema files based on Unity Catalog tables.
