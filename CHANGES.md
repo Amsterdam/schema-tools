@@ -1,6 +1,12 @@
+# 2026-07-22 (9.12.0-rc3)
+
+* Instead use raw sql to get table description.
+* Fix: put files in correct directory when calling `ingest` from other directory.
+* Fix: cast databricks type to schema type.
+
 # 2026-07-21 (9.12.0-rc2)
 
-* Create schema files based on Unity Catalog tables.
+* Use include_browse to fetch tables.
 
 # 2026-07-08 (9.12.0-rc1)
 
