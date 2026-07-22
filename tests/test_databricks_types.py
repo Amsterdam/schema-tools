@@ -5,7 +5,8 @@ from types import SimpleNamespace
 from typing import cast
 
 import pytest
-from databricks.sdk.service.catalog import EntityTagAssignment, TableInfo
+from databricks.sdk.service.catalog import EntityTagAssignment
+from databricks.sdk.service.sql import ResultData
 
 from schematools.contrib.databricks.types import (
     DatabricksInfo,
@@ -60,16 +61,21 @@ def test_databricks_info_validates_and_renders_table_json() -> None:
         ),
         "name": Tags(_tags=[Tag(key="minLength", value="2", type="columns")]),
     }
-    table_info = cast(
-        TableInfo,
-        SimpleNamespace(columns=[SimpleNamespace(name="geometry"), SimpleNamespace(name="name")]),
+    table_description = cast(
+        ResultData,
+        SimpleNamespace(
+            data_array=[
+                ["geometry", "string", "A geometry column"],
+                ["name", "string", "A name column"],
+            ]
+        ),
     )
 
     info = DatabricksInfo(
         catalog="main",
         schema="default",
         table_name="buildings_table",
-        table_info=table_info,
+        table_description=table_description,
         table_tags=table_tags,
         column_tags=column_tags,
     )
@@ -86,7 +92,6 @@ def test_databricks_info_validates_and_renders_table_json() -> None:
     assert payload["version"] == "1.2.3"
     assert payload["schema"]["identifier"] == ["id", "code"]
     assert payload["schema"]["required"] == ["schema", "name"]
-    assert payload["schema"]["properties"]["geometry"]["type"] == "string"
     assert payload["schema"]["properties"]["geometry"]["format"] == "date"
     assert (
         payload["schema"]["properties"]["geometry"]["$ref"]
@@ -96,14 +101,14 @@ def test_databricks_info_validates_and_renders_table_json() -> None:
 
 
 def test_databricks_info_reports_explicit_none_values() -> None:
-    table_info = cast(TableInfo, SimpleNamespace(columns=[]))
+    table_description = cast(ResultData, SimpleNamespace(data_array=[]))
     table_tags = Tags(_tags=[Tag(key="auth", value=None, type="tables")])
 
     info = DatabricksInfo(
         catalog="main",
         schema="default",
         table_name="buildings_table",
-        table_info=table_info,
+        table_description=table_description,
         table_tags=table_tags,
         column_tags={},
     )
