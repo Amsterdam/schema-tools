@@ -1,6 +1,10 @@
+import os
+
 from databricks.sdk import WorkspaceClient
 
 from schematools.contrib.databricks.types import DatabricksInfo, Tags
+
+DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID")
 
 
 def get_databricks_info(full_name: str) -> DatabricksInfo:
@@ -13,22 +17,30 @@ def get_databricks_info(full_name: str) -> DatabricksInfo:
     Returns:
         DatabricksInfo: An object containing Databricks information.
     """
+    if DATABRICKS_WAREHOUSE_ID is None:
+        raise ValueError("DATABRICKS_WAREHOUSE_ID environment variable is not set.")
+
     client = WorkspaceClient()
     catalog, schema, table_name = full_name.split(".")
-    table_info = client.tables.get(full_name, include_browse=True)
+    table_description = client.statement_execution.execute_statement(
+        statement=f"DESCRIBE TABLE {full_name}", warehouse_id=DATABRICKS_WAREHOUSE_ID
+    ).result
+    if table_description is None:
+        raise RuntimeError(f"Failed to retrieve table information for {full_name}.")
+
     table_tags = Tags.from_tag_assignments(client.entity_tag_assignments.list("tables", full_name))
     column_tags = {
-        col.name: Tags.from_tag_assignments(
-            client.entity_tag_assignments.list("columns", f"{full_name}.{col.name}")
+        name: Tags.from_tag_assignments(
+            client.entity_tag_assignments.list("columns", f"{full_name}.{name}")
         )
-        for col in (table_info.columns if table_info.columns is not None else [])
-        if col.name is not None
+        for name, _, _ in (table_description.data_array or [])
+        if name is not None
     }
     return DatabricksInfo(
         catalog=catalog,
         schema=schema,
         table_name=table_name,
-        table_info=table_info,
+        table_description=table_description,
         table_tags=table_tags,
         column_tags=column_tags,
     )

@@ -6,7 +6,8 @@ from datetime import datetime
 from functools import cached_property
 from typing import Literal
 
-from databricks.sdk.service.catalog import EntityTagAssignment, TableInfo
+from databricks.sdk.service.catalog import EntityTagAssignment
+from databricks.sdk.service.sql import ResultData
 
 from schematools.naming import toCamelCase
 
@@ -214,6 +215,18 @@ MUTUALLY_EXCLUSIVE_ATTRIBUTES = [
     ("maximum", "exclusiveMaximum"),
 ]
 
+SCHEMA_TYPES = {
+    "string": "string",
+    "int": "integer",
+    "bigint": "integer",
+    "smallint": "integer",
+    "timestamp": "datetime",
+    "date": "date",
+    "boolean": "boolean",
+    "double": "number",
+    "float": "number",
+}
+
 
 @dataclass
 class Tag:
@@ -254,7 +267,7 @@ class DatabricksInfo:
     catalog: str
     schema: str
     table_name: str
-    table_info: TableInfo
+    table_description: ResultData
     table_tags: Tags
     column_tags: dict[str, Tags]
     errors: list[str] = field(default_factory=list)
@@ -276,6 +289,8 @@ class DatabricksInfo:
             if value is None and not_none in spec.validators:
                 # We only add None values if the validator allows it.
                 continue
+            if attr == "$ref":
+                target.pop("type", None)  # Remove 'type' if '$ref' is present
             target[attr] = spec.transform(value)
 
     def _validate_table_tags(self) -> list[str]:
@@ -306,8 +321,12 @@ class DatabricksInfo:
             errors.extend(self._collect_spec_errors(tags, COLUMN_ATTRIBUTES))
         return errors
 
-    def _build_column_schema(self, column_name: str) -> dict:
-        column_schema = {"title": column_name}
+    def _build_column_schema(self, column_name: str, type: str, comment: str) -> dict:
+        column_schema = {
+            "title": column_name,
+            "type": SCHEMA_TYPES.get(type),
+            "description": comment,
+        }
         tags = self.column_tags.get(column_name)
         if tags is not None:
             self._apply_tag_specs(column_schema, tags, COLUMN_ATTRIBUTES)
@@ -334,11 +353,9 @@ class DatabricksInfo:
         schema = self.get_base_schema()
         self._apply_tag_specs(schema["schema"], self.table_tags, TABLE_SCHEMA_ATTRIBUTES)
         self._apply_tag_specs(schema, self.table_tags, TABLE_ATTRIBUTES)
-        for column in self.table_info.columns or []:
-            if column.name is None:
-                continue
-            schema["schema"]["properties"][toCamelCase(column.name)] = self._build_column_schema(
-                column.name
+        for name, type, comment in self.table_description.data_array or []:
+            schema["schema"]["properties"][toCamelCase(name)] = self._build_column_schema(
+                name, type, comment
             )
         return schema
 
