@@ -1225,6 +1225,7 @@ def ingest(dataset_file: str) -> None:
     """Ingest tables from databricks."""
     click.echo(f"Ingesting dataset from {dataset_file}")
     dataset: dict = read_json_path(dataset_file)
+    dirname = os.path.dirname(dataset_file)
     errors = {}
 
     for ds_version in dataset.get("versions", {}).values():
@@ -1240,7 +1241,7 @@ def ingest(dataset_file: str) -> None:
                     ]
 
                 table_version = f"v{db_info.dict['version'].split('.')[0]}"
-                filename = Path(db_info.table_id, f"{table_version}.json")
+                filename = Path(dirname, db_info.table_id, f"{table_version}.json")
                 click.echo(f"Writing table to {filename}")
                 filename.parent.mkdir(parents=True, exist_ok=True)
                 with open(filename, "w") as f:
