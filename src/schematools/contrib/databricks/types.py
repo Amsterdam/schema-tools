@@ -7,7 +7,6 @@ from functools import cached_property
 from typing import Literal
 
 from databricks.sdk.service.catalog import EntityTagAssignment
-from databricks.sdk.service.sql import ResultData
 
 from schematools.naming import toCamelCase
 
@@ -252,6 +251,21 @@ class Tags:
         ]
         return cls(_tags=tags)
 
+    @classmethod
+    def from_tag_list(
+        cls, tag_list: list[dict[str, str]], tag_type: Literal["columns", "tables"]
+    ) -> "Tags":
+        tags = [
+            Tag(
+                key=tag["name"][len("schema:") :],
+                value=tag.get("value"),
+                type=tag_type,
+            )
+            for tag in tag_list
+            if tag["name"].startswith("schema:")
+        ]
+        return cls(_tags=tags)
+
     def __iter__(self):
         return iter(self._tags)
 
@@ -267,7 +281,8 @@ class DatabricksInfo:
     catalog: str
     schema: str
     table_name: str
-    table_description: ResultData
+    table_data: tuple[str | None, list[dict[str, str]]] | None
+    column_data: list[tuple[str, str, str | None, str | None, str, list[dict[str, str]]]] | None
     table_tags: Tags
     column_tags: dict[str, Tags]
     errors: list[str] = field(default_factory=list)
@@ -353,7 +368,7 @@ class DatabricksInfo:
         schema = self.get_base_schema()
         self._apply_tag_specs(schema["schema"], self.table_tags, TABLE_SCHEMA_ATTRIBUTES)
         self._apply_tag_specs(schema, self.table_tags, TABLE_ATTRIBUTES)
-        for name, type, comment in self.table_description.data_array or []:
+        for name, type, _nullable, _default, comment, _tags in self.column_data or []:
             schema["schema"]["properties"][toCamelCase(name)] = self._build_column_schema(
                 name, type, comment
             )

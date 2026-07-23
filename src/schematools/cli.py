@@ -1233,7 +1233,8 @@ def ingest(dataset_file: str) -> None:
             provenance: str | None = table.get("provenance")
             if provenance is not None and provenance.startswith("uc:"):
                 click.echo(f"Ingesting table {provenance}")
-                db_info = get_databricks_info(provenance[3:])
+                catalog, schema, table_name = provenance[3:].split(".")
+                db_info = get_databricks_info(catalog, schema, table_name)
 
                 if db_info.errors:
                     errors[(db_info.table_id, provenance[3:])] = [
