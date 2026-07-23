@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "amsterdam-schema-tools"
-version = "9.12.0rc3"
+version = "9.12.0rc4"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
