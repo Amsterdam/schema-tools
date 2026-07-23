@@ -6,7 +6,6 @@ from typing import cast
 
 import pytest
 from databricks.sdk.service.catalog import EntityTagAssignment
-from databricks.sdk.service.sql import ResultData
 
 from schematools.contrib.databricks.types import (
     DatabricksInfo,
@@ -61,21 +60,16 @@ def test_databricks_info_validates_and_renders_table_json() -> None:
         ),
         "name": Tags(_tags=[Tag(key="minLength", value="2", type="columns")]),
     }
-    table_description = cast(
-        ResultData,
-        SimpleNamespace(
-            data_array=[
-                ["geometry", "string", "A geometry column"],
-                ["name", "string", "A name column"],
-            ]
-        ),
-    )
 
     info = DatabricksInfo(
         catalog="main",
         schema="default",
         table_name="buildings_table",
-        table_description=table_description,
+        table_data=(None, []),
+        column_data=[
+            ("geometry", "string", None, None, "A geometry column", []),
+            ("name", "string", None, None, "A name column", []),
+        ],
         table_tags=table_tags,
         column_tags=column_tags,
     )
@@ -101,14 +95,14 @@ def test_databricks_info_validates_and_renders_table_json() -> None:
 
 
 def test_databricks_info_reports_explicit_none_values() -> None:
-    table_description = cast(ResultData, SimpleNamespace(data_array=[]))
     table_tags = Tags(_tags=[Tag(key="auth", value=None, type="tables")])
 
     info = DatabricksInfo(
         catalog="main",
         schema="default",
         table_name="buildings_table",
-        table_description=table_description,
+        table_data=(None, []),
+        column_data=[],
         table_tags=table_tags,
         column_tags={},
     )
