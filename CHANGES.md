@@ -1,3 +1,7 @@
+# 2026-07-23 (9.12.0-rc4)
+
+* Get metadata from system.information_schema as SELECT is not possible for other tables.
+
 # 2026-07-22 (9.12.0-rc3)
 
 * Instead use raw sql to get table description.
