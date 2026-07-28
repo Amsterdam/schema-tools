@@ -1247,11 +1247,13 @@ def ingest(dataset_file: str) -> None:
                 filename.parent.mkdir(parents=True, exist_ok=True)
                 with open(filename, "w") as f:
                     f.write(db_info.json)
+                    f.write("\n")
 
                 table["id"] = db_info.table_id
                 table["$ref"] = f"{db_info.table_id}/{table_version}"
     with open(dataset_file, "w") as df:
         df.write(json.dumps(dataset, indent=2))
+        df.write("\n")
 
     if errors:
         click.echo("## Unity Catalog Ingestion Errors", err=True)
