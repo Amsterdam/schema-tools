@@ -1,3 +1,7 @@
+# 2026-07-28 (9.11.1)
+
+* Bugfix: escape %-sign in generated SQL.
+
 # 2026-06-24 (9.11.0)
 
 * Added soft and hard delete functionalities to delete tables after grace period.
