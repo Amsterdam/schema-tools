@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import shlex
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -517,18 +518,20 @@ class TestExports:
         )
         context = create_context(meetbouten_export_schema, export_definition)
         GeopackageExporter(context).export_tables()
-        sqlite3_conn = sqlite3.connect(context.folder / "meet_bouten_v1_all_openbaar.gpkg")
-        cursor = sqlite3_conn.cursor()
-        cursor.execute("select * from rtree_meetbouten_v1_geometrie")
-        res = cursor.fetchall()
-        assert res == [(1, 119434.0, 119434.0, 487091.59375, 487091.65625)]
-        cursor.execute(
-            """
-                select identificatie, ligt_in_buurt_id, merk_code, merk_omschrijving from meetbouten_v1
-            """
-        )
-        res = cursor.fetchall()
-        assert res == [(1, "10180001.1", "12", "De meetbout")]
+        with closing(
+            sqlite3.connect(context.folder / "meet_bouten_v1_all_openbaar.gpkg")
+        ) as sqlite3_conn:
+            cursor = sqlite3_conn.cursor()
+            cursor.execute("select * from rtree_meetbouten_v1_geometrie")
+            res = cursor.fetchall()
+            assert res == [(1, 119434.0, 119434.0, 487091.59375, 487091.65625)]
+            cursor.execute(
+                """
+                    select identificatie, ligt_in_buurt_id, merk_code, merk_omschrijving from meetbouten_v1
+                """
+            )
+            res = cursor.fetchall()
+            assert res == [(1, "10180001.1", "12", "De meetbout")]
 
     def test_geopackage_export_multiple_layers(self, gebieden_export_schema, create_context):
         """Prove that geopackage export contains the correct content."""
@@ -543,18 +546,18 @@ class TestExports:
             importer.generate_db_objects(table_id, truncate=False, ind_extra_index=False)
 
         GeopackageExporter(context).export_tables()
-        sqlite3_conn = sqlite3.connect(context.folder / "gebieden_v1_grote_gebieden_openbaar.gpkg")
-        cursor = sqlite3_conn.cursor()
+        with closing(
+            sqlite3.connect(context.folder / "gebieden_v1_grote_gebieden_openbaar.gpkg")
+        ) as sqlite3_conn:
+            cursor = sqlite3_conn.cursor()
 
-        cursor.execute("SELECT table_name FROM gpkg_contents ORDER BY table_name;")
-        layer_names = [row[0] for row in cursor.fetchall()]
-        assert layer_names == [
-            "ggw_gebieden_v1",
-            "stadsdelen_v1",
-            "wijken_v1",
-        ]
-
-        sqlite3_conn.close()
+            cursor.execute("SELECT table_name FROM gpkg_contents ORDER BY table_name;")
+            layer_names = [row[0] for row in cursor.fetchall()]
+            assert layer_names == [
+                "ggw_gebieden_v1",
+                "stadsdelen_v1",
+                "wijken_v1",
+            ]
 
     def test_geojson_export(self, meetbouten_export_schema, meetbouten_content, create_context):
         """Prove that geojson export contains the correct content."""
