@@ -1,10 +1,9 @@
-import json
 import os
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.sql import StatementParameterListItem
 
-from schematools.contrib.databricks.types import DatabricksInfo, Tags
+from schematools.contrib.databricks.types import ColumnData, DatabricksInfo, TableData
 
 DATABRICKS_WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID")
 
@@ -98,26 +97,16 @@ def get_databricks_info(catalog: str, schema: str, table_name: str) -> Databrick
         StatementParameterListItem(name="table_name", value=table_name),
     ]
     client = WorkspaceClient()
-    table_data = _execute_sql(client, TABLE_DATA_SQL, parameters=parameters)
-    column_data = _execute_sql(client, COLUMN_DATA_SQL, parameters=parameters)
-    table_tags = Tags.from_tag_list(
-        json.loads(table_data[0][1]) if table_data and table_data[0][1] is not None else [],
-        "tables",
-    )
-    column_tags = {
-        col[0]: Tags.from_tag_list(
-            json.loads(col[-1]) if column_data and col[-1] is not None else [],
-            "columns",
-        )
-        for col in (column_data or [])
-        if col[0] is not None
+    table_rows = _execute_sql(client, TABLE_DATA_SQL, parameters=parameters)
+    column_rows = _execute_sql(client, COLUMN_DATA_SQL, parameters=parameters)
+    table_data = TableData.from_row(table_rows[0]) if table_rows else None
+    column_data = {
+        column.name: column for column in (ColumnData.from_row(row) for row in column_rows or [])
     }
     return DatabricksInfo(
         catalog=catalog,
         schema=schema,
         table_name=table_name,
-        table_data=table_data[0] if table_data else None,
-        column_data=column_data if column_data else [],
-        table_tags=table_tags,
-        column_tags=column_tags,
+        table_data=table_data,
+        column_data=column_data,
     )
