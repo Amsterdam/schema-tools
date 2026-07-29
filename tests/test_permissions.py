@@ -54,7 +54,7 @@ class TestReadPermissions:
             engine, "scope_level_c", "gebieden_bouwblokken_v1", "begin_geldigheid"
         )
 
-    def test_roles_created(self, engine, gebieden_schema_auth):
+    def test_roles_created(self, engine, gebieden_schema_auth, dbsession):
         scope = Scope.from_string("certain_role")
         scope2 = Scope.from_string("another_role")
         apply_schema_and_profile_permissions(
@@ -62,6 +62,8 @@ class TestReadPermissions:
             gebieden_schema_auth,
             profiles=[],
             create_roles=True,
+            set_read_permissions=False,
+            set_write_permissions=False,
             all_scopes=[scope, scope2],
         )
         _check_role_exists(engine, "scope_certain_role")
@@ -78,6 +80,7 @@ class TestReadPermissions:
         parkeervakken_schema,
         gebieden_schema_auth,
         caplog,
+        dbsession,
     ):
         """Prove that the profiles are properly included in the grants."""
         all_schemas = {
@@ -931,7 +934,7 @@ class TestReadPermissions:
 
 
 class TestWritePermissions:
-    def test_dataset_write_role(self, engine, gebieden_schema_auth):
+    def test_dataset_write_role(self, engine, gebieden_schema_auth, dbsession):
         """
         Prove that a write role with name write_{dataset.id} is created with DML rights
         Check INSERT, UPDATE, DELETE, TRUNCATE permissions
@@ -1005,7 +1008,9 @@ class TestWritePermissions:
         # TRUNCATE is also allowed, even though the table is already empty by now
         _check_truncate_permission_granted(engine, "testuser", "gebieden_bouwblokken_v1")
 
-    def test_multiple_datasets_write_roles(self, engine, parkeervakken_schema, afval_schema):
+    def test_multiple_datasets_write_roles(
+        self, engine, parkeervakken_schema, afval_schema, dbsession
+    ):
         """
         Prove that the write_{dataset.id} roles only have DML rights for their associated
         dataset tables.

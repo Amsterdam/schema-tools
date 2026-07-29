@@ -38,15 +38,17 @@ class TestExports:
         )
         db_exists = sqlalchemy_utils.functions.database_exists(engine.url)
         if db_exists and not sqlalchemy_keep_db:
-            raise RuntimeError("DB exists, remove it before proceeding")
+            sqlalchemy_utils.functions.drop_database(engine.url)
+            db_exists = False
 
         if not db_exists:
             sqlalchemy_utils.functions.create_database(engine.url)
             with engine.connect() as connection:
                 connection.execute(text("CREATE EXTENSION postgis"))
                 connection.commit()
-            yield engine
-        sqlalchemy_utils.functions.drop_database(engine.url)
+        yield engine
+        if not sqlalchemy_keep_db:
+            sqlalchemy_utils.functions.drop_database(engine.url)
         engine.dispose()
 
     @pytest.fixture
