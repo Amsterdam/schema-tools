@@ -105,6 +105,7 @@ filterwarnings = [
     "once::DeprecationWarning",
     "once::PendingDeprecationWarning",
     "ignore:Model '.*' was already registered. Reloading models is not advised.*:RuntimeWarning",
+    'ignore:DateTimeField .* received a naive datetime .* while time zone support is active\.:RuntimeWarning:django\.db\.models\.fields',
 ]
 
 # ==== Coverage ====
