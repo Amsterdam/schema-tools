@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
-from typing import Literal
+from typing import Any, Literal
 
 from databricks.sdk.service.catalog import EntityTagAssignment
 
@@ -277,14 +277,46 @@ class Tags:
 
 
 @dataclass
+class TableData:
+    comment: str | None
+    tags: Tags
+
+    @classmethod
+    def from_row(cls, row: tuple[Any, ...]) -> "TableData":
+        return cls(
+            comment=row[0],
+            tags=Tags.from_tag_list(json.loads(row[1]) if row[1] is not None else [], "tables"),
+        )
+
+
+@dataclass
+class ColumnData:
+    name: str
+    type_name: str
+    is_nullable: str | None
+    default: str | None
+    comment: str
+    tags: Tags
+
+    @classmethod
+    def from_row(cls, row: tuple[Any, ...]) -> "ColumnData":
+        return cls(
+            name=row[0],
+            type_name=row[1],
+            is_nullable=row[2],
+            default=row[3],
+            comment=row[4],
+            tags=Tags.from_tag_list(json.loads(row[5]) if row[5] is not None else [], "columns"),
+        )
+
+
+@dataclass
 class DatabricksInfo:
     catalog: str
     schema: str
     table_name: str
-    table_data: tuple[str | None, list[dict[str, str]]] | None
-    column_data: list[tuple[str, str, str | None, str | None, str, list[dict[str, str]]]] | None
-    table_tags: Tags
-    column_tags: dict[str, Tags]
+    table_data: TableData | None
+    column_data: dict[str, ColumnData]
     errors: list[str] = field(default_factory=list)
 
     def _collect_spec_errors(self, tags: Tags, specs: dict[str, AttributeSpec]) -> list[str]:
@@ -311,16 +343,18 @@ class DatabricksInfo:
     def _validate_table_tags(self) -> list[str]:
         errors = []
         allowed_keys = set(TABLE_ATTRIBUTES) | set(TABLE_SCHEMA_ATTRIBUTES)
-        for tag in self.table_tags:
+        table_tags = self.table_data.tags if self.table_data is not None else Tags(_tags=[])
+        for tag in table_tags:
             if tag.key not in allowed_keys:
                 errors.append(f"Unknown table or schema tag: schema:{tag.key}")
-        errors.extend(self._collect_spec_errors(self.table_tags, TABLE_SCHEMA_ATTRIBUTES))
-        errors.extend(self._collect_spec_errors(self.table_tags, TABLE_ATTRIBUTES))
+        errors.extend(self._collect_spec_errors(table_tags, TABLE_SCHEMA_ATTRIBUTES))
+        errors.extend(self._collect_spec_errors(table_tags, TABLE_ATTRIBUTES))
         return errors
 
     def _validate_column_tags(self) -> list[str]:
         errors = []
-        for column_name, tags in self.column_tags.items():
+        for column_name, column in self.column_data.items():
+            tags = column.tags
             for tag in tags:
                 if tag.key not in COLUMN_ATTRIBUTES:
                     errors.append(f"Unknown column tag for {column_name}: schema:{tag.key}")
@@ -336,15 +370,13 @@ class DatabricksInfo:
             errors.extend(self._collect_spec_errors(tags, COLUMN_ATTRIBUTES))
         return errors
 
-    def _build_column_schema(self, column_name: str, type: str, comment: str) -> dict:
+    def _build_column_schema(self, column: ColumnData) -> dict:
         column_schema = {
-            "title": column_name,
-            "type": SCHEMA_TYPES.get(type),
-            "description": comment,
+            "title": column.name,
+            "type": SCHEMA_TYPES.get(column.type_name),
+            "description": column.comment,
         }
-        tags = self.column_tags.get(column_name)
-        if tags is not None:
-            self._apply_tag_specs(column_schema, tags, COLUMN_ATTRIBUTES)
+        self._apply_tag_specs(column_schema, column.tags, COLUMN_ATTRIBUTES)
         return column_schema
 
     def __post_init__(self):
@@ -356,7 +388,8 @@ class DatabricksInfo:
 
     @property
     def table_id(self) -> str:
-        return toCamelCase(self.table_tags["id"] or self.table_name)
+        table_tags = self.table_data.tags if self.table_data is not None else Tags(_tags=[])
+        return toCamelCase(table_tags["id"] or self.table_name)
 
     def get_base_schema(self) -> dict:
         schema = {"id": self.table_id}
@@ -366,11 +399,12 @@ class DatabricksInfo:
     @cached_property
     def dict(self) -> dict:
         schema = self.get_base_schema()
-        self._apply_tag_specs(schema["schema"], self.table_tags, TABLE_SCHEMA_ATTRIBUTES)
-        self._apply_tag_specs(schema, self.table_tags, TABLE_ATTRIBUTES)
-        for name, type, _nullable, _default, comment, _tags in self.column_data or []:
-            schema["schema"]["properties"][toCamelCase(name)] = self._build_column_schema(
-                name, type, comment
+        table_tags = self.table_data.tags if self.table_data is not None else Tags(_tags=[])
+        self._apply_tag_specs(schema["schema"], table_tags, TABLE_SCHEMA_ATTRIBUTES)
+        self._apply_tag_specs(schema, table_tags, TABLE_ATTRIBUTES)
+        for column in self.column_data.values():
+            schema["schema"]["properties"][toCamelCase(column.name)] = self._build_column_schema(
+                column
             )
         return schema
 

@@ -8,7 +8,9 @@ import pytest
 from databricks.sdk.service.catalog import EntityTagAssignment
 
 from schematools.contrib.databricks.types import (
+    ColumnData,
     DatabricksInfo,
+    TableData,
     Tag,
     Tags,
     as_datetime,
@@ -65,13 +67,13 @@ def test_databricks_info_validates_and_renders_table_json() -> None:
         catalog="main",
         schema="default",
         table_name="buildings_table",
-        table_data=(None, []),
-        column_data=[
-            ("geometry", "string", None, None, "A geometry column", []),
-            ("name", "string", None, None, "A name column", []),
-        ],
-        table_tags=table_tags,
-        column_tags=column_tags,
+        table_data=TableData(comment=None, tags=table_tags),
+        column_data={
+            "geometry": ColumnData(
+                "geometry", "string", None, None, "A geometry column", column_tags["geometry"]
+            ),
+            "name": ColumnData("name", "string", None, None, "A name column", column_tags["name"]),
+        },
     )
 
     assert info.table_id == "buildings"
@@ -101,10 +103,8 @@ def test_databricks_info_reports_explicit_none_values() -> None:
         catalog="main",
         schema="default",
         table_name="buildings_table",
-        table_data=(None, []),
-        column_data=[],
-        table_tags=table_tags,
-        column_tags={},
+        table_data=TableData(comment=None, tags=table_tags),
+        column_data={},
     )
 
     assert info.errors == ["auth: Value cannot be None"]
