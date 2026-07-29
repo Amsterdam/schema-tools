@@ -1,3 +1,8 @@
+# 2026-07-29 (9.12.0)
+
+* Refactor Databricks Unity Catalog types and client handling.
+* Fix escaping of `%` in Django migration helper constraint statements.
+
 # 2026-07-23 (9.12.0-rc4)
 
 * Get metadata from system.information_schema as SELECT is not possible for other tables.
