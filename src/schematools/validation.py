@@ -63,8 +63,14 @@ def run(dataset: DatasetSchema, location: str | None = None) -> Iterator[Validat
 
     """  # noqa: W605
     for name, validator in _all:
-        for msg in validator(dataset, location):
-            yield ValidationError(validator_name=name, message=msg)
+        try:
+            for msg in validator(dataset, location):
+                yield ValidationError(validator_name=name, message=msg)
+        except (SchemaObjectNotFound, ValueError) as e:
+            yield ValidationError(
+                validator_name=name,
+                message=f"Validator {name!r} couldn't validate due to an exception: {e}",
+            )
 
 
 def _register_validator(name: str) -> Callable:
