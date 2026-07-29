@@ -32,6 +32,9 @@ class AttributeSpec:
         return value
 
 
+# Validators and transformers for attribute specifications
+
+
 def enum(*allowed_values):
     def validate(value):
         if value not in allowed_values:
@@ -74,52 +77,18 @@ def semver(val: str):
     return val
 
 
-BASE_TABLE_SCHEMA: dict = {
-    "type": "table",
-    "version": "1.0.0",
-    "status": "stable",
-    "schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": False,
-        "identifier": "id",
-        "required": ["schema"],
-        "display": "id",
-        "properties": {
-            "schema": {
-                "$ref": "https://schemas.data.amsterdam.nl/schema@v4.2.0#/definitions/schema"
-            }
-        },
-    },
-}
+# Reusable attribute specs
 
+# Passthrough and scalar coercion
 as_is = AttributeSpec(validators=[], transformers=[])
 as_list = AttributeSpec(validators=[not_none], transformers=[lambda v: v.split(";")])
 as_number = AttributeSpec(validators=[not_none, valid_number], transformers=[float])
 as_integer = AttributeSpec(validators=[not_none, valid_number], transformers=[int])
+
+# Constrained scalar values
 as_semver = AttributeSpec(validators=[not_none, semver], transformers=[])
 as_datetime = AttributeSpec(validators=[not_none, valid_datetime], transformers=[])
 status = AttributeSpec(validators=[not_none, enum("stable", "under_development")], transformers=[])
-geo = AttributeSpec(
-    validators=[
-        not_none,
-        enum(
-            "Point",
-            "LineString",
-            "Polygon",
-            "MultiPolygon",
-            "Geometry",
-            "MultiLineString",
-            "MultiPoint",
-        ),
-    ],
-    transformers=[lambda v: f"https://geojson.org/schema/{v}.json"],
-)
-crs = AttributeSpec(
-    validators=[not_none, enum("EPSG:4326", "EPSG:28992", "EPSG:7415")],
-    transformers=[],
-)
-list_or_string = AttributeSpec(validators=[not_none], transformers=[maybe_list])
 dataclass_attr = AttributeSpec(
     validators=[not_none, enum("structured", "blob", "event")],
     transformers=[],
@@ -155,7 +124,32 @@ format = AttributeSpec(
     transformers=[],
 )
 
-TABLE_ATTRIBUTES = {
+# Domain-specific values
+geo = AttributeSpec(
+    validators=[
+        not_none,
+        enum(
+            "Point",
+            "LineString",
+            "Polygon",
+            "MultiPolygon",
+            "Geometry",
+            "MultiLineString",
+            "MultiPoint",
+        ),
+    ],
+    transformers=[lambda v: f"https://geojson.org/schema/{v}.json"],
+)
+crs = AttributeSpec(
+    validators=[not_none, enum("EPSG:4326", "EPSG:28992", "EPSG:7415")],
+    transformers=[],
+)
+list_or_string = AttributeSpec(validators=[not_none], transformers=[maybe_list])
+
+# Attribute registries
+
+# Top-level table attributes
+TABLE_CORE_ATTRIBUTES = {
     "id": as_is,
     "version": as_semver,
     "status": status,
@@ -177,6 +171,7 @@ TABLE_ATTRIBUTES = {
     "zoom": as_is,
 }
 
+# Attributes nested under schema["schema"]
 TABLE_SCHEMA_ATTRIBUTES = {
     "required": as_list,
     "display": as_is,
@@ -184,6 +179,7 @@ TABLE_SCHEMA_ATTRIBUTES = {
     "identifier": list_or_string,
 }
 
+# Per-column attributes
 COLUMN_ATTRIBUTES = {
     "type": as_type,
     "$ref": geo,
@@ -224,6 +220,25 @@ SCHEMA_TYPES = {
     "boolean": "boolean",
     "double": "number",
     "float": "number",
+}
+
+BASE_TABLE_SCHEMA: dict = {
+    "type": "table",
+    "version": "1.0.0",
+    "status": "stable",
+    "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": False,
+        "identifier": "id",
+        "required": ["schema"],
+        "display": "id",
+        "properties": {
+            "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v4.2.0#/definitions/schema"
+            }
+        },
+    },
 }
 
 
@@ -342,13 +357,13 @@ class DatabricksInfo:
 
     def _validate_table_tags(self) -> list[str]:
         errors = []
-        allowed_keys = set(TABLE_ATTRIBUTES) | set(TABLE_SCHEMA_ATTRIBUTES)
+        allowed_keys = set(TABLE_CORE_ATTRIBUTES) | set(TABLE_SCHEMA_ATTRIBUTES)
         table_tags = self.table_data.tags if self.table_data is not None else Tags(_tags=[])
         for tag in table_tags:
             if tag.key not in allowed_keys:
                 errors.append(f"Unknown table or schema tag: schema:{tag.key}")
         errors.extend(self._collect_spec_errors(table_tags, TABLE_SCHEMA_ATTRIBUTES))
-        errors.extend(self._collect_spec_errors(table_tags, TABLE_ATTRIBUTES))
+        errors.extend(self._collect_spec_errors(table_tags, TABLE_CORE_ATTRIBUTES))
         return errors
 
     def _validate_column_tags(self) -> list[str]:
@@ -401,7 +416,7 @@ class DatabricksInfo:
         schema = self.get_base_schema()
         table_tags = self.table_data.tags if self.table_data is not None else Tags(_tags=[])
         self._apply_tag_specs(schema["schema"], table_tags, TABLE_SCHEMA_ATTRIBUTES)
-        self._apply_tag_specs(schema, table_tags, TABLE_ATTRIBUTES)
+        self._apply_tag_specs(schema, table_tags, TABLE_CORE_ATTRIBUTES)
         for column in self.column_data.values():
             schema["schema"]["properties"][toCamelCase(column.name)] = self._build_column_schema(
                 column
