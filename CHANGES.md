@@ -1,3 +1,9 @@
+# 2026-07-29 (9.12.1)
+
+* Allow the CLI to load without the optional Databricks dependencies; only the `ingest` command now requires that extra when used.
+* Report validator exceptions as validation errors instead of aborting validation.
+* Improve test database and SQLite cleanup, and add coverage for import, export, CLI, and permission flows.
+
 # 2026-07-29 (9.12.0)
 
 * Refactor Databricks Unity Catalog types and client handling.
