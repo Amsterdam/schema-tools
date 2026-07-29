@@ -33,7 +33,6 @@ from schematools import (
     ckan,
     validation,
 )
-from schematools.contrib.databricks.client import get_databricks_info
 from schematools.exceptions import (
     DatasetNotFound,
     DuplicateScopeId,
@@ -1215,8 +1214,18 @@ def convert_to_snake_case(input_str: str) -> str:
     click.echo(to_snake_case(input_str))
 
 
-if __name__ == "__main__":
-    main()
+def _get_databricks_info(catalog: str, schema: str, table_name: str):
+    try:
+        from schematools.contrib.databricks.client import get_databricks_info
+    except ModuleNotFoundError as e:
+        if e.name and e.name.startswith("databricks"):
+            raise click.ClickException(
+                "The 'ingest' command requires the optional databricks dependencies. "
+                "Install schema-tools with the 'databricks' extra."
+            ) from e
+        raise
+
+    return get_databricks_info(catalog, schema, table_name)
 
 
 @schema.command("ingest")
@@ -1234,7 +1243,7 @@ def ingest(dataset_file: str) -> None:
             if provenance is not None and provenance.startswith("uc:"):
                 click.echo(f"Ingesting table {provenance}")
                 catalog, schema, table_name = provenance[3:].split(".")
-                db_info = get_databricks_info(catalog, schema, table_name)
+                db_info = _get_databricks_info(catalog, schema, table_name)
 
                 if db_info.errors:
                     errors[(db_info.table_id, provenance[3:])] = [
@@ -1263,3 +1272,7 @@ def ingest(dataset_file: str) -> None:
                 click.echo(f"{table_id}: {issue.message}")
                 click.echo(issue.as_markdown_todo(), err=True)
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

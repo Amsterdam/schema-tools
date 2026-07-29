@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import builtins
+import importlib
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 from click.testing import CliRunner
 
+import schematools
 from schematools.cli import (
     batch_validate,
     validate_datasets,
@@ -21,6 +25,29 @@ class Publisher(SimpleNamespace):
 
 class Scope(SimpleNamespace):
     pass
+
+
+def test_cli_import_does_not_require_databricks_sdk(monkeypatch) -> None:
+    original_import = builtins.__import__
+    original_cli_attr = getattr(schematools, "cli", None)
+
+    def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name.startswith("databricks"):
+            raise ModuleNotFoundError("No module named 'databricks'", name=name)
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocked_import)
+    sys.modules.pop("schematools.cli", None)
+
+    try:
+        cli = importlib.import_module("schematools.cli")
+    finally:
+        if original_cli_attr is None:
+            delattr(schematools, "cli")
+        else:
+            schematools.cli = original_cli_attr
+
+    assert cli is not None
 
 
 def test_validate_tables_aggregates_errors_on_stderr(tmp_path: Path) -> None:
