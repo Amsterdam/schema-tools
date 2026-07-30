@@ -336,6 +336,7 @@ class DatabricksInfo:
     table_data: TableData | None
     column_data: dict[str, ColumnData]
     first_field_name: str | None = None
+    geo_field: str | None = None
     errors: list[str] = field(default_factory=list)
 
     def _collect_spec_errors(self, tags: Tags, specs: dict[str, AttributeSpec]) -> list[str]:
@@ -357,6 +358,9 @@ class DatabricksInfo:
                 continue
             if attr == "$ref":
                 target.pop("type", None)  # Remove 'type' if '$ref' is present
+                if self.geo_field is None:
+                    # set geo_field to first geo field encountered
+                    self.geo_field = target.get("title")
             target[attr] = spec.transform(value)
 
     def _validate_table_tags(self) -> list[str]:
@@ -431,6 +435,8 @@ class DatabricksInfo:
             schema["schema"]["properties"][toCamelCase(column.name)] = self._build_column_schema(
                 column
             )
+        if self.geo_field is not None and "mainGeometry" not in schema["schema"]:
+            schema["schema"]["mainGeometry"] = toCamelCase(self.geo_field)
         return schema
 
     @cached_property
