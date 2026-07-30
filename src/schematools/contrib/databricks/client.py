@@ -99,6 +99,7 @@ def get_databricks_info(catalog: str, schema: str, table_name: str) -> Databrick
     client = WorkspaceClient()
     table_rows = _execute_sql(client, TABLE_DATA_SQL, parameters=parameters)
     column_rows = _execute_sql(client, COLUMN_DATA_SQL, parameters=parameters)
+    first_field_name = column_rows[0][0] if column_rows and column_rows[0] else None
     table_data = TableData.from_row(table_rows[0]) if table_rows else None
     column_data = {
         column.name: column for column in (ColumnData.from_row(row) for row in column_rows or [])
@@ -109,4 +110,5 @@ def get_databricks_info(catalog: str, schema: str, table_name: str) -> Databrick
         table_name=table_name,
         table_data=table_data,
         column_data=column_data,
+        first_field_name=first_field_name,
     )
