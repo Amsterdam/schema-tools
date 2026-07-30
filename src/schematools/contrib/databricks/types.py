@@ -389,8 +389,9 @@ class DatabricksInfo:
         column_schema = {
             "title": column.name,
             "type": SCHEMA_TYPES.get(column.type_name),
-            "description": column.comment,
         }
+        if column.comment:
+            column_schema["description"] = column.comment
         self._apply_tag_specs(column_schema, column.tags, COLUMN_ATTRIBUTES)
         return column_schema
 
