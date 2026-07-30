@@ -1,3 +1,8 @@
+# 2026-07-30 (9.12.3)
+
+* Improve Databricks schema generation by setting identifier and display from the first field and inferring `mainGeometry` from the first geo field.
+* Represent Databricks date, time, and timestamp columns as strings with the matching schema formats.
+
 # 2026-07-30 (9.12.2)
 
 * Bufix table filter on dataset instead of name for expired schemas.
