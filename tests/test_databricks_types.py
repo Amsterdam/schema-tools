@@ -7,6 +7,7 @@ from typing import cast
 import pytest
 from databricks.sdk.service.catalog import EntityTagAssignment
 
+from schematools.contrib.databricks import client as databricks_client
 from schematools.contrib.databricks.types import (
     ColumnData,
     DatabricksInfo,
@@ -94,6 +95,102 @@ def test_databricks_info_validates_and_renders_table_json() -> None:
         == "https://geojson.org/schema/Point.json"
     )
     assert payload["schema"]["properties"]["name"]["minLength"] == 2
+
+
+def test_databricks_info_sets_temporal_formats_and_defaults_from_first_field() -> None:
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="events_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "event_id": ColumnData("event_id", "string", None, None, "", Tags(_tags=[])),
+            "created_at": ColumnData("created_at", "timestamp", None, None, "", Tags(_tags=[])),
+            "event_date": ColumnData("event_date", "date", None, None, "", Tags(_tags=[])),
+            "event_time": ColumnData("event_time", "time", None, None, "", Tags(_tags=[])),
+        },
+        first_field_name="event_id",
+    )
+
+    payload = json.loads(info.json)
+
+    assert payload["schema"]["identifier"] == "eventId"
+    assert payload["schema"]["display"] == "eventId"
+    assert payload["schema"]["properties"]["createdAt"] == {
+        "title": "created_at",
+        "type": "string",
+        "format": "date-time",
+    }
+    assert payload["schema"]["properties"]["eventDate"] == {
+        "title": "event_date",
+        "type": "string",
+        "format": "date",
+    }
+    assert payload["schema"]["properties"]["eventTime"] == {
+        "title": "event_time",
+        "type": "string",
+        "format": "time",
+    }
+
+
+def test_databricks_info_sets_main_geometry_from_first_geo_ref_column() -> None:
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="buildings_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "shape": ColumnData(
+                "shape",
+                "string",
+                None,
+                None,
+                "",
+                Tags(_tags=[Tag(key="$ref", value="Point", type="columns")]),
+            ),
+            "secondary_shape": ColumnData(
+                "secondary_shape",
+                "string",
+                None,
+                None,
+                "",
+                Tags(_tags=[Tag(key="$ref", value="Polygon", type="columns")]),
+            ),
+        },
+    )
+
+    payload = json.loads(info.json)
+
+    assert payload["schema"]["mainGeometry"] == "shape"
+    assert (
+        payload["schema"]["properties"]["shape"]["$ref"] == "https://geojson.org/schema/Point.json"
+    )
+    assert "type" not in payload["schema"]["properties"]["shape"]
+
+
+def test_get_databricks_info_uses_first_column_name_for_defaults(monkeypatch) -> None:
+    table_rows = [("Table comment", json.dumps([]))]
+    column_rows = [
+        ("event_id", "string", True, None, None, json.dumps([])),
+        ("created_at", "timestamp", True, None, None, json.dumps([])),
+    ]
+
+    def fake_execute_sql(_client, sql_statement: str, parameters=None):
+        if sql_statement == databricks_client.TABLE_DATA_SQL:
+            return table_rows
+        if sql_statement == databricks_client.COLUMN_DATA_SQL:
+            return column_rows
+        raise AssertionError(f"Unexpected SQL statement: {sql_statement}")
+
+    monkeypatch.setattr(databricks_client, "DATABRICKS_WAREHOUSE_ID", "warehouse-id")
+    monkeypatch.setattr(databricks_client, "WorkspaceClient", lambda: object())
+    monkeypatch.setattr(databricks_client, "_execute_sql", fake_execute_sql)
+
+    info = databricks_client.get_databricks_info("main", "default", "events_table")
+
+    assert info.first_field_name == "event_id"
+    assert info.get_base_schema()["schema"]["identifier"] == "eventId"
+    assert info.get_base_schema()["schema"]["display"] == "eventId"
 
 
 def test_databricks_info_reports_explicit_none_values() -> None:
