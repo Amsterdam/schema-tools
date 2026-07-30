@@ -1,3 +1,7 @@
+# 2026-07-30 (9.12.2)
+
+* Bufix table filter on dataset instead of name for expired schemas.
+
 # 2026-07-29 (9.12.1)
 
 * Allow the CLI to load without the optional Databricks dependencies; only the `ingest` command now requires that extra when used.
