@@ -215,12 +215,15 @@ SCHEMA_TYPES = {
     "int": "integer",
     "bigint": "integer",
     "smallint": "integer",
-    "timestamp": "datetime",
-    "date": "date",
+    "timestamp": "string",
+    "date": "string",
+    "time": "string",
     "boolean": "boolean",
     "double": "number",
     "float": "number",
 }
+
+SCHEMA_FORMAT = {"timestamp": "date-time", "date": "date", "time": "time"}
 
 BASE_TABLE_SCHEMA: dict = {
     "type": "table",
@@ -392,6 +395,8 @@ class DatabricksInfo:
         }
         if column.comment:
             column_schema["description"] = column.comment
+        if format := SCHEMA_FORMAT.get(column.type_name):
+            column_schema["format"] = format
         self._apply_tag_specs(column_schema, column.tags, COLUMN_ATTRIBUTES)
         return column_schema
 
