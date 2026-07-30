@@ -335,6 +335,7 @@ class DatabricksInfo:
     table_name: str
     table_data: TableData | None
     column_data: dict[str, ColumnData]
+    first_field_name: str | None = None
     errors: list[str] = field(default_factory=list)
 
     def _collect_spec_errors(self, tags: Tags, specs: dict[str, AttributeSpec]) -> list[str]:
@@ -413,8 +414,11 @@ class DatabricksInfo:
         return toCamelCase(table_tags["id"] or self.table_name)
 
     def get_base_schema(self) -> dict:
-        schema = {"id": self.table_id}
+        schema: dict[str, Any] = {"id": self.table_id}
         schema.update(deepcopy(BASE_TABLE_SCHEMA))
+        if self.first_field_name is not None:
+            schema["schema"]["identifier"] = toCamelCase(self.first_field_name)
+            schema["schema"]["display"] = toCamelCase(self.first_field_name)
         return schema
 
     @cached_property
