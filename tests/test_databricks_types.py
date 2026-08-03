@@ -133,6 +133,21 @@ def test_databricks_info_sets_temporal_formats_and_defaults_from_first_field() -
     }
 
 
+def test_databricks_info_json_preserves_unicode_characters() -> None:
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="cafes_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "name": ColumnData("name", "string", None, None, "Café op de gracht", Tags(_tags=[]))
+        },
+    )
+
+    assert "Café op de gracht" in info.json
+    assert "\\u00e9" not in info.json
+
+
 def test_databricks_info_sets_main_geometry_from_first_geo_ref_column() -> None:
     info = DatabricksInfo(
         catalog="main",

@@ -441,4 +441,4 @@ class DatabricksInfo:
 
     @cached_property
     def json(self) -> str:
-        return json.dumps(self.dict, indent=2)
+        return json.dumps(self.dict, indent=2, ensure_ascii=False)
