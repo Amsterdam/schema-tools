@@ -1236,11 +1236,13 @@ def ingest(dataset_file: str) -> None:
     dataset: dict = read_json_path(dataset_file)
     dirname = os.path.dirname(dataset_file)
     errors = {}
+    has_databricks_table = False
 
     for ds_version in dataset.get("versions", {}).values():
         for table in ds_version.get("tables", []):
             provenance: str | None = table.get("provenance")
             if provenance is not None and provenance.startswith("uc:"):
+                has_databricks_table = True
                 click.echo(f"Ingesting table {provenance}")
                 catalog, schema, table_name = provenance[3:].split(".")
                 db_info = _get_databricks_info(catalog, schema, table_name)
@@ -1260,9 +1262,12 @@ def ingest(dataset_file: str) -> None:
 
                 table["id"] = db_info.table_id
                 table["$ref"] = f"{db_info.table_id}/{table_version}"
-    with open(dataset_file, "w") as df:
-        df.write(json.dumps(dataset, indent=2))
-        df.write("\n")
+
+    if has_databricks_table:
+        # Only write the dataset file if we have ingested at least one databricks table.
+        with open(dataset_file, "w") as df:
+            df.write(json.dumps(dataset, indent=2))
+            df.write("\n")
 
     if errors:
         click.echo("## Unity Catalog Ingestion Errors", err=True)

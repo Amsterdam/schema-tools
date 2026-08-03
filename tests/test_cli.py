@@ -12,6 +12,7 @@ from click.testing import CliRunner
 import schematools
 from schematools.cli import (
     batch_validate,
+    schema,
     validate_datasets,
     validate_publishers,
     validate_scopes,
@@ -372,3 +373,38 @@ def test_validate_scopes_does_not_write_error_header_without_errors(monkeypatch)
     assert result.exit_code == 0
     assert result.stderr == ""
     assert "## Scopes Validation Errors" not in result.output
+
+
+def test_ingest_does_not_write_dataset_without_uc_provenance(tmp_path: Path, monkeypatch) -> None:
+    dataset_dir = tmp_path / "datasets"
+    dataset_dir.mkdir()
+    dataset_file = dataset_dir / "dataset.json"
+    original_content = json.dumps(
+        {
+            "title": "No Databricks",
+            "versions": {
+                "v1": {
+                    "tables": [
+                        {"provenance": "source-system.table"},
+                        {"provenance": "foo:main.default.cafes_table"},
+                        {},
+                    ],
+                }
+            },
+        },
+        indent=2,
+        ensure_ascii=False,
+    )
+    dataset_file.write_text(f"{original_content}\n", encoding="utf-8")
+
+    def fail_if_called(*_args):
+        raise AssertionError("_get_databricks_info should not be called without uc: provenance")
+
+    monkeypatch.setattr("schematools.cli._get_databricks_info", fail_if_called)
+
+    runner = CliRunner()
+    result = runner.invoke(schema, ["ingest", str(dataset_file)])
+
+    assert result.exit_code == 0
+    assert dataset_file.read_text(encoding="utf-8") == f"{original_content}\n"
+    assert not (dataset_dir / "cafes").exists()
