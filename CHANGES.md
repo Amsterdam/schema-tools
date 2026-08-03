@@ -2,6 +2,8 @@
 
 * Improve Databricks schema generation by setting identifier and display from the first field and inferring `mainGeometry` from the first geo field.
 * Represent Databricks date, time, and timestamp columns as strings with the matching schema formats.
+* Preserve unicode characters in json files.
+* Only write to dataset.json when necessary.
 
 # 2026-07-30 (9.12.2)
 
