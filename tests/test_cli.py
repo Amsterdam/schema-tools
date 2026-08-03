@@ -375,6 +375,52 @@ def test_validate_scopes_does_not_write_error_header_without_errors(monkeypatch)
     assert "## Scopes Validation Errors" not in result.output
 
 
+def test_ingest_preserves_unicode_characters_in_written_files(tmp_path: Path, monkeypatch) -> None:
+    dataset_dir = tmp_path / "datasets"
+    dataset_dir.mkdir()
+    dataset_file = dataset_dir / "dataset.json"
+    dataset_file.write_text(
+        json.dumps(
+            {
+                "title": "Cafés",
+                "versions": {
+                    "v1": {
+                        "tables": [{"provenance": "uc:main.default.cafes_table"}],
+                    }
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    db_info = SimpleNamespace(
+        errors=[],
+        table_id="cafes",
+        dict={"version": "1.0.0"},
+        json=json.dumps(
+            {
+                "id": "cafes",
+                "schema": {"properties": {"name": {"description": "Café op de kade"}}},
+            },
+            indent=2,
+            ensure_ascii=False,
+        ),
+    )
+    monkeypatch.setattr("schematools.cli._get_databricks_info", lambda *_args: db_info)
+
+    runner = CliRunner()
+    result = runner.invoke(schema, ["ingest", str(dataset_file)])
+
+    assert result.exit_code == 0
+    assert "Cafés" in dataset_file.read_text(encoding="utf-8")
+    assert "\\u00e9" not in dataset_file.read_text(encoding="utf-8")
+
+    table_file = dataset_dir / "cafes" / "v1.json"
+    assert "Café op de kade" in table_file.read_text(encoding="utf-8")
+    assert "\\u00e9" not in table_file.read_text(encoding="utf-8")
+
+
 def test_ingest_does_not_write_dataset_without_uc_provenance(tmp_path: Path, monkeypatch) -> None:
     dataset_dir = tmp_path / "datasets"
     dataset_dir.mkdir()

@@ -1266,7 +1266,7 @@ def ingest(dataset_file: str) -> None:
     if has_databricks_table:
         # Only write the dataset file if we have ingested at least one databricks table.
         with open(dataset_file, "w") as df:
-            df.write(json.dumps(dataset, indent=2))
+            df.write(json.dumps(dataset, indent=2, ensure_ascii=False))
             df.write("\n")
 
     if errors:
