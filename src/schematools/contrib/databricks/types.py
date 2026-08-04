@@ -8,6 +8,8 @@ from typing import Any, Literal
 
 from databricks.sdk.service.catalog import EntityTagAssignment
 
+from schematools.exceptions import SchemaObjectNotFound
+from schematools.loaders import get_schema_loader
 from schematools.naming import toCamelCase
 
 
@@ -80,7 +82,7 @@ def semver(val: str):
 # Reusable attribute specs
 
 # Passthrough and scalar coercion
-as_is = AttributeSpec(validators=[], transformers=[])
+as_is = AttributeSpec(validators=[not_none], transformers=[])
 as_list = AttributeSpec(validators=[not_none], transformers=[lambda v: v.split(";")])
 as_number = AttributeSpec(validators=[not_none, valid_number], transformers=[float])
 as_integer = AttributeSpec(validators=[not_none, valid_number], transformers=[int])
@@ -181,7 +183,7 @@ TABLE_SCHEMA_ATTRIBUTES = {
 
 # Per-column attributes
 COLUMN_ATTRIBUTES = {
-    "type": as_type,
+    "type": as_type,  # Should remain in first place in the dict to ensure correct processing.
     "$ref": geo,
     "title": as_is,
     "description": as_is,
@@ -348,6 +350,41 @@ class DatabricksInfo:
             errors.extend(spec.errors(attr, value))
         return errors
 
+    def _expand_relation(self, target: dict, value: str) -> None:
+        loader = get_schema_loader()
+        fields = {}
+        try:
+            dataset, table = value.split(":")
+            dataset_schema = loader.get_dataset(dataset)
+            table_schema = dataset_schema.get_table_by_id(
+                table, version=dataset_schema.default_version
+            )
+            for identifier in table_schema.identifier_fields:
+                fields[identifier.name] = {"type": identifier.type}
+            if table_schema.is_temporal:
+                for start, end in table_schema.temporal.dimensions.values():
+                    fields[start.name] = {"type": start.type}
+                    fields[end.name] = {"type": end.type}
+        except (SchemaObjectNotFound, ValueError, AttributeError):
+            self.errors.append(f"Relation '{value}' could not be resolved.")
+            return
+
+        # If the target is an array, we need to set the items property to the fields. Otherwise,
+        # we set the properties directly on the target.
+        field_target = target
+        if target["type"] == "array":
+            target["items"] = {}
+            field_target = target["items"]
+
+        # In case there is only one field, we set
+        # the type directly to that field's type. If there are multiple fields, we set the type to
+        # object and add the properties.
+        if len(fields) == 1:
+            field_target["type"] = next(iter(fields.values()))["type"]
+        else:
+            field_target["type"] = "object"
+            field_target["properties"] = fields
+
     def _apply_tag_specs(self, target: dict, tags: Tags, specs: dict[str, AttributeSpec]) -> None:
         for attr, spec in specs.items():
             if attr not in tags:
@@ -361,6 +398,8 @@ class DatabricksInfo:
                 if self.geo_field is None:
                     # set geo_field to first geo field encountered
                     self.geo_field = target.get("title")
+            if attr == "relation" and value is not None:
+                self._expand_relation(target, value)
             target[attr] = spec.transform(value)
 
     def _validate_table_tags(self) -> list[str]:
@@ -441,4 +480,4 @@ class DatabricksInfo:
 
     @cached_property
     def json(self) -> str:
-        return json.dumps(self.dict, indent=2, ensure_ascii=False)
+        return json.dumps(self.dict, indent=2, ensure_ascii=False)  #

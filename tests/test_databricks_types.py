@@ -9,6 +9,7 @@ from databricks.sdk.service.catalog import EntityTagAssignment
 
 from schematools.contrib.databricks import client as databricks_client
 from schematools.contrib.databricks.types import (
+    COLUMN_ATTRIBUTES,
     ColumnData,
     DatabricksInfo,
     TableData,
@@ -16,6 +17,7 @@ from schematools.contrib.databricks.types import (
     Tags,
     as_datetime,
     as_integer,
+    as_is,
     as_number,
     as_semver,
     as_type,
@@ -26,6 +28,7 @@ from schematools.contrib.databricks.types import (
     list_or_string,
     status,
 )
+from schematools.exceptions import SchemaObjectNotFound
 
 
 def test_tags_from_tag_assignments_filters_schema_tags() -> None:
@@ -222,9 +225,191 @@ def test_databricks_info_reports_explicit_none_values() -> None:
     assert info.errors == ["auth: Value cannot be None"]
 
 
+def test_databricks_info_reports_explicit_none_values_for_as_is_tags() -> None:
+    table_tags = Tags(_tags=[Tag(key="title", value=None, type="tables")])
+
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="buildings_table",
+        table_data=TableData(comment=None, tags=table_tags),
+        column_data={},
+    )
+
+    assert info.errors == ["title: Value cannot be None"]
+
+
+def test_databricks_info_expands_scalar_relations(monkeypatch) -> None:
+    related_table = SimpleNamespace(
+        identifier_fields=[SimpleNamespace(name="related_id", type="string")],
+        is_temporal=False,
+    )
+    dataset_schema = SimpleNamespace(
+        default_version="v1",
+        get_table_by_id=lambda table_id, version: related_table,
+    )
+    loader = SimpleNamespace(get_dataset=lambda dataset_id: dataset_schema)
+    monkeypatch.setattr("schematools.contrib.databricks.types.get_schema_loader", lambda: loader)
+
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="buildings_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "related": ColumnData(
+                "related",
+                "string",
+                None,
+                None,
+                "",
+                Tags(_tags=[Tag(key="relation", value="dataset:table", type="columns")]),
+            )
+        },
+    )
+
+    payload = json.loads(info.json)
+
+    assert info.errors == []
+    assert payload["schema"]["properties"]["related"]["type"] == "string"
+    assert payload["schema"]["properties"]["related"]["relation"] == "dataset:table"
+
+
+def test_databricks_info_expands_array_relations_into_items(monkeypatch) -> None:
+    related_table = SimpleNamespace(
+        identifier_fields=[
+            SimpleNamespace(name="related_id", type="string"),
+            SimpleNamespace(name="related_seq", type="integer"),
+        ],
+        is_temporal=False,
+    )
+    dataset_schema = SimpleNamespace(
+        default_version="v1",
+        get_table_by_id=lambda table_id, version: related_table,
+    )
+    loader = SimpleNamespace(get_dataset=lambda dataset_id: dataset_schema)
+    monkeypatch.setattr("schematools.contrib.databricks.types.get_schema_loader", lambda: loader)
+
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="buildings_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "related": ColumnData(
+                "related",
+                "string",
+                None,
+                None,
+                "",
+                Tags(
+                    _tags=[
+                        Tag(key="type", value="array", type="columns"),
+                        Tag(key="relation", value="dataset:table", type="columns"),
+                    ]
+                ),
+            )
+        },
+    )
+
+    payload = json.loads(info.json)
+
+    assert info.errors == []
+    assert payload["schema"]["properties"]["related"]["type"] == "array"
+    assert payload["schema"]["properties"]["related"]["items"] == {
+        "type": "object",
+        "properties": {
+            "related_id": {"type": "string"},
+            "related_seq": {"type": "integer"},
+        },
+    }
+
+
+def test_databricks_info_expands_temporal_relations(monkeypatch) -> None:
+    related_table = SimpleNamespace(
+        identifier_fields=[SimpleNamespace(name="related_id", type="string")],
+        is_temporal=True,
+        temporal=SimpleNamespace(
+            dimensions={
+                "validity": (
+                    SimpleNamespace(name="valid_from", type="string"),
+                    SimpleNamespace(name="valid_to", type="string"),
+                )
+            }
+        ),
+    )
+    dataset_schema = SimpleNamespace(
+        default_version="v1",
+        get_table_by_id=lambda table_id, version: related_table,
+    )
+    loader = SimpleNamespace(get_dataset=lambda dataset_id: dataset_schema)
+    monkeypatch.setattr("schematools.contrib.databricks.types.get_schema_loader", lambda: loader)
+
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="buildings_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "related": ColumnData(
+                "related",
+                "string",
+                None,
+                None,
+                "",
+                Tags(_tags=[Tag(key="relation", value="dataset:table", type="columns")]),
+            )
+        },
+    )
+
+    payload = json.loads(info.json)
+
+    assert info.errors == []
+    assert payload["schema"]["properties"]["related"] == {
+        "title": "related",
+        "type": "object",
+        "properties": {
+            "related_id": {"type": "string"},
+            "valid_from": {"type": "string"},
+            "valid_to": {"type": "string"},
+        },
+        "relation": "dataset:table",
+    }
+
+
+def test_databricks_info_reports_unresolved_relations(monkeypatch) -> None:
+    def raise_not_found(_dataset_id: str):
+        raise SchemaObjectNotFound("dataset")
+
+    loader = SimpleNamespace(get_dataset=raise_not_found)
+    monkeypatch.setattr("schematools.contrib.databricks.types.get_schema_loader", lambda: loader)
+
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="buildings_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "related": ColumnData(
+                "related",
+                "string",
+                None,
+                None,
+                "",
+                Tags(_tags=[Tag(key="relation", value="dataset:table", type="columns")]),
+            )
+        },
+    )
+
+    _ = info.json
+
+    assert info.errors == ["Relation 'dataset:table' could not be resolved."]
+
+
 @pytest.mark.parametrize(
     ("spec", "attr", "value", "expected_errors"),
     [
+        (as_is, "title", None, ["title: Value cannot be None"]),
         (list_or_string, "auth", None, ["auth: Value cannot be None"]),
         (
             as_number,
@@ -261,8 +446,10 @@ def test_databricks_info_reports_explicit_none_values() -> None:
             "type",
             "date",
             [
-                "type: Value 'date' is not in the allowed values: "
-                "('string', 'number', 'integer', 'boolean', 'array', 'object', 'null')"
+                (
+                    "type: Value 'date' is not in the allowed values: "
+                    "('string', 'number', 'integer', 'boolean', 'array', 'object', 'null')"
+                )
             ],
         ),
         (
@@ -270,10 +457,12 @@ def test_databricks_info_reports_explicit_none_values() -> None:
             "format",
             "uuid",
             [
-                "format: Value 'uuid' is not in the allowed values: "
-                "('date-time', 'date', 'time', 'duration', 'email', 'idn-email', 'uri', "
-                "'uri-reference', 'hostname', 'idn-hostname', 'ipv4', 'ipv6', 'iri', "
-                "'iri-reference', 'json')"
+                (
+                    "format: Value 'uuid' is not in the allowed values: "
+                    "('date-time', 'date', 'time', 'duration', 'email', 'idn-email', 'uri', "
+                    "'uri-reference', 'hostname', 'idn-hostname', 'ipv4', 'ipv6', 'iri', "
+                    "'iri-reference', 'json')"
+                )
             ],
         ),
         (
@@ -281,9 +470,11 @@ def test_databricks_info_reports_explicit_none_values() -> None:
             "$ref",
             "Circle",
             [
-                "$ref: Value 'Circle' is not in the allowed values: "
-                "('Point', 'LineString', 'Polygon', 'MultiPolygon', 'Geometry', "
-                "'MultiLineString', 'MultiPoint')"
+                (
+                    "$ref: Value 'Circle' is not in the allowed values: "
+                    "('Point', 'LineString', 'Polygon', 'MultiPolygon', 'Geometry', "
+                    "'MultiLineString', 'MultiPoint')"
+                )
             ],
         ),
         (
@@ -299,11 +490,19 @@ def test_databricks_info_reports_explicit_none_values() -> None:
             "dataclass",
             "stream",
             [
-                "dataclass: Value 'stream' is not in the allowed values: "
-                "('structured', 'blob', 'event')"
+                (
+                    "dataclass: Value 'stream' is not in the allowed values: "
+                    "('structured', 'blob', 'event')"
+                )
             ],
         ),
     ],
 )
 def test_attribute_spec_errors(spec, attr: str, value, expected_errors: list[str]) -> None:
     assert spec.errors(attr, value) == expected_errors
+
+
+def test_type_first_in_column_attributes() -> None:
+    # Ensure that 'type' is the first key in COLUMN_ATTRIBUTES to guarantee correct processing order.
+    first_key = next(iter(COLUMN_ATTRIBUTES))
+    assert first_key == "type", f"Expected 'type' to be the first key, but got '{first_key}'"
