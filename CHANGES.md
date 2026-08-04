@@ -1,3 +1,9 @@
+# 2026-08-04 (9.12.4)
+
+* Parse valid Databricks relations when ingesting Unity Catalog metadata.
+* Handle Databricks array and object columns, including nested field definitions that have
+  path-like tags, i.e.: `schema:items:properties:field_name:type = "string".
+
 # 2026-07-30 (9.12.3)
 
 * Improve Databricks schema generation by setting identifier and display from the first field and inferring `mainGeometry` from the first geo field.
