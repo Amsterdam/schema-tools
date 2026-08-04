@@ -8,6 +8,8 @@ from typing import Any, Literal
 
 from databricks.sdk.service.catalog import EntityTagAssignment
 
+from schematools.exceptions import SchemaObjectNotFound
+from schematools.loaders import get_schema_loader
 from schematools.naming import toCamelCase
 
 
@@ -70,6 +72,15 @@ def valid_datetime(val: str):
         raise ValueError(f"Value '{val}' is not a valid ISO 8601 datetime") from None
 
 
+def valid_boolean(val: str):
+    if val not in {"true", "false"}:
+        raise ValueError(f"Value '{val}' is not a valid boolean")
+
+
+def as_bool(val: str) -> bool:
+    return val == "true"
+
+
 def semver(val: str):
     parts = val.split(".")
     if len(parts) != 3 or not all(part.isdigit() for part in parts):
@@ -80,10 +91,11 @@ def semver(val: str):
 # Reusable attribute specs
 
 # Passthrough and scalar coercion
-as_is = AttributeSpec(validators=[], transformers=[])
+as_is = AttributeSpec(validators=[not_none], transformers=[])
 as_list = AttributeSpec(validators=[not_none], transformers=[lambda v: v.split(";")])
 as_number = AttributeSpec(validators=[not_none, valid_number], transformers=[float])
 as_integer = AttributeSpec(validators=[not_none, valid_number], transformers=[int])
+as_boolean = AttributeSpec(validators=[not_none, valid_boolean], transformers=[as_bool])
 
 # Constrained scalar values
 as_semver = AttributeSpec(validators=[not_none, semver], transformers=[])
@@ -181,7 +193,7 @@ TABLE_SCHEMA_ATTRIBUTES = {
 
 # Per-column attributes
 COLUMN_ATTRIBUTES = {
-    "type": as_type,
+    "type": as_type,  # Should remain in first place in the dict to ensure correct processing.
     "$ref": geo,
     "title": as_is,
     "description": as_is,
@@ -203,6 +215,7 @@ COLUMN_ATTRIBUTES = {
     "contentEncoding": as_is,
     "enum": as_list,
     "format": format,
+    "additionalProperties": as_boolean,
 }
 
 MUTUALLY_EXCLUSIVE_ATTRIBUTES = [
@@ -221,6 +234,9 @@ SCHEMA_TYPES = {
     "boolean": "boolean",
     "double": "number",
     "float": "number",
+    "array": "array",
+    "object": "object",
+    "struct": "object",
 }
 
 SCHEMA_FORMAT = {"timestamp": "date-time", "date": "date", "time": "time"}
@@ -348,6 +364,110 @@ class DatabricksInfo:
             errors.extend(spec.errors(attr, value))
         return errors
 
+    def _split_nested_column_tag(self, key: str) -> tuple[list[str], str] | None:
+        if ":" not in key:
+            return None
+        parts = key.split(":")
+        return parts[:-1], parts[-1]
+
+    def _is_valid_nested_column_tag_path(self, path: list[str]) -> bool:
+        index = 0
+        while index < len(path):
+            if path[index] == "items":
+                index += 1
+                continue
+            if path[index] == "properties" and index + 1 < len(path):
+                index += 2
+                continue
+            return False
+        return True
+
+    def _nested_column_tag_errors(self, column_name: str, tag: Tag) -> list[str]:
+        nested_tag = self._split_nested_column_tag(tag.key)
+        if nested_tag is None:
+            return []
+
+        path, attr = nested_tag
+        if not self._is_valid_nested_column_tag_path(path) or attr not in COLUMN_ATTRIBUTES:
+            return [f"Unknown column tag for {column_name}: schema:{tag.key}"]
+
+        if attr == "type" and tag.value in SCHEMA_TYPES:
+            return []
+
+        spec = COLUMN_ATTRIBUTES[attr]
+        return spec.errors(attr, tag.value)
+
+    def _ensure_nested_schema_target(self, target: dict, path: list[str]) -> dict:
+        nested_target = target
+        index = 0
+        while index < len(path):
+            if path[index] == "items":
+                nested_target = nested_target.setdefault("items", {})
+                index += 1
+                continue
+
+            properties = nested_target.setdefault("properties", {})
+            property_name = path[index + 1]
+            nested_target = properties.setdefault(property_name, {})
+            index += 2
+
+        return nested_target
+
+    def _apply_nested_column_tag(self, target: dict, tag: Tag) -> None:
+        nested_tag = self._split_nested_column_tag(tag.key)
+        if nested_tag is None:
+            return
+
+        path, attr = nested_tag
+        nested_target = self._ensure_nested_schema_target(target, path)
+
+        if attr == "type" and tag.value in SCHEMA_TYPES:
+            nested_target["type"] = SCHEMA_TYPES[tag.value]
+            if nested_format := SCHEMA_FORMAT.get(tag.value):
+                nested_target["format"] = nested_format
+            return
+
+        self._apply_tag_specs(
+            nested_target,
+            Tags(_tags=[Tag(attr, tag.value, tag.type)]),
+            COLUMN_ATTRIBUTES,
+        )
+
+    def _expand_relation(self, target: dict, value: str) -> None:
+        loader = get_schema_loader()
+        fields = {}
+        try:
+            dataset, table = value.split(":")
+            dataset_schema = loader.get_dataset(dataset)
+            table_schema = dataset_schema.get_table_by_id(
+                table, version=dataset_schema.default_version
+            )
+            for identifier in table_schema.identifier_fields:
+                fields[identifier.name] = {"type": identifier.type}
+            if table_schema.is_temporal:
+                for start, end in table_schema.temporal.dimensions.values():
+                    fields[start.name] = {"type": start.type}
+                    fields[end.name] = {"type": end.type}
+        except (SchemaObjectNotFound, ValueError, AttributeError):
+            self.errors.append(f"Relation '{value}' could not be resolved.")
+            return
+
+        # If the target is an array, we need to set the items property to the fields. Otherwise,
+        # we set the properties directly on the target.
+        field_target = target
+        if target["type"] == "array":
+            target["items"] = {}
+            field_target = target["items"]
+
+        # In case there is only one field, we set
+        # the type directly to that field's type. If there are multiple fields, we set the type to
+        # object and add the properties.
+        if len(fields) == 1:
+            field_target["type"] = next(iter(fields.values()))["type"]
+        else:
+            field_target["type"] = "object"
+            field_target["properties"] = fields
+
     def _apply_tag_specs(self, target: dict, tags: Tags, specs: dict[str, AttributeSpec]) -> None:
         for attr, spec in specs.items():
             if attr not in tags:
@@ -361,6 +481,8 @@ class DatabricksInfo:
                 if self.geo_field is None:
                     # set geo_field to first geo field encountered
                     self.geo_field = target.get("title")
+            if attr == "relation" and value is not None:
+                self._expand_relation(target, value)
             target[attr] = spec.transform(value)
 
     def _validate_table_tags(self) -> list[str]:
@@ -379,6 +501,9 @@ class DatabricksInfo:
         for column_name, column in self.column_data.items():
             tags = column.tags
             for tag in tags:
+                if ":" in tag.key:
+                    errors.extend(self._nested_column_tag_errors(column_name, tag))
+                    continue
                 if tag.key not in COLUMN_ATTRIBUTES:
                     errors.append(f"Unknown column tag for {column_name}: schema:{tag.key}")
 
@@ -402,7 +527,14 @@ class DatabricksInfo:
             column_schema["description"] = column.comment
         if format := SCHEMA_FORMAT.get(column.type_name):
             column_schema["format"] = format
-        self._apply_tag_specs(column_schema, column.tags, COLUMN_ATTRIBUTES)
+        self._apply_tag_specs(
+            column_schema,
+            Tags(_tags=[tag for tag in column.tags if ":" not in tag.key]),
+            COLUMN_ATTRIBUTES,
+        )
+        for tag in column.tags:
+            if ":" in tag.key:
+                self._apply_nested_column_tag(column_schema, tag)
         return column_schema
 
     def __post_init__(self):
@@ -441,4 +573,4 @@ class DatabricksInfo:
 
     @cached_property
     def json(self) -> str:
-        return json.dumps(self.dict, indent=2, ensure_ascii=False)
+        return json.dumps(self.dict, indent=2, ensure_ascii=False)  #
