@@ -325,6 +325,183 @@ def test_databricks_info_expands_array_relations_into_items(monkeypatch) -> None
     }
 
 
+def test_databricks_info_builds_nested_array_item_properties_from_column_tags() -> None:
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="birthdays_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "verjaardagskalender": ColumnData(
+                "verjaardagskalender",
+                "string",
+                None,
+                None,
+                "",
+                Tags(
+                    _tags=[
+                        Tag(key="type", value="array", type="columns"),
+                        Tag(key="title", value="Verjaardagskalender", type="columns"),
+                        Tag(key="items:type", value="object", type="columns"),
+                        Tag(
+                            key="items:properties:naam:type",
+                            value="string",
+                            type="columns",
+                        ),
+                        Tag(
+                            key="items:properties:verjaardag:type",
+                            value="date",
+                            type="columns",
+                        ),
+                    ]
+                ),
+            )
+        },
+    )
+
+    payload = json.loads(info.json)
+
+    assert info.errors == []
+    assert payload["schema"]["properties"]["verjaardagskalender"] == {
+        "title": "Verjaardagskalender",
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "naam": {"type": "string"},
+                "verjaardag": {"type": "string", "format": "date"},
+            },
+        },
+    }
+
+
+def test_databricks_info_builds_nested_array_scalar_items_from_column_tags() -> None:
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="lists_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "lijst": ColumnData(
+                "lijst",
+                "string",
+                None,
+                None,
+                "",
+                Tags(
+                    _tags=[
+                        Tag(key="type", value="array", type="columns"),
+                        Tag(key="title", value="lijst", type="columns"),
+                        Tag(key="items:type", value="string", type="columns"),
+                    ]
+                ),
+            )
+        },
+    )
+
+    payload = json.loads(info.json)
+
+    assert info.errors == []
+    assert payload["schema"]["properties"]["lijst"] == {
+        "title": "lijst",
+        "type": "array",
+        "items": {
+            "type": "string",
+        },
+    }
+
+
+def test_databricks_info_builds_object_properties_from_column_tags() -> None:
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="addresses_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "adres": ColumnData(
+                "adres",
+                "string",
+                None,
+                None,
+                "",
+                Tags(
+                    _tags=[
+                        Tag(key="type", value="object", type="columns"),
+                        Tag(key="title", value="Adres", type="columns"),
+                        Tag(key="additionalProperties", value="false", type="columns"),
+                        Tag(key="properties:straat:type", value="string", type="columns"),
+                        Tag(key="properties:huisnr:type", value="int", type="columns"),
+                        Tag(key="properties:postcode:type", value="string", type="columns"),
+                    ]
+                ),
+            )
+        },
+    )
+
+    payload = json.loads(info.json)
+
+    assert info.errors == []
+    assert payload["schema"]["properties"]["adres"] == {
+        "title": "Adres",
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "straat": {"type": "string"},
+            "huisnr": {"type": "integer"},
+            "postcode": {"type": "string"},
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    ("tags", "expected_errors"),
+    [
+        (
+            [Tag(key="properties:type", value="string", type="columns")],
+            ["Unknown column tag for invalid: schema:properties:type"],
+        ),
+        (
+            [Tag(key="items:foo:type", value="string", type="columns")],
+            ["Unknown column tag for invalid: schema:items:foo:type"],
+        ),
+        (
+            [Tag(key="properties:verjaardag:type", value="uuid", type="columns")],
+            [
+                (
+                    "type: Value 'uuid' is not in the allowed values: "
+                    "('string', 'number', 'integer', 'boolean', 'array', 'object', 'null')"
+                )
+            ],
+        ),
+        (
+            [Tag(key="additionalProperties", value="maybe", type="columns")],
+            ["additionalProperties: Value 'maybe' is not a valid boolean"],
+        ),
+    ],
+)
+def test_databricks_info_reports_invalid_nested_column_tags(
+    tags: list[Tag], expected_errors: list[str]
+) -> None:
+    info = DatabricksInfo(
+        catalog="main",
+        schema="default",
+        table_name="invalid_tags_table",
+        table_data=TableData(comment=None, tags=Tags(_tags=[])),
+        column_data={
+            "invalid": ColumnData(
+                "invalid",
+                "string",
+                None,
+                None,
+                "",
+                Tags(_tags=tags),
+            )
+        },
+    )
+
+    assert info.errors == expected_errors
+
+
 def test_databricks_info_expands_temporal_relations(monkeypatch) -> None:
     related_table = SimpleNamespace(
         identifier_fields=[SimpleNamespace(name="related_id", type="string")],
