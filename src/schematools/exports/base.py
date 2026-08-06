@@ -62,6 +62,7 @@ class BaseExporter:
         public_scope = Scope.from_string(_PUBLIC_SCOPE)
         parent_scopes = set(dataset.scopes | table.scopes) - {public_scope}
         for field in table.fields:
+
             if field.is_array and self.extension == "gpkg":
                 continue
             if field.is_internal:
@@ -82,7 +83,9 @@ class BaseExporter:
 
         return column
 
-    def _get_columns(self, sa_table: Table, table: DatasetTableSchema) -> Iterable[Column]:
+    def _get_columns(
+        self, sa_table: Table, table: DatasetTableSchema
+    ) -> Iterable[Column]:
         for field in self._get_fields(table):
             try:
                 yield self._get_column(sa_table, field)

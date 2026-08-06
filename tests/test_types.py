@@ -4,8 +4,11 @@ import operator
 
 import pytest
 
-from schematools import validation
-from schematools.exceptions import IncompatibleDataset, SchemaObjectNotFound, ScopeNotFound
+from schematools.exceptions import (
+    IncompatibleDataset,
+    SchemaObjectNotFound,
+    ScopeNotFound,
+)
 from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
@@ -50,7 +53,7 @@ def test_geo_and_id_when_not_configured(schema_loader, afvalwegingen_schema) -> 
     assert id_field.is_primary
 
 
-def test_main_geo_is_relation(schema_loader) -> None:
+def test_main_geometry_is_relation(schema_loader) -> None:
     monumenten = schema_loader.get_dataset_from_file("monumenten.json")
     bag = schema_loader.get_dataset_from_file("bag.json")
 
@@ -74,7 +77,9 @@ def test_datasetschema_from_file_not_a_dataset(schema_loader) -> None:
     error_msg = "Invalid Amsterdam Dataset schema file"
     with pytest.raises(ValueError, match=error_msg):
         # v1.0.0.json is a DatasetRow, not a DatasetSchema.
-        schema_loader.get_dataset_from_file("gebieden_sep_tables/bouwblokken/v1.0.0.json")
+        schema_loader.get_dataset_from_file(
+            "gebieden_sep_tables/bouwblokken/v1.0.0.json"
+        )
 
     error_msg = "Invalid JSON file"
     with pytest.raises(ValueError, match=error_msg):
@@ -223,7 +228,9 @@ def test_dataset_schema_get_fields_with_surrogate_pk(
     ]
 
 
-def test_dataset_with_loose_1n_relations_has_no_through_tables(meldingen_schema, gebieden_schema):
+def test_dataset_with_loose_1n_relations_has_no_through_tables(
+    meldingen_schema, gebieden_schema
+):
     """Prove that a loose relation for a 1-N is not generating a though table.
 
     The `meldingen_schema` has a 1-N relation to `buurt`, however,
@@ -262,8 +269,14 @@ def test_dataset_with_camel_cased_id_generates_correct_through_relations(
     through_table = schema.through_tables[0]
 
     # The fields `hasrelations` and `hasNMRelation` are the FK's to source and target table.
-    assert through_table.get_field_by_id("hasrelations").relation == "baseDataset:hasrelations"
-    assert through_table.get_field_by_id("hasNMRelation").relation == "baseDataset:internalRelated"
+    assert (
+        through_table.get_field_by_id("hasrelations").relation
+        == "baseDataset:hasrelations"
+    )
+    assert (
+        through_table.get_field_by_id("hasNMRelation").relation
+        == "baseDataset:internalRelated"
+    )
 
 
 def test_subfields(ggwgebieden_schema: DatasetSchema) -> None:
@@ -280,9 +293,9 @@ def test_subfields(ggwgebieden_schema: DatasetSchema) -> None:
 
 def test_names_of_subobject_fields(kadastraleobjecten_schema: DatasetSchema) -> None:
     """Prove that the subfields of an object field get prefixed."""
-    field = kadastraleobjecten_schema.get_table_by_id("kadastraleobjecten").get_field_by_id(
-        "soortCultuurOnbebouwd"
-    )
+    field = kadastraleobjecten_schema.get_table_by_id(
+        "kadastraleobjecten"
+    ).get_field_by_id("soortCultuurOnbebouwd")
     assert {"soortCultuurOnbebouwdCode", "soortCultuurOnbebouwdOmschrijving"} == {
         sf.name for sf in field.subfields
     }
@@ -290,9 +303,9 @@ def test_names_of_subobject_fields(kadastraleobjecten_schema: DatasetSchema) -> 
 
 def test_json_subfield_does_not_crash(kadastraleobjecten_schema: DatasetSchema) -> None:
     """Prove that the subfields of an object field get prefixed."""
-    field = kadastraleobjecten_schema.get_table_by_id("kadastraleobjecten").get_field_by_id(
-        "soortGrootte"
-    )
+    field = kadastraleobjecten_schema.get_table_by_id(
+        "kadastraleobjecten"
+    ).get_field_by_id("soortGrootte")
     assert len(field.subfields) == 0
 
 
@@ -455,7 +468,10 @@ def test_scopes_comparison():
             "id": "SCOPE/B",
             "name": "scope B",
             "owner": {"$ref": "publishers/BENK"},
-            "accessPackages": {"production": "p-scope_b", "nonProduction": "ot-scope_b"},
+            "accessPackages": {
+                "production": "p-scope_b",
+                "nonProduction": "ot-scope_b",
+            },
         }
     )
 
@@ -534,7 +550,9 @@ def _assert_scopes_are_resolved(element):
 def test_schema_json_data_can_inline_scopes(schema_loader):
     schema = schema_loader.get_dataset_from_file("metaschema2.json")
 
-    json_data = schema.json_data(inline_tables=True, inline_publishers=True, inline_scopes=True)
+    json_data = schema.json_data(
+        inline_tables=True, inline_publishers=True, inline_scopes=True
+    )
 
     _assert_scopes_are_resolved(json_data)
     _assert_scopes_are_resolved(json_data["versions"]["v1"]["tables"][0])
@@ -553,13 +571,17 @@ def test_repr_broken_schema():
 
 def test_relation_with_extra_properties_has_through_table(gebieden_schema):
     """Prove that a 1-N relation with extra properties on the relates add a through table."""
-    tables_including_through = {t.id for t in gebieden_schema.get_tables(include_through=True)}
+    tables_including_through = {
+        t.id for t in gebieden_schema.get_tables(include_through=True)
+    }
     assert "ggwgebieden_ligtInStadsdeel" in tables_including_through
 
 
 def test_extra_properties_of_relation_field_are_also_in_through_table(gebieden_schema):
     """Prove that extra fields defined on the relation are also showing up in the through table."""
-    tables_including_through = {t.id: t for t in gebieden_schema.get_tables(include_through=True)}
+    tables_including_through = {
+        t.id: t for t in gebieden_schema.get_tables(include_through=True)
+    }
     fields_on_through_table = {
         f.id: f for f in tables_including_through["bouwblokken_ligtInBuurt"].fields
     }
