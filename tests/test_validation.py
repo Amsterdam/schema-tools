@@ -99,9 +99,7 @@ def test_id_matches_path(here: Path, schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("stadsdelen.json")
 
     # No errors when id equals parent path name
-    errors = validation.run(
-        dataset, str(here / "files/datasets/stadsdelen/dataset.json")
-    )
+    errors = validation.run(dataset, str(here / "files/datasets/stadsdelen/dataset.json"))
     assert list(errors) == []
 
     # Error when not equal
@@ -117,9 +115,7 @@ def test_id_matches_path(here: Path, schema_loader) -> None:
 
     # Test datasets in sub directory
     dataset.__setitem__("id", "beheerkaartCbsGrid")
-    errors = validation.run(
-        dataset, str(here / "files/datasets/bierkaart/cbs_grid/dataset.json")
-    )
+    errors = validation.run(dataset, str(here / "files/datasets/bierkaart/cbs_grid/dataset.json"))
     error = next(errors)
     assert error
     assert error.validator_name == "ID does not match file path"
@@ -170,9 +166,7 @@ def test_postgres_duplicate_shortnames(schema_loader) -> None:
     error = next(validation.run(dataset))
     assert error
     assert error.validator_name == "PostgreSQL duplicate shortnames"
-    assert (
-        error.message == "Duplicate shortname 'sameName' found for field: 'veld1,veld2'"
-    )
+    assert error.message == "Duplicate shortname 'sameName' found for field: 'veld1,veld2'"
 
 
 def test_postgres_duplicate_abbreviated_fieldnames(schema_loader) -> None:
@@ -189,12 +183,8 @@ def test_postgres_duplicate_abbreviated_fieldnames(schema_loader) -> None:
     )
 
 
-def test_postgres_duplicate_abbreviated_fieldnames_with_shortname(
-    schema_loader,
-) -> None:
-    dataset = schema_loader.get_dataset_from_file(
-        "abbreviated_fieldnames_with_shortname.json"
-    )
+def test_postgres_duplicate_abbreviated_fieldnames_with_shortname(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("abbreviated_fieldnames_with_shortname.json")
     assert list(validation.run(dataset)) == []  # no validation errors
 
 
@@ -266,10 +256,7 @@ def test_display(here: Path, schema_loader) -> None:
     table["schema"]["properties"]["merkCode"]["auth"] = "some_scope"
     table.__dict__.pop("fields", None)  # clear cached property
     error = next(validation.run(dataset))
-    assert (
-        "'auth' property on the display field: 'merkCode' is not allowed."
-        in error.message
-    )
+    assert "'auth' property on the display field: 'merkCode' is not allowed." in error.message
 
 
 def test_rel_auth_dataset(schema_loader) -> None:
@@ -292,9 +279,7 @@ def test_rel_auth_dataset_public(schema_loader) -> None:
 def test_rel_auth_table(here: Path, schema_loader) -> None:
     with (here / "files/datasets/rel_auth.json").open() as f:
         dataset_json = json.load(f)
-    table = next(
-        t for t in dataset_json["versions"]["v1"]["tables"] if t["id"] == "base"
-    )
+    table = next(t for t in dataset_json["versions"]["v1"]["tables"] if t["id"] == "base")
     table["auth"] = ["HAMMERTIME"]
     table["reasonsNonPublic"] = ["U can't touch this"]
     dataset = DatasetSchema.from_dict(dataset_json, loader=schema_loader)
@@ -307,9 +292,7 @@ def test_rel_auth_table(here: Path, schema_loader) -> None:
 def test_rel_auth_field(here: Path, schema_loader) -> None:
     with (here / "files/datasets/rel_auth.json").open() as f:
         dataset_json = json.load(f)
-    table = next(
-        t for t in dataset_json["versions"]["v1"]["tables"] if t["id"] == "base"
-    )
+    table = next(t for t in dataset_json["versions"]["v1"]["tables"] if t["id"] == "base")
     field = table["schema"]["properties"]["stop"]
     field["auth"] = ["HAMMERTIME"]
 
@@ -342,10 +325,7 @@ def test_reasons_non_public_exists(here: Path, schema_loader) -> None:
     # Test an error is given for the highest non-public scope
     # and only for the highest non-public scope.
     assert len(errors) == 1
-    assert (
-        errors[0].message
-        == "Non-public dataset hr should have a 'reasonsNonPublic' property."
-    )
+    assert errors[0].message == "Non-public dataset hr should have a 'reasonsNonPublic' property."
 
     dataset["auth"] = [PUBLIC_SCOPE]
     errors = list(validation.run(dataset))
@@ -373,9 +353,7 @@ def test_reasons_non_public_value(schema_loader) -> None:
 
     # Test an error is given for the placeholder value in a dataset with status = beschikbaar.
     assert len(errors) == 1
-    assert (
-        "not allowed in ReasonsNonPublic property of dataset hr." in errors[0].message
-    )
+    assert "not allowed in ReasonsNonPublic property of dataset hr." in errors[0].message
 
     # Test no error is given for the placeholder value in a dataset with status != beschikbaar.
     dataset.versions["v1"]["enableAPI"] = False
@@ -406,9 +384,7 @@ def test_schema_ref(schema_loader) -> None:
 def test_check_default_version_is_experimental(schema_loader) -> None:
     """Ensure that if there is only one version and it is experimental, it does not matter that
     the default version is unavailable."""
-    dataset = schema_loader.get_dataset_from_file(
-        "schema_default_version_experimental.json"
-    )
+    dataset = schema_loader.get_dataset_from_file("schema_default_version_experimental.json")
 
     errors = list(validation.run(dataset))
     assert len(errors) == 0
@@ -420,8 +396,7 @@ def test_production_version_tables(schema_loader) -> None:
     errors = list(validation.run(dataset))
     assert len(errors) == 1
     assert (
-        "Dataset version (v1) cannot contain non-production table [tables/v0]"
-        in errors[0].message
+        "Dataset version (v1) cannot contain non-production table [tables/v0]" in errors[0].message
     )
 
 
@@ -477,9 +452,7 @@ def test_exports_invalid(schema_loader) -> None:
 
 
 def test_exports_invalid_scope_tables_fields(schema_loader) -> None:
-    dataset = schema_loader.get_dataset_from_file(
-        "exports_invalid_scopes_tables_fields.json"
-    )
+    dataset = schema_loader.get_dataset_from_file("exports_invalid_scopes_tables_fields.json")
     errors = list(_check_export_scopes(dataset))
 
     assert len(errors) == 5
@@ -641,26 +614,16 @@ def test_temp_relation_array_items(schema_loader):
     "prev,curr,errors",
     [
         # No changes
-        (
-            [{"id": "table", "$ref": "table/v1"}],
-            [{"id": "table", "$ref": "table/v1"}],
-            [],
-        ),
+        ([{"id": "table", "$ref": "table/v1"}], [{"id": "table", "$ref": "table/v1"}], []),
         # Added table
         (
             [{"id": "table", "$ref": "table/v1"}],
-            [
-                {"id": "table", "$ref": "table/v1"},
-                {"id": "table2", "$ref": "table2/v1"},
-            ],
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
             [],
         ),
         # Removed table
         (
-            [
-                {"id": "table", "$ref": "table/v1"},
-                {"id": "table2", "$ref": "table2/v1"},
-            ],
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
             [{"id": "table", "$ref": "table/v1"}],
             ["Table table2 has been removed."],
         ),
@@ -674,10 +637,7 @@ def test_temp_relation_array_items(schema_loader):
         ),
         # Multiple errors
         (
-            [
-                {"id": "table", "$ref": "table/v1"},
-                {"id": "table2", "$ref": "table2/v1"},
-            ],
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
             [{"id": "table", "$ref": "table/v2"}],
             [
                 "Table table has changed version. Previous version: table/v1, current version: table/v2.",
@@ -754,18 +714,8 @@ def test_validate_table_schema_identifier(prev, curr, errors):
         ),
         # Changed object property.
         (
-            {
-                "object": {
-                    "type": "object",
-                    "properties": {"element": {"type": "string"}},
-                }
-            },
-            {
-                "object": {
-                    "type": "object",
-                    "properties": {"element": {"type": "integer"}},
-                }
-            },
+            {"object": {"type": "object", "properties": {"element": {"type": "string"}}}},
+            {"object": {"type": "object", "properties": {"element": {"type": "integer"}}}},
             ["Column object would change element.type."],
         ),
         # Object with format JSON works does not raise errors.
@@ -779,19 +729,13 @@ def test_validate_table_schema_identifier(prev, curr, errors):
             {
                 "list": {
                     "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {"element": {"type": "string"}},
-                    },
+                    "items": {"type": "object", "properties": {"element": {"type": "string"}}},
                 }
             },
             {
                 "list": {
                     "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {"element": {"type": "integer"}},
-                    },
+                    "items": {"type": "object", "properties": {"element": {"type": "integer"}}},
                 }
             },
             ["Column list would change items.element.type."],
@@ -1126,9 +1070,7 @@ def test_validate_table(prev, curr, errors):
                     }
                 },
             },
-            [
-                "Table 'test' changed major version, a new file v2.json should be created."
-            ],
+            ["Table 'test' changed major version, a new file v2.json should be created."],
         ),
     ],
 )
@@ -1300,11 +1242,7 @@ def test_validate_table_status_change(prev, curr, errors):
         ),
         # Changes for experimental table, no fail
         (
-            {
-                "version": "1.0.0",
-                "status": "under_development",
-                "tables": [{"id": "table1"}],
-            },
+            {"version": "1.0.0", "status": "under_development", "tables": [{"id": "table1"}]},
             {
                 "version": "1.1.0",
                 "status": "under_development",
@@ -1320,9 +1258,7 @@ def test_validate_table_status_change(prev, curr, errors):
                 "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
-            [
-                "Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."
-            ],
+            ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
         ),
         # Changes with too big of a minor version bump, fail
         (
@@ -1332,9 +1268,7 @@ def test_validate_table_status_change(prev, curr, errors):
                 "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
-            [
-                "Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."
-            ],
+            ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
         ),
         # Changes with a patch version expect new minor version without patch, no fail
         (
@@ -1354,9 +1288,7 @@ def test_validate_table_status_change(prev, curr, errors):
                 "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
-            [
-                "Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."
-            ],
+            ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
         ),
         # Changes with too little of a version bump, fail
         (
@@ -1366,9 +1298,7 @@ def test_validate_table_status_change(prev, curr, errors):
                 "status": "stable",
                 "tables": [{"id": "table1"}, {"id": "table2"}],
             },
-            [
-                "Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."
-            ],
+            ["Dataset 'dataset' v1 has an added table, expecting new version to be 1.1.0."],
         ),
     ],
 )
