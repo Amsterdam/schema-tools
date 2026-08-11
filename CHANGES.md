@@ -1,10 +1,13 @@
-# 2026-08-18 (9.12.7)
-
-* Bump some dependencies.
-
+<<<<<<< HEAD
 # 2026-08-13 (9.12.6)
 
 * Bugfix scope of export should be in set of auth scopes (this failed in case of multiple auth scopes)
+=======
+# 2026-08-11 (9.13.0)
+
+* Allow related table as mainGeometry
+* Bugfix in `main_geometry` method for `DatasetTableSchema`
+>>>>>>> 7dae649 (Versie bump to 9.13.0)
 
 # 2026-08-12 (9.12.5)
 
