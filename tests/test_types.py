@@ -4,6 +4,7 @@ import operator
 
 import pytest
 
+from schematools import validation
 from schematools.exceptions import IncompatibleDataset, SchemaObjectNotFound, ScopeNotFound
 from schematools.types import (
     DatasetSchema,
