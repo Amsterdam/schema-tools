@@ -1,3 +1,9 @@
+# 2026-08-12 (9.12.5)
+
+* Accept array-shaped temporal relations by validating the item object properties, and add regression coverage.
+* Validate across all tables in a dataset instead of only the default version's tables.
+* Prevent use of DatasetSchema.tables in validators so we don't make the same mistake again.
+
 # 2026-08-04 (9.12.4)
 
 * Parse valid Databricks relations when ingesting Unity Catalog metadata.
