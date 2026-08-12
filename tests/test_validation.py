@@ -18,6 +18,7 @@ from schematools.validation import (
     _check_relation_suffix,
     _check_scopes_exist,
     _identifier_properties,
+    _postgres_identifier_length,
     validate_dataset,
     validate_dataset_versions_version,
     validate_schema_identifier,
@@ -149,10 +150,9 @@ def test_crs(schema_loader) -> None:
 def test_postgres_identifier_length(schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("long_ids.json")
 
-    error = next(validation.run(dataset))
+    error = next(_postgres_identifier_length(dataset))
     assert error
-    assert error.validator_name == "PostgreSQL identifier length"
-    assert "absurdly_long" in error.message
+    assert "absurdly_long" in error
 
     dataset = schema_loader.get_dataset_from_file("stadsdelen.json")
     assert list(validation.run(dataset)) == []  # no validation errors
