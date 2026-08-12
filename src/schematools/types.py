@@ -63,6 +63,19 @@ IS_DEBUGGER = (
     or (hasattr(sys, "gettrace") and sys.gettrace() is not None)
 )
 
+DISALLOWED_USERS_OF_DATASET_TABLES_PROP = {
+    "schematools.validation",
+}
+
+
+def _accessed_from_validation_module() -> bool:
+    frame = sys._getframe(1)
+    while frame is not None:
+        if frame.f_globals.get("__name__") in DISALLOWED_USERS_OF_DATASET_TABLES_PROP:
+            return True
+        frame = frame.f_back
+    return False
+
 
 class SemVer(str):
     """Semantic version numbers.
@@ -547,6 +560,11 @@ class DatasetSchema(SchemaType):
     @property
     def tables(self) -> list[DatasetTableSchema]:
         """Access the tables within the file."""
+        if _accessed_from_validation_module():
+            raise RuntimeError(
+                "schematools.validation must not use DatasetSchema.tables; "
+                "use get_all_tables() or get_tables() instead."
+            )
         version = self.get_version(self.default_version)
         return version.get_tables()
 

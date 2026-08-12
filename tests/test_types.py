@@ -4,6 +4,7 @@ import operator
 
 import pytest
 
+from schematools import validation
 from schematools.exceptions import IncompatibleDataset, SchemaObjectNotFound, ScopeNotFound
 from schematools.types import (
     DatasetSchema,
@@ -589,6 +590,18 @@ def test_datasetversions(schema_loader):
     # Test each version of the dataset is accessible
     assert not dataset.get_version("v0").enable_api
     assert dataset.get_version("v1").enable_api
+
+
+def test_dataset_tables_blocked_in_validation_module(schema_loader):
+    dataset = schema_loader.get_dataset("metaschema3")
+    function_name = "_read_dataset_tables_for_test"
+    exec(f"def {function_name}(dataset):\n    return dataset.tables\n", validation.__dict__)  # noqa: S102
+
+    try:
+        with pytest.raises(RuntimeError, match="must not use DatasetSchema.tables"):
+            validation.__dict__[function_name](dataset)
+    finally:
+        validation.__dict__.pop(function_name, None)
 
 
 def test_row_level_auth(schema_loader):
