@@ -586,6 +586,26 @@ def test_temp_relation(schema_loader):
     ]
 
 
+def test_temp_relation_array_items(schema_loader):
+    dataset = schema_loader.get_dataset_from_file("relation_to_temporal.json")
+    bag_field = dataset.get_table_by_id("rolcontainer").get_field_by_id("bagVerblijfsobject")
+    bag_field["type"] = "array"
+    bag_field["items"] = {
+        "type": "object",
+        "properties": {
+            "identificatie": {"type": "string"},
+            "volgnummer": {"type": "integer"},
+        },
+    }
+
+    dataset_temp_relation_errors = validate_temporal_relations(dataset)
+
+    assert dataset_temp_relation_errors == [
+        "Incorrect type and/or properties for relational field container.bagHoofdadresVerblijfsobject. "
+        "Names and types should match identifier and temporal of object bag:verblijfsobjecten.",
+    ]
+
+
 @pytest.mark.parametrize(
     "prev,curr,errors",
     [

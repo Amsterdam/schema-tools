@@ -834,9 +834,13 @@ def _check_relation_suffix(dataset: DatasetSchema) -> Iterator[str]:
 
 def _has_invalid_temporal_relation(field: DatasetFieldSchema) -> bool:
     related_table = field.related_table
-    properties = field.get("properties", {})
+    if related_table is None:
+        return True
 
-    if field.get("type") != "object" or not isinstance(properties, dict):
+    field_schema = field.get("items", {}) if field.get("type") == "array" else field
+    properties = field_schema.get("properties", {})
+
+    if field_schema.get("type") != "object" or not isinstance(properties, dict):
         return True
 
     if properties.get("identificatie", {}).get("type") != related_table.get_field_by_id(
