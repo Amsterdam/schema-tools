@@ -99,7 +99,7 @@ def _register_validator(name: str) -> Callable:
 @_register_validator("camel case")
 def _camelcase(dataset: DatasetSchema) -> Iterator[str]:
     """Checks that conversion to snake case and back leaves field identifiers unchanged."""
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         for field in table.fields:
             error = _camelcase_ident(field.id)
             if error is not None:
@@ -117,7 +117,7 @@ def _camelcase_ident(ident: str) -> str | None:
 
 @_register_validator("enum type error")
 def _enum_types(dataset: DatasetSchema, location: str | None) -> Iterator[str]:
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         for field in table.fields:
             enum = field.get("enum")
             if not enum:
@@ -173,7 +173,7 @@ def _id_auth(dataset: DatasetSchema) -> Iterator[str]:
 
     Handling these separately from table scopes is too much work for too little gain.
     """
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         for ident in table.identifier:
             try:
                 field = table.get_field_by_id(ident)
@@ -186,7 +186,7 @@ def _id_auth(dataset: DatasetSchema) -> Iterator[str]:
 @_register_validator("Identifier field with the wrong type")
 def _id_type(dataset: DatasetSchema) -> Iterator[str]:
     """Identifier fields should have type integer or string."""
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         for ident in table.identifier:
             try:
                 field = table.get_field_by_id(ident)
@@ -208,17 +208,22 @@ def _postgres_identifier_length(dataset: DatasetSchema) -> Iterator[str]:
     Those inferred table names should not exceed the max identifier length
     supported by PostgreSQL.
     """
-    for table in dataset.get_tables(include_nested=True, include_through=True):
-        db_name = table.db_name_variant(
-            with_dataset_prefix=True, with_version=True, check_assert=False
-        )
-        if (length := len(db_name)) > MAX_TABLE_NAME_LENGTH:
-            excess = length - MAX_TABLE_NAME_LENGTH
-            yield (
-                f"Inferred PostgreSQL table name '{db_name}' is '{excess}' characters "
-                f"too long. Maximum table name length is '{MAX_TABLE_NAME_LENGTH}'. Define "
-                f"a `shortname`!"
+    seen = set()
+    for version in dataset.versions.values():
+        for table in version.get_tables(include_nested=True, include_through=True):
+            db_name = table.db_name_variant(
+                with_dataset_prefix=True, with_version=True, check_assert=False
             )
+            if db_name in seen:
+                continue
+            if (length := len(db_name)) > MAX_TABLE_NAME_LENGTH:
+                excess = length - MAX_TABLE_NAME_LENGTH
+                yield (
+                    f"Inferred PostgreSQL table name '{db_name}' is '{excess}' characters "
+                    f"too long. Maximum table name length is '{MAX_TABLE_NAME_LENGTH}'. Define "
+                    f"a `shortname`!"
+                )
+            seen.add(db_name)
 
 
 @_register_validator("PostgreSQL duplicate shortnames")
@@ -277,7 +282,7 @@ def _repetitive_naming(dataset: DatasetSchema) -> Iterator[str]:
     datasetThingIdentifier (should be dataset, thing, identifier).
     We make an exception for the case where dataset and table names are equal.
     """
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         if table.id != dataset.id and table.id.startswith(dataset.id):
             yield f"table name {table.id!r} should not start with {dataset.id!r}"
         # NOTE: The code below is temporarily commented out because a lot of datasets are not
@@ -347,7 +352,7 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
 
 @_register_validator("mainGeometry")
 def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         # We can't use table.main_geometry here, because it has a default value
         # "geometry". We can't rely on that always existing.
         main_geo = table["schema"].get("mainGeometry")
@@ -376,7 +381,7 @@ def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
 def _check_crs(dataset: DatasetSchema) -> Iterator[str]:
     """Check that a valid crs exists for each geometry field."""
     if dataset.data.get("crs") is None:
-        for table in dataset.tables:
+        for table in dataset.get_all_tables():
             if table.data.get("crs") is None:
                 for field in table.fields:
                     if field.is_geo and field.crs is None:
@@ -389,7 +394,7 @@ def _check_crs(dataset: DatasetSchema) -> Iterator[str]:
 
 @_register_validator("display")
 def _check_display(dataset: DatasetSchema) -> Iterator[str]:
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         display_field_id = table["schema"].get("display")
         if display_field_id is None:
             continue
@@ -431,7 +436,7 @@ def _property_formats(dataset: DatasetSchema) -> Iterator[str]:
         "summary",
     }
 
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         for field in table.fields:
             if field.type == "str" and field.format not in ALLOWED:
                 yield f"Format {field.format!r} not allowed, must be one of {ALLOWED!r}"
@@ -440,7 +445,7 @@ def _property_formats(dataset: DatasetSchema) -> Iterator[str]:
 @_register_validator("auth across relations")
 def _relation_auth(dataset: DatasetSchema) -> Iterator[str]:
     """Relation fields should have at least the auth scopes of the field they refer to."""
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         for field in table.get_fields(include_subfields=True):
             our_auth = table.dataset.auth | table.auth | field.auth
 
@@ -473,7 +478,7 @@ def _reasons_non_public_exists(dataset: DatasetSchema) -> Iterator[str]:
 
     """
     if dataset.auth == {"OPENBAAR"}:
-        for table in dataset.tables:
+        for table in dataset.get_all_tables():
             if table.data.get("reasonsNonPublic") is None:
                 if table.auth == {"OPENBAAR"}:
                     for field in table.fields:
@@ -504,7 +509,7 @@ def _reasons_non_public_value(dataset: DatasetSchema) -> Iterator[str]:
             f"Placeholder value '{placeholder_value}' not allowed in "
             f"ReasonsNonPublic property of dataset {dataset.id}."
         )
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         if placeholder_value in table.data.get("reasonsNonPublic", []):
             yield (
                 f"Placeholder value '{placeholder_value}' not allowed "
@@ -521,7 +526,7 @@ def _reasons_non_public_value(dataset: DatasetSchema) -> Iterator[str]:
 @_register_validator("schema ref")
 def _check_schema_ref(dataset: DatasetSchema) -> Iterator[str]:
     """Check that $ref field for all tables has correct hostname."""
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         fragments = urlparse(table["schema"]["properties"]["schema"]["$ref"])
         if fragments.hostname != "schemas.data.amsterdam.nl" or fragments.scheme != "https":
             yield (
@@ -593,7 +598,7 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
             schema = schema["properties"][part]
         return schema
 
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         if rla := table.data.get("rowLevelAuth"):
             schema = table["schema"]
             source = rla["source"]
@@ -622,7 +627,7 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
 
 @_register_validator("subresources")
 def _check_sub_resources(dataset: DatasetSchema) -> Iterator[str]:
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         if subresources := table.get("subresources"):
             for key, field_name in subresources.items():
                 dataset_id, table_id = key.split(":")
@@ -818,7 +823,7 @@ def _check_export_scopes(dataset: DatasetSchema) -> Iterator[str]:
 def _check_relation_suffix(dataset: DatasetSchema) -> Iterator[str]:
     """Check that fields with a 'relation' property does not end with 'Id'. This is added by us
     in the database column."""
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         for field in table.fields:
             if "relation" in field and field.id.endswith("Id"):
                 yield (
@@ -849,11 +854,11 @@ def _has_invalid_temporal_relation(field: DatasetFieldSchema) -> bool:
 
 
 @_register_validator("temporal relations")
-def validate_temporal_relations(dataset: dict) -> list[str]:
+def validate_temporal_relations(dataset: DatasetSchema) -> list[str]:
     """Relation to a temporal table should have a property object defined."""
     errors = []
 
-    for table in dataset.tables:
+    for table in dataset.get_all_tables():
         for field in table.get_fields(include_subfields=True):
             if (
                 field.related_table
