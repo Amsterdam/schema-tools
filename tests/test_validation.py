@@ -216,6 +216,21 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     )
 
 
+def test_main_geometry_is_relation(schema_loader) -> None:
+    monumenten = schema_loader.get_dataset_from_file("monumenten.json")
+    bag = schema_loader.get_dataset_from_file("bag.json")
+
+    assert list(_check_maingeometry(monumenten)) == []
+    assert list(validation.run(monumenten)) == []
+
+    # Set mainGeo of related table to a non-geo type
+    bag.get_table_by_id("panden")["schema"]["mainGeometry"] = "beginGeldigheid"
+    error = next(validation.run(monumenten))
+    assert error.message == (
+        "mainGeometry = 'beginGeldigheid' is not a geometry field, type = 'string'"
+    )
+
+
 def test_display(here: Path, schema_loader) -> None:
     schema_loader.get_dataset_from_file("gebieden.json")  # fill cache
     dataset = schema_loader.get_dataset_from_file("meetbouten.json")
