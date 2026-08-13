@@ -113,7 +113,7 @@ but also commit a tag with the version number; see below.
 
 We use GitHub pull requests. If your PR should produce a new release of
 schema-tools, make sure one of the commit increments the version number in
-``pyproject.toml`` appropriately, and an entry is added to CHANGES.md.
+``pyproject.toml`` and ``uv.lock`` appropriately, and an entry is added to CHANGES.md.
 Then,
 
 * merge the commit in GitHub, after review;
