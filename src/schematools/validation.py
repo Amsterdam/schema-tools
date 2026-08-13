@@ -802,12 +802,12 @@ def _check_export_scopes(dataset: DatasetSchema) -> Iterator[str]:
                         # 2. Field is public and table has the scope.
                         # 3. Field is public, table is public and dataset has the scope.
                         if not any(
-                            field.auth == {export_scope}
-                            or (field.auth == {"OPENBAAR"} and table.auth == {export_scope})
+                            export_scope in field.auth
+                            or (field.auth == {"OPENBAAR"} and export_scope in table.auth)
                             or (
                                 field.auth == {"OPENBAAR"}
                                 and table.auth == {"OPENBAAR"}
-                                and dataset.auth == {export_scope}
+                                and export_scope in dataset.auth
                             )
                             for field in table.fields
                             if field.id not in ["schema", "id"]
