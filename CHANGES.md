@@ -1,3 +1,7 @@
+# 2026-08-13 (9.12.6)
+
+* Bugfix scope of export should be in set of auth scopes (this failed in case of multiple auth scopes)
+
 # 2026-08-12 (9.12.5)
 
 * Accept array-shaped temporal relations by validating the item object properties, and add regression coverage.
