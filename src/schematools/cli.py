@@ -47,7 +47,6 @@ from schematools.loaders import (
     get_schema_loader,
     read_json_path,
 )
-from schematools.maps import create_mapfile
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.db import (
     apply_schema_and_profile_permissions,
@@ -1103,26 +1102,6 @@ def show_datasettables(schema_url: str, dataset_id: str, snake_it: bool) -> None
     modifier = to_snake_case if snake_it else lambda x: x
     for dataset_table in dataset_schema.tables:
         click.echo(modifier(dataset_table.id))
-
-
-@show.command("mapfile")
-@click.option(
-    "--schema-url",
-    envvar="SCHEMA_URL",
-    default=DEFAULT_SCHEMA_URL,
-    show_default=True,
-    required=True,
-    help="Url where valid amsterdam schema files are found. "
-    "SCHEMA_URL can also be provided as environment variable.",
-)
-@click.argument("dataset_id")
-def show_mapfile(schema_url: str, dataset_id: str) -> None:
-    """Generate a mapfile based on a dataset schema."""
-    try:
-        dataset_schema = get_schema_loader(schema_url).get_dataset(dataset_id)
-    except KeyError:
-        raise click.BadParameter(f"Schema {dataset_id} not found.") from None
-    click.echo(create_mapfile(dataset_schema))
 
 
 @show.command("scopes")
