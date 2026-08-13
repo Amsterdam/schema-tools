@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from io import StringIO
+from types import SimpleNamespace
 
 import pytest
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.db import connection
+from django.db.utils import ProgrammingError
 from django.utils import timezone
 
 from schematools.contrib.django import models
 from schematools.contrib.django.factories import DjangoModelFactory
+from schematools.contrib.django.management.commands import (
+    delete_expired_schemas,
+    soft_delete_schemas,
+)
 
 
 @pytest.mark.django_db
@@ -118,3 +125,86 @@ def test_hard_delete_schema_and_tables(here, capsys):
     captured = capsys.readouterr()
     assert "Deleted datasets verblijfsobjecten" in captured.out
     assert "verblijfsobjecten_verblijfsobjecten_v1" in captured.out
+
+
+def test_soft_delete_schema_reports_unknown_schema_with_hint(monkeypatch):
+    command = soft_delete_schemas.Command(stdout=StringIO())
+
+    class DatasetQuerySet(list):
+        def all(self):
+            return self
+
+    datasets = DatasetQuerySet([SimpleNamespace(name="my_dataset")])
+    monkeypatch.setattr(soft_delete_schemas.Dataset.objects, "all", lambda: datasets)
+
+    with pytest.raises(CommandError, match=r"did you mean 'my_dataset'\?"):
+        command.handle(schemas=["myDataset"])
+
+
+def test_delete_expired_schemas_reports_when_nothing_is_expired(monkeypatch):
+    command = delete_expired_schemas.Command(stdout=StringIO())
+
+    class EmptyQuerySet(list):
+        def exists(self):
+            return False
+
+    monkeypatch.setattr(
+        delete_expired_schemas.Dataset.objects,
+        "filter",
+        lambda **kwargs: EmptyQuerySet(),
+    )
+
+    command.handle(verbosity=1)
+
+    assert command.stdout.getvalue().strip() == "No expired schemas found."
+
+
+def test_delete_expired_schemas_reports_failed_table_drop(monkeypatch):
+    command = delete_expired_schemas.Command(stdout=StringIO())
+    deleted: list[str] = []
+    executed = []
+    dataset = SimpleNamespace(name="expired_dataset")
+    dataset.delete = lambda: deleted.append(dataset.name)
+
+    class ExpiredQuerySet(list):
+        def exists(self):
+            return True
+
+    expired_datasets = ExpiredQuerySet([dataset])
+    tables = [SimpleNamespace(db_table="expired_table")]
+
+    class Cursor:
+        def execute(self, statement):
+            executed.append(str(statement))
+            raise ProgrammingError("already gone")
+
+    class CursorContext:
+        def __enter__(self):
+            return Cursor()
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(
+        delete_expired_schemas.Dataset.objects,
+        "filter",
+        lambda **kwargs: expired_datasets,
+    )
+    monkeypatch.setattr(
+        delete_expired_schemas.DatasetTable.objects,
+        "filter",
+        lambda **kwargs: tables,
+    )
+    monkeypatch.setattr(delete_expired_schemas.connection, "cursor", lambda: CursorContext())
+
+    command.handle(verbosity=1)
+
+    assert len(executed) == 1
+    assert "DROP TABLE" in executed[0]
+    assert "expired_table" in executed[0]
+    assert "CASCADE" in executed[0]
+    assert deleted == ["expired_dataset"]
+    assert command.stdout.getvalue().splitlines() == [
+        "Failed to delete table expired_table. Error: already gone",
+        "Deleted datasets expired_dataset",
+    ]

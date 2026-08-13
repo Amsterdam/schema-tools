@@ -2,14 +2,22 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from io import StringIO
+from types import SimpleNamespace
 
 import pytest
+from django.db import ProgrammingError
 
 from schematools.contrib.django.db import create_tables
 from schematools.contrib.django.factories import schema_model_mockers_factory
 from schematools.contrib.django.faker import get_field_factory
 from schematools.contrib.django.faker.create import create_data_for
 from schematools.contrib.django.faker.relate import relate_datasets
+from schematools.contrib.django.management.commands import (
+    create_mock_data,
+    relate_mock_data,
+    truncate_tables,
+)
 from schematools.naming import to_snake_case
 from tests.django.utils import get_models
 
@@ -81,7 +89,6 @@ def test_mocking_add_ids_for_relations(
         ("afvalwegingen", "clusters", (to_snake_case("bagHoofdadresVerblijfsobject"),)),
         ("afvalwegingen", "wegingen", ("cluster",)),
     ):
-
         for relation_id in relation_ids:
             assert all(
                 getattr(obj, relation_id) is None
@@ -97,7 +104,6 @@ def test_mocking_add_ids_for_relations(
         ("afvalwegingen", "clusters", (to_snake_case("bagHoofdadresVerblijfsobject"),)),
         ("afvalwegingen", "wegingen", ("cluster",)),
     ):
-
         for relation_id in relation_ids:
             assert all(
                 getattr(obj, relation_id) is not None
@@ -249,6 +255,117 @@ def test_mocker_params_are_not_leaking(
     locatie_value = locatie_provider()
     assert locatie_value not in elements
     assert len(locatie_value) not in {len(e) for e in elements}
+
+
+def test_create_mock_data_rejects_table_option_for_multiple_datasets(monkeypatch):
+    command = create_mock_data.Command(stdout=StringIO())
+    datasets = [SimpleNamespace(name="one"), SimpleNamespace(name="two")]
+
+    monkeypatch.setattr(command, "get_datasets", lambda options, enable_db, default_all: datasets)
+
+    called = False
+
+    def fail_if_called(*args, **kwargs):
+        nonlocal called
+        called = True
+        return []
+
+    monkeypatch.setattr(create_mock_data, "create_data_for", fail_if_called)
+
+    command.handle(table=["only_table"], size=10, sql=False, start_at=1)
+
+    assert command.stdout.getvalue().strip() == (
+        "The `tables` options can only be used with one dataset."
+    )
+    assert called is False
+
+
+def test_create_mock_data_writes_sql_lines(monkeypatch):
+    command = create_mock_data.Command(stdout=StringIO())
+    datasets = [SimpleNamespace(name="one")]
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(command, "get_datasets", lambda options, enable_db, default_all: datasets)
+
+    def fake_create_data_for(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return ["INSERT 1", "INSERT 2"]
+
+    monkeypatch.setattr(create_mock_data, "create_data_for", fake_create_data_for)
+
+    command.handle(table=["mock_table"], size=10, sql=True, start_at=7)
+
+    assert captured == {
+        "args": tuple(datasets),
+        "kwargs": {"start_at": 7, "size": 10, "sql": True, "tables": ["mock_table"]},
+    }
+    assert command.stdout.getvalue().strip() == "INSERT 1\nINSERT 2"
+
+
+def test_relate_mock_data_relates_selected_datasets(monkeypatch):
+    command = relate_mock_data.Command(stdout=StringIO())
+    datasets = [SimpleNamespace(name="one"), SimpleNamespace(name="two")]
+    captured: dict[str, object] = {}
+
+    def fake_get_datasets(options, enable_db):
+        captured["options"] = options
+        captured["enable_db"] = enable_db
+        return datasets
+
+    def fake_relate_datasets(*args):
+        captured["datasets"] = args
+
+    monkeypatch.setattr(command, "get_datasets", fake_get_datasets)
+    monkeypatch.setattr(relate_mock_data, "relate_datasets", fake_relate_datasets)
+
+    command.handle(dataset=["one", "two"], datasets_list=None, datasets_exclude=None)
+
+    assert captured == {
+        "options": {"dataset": ["one", "two"], "datasets_list": None, "datasets_exclude": None},
+        "enable_db": True,
+        "datasets": tuple(datasets),
+    }
+
+
+def test_truncate_tables_reports_missing_tables(monkeypatch):
+    command = truncate_tables.Command(stdout=StringIO())
+    datasets = [
+        SimpleNamespace(
+            schema=SimpleNamespace(
+                get_tables=lambda include_nested, include_through: [
+                    SimpleNamespace(db_name="z_table"),
+                    SimpleNamespace(db_name="a_table"),
+                ]
+            )
+        )
+    ]
+    executed: list[str] = []
+
+    class Cursor:
+        def execute(self, sql):
+            executed.append(sql)
+            if sql == "TRUNCATE z_table":
+                raise ProgrammingError("missing table")
+
+    class CursorContext:
+        def __enter__(self):
+            return Cursor()
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(command, "get_datasets", lambda options, enable_db, default_all: datasets)
+    monkeypatch.setattr(truncate_tables.connection, "cursor", lambda: CursorContext())
+
+    command.handle(dataset=["dataset"], datasets_list=None, datasets_exclude=None)
+
+    assert executed == ["TRUNCATE a_table", "TRUNCATE z_table"]
+    assert command.stdout.getvalue().splitlines() == [
+        "Truncating a_table",
+        "Truncating z_table",
+        "Failed to truncate z_table",
+    ]
 
 
 @pytest.mark.django_db
