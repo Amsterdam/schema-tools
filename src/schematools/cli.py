@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import heapq
-import io
 import json
 import logging
 import os
@@ -459,91 +458,6 @@ def _fetch_json(location: str) -> dict[str, Any]:
     return json_obj
 
 
-@schema.command()
-@option_schema_url
-@argument_dataset_id
-@click.option(
-    "--additional-schemas",
-    "-a",
-    multiple=True,
-    help=(
-        "Id of a dataset schema that will be preloaded. "
-        "To be used mainly for schemas that are related to the schema that is being validated."
-    ),
-)
-@click.argument("meta_schema_url", nargs=-1)
-def validate(
-    schema_url: str,
-    dataset_id: str,
-    additional_schemas: list[str],
-    meta_schema_url: tuple[str],
-) -> None:
-    """Validate a schema against the Amsterdam Schema meta schema.
-
-    Args:
-
-    \b
-        DATASET_ID: id of the dataset.
-        META_SCHEMA_URL: URL where the meta schema for Amsterdam Schema definitions can be found.
-        If multiple are given, schematools will try to validate against the largest version,
-        working backwards and stopping at the first version that the objects are valid against.
-
-        Usually META_SCHEMA_URL is something like: https://schemas.data.amsterdam.nl/schema@vn
-    """  # noqa: D301,D412,D417
-    if not meta_schema_url:
-        click.echo("META_SCHEMA_URL not provided", err=True)
-        sys.exit(1)
-
-    dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
-
-    # The additional schemas are fetched, but the result is not used
-    # because the only reason to fetch the additional schemas is to have those schemas
-    # available in the cache that is part of the DatasetSchema class
-    for schema in additional_schemas:
-        _get_dataset_schema(schema, schema_url)
-
-    exit_status = 0
-
-    for meta_schema_version, url in sorted(
-        [(version_from_metaschema_url(u), u) for u in set(meta_schema_url)],
-        reverse=True,
-    ):
-        click.echo(f"Validating against metaschema {meta_schema_version}")
-        meta_schema = _fetch_json(url)
-        if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
-            raise IncompatibleMetaschema(
-                f"Schematools {pkg_version} is not compatible"
-                f" with metaschema {meta_schema_version}"
-            )
-        structural_errors = False
-
-        try:
-            jsonschema.validate(
-                instance=dataset.json_data(inline_tables=True, inline_publishers=False),
-                schema=meta_schema,
-                format_checker=Draft7Validator.FORMAT_CHECKER,
-            )
-        except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
-            click.echo("Structural validation: ", nl=False)
-            structural_errors = True
-            click.echo(format_schema_error(e), err=True)
-
-        semantic_errors = False
-        for error in validation.run(dataset):
-            if not semantic_errors:  # Only print on first error.
-                click.echo("Semantic validation: ", nl=False)
-                semantic_errors = True
-            click.echo(f"\n{error!s}", err=True)
-
-        if structural_errors or semantic_errors:
-            click.echo(f"Dataset is invalid against {meta_schema_version}")
-            exit_status = 1
-        else:
-            click.echo(f"Dataset is valid against {meta_schema_version}")
-
-    sys.exit(exit_status)
-
-
 def _get_prefixed_path(path: str, prefix: str) -> str:
     path_parts = path.split("/")
     path_parts[-1] = f"{prefix}-{path_parts[-1]}"
@@ -927,17 +841,6 @@ def batch_validate(
                     )
                     click.echo(issue.as_markdown_todo(), err=True)
         sys.exit(1)
-
-
-def format_schema_error(e: jsonschema.SchemaError | jsonschema.ValidationError) -> str:
-    s = io.StringIO()
-    s.write(f"{e.json_path}, {list(e.schema_path)}")
-    if e.message and not e.context:
-        s.write("\n\t" + e.message)
-    if e.context:
-        for ec in e.context:
-            s.write("\n\t" + ec.message.strip())
-    return s.getvalue()
 
 
 @schema.command("ckan")
