@@ -1575,14 +1575,17 @@ class DatasetTableSchema(SchemaType):
         return date_fields
 
     @property
+    def has_main_geometry(self) -> bool:
+        """Indicates if this table has a main geometry field."""
+        return "mainGeometry" in self["schema"]
+
+
+    @property
     def main_geometry(self) -> str:
         """The main geometry field, if there is a geometry field available.
         Default to "geometry" for existing schemas without a mainGeometry field.
         """
-        main_geo = self["schema"].get("mainGeometry", None)
-        if not main_geo:
-            return "geometry" if "geometry" in self["schema"]["properties"] else None
-        return main_geo
+        return str(self["schema"].get("mainGeometry", "geometry"))
 
     @property
     def main_geometry_field(self) -> DatasetFieldSchema:
@@ -1697,7 +1700,7 @@ class DatasetTableSchema(SchemaType):
 
     @cached_property
     def has_geometry_fields(self) -> bool:
-        return any(field.is_geo for field in self.fields) or self.main_geometry
+        return any(field.is_geo for field in self.fields) or self.has_main_geometry
 
     @cached_property
     def db_name(self) -> str:
