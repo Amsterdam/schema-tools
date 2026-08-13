@@ -200,7 +200,7 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     assert list(_check_maingeometry(dataset)) == []
 
-    dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = None
+    dataset.get_table_by_id("meetbouten")["schema"].pop("mainGeometry")
     error = next(validation.run(dataset))
     assert "'mainGeometry' is required but not defined in table" in error.message
 

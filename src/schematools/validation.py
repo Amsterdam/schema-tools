@@ -363,10 +363,8 @@ def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
 
 
 def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
-    # We can't use table.main_geometry here, because it has a default value
-    # "geometry". We can't rely on that always existing.
-    main_geo = table.main_geometry
-    if main_geo is None:
+    """"""
+    if not table.has_main_geometry:
         # mainGeometry should exist if a geometry field exists
         # but none of the geometry fields is called "geometry"
         if table.has_geometry_fields and not any(
@@ -378,14 +376,17 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
                 f"but none of these fields is called 'geometry'."
             )
         return
+
     # If mainGeometry is defined:
     try:
-        field = table.get_field_by_id(main_geo)
+
+        # We don't use main_geometry_field here, because that directly takes the mainGeometry of
+        # a possible related table, and we want to validate it first
+        field = table.get_field_by_id(table.main_geometry)
 
         # If mainGeoField is a relation
         if rel_table := field.related_table:
-            main_geo = rel_table.main_geometry
-            if main_geo is None:
+            if not rel_table.has_main_geometry:
                 # mainGeometry should exist if a geometry field exists
                 # but none of the geometry fields is called "geometry"
                 if rel_table.has_geometry_fields and not any(
@@ -400,7 +401,7 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
                 return
 
             try:
-                rel_field = rel_table.get_field_by_id(main_geo)
+                rel_field = rel_table.get_field_by_id(rel_table.main_geometry)
 
                 # if rel table main geo also has rel table, yield error to refer directly
                 if rel_rel_table := rel_field.related_table:
@@ -416,14 +417,14 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
                     )
 
             except SchemaObjectNotFound as e:
-                yield (f"mainGeometry = {main_geo!r}, but: {e}")
+                yield (f"mainGeometry = {rel_table.main_geometry!r}, but: {e}")
 
         if not field.is_geo:
             yield (
                 f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}"
             )
     except SchemaObjectNotFound as e:
-        yield (f"mainGeometry = {main_geo!r}, but: {e}")
+        yield (f"mainGeometry = {table.main_geometry!r}, but: {e}")
 
 
 @_register_validator("crs")
