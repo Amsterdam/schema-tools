@@ -1,3 +1,7 @@
+# 2026-08-18 (9.12.7)
+
+* Bump some dependencies.
+
 # 2026-08-13 (9.12.6)
 
 * Bugfix scope of export should be in set of auth scopes (this failed in case of multiple auth scopes)
