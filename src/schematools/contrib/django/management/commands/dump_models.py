@@ -167,7 +167,7 @@ class Command(BaseCommand):
         related_model = _format_model_name(field.related_model)
         source_name = f"<{source_field.__class__.__name__} at {related_model}.{source_field.name}>"
 
-        comment = "hidden reverse relation" if field.is_hidden() else "reverse relation"
+        comment = "hidden reverse relation" if field.hidden else "reverse relation"
         self.stdout.write(
             f"    # {comment}: {field.name} = {cls_name}(field={source_name}, ...)\n"
         )

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from pg_grant import PgObjectType, parse_acl_item, query
-from pg_grant.sql import _Grant, grant, revoke
+from pg_grant import PgObjectType
+from pg_grant.sql import _Grant, grant
 from sqlalchemy import Connection, event, text
 from sqlalchemy.engine import Engine
 
@@ -28,52 +28,6 @@ existing_sequences = {}
 
 PUBLIC_SCOPE_OBJECT = Scope({"id": PUBLIC_SCOPE})
 PUBLIC_SCOPES = {PUBLIC_SCOPE_OBJECT, PUBLIC_SCOPE}
-
-
-def introspect_permissions(engine: Engine, role: str) -> None:
-    """Shows the table permissions."""
-    with engine.connect() as conn:
-        schema_relation_infolist = query.get_all_table_acls(conn, schema="public")
-
-    for schema_relation_info in schema_relation_infolist:
-        if schema_relation_info.acl:
-            acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
-            for acl in acl_list:
-                if acl.grantee == role:
-                    logger.info(
-                        'role "%s" has privileges %s on table "%s"',
-                        role,
-                        ",".join(acl.privs),
-                        schema_relation_info.name,
-                    )
-
-
-def revoke_permissions(engine: Engine, role: str, verbose: int = 0) -> None:
-    """Revoke all privileges for the indicated role."""
-    grantee = role
-    with engine.connect() as conn:
-        schema_relation_infolist = query.get_all_table_acls(conn, schema="public")
-
-    revoke_statements = []
-    for schema_relation_info in schema_relation_infolist:
-        if schema_relation_info.acl:
-            acl_list = [parse_acl_item(item) for item in schema_relation_info.acl]
-            for acl in acl_list:
-                if acl.grantee == role:
-                    revoke_statements.append(
-                        revoke("ALL", PgObjectType.TABLE, schema_relation_info.name, grantee)
-                    )
-
-    with engine.begin() as conn:
-        for revoke_statement in revoke_statements:
-            if verbose:
-                logger.info(
-                    'revoking ALL privileges of role "%s" on table "%s"',
-                    role,
-                    revoke_statement.target,
-                )
-
-            conn.execute(revoke_statement)
 
 
 def apply_schema_and_profile_permissions(
