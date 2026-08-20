@@ -64,7 +64,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = "==8.4.2" },
-    { name = "databricks-sdk", marker = "extra == 'databricks'", specifier = "==0.129.0" },
+    { name = "databricks-sdk", marker = "extra == 'databricks'", specifier = "==0.131.0" },
     { name = "deepdiff", specifier = "==9.1.0" },
     { name = "django", marker = "extra == 'django'", specifier = ">=4.2,!=5.0,!=5.1,<6.0" },
     { name = "django-environ", marker = "extra == 'django'", specifier = "==0.14.0" },
@@ -664,7 +664,7 @@ wheels = [
 
 [[package]]
 name = "databricks-sdk"
-version = "0.129.0"
+version = "0.131.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-auth" },
@@ -672,9 +672,9 @@ dependencies = [
     { name = "requests" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/d5/8715dc8acd56da3ee90123bba06dafe828c86abc60fa5211d878f688ab0b/databricks_sdk-0.129.0.tar.gz", hash = "sha256:324583d22fa18bd1b3219118743ce53c8261a11254ac5b6ea829cf02e19d751b", size = 1156077, upload-time = "2026-08-15T04:29:53.588Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/a6/3958201107e6bc704385eca78ecceedb09cdbf2ac8765184729404cde4b0/databricks_sdk-0.131.0.tar.gz", hash = "sha256:4600807c6d9c44733b7884e6dc3e84b82649850ede7b2e95df294cb69fa84e23", size = 1157152, upload-time = "2026-08-17T04:30:56.427Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/c7/18a0a34223c402c840300e1223867eb47a950104a636ca74d595469fb69b/databricks_sdk-0.129.0-py3-none-any.whl", hash = "sha256:102a80bb4e838dfbacd828b2730f692bd79563b4062fb53e496c70ea3504b170", size = 1098774, upload-time = "2026-08-15T04:29:51.845Z" },
+    { url = "https://files.pythonhosted.org/packages/71/81/ee04f4769112fcc999cf57effc60024991464ed6b505b14b43d2cf18c65c/databricks_sdk-0.131.0-py3-none-any.whl", hash = "sha256:5019fd4fd874d5bcad9e50990c91403c4913c38387a9e0a9172400ec507ef121", size = 1099676, upload-time = "2026-08-17T04:30:54.504Z" },
 ]
 
 [[package]]
