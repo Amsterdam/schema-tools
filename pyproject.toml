@@ -68,7 +68,7 @@ django = [
     "factory_boy==3.3.3",
 ]
 databricks = [
-    "databricks-sdk==0.129.0"
+    "databricks-sdk==0.131.0"
 ]
 
 [project.scripts]
