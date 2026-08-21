@@ -1579,7 +1579,6 @@ class DatasetTableSchema(SchemaType):
         """Indicates if this table has a main geometry field."""
         return "mainGeometry" in self["schema"]
 
-
     @property
     def main_geometry(self) -> str:
         """The main geometry field, if there is a geometry field available.
@@ -1592,11 +1591,13 @@ class DatasetTableSchema(SchemaType):
         """The main geometry as field object"""
         field = self.get_field_by_id(self.main_geometry)
 
+        """
         # if main geo is a relation, get that field from related table
         if field.related_table:
             return field.related_table.get_field_by_id(
                 field.related_table.main_geometry
             )
+        """
         return field
 
     @property

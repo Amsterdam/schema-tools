@@ -217,6 +217,10 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
 
 
 def test_main_geometry_is_relation(schema_loader) -> None:
+
+    # TODO: functie hierboven test dit al voor de normale main geo.
+    # En dit is een fix voor de related table, niet voor de tabel waar de validatie op draait
+
     monumenten = schema_loader.get_dataset_from_file("monumenten.json")
     bag = schema_loader.get_dataset_from_file("bag.json")
 
