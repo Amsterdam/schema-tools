@@ -200,7 +200,7 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     assert list(_check_maingeometry(dataset)) == []
 
-    dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = None
+    dataset.get_table_by_id("meetbouten")["schema"].pop("mainGeometry")
     error = next(validation.run(dataset))
     assert "'mainGeometry' is required but not defined in table" in error.message
 
@@ -213,6 +213,33 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     error = next(validation.run(dataset))
     assert error.message == (
         "mainGeometry = 'merkOmschrijving' is not a geometry field, type = 'string'"
+    )
+
+
+def test_main_geometry_is_relation(schema_loader) -> None:
+
+    # TODO: functie hierboven test dit al voor de normale main geo.
+    # En dit is een fix voor de related table, niet voor de tabel waar de validatie op draait
+
+    monumenten = schema_loader.get_dataset_from_file("monumenten.json")
+    bag = schema_loader.get_dataset_from_file("bag.json")
+
+    # Remove mainGeo of related table
+    bag.get_table_by_id("panden")["schema"].pop("mainGeometry")
+    error = next(validation.run(monumenten))
+    assert "'mainGeometry' is required but not defined in table" in error.message
+
+    # Set mainGeo of related table to a non-existent field
+    bag.get_table_by_id("panden")["schema"]["mainGeometry"] = "non_existent_field"
+    error = next(validation.run(monumenten))
+    assert "mainGeometry = 'non_existent_field'" in error.message
+    assert "Field 'non_existent_field' does not exist" in error.message
+
+    # Set mainGeo of related table to a non-geo type
+    bag.get_table_by_id("panden")["schema"]["mainGeometry"] = "beginGeldigheid"
+    error = next(validation.run(monumenten))
+    assert error.message == (
+        "mainGeometry = 'beginGeldigheid' is not a geometry field, type = 'string'"
     )
 
 
