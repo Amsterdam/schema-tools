@@ -158,7 +158,9 @@ class Dataset(models.Model):
     """
 
     name = models.CharField(_("Name"), unique=True, max_length=50)
-    schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
+    schema_data = models.TextField(
+        _("Amsterdam Schema Contents"), validators=[validate_json]
+    )
     view_data = models.TextField(_("View SQL"), blank=True, null=True)
     default_version = models.CharField(_("Default version"), default="v1")
 
@@ -187,7 +189,9 @@ class Dataset(models.Model):
         # The check makes sure that deferred fields are not checked for changes,
         # nor that creating the model
         self._old_schema_data = (
-            self.schema_data if "schema_data" in self.__dict__ and not self._state.adding else None
+            self.schema_data
+            if "schema_data" in self.__dict__ and not self._state.adding
+            else None
         )
 
     def save(self, *args, **kwargs):
@@ -234,7 +238,9 @@ class Dataset(models.Model):
         )
         obj._loader = schema.loader  # retain collection on saving
         obj.save()
-        obj.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
+        obj.__dict__["schema"] = (
+            schema  # Avoid serializing/deserializing the schema data
+        )
         return obj
 
     def save_for_schema(self, schema: DatasetSchema, path: str) -> bool:
@@ -264,7 +270,9 @@ class Dataset(models.Model):
                 ]
             )
 
-        self.__dict__["schema"] = schema  # Avoid serializing/deserializing the schema data
+        self.__dict__["schema"] = (
+            schema  # Avoid serializing/deserializing the schema data
+        )
         return changed
 
     def save_schema_tables(self):
@@ -278,7 +286,9 @@ class Dataset(models.Model):
                 self.versions.all().delete()
             return
 
-        new_definitions = {t.db_name: t for t in self.schema.get_all_tables(include_nested=True)}
+        new_definitions = {
+            t.db_name: t for t in self.schema.get_all_tables(include_nested=True)
+        }
         new_names = set(new_definitions.keys())
         existing_models = {t.db_table: t for t in self.tables.all()}
         existing_names = set(existing_models.keys())
@@ -300,11 +310,17 @@ class Dataset(models.Model):
         # Create/update versions
         for vmajor, version in self.schema.versions.items():
             try:
-                version_instance = DatasetVersion.objects.get(dataset=self, version=vmajor)
+                version_instance = DatasetVersion.objects.get(
+                    dataset=self, version=vmajor
+                )
             except DatasetVersion.DoesNotExist:
-                version_instance = DatasetVersion.create_for_schema(version, dataset=self)
+                version_instance = DatasetVersion.create_for_schema(
+                    version, dataset=self
+                )
             else:
-                version_instance.status = DatasetVersion.Status[version.status.value.upper()]
+                version_instance.status = DatasetVersion.Status[
+                    version.status.value.upper()
+                ]
                 version_instance.save()
                 # Remove tables that are no longer in the version.
                 for table in version_instance.tables.all():
@@ -374,8 +390,11 @@ class DatasetVersion(models.Model):
         STABLE = "S", "stable"
         SUPERSEDED = "U", "superseded"
         DEPRECATED = "X", "deprecated"
+        DISCONTINUED = "F", "discontinued"
 
-    dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="versions")
+    dataset = models.ForeignKey(
+        Dataset, on_delete=models.CASCADE, related_name="versions"
+    )
     version = models.CharField(default="v1", max_length=3)
     status = models.CharField(
         choices=Status.choices,
@@ -386,10 +405,14 @@ class DatasetVersion(models.Model):
         return f"{self.dataset.name}_{self.version}"
 
     @classmethod
-    def create_for_schema(cls, version_schema: DatasetVersionSchema, dataset: Dataset | None):
+    def create_for_schema(
+        cls, version_schema: DatasetVersionSchema, dataset: Dataset | None
+    ):
         if dataset is None:
             try:
-                dataset = Dataset.objects.get(name=to_snake_case(version_schema.schema.id))
+                dataset = Dataset.objects.get(
+                    name=to_snake_case(version_schema.schema.id)
+                )
             except Dataset.DoesNotExist as e:
                 raise RuntimeError(
                     f"Dataset '{to_snake_case(version_schema.schema.id)}' not found!"
@@ -409,7 +432,9 @@ class DatasetTable(models.Model):
     This table can be read by the 'geosearch' project to locate all our tables and data sources.
     """
 
-    dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="tables")
+    dataset = models.ForeignKey(
+        Dataset, on_delete=models.CASCADE, related_name="tables"
+    )
     dataset_versions = models.ManyToManyField(DatasetVersion, related_name="tables")
     name = models.CharField(max_length=100)
     version = models.TextField(default=SemVer("1.0.0"))
@@ -460,7 +485,9 @@ class DatasetTable(models.Model):
         return to_snake_case(identifier[0]) if len(identifier) == 1 else "id"
 
     @classmethod
-    def create_for_schema(cls, dataset: Dataset, table_schema: DatasetTableSchema) -> DatasetTable:
+    def create_for_schema(
+        cls, dataset: Dataset, table_schema: DatasetTableSchema
+    ) -> DatasetTable:
         """Create a DatasetTable object based on the Amsterdam Schema table spec.
 
         (The table spec contains a JSON-schema for all fields).
@@ -476,11 +503,16 @@ class DatasetTable(models.Model):
         self.db_table = table_schema.db_name
         self.version = table_schema.version
         self.auth = " ".join(table_schema.auth)
-        self.display_field = display_field.db_name if display_field is not None else None
-        self.geometry_field, self.geometry_field_type = self._get_geometry_field(table_schema)
+        self.display_field = (
+            display_field.db_name if display_field is not None else None
+        )
+        self.geometry_field, self.geometry_field_type = self._get_geometry_field(
+            table_schema
+        )
         self.is_temporal = table_schema.is_temporal
         self.enable_geosearch = (
-            table_schema.dataset.id not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
+            table_schema.dataset.id
+            not in settings.AMSTERDAM_SCHEMA["geosearch_disabled_datasets"]
         )
         self.id_field = self._get_id_field(table_schema)
 
@@ -508,7 +540,9 @@ class DatasetTable(models.Model):
 class DatasetField(models.Model):
     """Exposed metadata per field."""
 
-    table = models.ForeignKey(DatasetTable, on_delete=models.CASCADE, related_name="fields")
+    table = models.ForeignKey(
+        DatasetTable, on_delete=models.CASCADE, related_name="fields"
+    )
     name = models.CharField(max_length=100)
 
     # Exposed metadata from the jsonschema, so other utils can query these
@@ -526,7 +560,9 @@ class DatasetField(models.Model):
         return self.name
 
     @classmethod
-    def create_for_schema(cls, table: DatasetTable, field: DatasetFieldSchema) -> DatasetField:
+    def create_for_schema(
+        cls, table: DatasetTable, field: DatasetFieldSchema
+    ) -> DatasetField:
         """Create a DatasetField object based on the Amsterdam Schema field spec."""
         instance = cls(table=table)
         instance.save_for_schema(field)
@@ -545,7 +581,9 @@ class Profile(models.Model):
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=100)
     scopes = models.CharField(max_length=255)
-    schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
+    schema_data = models.TextField(
+        _("Amsterdam Schema Contents"), validators=[validate_json]
+    )
 
     def __str__(self):
         return self.name
@@ -583,7 +621,9 @@ class Scope(models.Model):
 
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=100)
-    schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
+    schema_data = models.TextField(
+        _("Amsterdam Schema Contents"), validators=[validate_json]
+    )
 
     def __str__(self):
         return self.name
@@ -616,7 +656,9 @@ class Publisher(models.Model):
 
     id = models.CharField(max_length=100, primary_key=True)
     name = models.CharField(max_length=100)
-    schema_data = models.TextField(_("Amsterdam Schema Contents"), validators=[validate_json])
+    schema_data = models.TextField(
+        _("Amsterdam Schema Contents"), validators=[validate_json]
+    )
 
     def __str__(self):
         return self.name

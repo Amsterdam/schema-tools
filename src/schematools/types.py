@@ -164,30 +164,50 @@ class SemVer(str):
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
-        return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) < (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __le__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
 
-        return (self.major, self.minor, self.patch) <= (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) <= (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __gt__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
-        return (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) > (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __ge__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
 
-        return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) >= (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return False
 
-        return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) == (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __ne__(self, other: object) -> bool:
         return not self == other
@@ -393,13 +413,17 @@ class DatasetSchema(SchemaType):
                 if scopes and not self.scopes.intersection(set(scopes)):
                     ds_access = False
                 data["versions"][vmajor]["tables"] = [
-                    t.json_data(inline_scopes=inline_scopes, scopes=scopes, ds_access=ds_access)
+                    t.json_data(
+                        inline_scopes=inline_scopes, scopes=scopes, ds_access=ds_access
+                    )
                     for t in tables
                 ]
         if inline_publishers and self.publisher is not None:
             data["publisher"] = self.publisher.json_data()
         if inline_scopes:
-            data["auth"] = [s.json_data() if isinstance(s, Scope) else s for s in self.scopes]
+            data["auth"] = [
+                s.json_data() if isinstance(s, Scope) else s for s in self.scopes
+            ]
         return json.dumps(data)
 
     def json_data(
@@ -420,7 +444,9 @@ class DatasetSchema(SchemaType):
         )
 
     @classmethod
-    def filter_on_scopes(cls, schema: DatasetSchema, scopes: list[str]) -> DatasetSchema:
+    def filter_on_scopes(
+        cls, schema: DatasetSchema, scopes: list[str]
+    ) -> DatasetSchema:
         """Filter out fields that are not within the provided scopes"""
         scope_list = [Scope().from_string(scope) for scope in scopes]
         if Scope().from_string("OPENBAAR") not in scope_list:
@@ -429,7 +455,9 @@ class DatasetSchema(SchemaType):
         return cls.from_dict(schema_data, loader=schema.loader)
 
     @classmethod
-    def filter_on_tables(cls, schema: DatasetSchema, tables_list: list[str]) -> DatasetSchema:
+    def filter_on_tables(
+        cls, schema: DatasetSchema, tables_list: list[str]
+    ) -> DatasetSchema:
         """Filter out tables that are not in the list."""
         schema_data = schema.json_data(inline_tables=True)
         for vmajor, version in schema_data.get("versions", {}).items():
@@ -506,7 +534,10 @@ class DatasetSchema(SchemaType):
             return frozenset({self._find_scope_by_id(scopes)})
         elif isinstance(scopes, list):
             return frozenset(
-                [s if isinstance(s, Scope) else self._find_scope_by_id(s) for s in scopes]
+                [
+                    s if isinstance(s, Scope) else self._find_scope_by_id(s)
+                    for s in scopes
+                ]
             )
         return frozenset({self._find_scope_by_id(_PUBLIC_SCOPE)})
 
@@ -572,7 +603,11 @@ class DatasetSchema(SchemaType):
     def table_ids(self) -> list[str]:
         """Access different versions of the table, as mentioned in the dataset file."""
         return list(
-            {table["id"] for version in self.get("versions") for table in version["tables"]}
+            {
+                table["id"]
+                for version in self.get("versions")
+                for table in version["tables"]
+            }
         )
 
     @cached_property
@@ -647,7 +682,9 @@ class DatasetSchema(SchemaType):
     @property
     def nested_tables(self) -> list[DatasetTableSchema]:
         """Access list of nested tables."""
-        return [f.nested_table for t in self.tables for f in t.fields if f.is_nested_table]
+        return [
+            f.nested_table for t in self.tables for f in t.fields if f.is_nested_table
+        ]
 
     @property
     def through_tables(self) -> list[DatasetTableSchema]:
@@ -656,7 +693,8 @@ class DatasetSchema(SchemaType):
             f.through_table
             for t in self.tables
             for f in t.fields
-            if f.is_through_table and not (f.is_loose_relation and f.nm_relation is None)
+            if f.is_through_table
+            and not (f.is_loose_relation and f.nm_relation is None)
         ]
 
     def build_nested_table(self, field: DatasetFieldSchema) -> DatasetTableSchema:
@@ -668,14 +706,19 @@ class DatasetSchema(SchemaType):
             raise KeyError(f"Key 'properties' not defined in '{table.id}.{field.id}'")
 
         # composite keys are concatened to one id an thus always strings
-        parent_fk_type = "string" if len(table.identifier) > 1 else table.identifier_fields[0].type
+        parent_fk_type = (
+            "string" if len(table.identifier) > 1 else table.identifier_fields[0].type
+        )
 
         sub_table_schema = {
             "id": f"{table.id}_{field.id}",
             "originalID": field.id,
             "type": "table",
             "version": str(table.version),
-            "auth": list((field.auth - {_PUBLIC_SCOPE}) or (table.auth - {_PUBLIC_SCOPE})) or None,
+            "auth": list(
+                (field.auth - {_PUBLIC_SCOPE}) or (table.auth - {_PUBLIC_SCOPE})
+            )
+            or None,
             "description": f"Auto-generated table for nested field: {table.id}.{field.id}",
             "schema": {
                 "$schema": "http://json-schema.org/draft-07/schema#",
@@ -764,7 +807,9 @@ class DatasetSchema(SchemaType):
             "id": f"{table.id}_{target_field_id}",
             "type": "table",
             "version": str(table.version),
-            "auth": list((field.auth - {_PUBLIC_SCOPE}) or (field.table.auth - {_PUBLIC_SCOPE}))
+            "auth": list(
+                (field.auth - {_PUBLIC_SCOPE}) or (field.table.auth - {_PUBLIC_SCOPE})
+            )
             or None,
             "originalID": field.id,
             "throughFields": [left_table_id, target_field_id],
@@ -800,11 +845,13 @@ class DatasetSchema(SchemaType):
         # We also need to add a shortname for the individual FK fields
         # pointing to left en right table in the M2M
         if field.has_shortname:
-            sub_table_schema["schema"]["properties"][target_field_id]["shortname"] = (
-                field.shortname
-            )
+            sub_table_schema["schema"]["properties"][target_field_id][
+                "shortname"
+            ] = field.shortname
         if table.has_shortname:
-            sub_table_schema["schema"]["properties"][left_table_id]["shortname"] = table.shortname
+            sub_table_schema["schema"]["properties"][left_table_id][
+                "shortname"
+            ] = table.shortname
 
         # For both types of through tables (M2M and FK), we add extra fields
         # to the table (see docstring).
@@ -824,7 +871,8 @@ class DatasetSchema(SchemaType):
                 spec = sub_table_schema["schema"]["properties"][left_table_id]
                 spec["type"] = "object"
                 spec["properties"] = {
-                    id_field.id: {"type": id_field.type} for id_field in table.identifier_fields
+                    id_field.id: {"type": id_field.type}
+                    for id_field in table.identifier_fields
                 }
 
             # We change the spec of the target field if the field is composite
@@ -842,7 +890,10 @@ class DatasetSchema(SchemaType):
                 }
 
         return DatasetTableSchema(
-            sub_table_schema, parent_schema=self, _parent_table=table, through_table=True
+            sub_table_schema,
+            parent_schema=self,
+            _parent_table=table,
+            through_table=True,
         )
 
     @property
@@ -893,6 +944,7 @@ class DatasetVersionSchema(SchemaType):
         under_development = "under_development"
         superseded = "superseded"
         deprecated = "deprecated"
+        discontinued = "discontinued"
 
     def __init__(
         self,
@@ -910,7 +962,9 @@ class DatasetVersionSchema(SchemaType):
         try:
             return DatasetVersionSchema.Status[value]
         except KeyError:
-            raise ParserError(f"status field contains an unknown value: {value}") from None
+            raise ParserError(
+                f"status field contains an unknown value: {value}"
+            ) from None
 
     @property
     def enable_api(self) -> bool:
@@ -926,9 +980,13 @@ class DatasetVersionSchema(SchemaType):
         if not value:
             return None
         try:
-            date_value = datetime.datetime.strptime(value, "%Y-%m-%d").astimezone().date()
+            date_value = (
+                datetime.datetime.strptime(value, "%Y-%m-%d").astimezone().date()
+            )
         except ValueError:
-            raise ParserError("endSupportDate must be a valid date ('YYYY-MM-DD')") from None
+            raise ParserError(
+                "endSupportDate must be a valid date ('YYYY-MM-DD')"
+            ) from None
         return date_value
 
     @property
@@ -937,9 +995,13 @@ class DatasetVersionSchema(SchemaType):
         if not value:
             return None
         try:
-            date_value = datetime.datetime.strptime(value, "%Y-%m-%d").astimezone().date()
+            date_value = (
+                datetime.datetime.strptime(value, "%Y-%m-%d").astimezone().date()
+            )
         except ValueError:
-            raise ParserError("releaseDate must be a valid date ('YYYY-MM-DD')") from None
+            raise ParserError(
+                "releaseDate must be a valid date ('YYYY-MM-DD')"
+            ) from None
         return date_value
 
     @property
@@ -949,7 +1011,9 @@ class DatasetVersionSchema(SchemaType):
     @property
     def schema(self) -> DatasetSchema:
         if self._parent_schema is None:
-            raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
+            raise SchemaObjectNotFound(
+                f"{self!r} doesn't have a parent schema defined."
+            )
         return self._parent_schema
 
     @cached_property
@@ -976,7 +1040,9 @@ class DatasetVersionSchema(SchemaType):
     ) -> list[DatasetTableSchema]:
         """List tables, including nested."""
         return list(
-            self._get_tables(include_nested=include_nested, include_through=include_through)
+            self._get_tables(
+                include_nested=include_nested, include_through=include_through
+            )
         )
 
     @cached_method()  # type: ignore[misc]
@@ -984,7 +1050,9 @@ class DatasetVersionSchema(SchemaType):
         self, table_id: str, include_nested: bool = True, include_through: bool = True
     ) -> DatasetTableSchema:
         snakecased_table_id = to_snake_case(table_id)
-        tables = self.get_tables(include_nested=include_nested, include_through=include_through)
+        tables = self.get_tables(
+            include_nested=include_nested, include_through=include_through
+        )
         for table in tables:
             if to_snake_case(table.id) == snakecased_table_id:
                 return table
@@ -1007,7 +1075,9 @@ class DatasetVersionSchema(SchemaType):
     @property
     def nested_tables(self) -> list[DatasetTableSchema]:
         """Access list of nested tables."""
-        return [f.nested_table for t in self.tables for f in t.fields if f.is_nested_table]
+        return [
+            f.nested_table for t in self.tables for f in t.fields if f.is_nested_table
+        ]
 
     @property
     def through_tables(self) -> list[DatasetTableSchema]:
@@ -1016,7 +1086,8 @@ class DatasetVersionSchema(SchemaType):
             f.through_table
             for t in self.tables
             for f in t.fields
-            if f.is_through_table and not (f.is_loose_relation and f.nm_relation is None)
+            if f.is_through_table
+            and not (f.is_loose_relation and f.nm_relation is None)
         ]
 
     @cached_property
@@ -1147,7 +1218,8 @@ class Export:
     @property
     def filename_without_zip(self) -> str:
         return (
-            f"{self._dataset_name}_{self.version}_{self.name}_{self.scopes_string}.{self.filetype}"
+            f"{self._dataset_name}_{self.version}_{self.name}_"
+            f"{self.scopes_string}.{self.filetype}"
         )
 
     @property
@@ -1156,7 +1228,8 @@ class Export:
 
     def table_filename(self, table_id: str) -> str:
         return (
-            f"{self._dataset_name}_{self.version}_{table_id}_{self.scopes_string}.{self.filetype}"
+            f"{self._dataset_name}_{self.version}_{table_id}_"
+            f"{self.scopes_string}.{self.filetype}"
         )
 
     def table_paths(self, folder: Path) -> list[Path]:
@@ -1195,7 +1268,9 @@ class RowLevelAuthorisation:
         # convert source and target to camelCase. Nested objects in the schema end up as such on
         # the top level of the json output.
         source = toCamelCase(rls_dict["source"].replace(".", "_"))
-        targets = [toCamelCase(target.replace(".", "_")) for target in rls_dict["targets"]]
+        targets = [
+            toCamelCase(target.replace(".", "_")) for target in rls_dict["targets"]
+        ]
         return cls(targets=targets, source=source, auth_map=auth_map)
 
 
@@ -1262,10 +1337,16 @@ class DatasetTableSchema(SchemaType):
 
     def _resolve_scope(self, element):
         if "$ref" in element.get("auth", {}):
-            element["auth"] = self.schema.loader.get_scope(element["auth"]["$ref"]).json_data()
+            element["auth"] = self.schema.loader.get_scope(
+                element["auth"]["$ref"]
+            ).json_data()
         if isinstance(element.get("auth"), list):
             element["auth"] = [
-                self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a
+                (
+                    self.schema.loader.get_scope(a["$ref"]).json_data()
+                    if "$ref" in a
+                    else a
+                )
                 for a in element["auth"]
             ]
         if element.get("type") == "object":
@@ -1305,7 +1386,9 @@ class DatasetTableSchema(SchemaType):
             # Temporary fix to strip invalid statuses in old schemas, used in v9.0.0-rc1
             return DatasetTableSchema.Status[value.strip()]
         except KeyError:
-            raise ParserError(f"status field contains an unknown value: {value}") from None
+            raise ParserError(
+                f"status field contains an unknown value: {value}"
+            ) from None
 
     @cached_property
     def qualified_id(self) -> str:
@@ -1443,7 +1526,9 @@ class DatasetTableSchema(SchemaType):
 
         return fields
 
-    def get_fields(self, include_subfields: bool = False) -> Iterator[DatasetFieldSchema]:
+    def get_fields(
+        self, include_subfields: bool = False
+    ) -> Iterator[DatasetFieldSchema]:
         """Get the fields for this table.
 
         Args:
@@ -1495,10 +1580,14 @@ class DatasetTableSchema(SchemaType):
             if field_schema.id == field_id:
                 return field_schema
 
-        raise DatasetFieldNotFound(f"Field '{field_id}' does not exist in table '{self.id}'.")
+        raise DatasetFieldNotFound(
+            f"Field '{field_id}' does not exist in table '{self.id}'."
+        )
 
     @cached_method()  # type: ignore[misc]
-    def get_additional_relation_by_id(self, relation_id: str) -> AdditionalRelationSchema:
+    def get_additional_relation_by_id(
+        self, relation_id: str
+    ) -> AdditionalRelationSchema:
         """Get the reverse relation based on the ids of the relation."""
         for additional_relation in self.additional_relations:
             if additional_relation.id == relation_id:
@@ -1632,7 +1721,9 @@ class DatasetTableSchema(SchemaType):
             for name, relation in self["schema"].get("additionalRelations", {}).items()
         ]
 
-    def get_reverse_relation(self, field: DatasetFieldSchema) -> AdditionalRelationSchema | None:
+    def get_reverse_relation(
+        self, field: DatasetFieldSchema
+    ) -> AdditionalRelationSchema | None:
         """Find the description of a reverse relation for a field."""
         if not field.is_relation:
             raise ValueError("Field is not a relation")
@@ -1646,7 +1737,9 @@ class DatasetTableSchema(SchemaType):
     @property
     def schema(self) -> DatasetSchema:
         if self._parent_schema is None:
-            raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
+            raise SchemaObjectNotFound(
+                f"{self!r} doesn't have a parent schema defined."
+            )
         return self._parent_schema
 
     @cached_property
@@ -1658,7 +1751,10 @@ class DatasetTableSchema(SchemaType):
             return frozenset({self.schema._find_scope_by_id(scopes)})
         elif isinstance(scopes, list):
             return frozenset(
-                [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
+                [
+                    s if isinstance(s, Scope) else self.schema._find_scope_by_id(s)
+                    for s in scopes
+                ]
             )
         return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
 
@@ -1738,10 +1834,14 @@ class DatasetTableSchema(SchemaType):
                 - additional_underscores
             )
             # Shortening should preserve both postfixes
-            db_table_name = _name_join(db_table_name[:max_length], version_postfix) + postfix
+            db_table_name = (
+                _name_join(db_table_name[:max_length], version_postfix) + postfix
+            )
         else:
             # User defined table name -> no shortening
-            db_table_name = _name_join(dataset_prefix, shortname, version_postfix) + postfix
+            db_table_name = (
+                _name_join(dataset_prefix, shortname, version_postfix) + postfix
+            )
 
         # We are not shortening user defined table names automatically. Instead we rely on
         # validation code to prevent table ids in Amsterdam Schema's that result in DB table
@@ -1860,7 +1960,9 @@ class DatasetFieldSchema(JsonDict):
     @property
     def schema(self) -> DatasetSchema | None:
         if not self.table and self.table._parent_schema:
-            raise SchemaObjectNotFound(f"{self!r} doesn't have a parent schema defined.")
+            raise SchemaObjectNotFound(
+                f"{self!r} doesn't have a parent schema defined."
+            )
         return self.table._parent_schema
 
     @cached_property
@@ -2177,7 +2279,11 @@ class DatasetFieldSchema(JsonDict):
         if not self.is_geo:
             return None
         if self.table:
-            return self.get("crs") or self.table.get("crs") or self.table.dataset.get("crs")
+            return (
+                self.get("crs")
+                or self.table.get("crs")
+                or self.table.dataset.get("crs")
+            )
         return self.get("crs")
 
     @cached_property
@@ -2209,7 +2315,9 @@ class DatasetFieldSchema(JsonDict):
                 return field_schema
 
         name = self.table.id + "." + self.id
-        raise DatasetFieldNotFound(f"Subfield {field_id!r} does not exist in field {name!r}.")
+        raise DatasetFieldNotFound(
+            f"Subfield {field_id!r} does not exist in field {name!r}."
+        )
 
     @cached_property
     def subfields(self) -> list[DatasetFieldSchema]:
@@ -2301,7 +2409,8 @@ class DatasetFieldSchema(JsonDict):
                 and (
                     # The "is_composite_key" check is a performance win,
                     # as that avoids having to fetch the related table object.
-                    self.is_composite_key or self.related_table.is_temporal
+                    self.is_composite_key
+                    or self.related_table.is_temporal
                 )
             )
         )
@@ -2334,7 +2443,10 @@ class DatasetFieldSchema(JsonDict):
             return frozenset({self.schema._find_scope_by_id(scopes)})
         elif isinstance(scopes, list):
             return frozenset(
-                [s if isinstance(s, Scope) else self.schema._find_scope_by_id(s) for s in scopes]
+                [
+                    s if isinstance(s, Scope) else self.schema._find_scope_by_id(s)
+                    for s in scopes
+                ]
             )
         return frozenset({self.schema._find_scope_by_id(_PUBLIC_SCOPE)})
 
@@ -2372,7 +2484,11 @@ class DatasetFieldSchema(JsonDict):
     @cached_property
     def is_composite_key(self):
         """Tell whether the relation uses a composite key"""
-        return self.get("relation") and self.is_object and len(self.related_table.identifier) > 1
+        return (
+            self.get("relation")
+            and self.is_object
+            and len(self.related_table.identifier) > 1
+        )
 
     @property
     def is_loose_relation(self):
@@ -2410,7 +2526,8 @@ class DatasetFieldSchema(JsonDict):
         source_type_set = {
             (prop_name, prop_val["type"])
             for prop_name, prop_val in properties.items()
-            if prop_val.get("format") != "date-time"  # exclude beginGeldigheid/eindGeldigheid?
+            if prop_val.get("format")
+            != "date-time"  # exclude beginGeldigheid/eindGeldigheid?
         }
         destination_type_set = {
             (identifier_field.name, identifier_field.type),
@@ -2430,7 +2547,9 @@ class DatasetFieldSchema(JsonDict):
 class AdditionalRelationSchema(JsonDict):
     """Data class describing the additional relation block."""
 
-    def __init__(self, _id: str, _parent_table: DatasetTableSchema | None = None, **kwargs):
+    def __init__(
+        self, _id: str, _parent_table: DatasetTableSchema | None = None, **kwargs
+    ):
         super().__init__(**kwargs)
         self._id = _id
         self._parent_table = _parent_table
@@ -2666,7 +2785,8 @@ class ProfileDatasetSchema(JsonDict):
     def tables(self) -> dict[str, ProfileTableSchema]:
         """The tables that this profile provides additional access rules for."""
         return {
-            id: ProfileTableSchema(id, self, data) for id, data in self.get("tables", {}).items()
+            id: ProfileTableSchema(id, self, data)
+            for id, data in self.get("tables", {}).items()
         }
 
 
@@ -2712,7 +2832,9 @@ class ProfileTableSchema(JsonDict):
                 # There are no global permissions on the table, but some fields can be read.
                 # Hence this gives indirect permission to access the table.
                 # The return value expresses this, to avoid complex rules in the permission checks.
-                return Permission(PermissionLevel.SUBOBJECTS_ONLY, source=f"{source}.fields.*")
+                return Permission(
+                    PermissionLevel.SUBOBJECTS_ONLY, source=f"{source}.fields.*"
+                )
 
             raise RuntimeError(
                 f"Profile table {source} is invalid: "
@@ -2795,7 +2917,9 @@ class Temporal:
 
     identifier: str
     identifier_field: DatasetFieldSchema
-    dimensions: dict[str, TemporalDimensionFields] = dataclasses.field(default_factory=dict)
+    dimensions: dict[str, TemporalDimensionFields] = dataclasses.field(
+        default_factory=dict
+    )
 
     @cached_property
     def temporal_fields(self) -> list[DatasetFieldSchema]:
