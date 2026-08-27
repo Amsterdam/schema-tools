@@ -1298,6 +1298,8 @@ class DatasetTableSchema(SchemaType):
         # Temporary fix to allow migration to Amsterdam Schema v4, used in v9.0.0-rc1
         beschikbaar = "beschikbaar"
         niet_beschikbaar = "niet_beschikbaar"
+        discontinued = "discontinued"
+        # waarom hier geen superseded en deprecated?
 
     def __init__(
         self,
