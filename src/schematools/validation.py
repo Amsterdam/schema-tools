@@ -535,15 +535,6 @@ def _check_schema_ref(dataset: DatasetSchema) -> Iterator[str]:
             )
 
 
-@_register_validator("defaultVersion")
-def _check_default_version_is_enabled(dataset: DatasetSchema) -> Iterator[str]:
-    """Check that defaultVersion of a dataset is enabled if there is more than one version."""
-    if len(dataset.versions) > 1:
-        default_version = dataset.get_version(dataset.default_version)
-        if not default_version.enable_api:
-            yield (f"Default version {dataset.default_version} is not enabled.")
-
-
 @_register_validator("production version tables")
 def _check_production_version_tables(dataset: DatasetSchema) -> Iterator[str]:
     """Check that a production version (>= v1) contains no v0 tables."""
