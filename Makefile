@@ -4,7 +4,7 @@ install:
 	then echo "uv not found, installing..." \
 	&& curl -LsSf https://astral.sh/uv/install.sh | sh; \
 	fi
-	uv sync --extra django
+	uv sync --all-extras
 	uv run pre-commit install
 
 .PHONY: test
