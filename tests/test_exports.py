@@ -104,6 +104,20 @@ class TestExports:
         importer.load_file(ndjson_path)
 
     @pytest.fixture
+    def maingeo_relation_content(self, here, engine, maingeo_relation_export_schema):
+        ndjson_path = here / "files" / "data" / "maingeo_relation.ndjson"
+        importer = NDJSONImporter(maingeo_relation_export_schema, engine)
+        importer.generate_db_objects("maingeo_relation", truncate=True, ind_extra_index=False)
+        importer.load_file(ndjson_path)
+
+    @pytest.fixture
+    def related_geometry_content(self, here, engine, maingeo_relation_export_schema):
+        ndjson_path = here / "files" / "data" / "related_geometry.ndjson"
+        importer = NDJSONImporter(maingeo_relation_export_schema, engine)
+        importer.generate_db_objects("related_geometry", truncate=True, ind_extra_index=False)
+        importer.load_file(ndjson_path)
+
+    @pytest.fixture
     def tmp_folder(self):
         """Creates a temporary folder for exports and cleans it up after the test."""
         path = Path("tmp")
@@ -585,6 +599,45 @@ class TestExports:
                 },
                 "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
             }
+
+
+    def test_geojson_export_maingeometry_relation(
+        self,
+        maingeo_relation_export_schema,
+        maingeo_relation_content,
+        related_geometry_content,
+        create_context,
+    ):
+        export_definition = next(
+            exp
+            for exp in maingeo_relation_export_schema.versions["v1"].exports
+            if exp.filetype == "geojson"
+        )
+        context = create_context(maingeo_relation_export_schema, export_definition)
+        GeoJsonExporter(context).export_tables()
+        with open(
+            context.folder / "maingeo_relation_v1_maingeo_relation_openbaar.geojson"
+        ) as out_file:
+            result = orjson.loads(out_file.read())
+
+            #feature = result["features"][0]
+            #feature["geometry"]["coordinates"][1] = round(feature["geometry"]["coordinates"][1], 5)
+            #feature["geometry"]["coordinates"][0] = round(feature["geometry"]["coordinates"][0], 5)
+
+            print(result)
+
+            # assert feature == {
+            #     "type": "Feature",
+            #     "properties": {
+            #         "identificatie": 1,
+            #         "ligtInBuurtId": "10180001.1",
+            #         "merkCode": "12",
+            #         "merkOmschrijving": "De meetbout",
+            #         "genesteInfoNaam": None,
+            #         "genesteInfoNummer": None,
+            #     },
+            #     "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
+            # }
 
     def test_export_cli(self, engine, meetbouten_content):
         """Test the export CLI command."""
