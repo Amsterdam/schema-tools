@@ -60,9 +60,7 @@ class ValidationError:
 _all: list[tuple[str, Callable[[DatasetSchema, str | None], Iterator[str]]]] = []
 
 
-def run(
-    dataset: DatasetSchema, location: str | None = None
-) -> Iterator[ValidationError]:
+def run(dataset: DatasetSchema, location: str | None = None) -> Iterator[ValidationError]:
     r"""Run all registered validators.
 
     Yields:
@@ -93,9 +91,7 @@ def _register_validator(name: str) -> Callable:
         func: Callable[[DatasetSchema, str | None], Iterator[str]],
     ) -> Callable:
         @wraps(func)
-        def decorated(
-            dataset: DatasetSchema, location: str | None = None
-        ) -> Iterator[str]:
+        def decorated(dataset: DatasetSchema, location: str | None = None) -> Iterator[str]:
             if func.__code__.co_argcount == 1:
                 return func(dataset)
             else:
@@ -282,9 +278,7 @@ def _postgres_duplicate_abbreviated_fieldnames(dataset: DatasetSchema) -> Iterat
         for fields in fieldnames.values():
             if len(fields) > 1:
                 names = "', '".join(fields)
-                yield (
-                    f"Fields '{names}' share the same first 63 characters. Add a shortname."
-                )
+                yield (f"Fields '{names}' share the same first 63 characters. Add a shortname.")
 
 
 @_register_validator("repetitive identifiers")
@@ -347,20 +341,15 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
             #
             # I think this is a bug is schema-tools, but for now I'll cover this case
             # explicitly.
-            remove_id_suffix = cast(
-                Callable[[str], str], partial(re.sub, r"(.+)Id", r"\1")
-            )
+            remove_id_suffix = cast(Callable[[str], str], partial(re.sub, r"(.+)Id", r"\1"))
             derived_fields = tuple(
-                DerivedField(original=remove_id_suffix(f), derived=f)
-                for f in missing_fields
+                DerivedField(original=remove_id_suffix(f), derived=f) for f in missing_fields
             )
             for df in derived_fields:
                 if df.original in table_fields:
                     missing_fields.discard(df.derived)
             if missing_fields:
-                fields, have = (
-                    ("fields", "have") if len(missing_fields) > 1 else ("field", "has")
-                )
+                fields, have = ("fields", "have") if len(missing_fields) > 1 else ("field", "has")
                 yield (
                     f"Property 'identifier' on table '{table.id}' refers to {fields} "
                     f"'{', '.join(missing_fields)}' that {have} not been defined on the "
@@ -513,9 +502,7 @@ def _reasons_non_public_exists(dataset: DatasetSchema) -> Iterator[str]:
                         f"Non-public table {table.id} should have a 'reasonsNonPublic' property."
                     )
     elif dataset.data.get("reasonsNonPublic") is None:
-        yield (
-            f"Non-public dataset {dataset.id} should have a 'reasonsNonPublic' property."
-        )
+        yield (f"Non-public dataset {dataset.id} should have a 'reasonsNonPublic' property.")
 
 
 @_register_validator("reasons non public value")
@@ -548,10 +535,7 @@ def _check_schema_ref(dataset: DatasetSchema) -> Iterator[str]:
     """Check that $ref field for all tables has correct hostname."""
     for table in dataset.get_all_tables():
         fragments = urlparse(table["schema"]["properties"]["schema"]["$ref"])
-        if (
-            fragments.hostname != "schemas.data.amsterdam.nl"
-            or fragments.scheme != "https"
-        ):
+        if fragments.hostname != "schemas.data.amsterdam.nl" or fragments.scheme != "https":
             yield (
                 f"Incorrect `$ref` for {table.id}. Value should be "
                 f"`https://schemas.data.amsterdam.nl`"
@@ -627,13 +611,9 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
             source = rla["source"]
             source_field = get_field(source, schema)
             if not source_field:
-                yield (
-                    f"Source {source} is not available in table {table.python_name}."
-                )
+                yield (f"Source {source} is not available in table {table.python_name}.")
             elif source_field["type"] != "boolean":
-                yield (
-                    f"Source {source} in table {table.python_name} is not a boolean."
-                )
+                yield (f"Source {source} in table {table.python_name} is not a boolean.")
             targets = rla["targets"]
             if source in targets:
                 yield (f"Source {source} is also a target!")
@@ -641,18 +621,12 @@ def _check_row_level_auth(dataset: DatasetSchema) -> Iterator[str]:
             for target in targets:
                 field = get_field(target, schema)
                 if field is None:
-                    yield (
-                        f"Target {target} does not exist in table {table.python_name}"
-                    )
+                    yield (f"Target {target} does not exist in table {table.python_name}")
                     continue
                 auth = field.get("auth")
                 if (
                     not auth
-                    or (
-                        isinstance(auth, list)
-                        and RLA_SCOPE not in auth
-                        and RLA_REF not in auth
-                    )
+                    or (isinstance(auth, list) and RLA_SCOPE not in auth and RLA_REF not in auth)
                     or (isinstance(auth, str) and auth not in [RLA_SCOPE, RLA_REF])
                 ):
                     yield (f"Target {target} does not define FEATURE/RLA auth.")
@@ -819,8 +793,7 @@ def _check_export_scopes(dataset: DatasetSchema) -> Iterator[str]:
                         # Each table should have at least one public field
                         # (besides `schema` and `id`)
                         if not any(
-                            field.auth == {"OPENBAAR"}
-                            and field.id not in ["schema", "id"]
+                            field.auth == {"OPENBAAR"} and field.id not in ["schema", "id"]
                             for field in table.fields
                         ):
                             yield (
@@ -837,10 +810,7 @@ def _check_export_scopes(dataset: DatasetSchema) -> Iterator[str]:
                         # 3. Field is public, table is public and dataset has the scope.
                         if not any(
                             export_scope in field.auth
-                            or (
-                                field.auth == {"OPENBAAR"}
-                                and export_scope in table.auth
-                            )
+                            or (field.auth == {"OPENBAAR"} and export_scope in table.auth)
                             or (
                                 field.auth == {"OPENBAAR"}
                                 and table.auth == {"OPENBAAR"}
@@ -947,9 +917,7 @@ def validate_dataset(
     return dataset_errors
 
 
-def validate_dataset_versions_version(
-    id: str, previous: dict, current: dict
-) -> list[str]:
+def validate_dataset_versions_version(id: str, previous: dict, current: dict) -> list[str]:
     if previous["status"] == DatasetVersionSchema.Status.under_development:
         return []
     previous_version = SemVer(previous["version"])
@@ -1037,9 +1005,7 @@ def validate_table(
                         if object_path
                         else previous_field_name
                     )
-                prop_name = (
-                    f"{current_object_path}.{prop}" if current_object_path else prop
-                )
+                prop_name = f"{current_object_path}.{prop}" if current_object_path else prop
                 table_errors.append(f"Column {column_name} would change {prop_name}.")
 
         # recursively check array items
@@ -1051,10 +1017,7 @@ def validate_table(
             )
 
         # recursively check object properties, except for format json as there are no properties
-        if (
-            previous_field.get("type") == "object"
-            and previous_field.get("format") != "json"
-        ):
+        if previous_field.get("type") == "object" and previous_field.get("format") != "json":
             previous_object_properties = previous_field.get("properties")
             current_object_properties = current_field.get("properties")
             if previous_field_name != column_name:
