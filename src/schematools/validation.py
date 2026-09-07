@@ -38,12 +38,7 @@ from schematools.exceptions import (
 )
 from schematools.naming import to_snake_case, toCamelCase
 from schematools.permissions.auth import RLA_SCOPE
-from schematools.types import (
-    DatasetFieldSchema,
-    DatasetSchema,
-    DatasetVersionSchema,
-    SemVer,
-)
+from schematools.types import DatasetFieldSchema, DatasetSchema, DatasetVersionSchema, SemVer
 
 
 @dataclass(frozen=True)
@@ -87,9 +82,7 @@ def _register_validator(name: str) -> Callable:
     if not name:
         raise ValueError("validator must have a name")
 
-    def decorator(
-        func: Callable[[DatasetSchema, str | None], Iterator[str]],
-    ) -> Callable:
+    def decorator(func: Callable[[DatasetSchema, str | None], Iterator[str]]) -> Callable:
         @wraps(func)
         def decorated(dataset: DatasetSchema, location: str | None = None) -> Iterator[str]:
             if func.__code__.co_argcount == 1:
@@ -905,8 +898,7 @@ def validate_dataset(
             continue
 
         current_table = next(
-            (table for table in current_tables if table["id"] == previous_table["id"]),
-            None,
+            (table for table in current_tables if table["id"] == previous_table["id"]), None
         )
         if previous_table["$ref"] != current_table["$ref"]:
             dataset_errors.append(

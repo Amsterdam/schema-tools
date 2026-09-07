@@ -181,9 +181,7 @@ def test_postgres_duplicate_abbreviated_fieldnames(schema_loader) -> None:
     )
 
 
-def test_postgres_duplicate_abbreviated_fieldnames_with_shortname(
-    schema_loader,
-) -> None:
+def test_postgres_duplicate_abbreviated_fieldnames_with_shortname(schema_loader) -> None:
     dataset = schema_loader.get_dataset_from_file("abbreviated_fieldnames_with_shortname.json")
     assert list(validation.run(dataset)) == []  # no validation errors
 
@@ -612,26 +610,16 @@ def test_temp_relation_array_items(schema_loader):
     "prev,curr,errors",
     [
         # No changes
-        (
-            [{"id": "table", "$ref": "table/v1"}],
-            [{"id": "table", "$ref": "table/v1"}],
-            [],
-        ),
+        ([{"id": "table", "$ref": "table/v1"}], [{"id": "table", "$ref": "table/v1"}], []),
         # Added table
         (
             [{"id": "table", "$ref": "table/v1"}],
-            [
-                {"id": "table", "$ref": "table/v1"},
-                {"id": "table2", "$ref": "table2/v1"},
-            ],
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
             [],
         ),
         # Removed table
         (
-            [
-                {"id": "table", "$ref": "table/v1"},
-                {"id": "table2", "$ref": "table2/v1"},
-            ],
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
             [{"id": "table", "$ref": "table/v1"}],
             ["Table table2 has been removed."],
         ),
@@ -645,10 +633,7 @@ def test_temp_relation_array_items(schema_loader):
         ),
         # Multiple errors
         (
-            [
-                {"id": "table", "$ref": "table/v1"},
-                {"id": "table2", "$ref": "table2/v1"},
-            ],
+            [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}],
             [{"id": "table", "$ref": "table/v2"}],
             [
                 "Table table has changed version. Previous version: table/v1, current version: table/v2.",
@@ -725,18 +710,8 @@ def test_validate_table_schema_identifier(prev, curr, errors):
         ),
         # Changed object property.
         (
-            {
-                "object": {
-                    "type": "object",
-                    "properties": {"element": {"type": "string"}},
-                }
-            },
-            {
-                "object": {
-                    "type": "object",
-                    "properties": {"element": {"type": "integer"}},
-                }
-            },
+            {"object": {"type": "object", "properties": {"element": {"type": "string"}}}},
+            {"object": {"type": "object", "properties": {"element": {"type": "integer"}}}},
             ["Column object would change element.type."],
         ),
         # Object with format JSON works does not raise errors.
@@ -750,19 +725,13 @@ def test_validate_table_schema_identifier(prev, curr, errors):
             {
                 "list": {
                     "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {"element": {"type": "string"}},
-                    },
+                    "items": {"type": "object", "properties": {"element": {"type": "string"}}},
                 }
             },
             {
                 "list": {
                     "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {"element": {"type": "integer"}},
-                    },
+                    "items": {"type": "object", "properties": {"element": {"type": "integer"}}},
                 }
             },
             ["Column list would change items.element.type."],
@@ -1241,11 +1210,7 @@ def test_update_table_with_discontinued_status(prev, curr, errors):
         ),
         # Changes for experimental table, no fail
         (
-            {
-                "version": "1.0.0",
-                "status": "under_development",
-                "tables": [{"id": "table1"}],
-            },
+            {"version": "1.0.0", "status": "under_development", "tables": [{"id": "table1"}]},
             {
                 "version": "1.1.0",
                 "status": "under_development",

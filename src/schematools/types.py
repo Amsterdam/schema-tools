@@ -164,50 +164,30 @@ class SemVer(str):
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
-        return (self.major, self.minor, self.patch) < (
-            other.major,
-            other.minor,
-            other.patch,
-        )
+        return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
 
     def __le__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
 
-        return (self.major, self.minor, self.patch) <= (
-            other.major,
-            other.minor,
-            other.patch,
-        )
+        return (self.major, self.minor, self.patch) <= (other.major, other.minor, other.patch)
 
     def __gt__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
-        return (self.major, self.minor, self.patch) > (
-            other.major,
-            other.minor,
-            other.patch,
-        )
+        return (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
 
     def __ge__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return NotImplemented
 
-        return (self.major, self.minor, self.patch) >= (
-            other.major,
-            other.minor,
-            other.patch,
-        )
+        return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SemVer):
             return False
 
-        return (self.major, self.minor, self.patch) == (
-            other.major,
-            other.minor,
-            other.patch,
-        )
+        return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
 
     def __ne__(self, other: object) -> bool:
         return not self == other
@@ -862,10 +842,7 @@ class DatasetSchema(SchemaType):
                 }
 
         return DatasetTableSchema(
-            sub_table_schema,
-            parent_schema=self,
-            _parent_table=table,
-            through_table=True,
+            sub_table_schema, parent_schema=self, _parent_table=table, through_table=True
         )
 
     @property
