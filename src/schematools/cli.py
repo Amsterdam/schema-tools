@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import heapq
-import io
 import json
 import logging
-import operator
 import os
 import sys
 from collections import defaultdict
-from functools import reduce
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
@@ -19,10 +16,9 @@ import click
 import jsonschema
 import requests
 import sqlalchemy
-from deepdiff import DeepDiff
 from jsonschema.exceptions import relevance
 from jsonschema.validators import Draft7Validator
-from sqlalchemy import Engine, inspect
+from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import create_engine
 
@@ -47,14 +43,7 @@ from schematools.loaders import (
     get_schema_loader,
     read_json_path,
 )
-from schematools.maps import create_mapfile
-from schematools.naming import to_snake_case, toCamelCase
-from schematools.permissions.db import (
-    apply_schema_and_profile_permissions,
-    introspect_permissions,
-    revoke_permissions,
-)
-from schematools.provenance.create import ProvenanceIteration
+from schematools.permissions.db import apply_schema_and_profile_permissions
 from schematools.types import (
     DatasetSchema,
     DatasetTableSchema,
@@ -216,11 +205,6 @@ def schema() -> None:
     """Command line utility to work with Amsterdam Schema files."""
 
 
-@schema.group("import")
-def import_() -> None:
-    """Subcommand to import data."""
-
-
 def create_export_context(
     engine: Engine,
     dataset: DatasetSchema,
@@ -309,43 +293,9 @@ def export(
         sys.exit(1)
 
 
-@schema.group("tocase")
-def tocase() -> None:
-    """Subcommand to make case-changes."""
-
-
-@schema.group()
-def show() -> None:
-    """Show existing metadata."""
-
-
 @schema.group()
 def permissions() -> None:
     """Subcommand for permissions."""
-
-
-@schema.group()
-def kafka() -> None:
-    """Subcommand to consume or produce kafka events."""
-
-
-@permissions.command("introspect")
-@option_db_url
-@argument_role
-def permissions_introspect(db_url: str, role: str) -> None:
-    """Retrieve ACLs from a database."""
-    engine = _get_engine(db_url)
-    introspect_permissions(engine, role)
-
-
-@permissions.command("revoke")
-@option_db_url
-@argument_role
-@click.option("-v", "--verbose", count=True)
-def permissions_revoke(db_url: str, role: str, verbose: int) -> None:
-    """Revoke all table select priviliges for role."""
-    engine = _get_engine(db_url)
-    revoke_permissions(engine, role, verbose=verbose)
 
 
 @permissions.command("apply")
@@ -486,16 +436,6 @@ def permissions_apply(
         )
 
 
-@schema.group()
-def create() -> None:
-    """Subcommand to create a DB object."""
-
-
-@schema.group()
-def diff() -> None:
-    """Subcommand to show schema diffs."""
-
-
 def _fetch_json(location: str) -> dict[str, Any]:
     """Fetch JSON from file or URL.
 
@@ -516,91 +456,6 @@ def _fetch_json(location: str) -> dict[str, Any]:
         response.raise_for_status()
         json_obj = response.json()
     return json_obj
-
-
-@schema.command()
-@option_schema_url
-@argument_dataset_id
-@click.option(
-    "--additional-schemas",
-    "-a",
-    multiple=True,
-    help=(
-        "Id of a dataset schema that will be preloaded. "
-        "To be used mainly for schemas that are related to the schema that is being validated."
-    ),
-)
-@click.argument("meta_schema_url", nargs=-1)
-def validate(
-    schema_url: str,
-    dataset_id: str,
-    additional_schemas: list[str],
-    meta_schema_url: tuple[str],
-) -> None:
-    """Validate a schema against the Amsterdam Schema meta schema.
-
-    Args:
-
-    \b
-        DATASET_ID: id of the dataset.
-        META_SCHEMA_URL: URL where the meta schema for Amsterdam Schema definitions can be found.
-        If multiple are given, schematools will try to validate against the largest version,
-        working backwards and stopping at the first version that the objects are valid against.
-
-        Usually META_SCHEMA_URL is something like: https://schemas.data.amsterdam.nl/schema@vn
-    """  # noqa: D301,D412,D417
-    if not meta_schema_url:
-        click.echo("META_SCHEMA_URL not provided", err=True)
-        sys.exit(1)
-
-    dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
-
-    # The additional schemas are fetched, but the result is not used
-    # because the only reason to fetch the additional schemas is to have those schemas
-    # available in the cache that is part of the DatasetSchema class
-    for schema in additional_schemas:
-        _get_dataset_schema(schema, schema_url)
-
-    exit_status = 0
-
-    for meta_schema_version, url in sorted(
-        [(version_from_metaschema_url(u), u) for u in set(meta_schema_url)],
-        reverse=True,
-    ):
-        click.echo(f"Validating against metaschema {meta_schema_version}")
-        meta_schema = _fetch_json(url)
-        if meta_schema_version.major not in COMPATIBLE_METASCHEMAS:
-            raise IncompatibleMetaschema(
-                f"Schematools {pkg_version} is not compatible"
-                f" with metaschema {meta_schema_version}"
-            )
-        structural_errors = False
-
-        try:
-            jsonschema.validate(
-                instance=dataset.json_data(inline_tables=True, inline_publishers=False),
-                schema=meta_schema,
-                format_checker=Draft7Validator.FORMAT_CHECKER,
-            )
-        except (jsonschema.ValidationError, jsonschema.SchemaError) as e:
-            click.echo("Structural validation: ", nl=False)
-            structural_errors = True
-            click.echo(format_schema_error(e), err=True)
-
-        semantic_errors = False
-        for error in validation.run(dataset):
-            if not semantic_errors:  # Only print on first error.
-                click.echo("Semantic validation: ", nl=False)
-                semantic_errors = True
-            click.echo(f"\n{error!s}", err=True)
-
-        if structural_errors or semantic_errors:
-            click.echo(f"Dataset is invalid against {meta_schema_version}")
-            exit_status = 1
-        else:
-            click.echo(f"Dataset is valid against {meta_schema_version}")
-
-    sys.exit(exit_status)
 
 
 def _get_prefixed_path(path: str, prefix: str) -> str:
@@ -988,17 +843,6 @@ def batch_validate(
         sys.exit(1)
 
 
-def format_schema_error(e: jsonschema.SchemaError | jsonschema.ValidationError) -> str:
-    s = io.StringIO()
-    s.write(f"{e.json_path}, {list(e.schema_path)}")
-    if e.message and not e.context:
-        s.write("\n\t" + e.message)
-    if e.context:
-        for ec in e.context:
-            s.write("\n\t" + ec.message.strip())
-    return s.getvalue()
-
-
 @schema.command("ckan")
 @option_schema_url
 @click.option(
@@ -1056,88 +900,6 @@ def to_ckan(schema_url: str, upload_url: str):
     exit(status)
 
 
-@show.command("provenance")
-@click.argument("dataset_id")
-def show_provenance(dataset_id: str, schema_url: str) -> None:
-    """Retrieve the key-values pairs of the source column.
-
-    (specified as a 'provenance' property of an attribute)
-    and its translated name (the attribute name itself)
-    """
-    dataset = _get_dataset_schema(dataset_id, schema_url, prefetch_related=True)
-    try:
-        instance = ProvenanceIteration(dataset)
-        click.echo(instance.final_dic)
-    except (jsonschema.ValidationError, jsonschema.SchemaError, KeyError) as e:
-        click.echo(str(e), err=True)
-        exit(1)
-
-
-@show.command("tablenames")
-@option_db_url
-def show_tablenames(db_url: str) -> None:
-    """Retrieve tablenames from a database."""
-    engine = _get_engine(db_url)
-    names = inspect(engine).get_table_names()
-    click.echo("\n".join(names))
-
-
-@show.command("datasets")
-@option_schema_url
-@click.option("--to-snake-case", "snake_it", is_flag=True)
-def show_datasets(schema_url: str, snake_it: bool) -> None:
-    """Retrieve the ids of all the datasets."""
-    loader = get_schema_loader(schema_url)
-    modifier = to_snake_case if snake_it else lambda x: x
-    for dataset_schema in loader.get_all_datasets().values():
-        click.echo(modifier(dataset_schema.id))
-
-
-@show.command("datasettables")
-@option_schema_url
-@argument_dataset_id
-@click.option("--to-snake-case", "snake_it", is_flag=True)
-def show_datasettables(schema_url: str, dataset_id: str, snake_it: bool) -> None:
-    """Retrieve the ids of the datasettables for the indicated dataset."""
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url, prefetch_related=False)
-    modifier = to_snake_case if snake_it else lambda x: x
-    for dataset_table in dataset_schema.tables:
-        click.echo(modifier(dataset_table.id))
-
-
-@show.command("mapfile")
-@click.option(
-    "--schema-url",
-    envvar="SCHEMA_URL",
-    default=DEFAULT_SCHEMA_URL,
-    show_default=True,
-    required=True,
-    help="Url where valid amsterdam schema files are found. "
-    "SCHEMA_URL can also be provided as environment variable.",
-)
-@click.argument("dataset_id")
-def show_mapfile(schema_url: str, dataset_id: str) -> None:
-    """Generate a mapfile based on a dataset schema."""
-    try:
-        dataset_schema = get_schema_loader(schema_url).get_dataset(dataset_id)
-    except KeyError:
-        raise click.BadParameter(f"Schema {dataset_id} not found.") from None
-    click.echo(create_mapfile(dataset_schema))
-
-
-@show.command("scopes")
-@option_schema_url
-@argument_dataset_id
-def show_scopes(schema_url: str, dataset_id: str) -> None:
-    """Generate a list of all the scopes used in the indicated dataset."""
-    # We need to `unfreeze` the sets, to make the set operations work.
-    dataset_schema = _get_dataset_schema(dataset_id, schema_url)
-    scopes = set(dataset_schema.auth)
-    for table in dataset_schema.tables:
-        scopes |= set(table.auth) | reduce(operator.or_, (set(f.auth) for f in table.fields))
-    click.echo(" ".join(str(scope) for scope in scopes - {"OPENBAAR"}))
-
-
 def _get_dataset_schema(
     dataset_id: str, schema_url: str, prefetch_related: bool = False
 ) -> DatasetSchema:
@@ -1179,39 +941,6 @@ def _get_scopes(schema_url: str) -> dict[str, Scope]:
         return loader.get_all_scopes()
     except (SchemaObjectNotFound, DuplicateScopeId) as e:
         raise click.ClickException(str(e)) from None
-
-
-@diff.command("all")
-@option_schema_url
-@click.argument("diff_schema_url")
-def diff_schemas(schema_url: str, diff_schema_url: str) -> None:
-    """Show diff for two sets of schemas.
-
-    The left-side schemas location is
-    defined in SCHEMA_URL (or via --schema-url), the right-side schemas location
-    has to be on the command-line.
-
-    This can be used to compare two sets of schemas, e.g. ACC and PRD schemas.
-
-    For nicer output, pipe it through a json formatter.
-    """
-    schemas = get_schema_loader(schema_url).get_all_datasets()
-    diff_schemas = get_schema_loader(diff_schema_url).get_all_datasets()
-    click.echo(DeepDiff(schemas, diff_schemas, ignore_order=True).to_json())
-
-
-@tocase.command("camel")
-@click.argument("input_str")
-def convert_to_camel_case(input_str: str) -> str:
-    """Converts INPUT_STR to camel case."""
-    click.echo(toCamelCase(input_str))
-
-
-@tocase.command("snake")
-@click.argument("input_str")
-def convert_to_snake_case(input_str: str) -> str:
-    """Converts INPUT_STR to snake case."""
-    click.echo(to_snake_case(input_str))
 
 
 def _get_databricks_info(catalog: str, schema: str, table_name: str):
