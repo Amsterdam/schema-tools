@@ -23,8 +23,10 @@ from schematools.validation import (
     validate_dataset_versions_version,
     validate_schema_identifier,
     validate_table,
+    validate_table_status_change,
     validate_table_version,
     validate_temporal_relations,
+    validate_version_status_change,
 )
 
 
@@ -1078,12 +1080,28 @@ def test_validate_table_version(prev, curr, errors):
 @pytest.mark.parametrize(
     "prev,curr,errors",
     [
-        # No updates
+        # Change status from discontinued to stable fail
         (
             {
                 "id": "test",
                 "version": "1.0.0",
                 "status": "discontinued",
+                "schema": {"properties": {"field": {}}},
+            },
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "status": "stable",
+                "schema": {"properties": {"field": {}}},
+            },
+            ["Cannot change status of table 'test' from 'discontinued' to 'stable'."],
+        ),
+        # Change status from deprecated to discontinued
+        (
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "status": "deprecated",
                 "schema": {"properties": {"field": {}}},
             },
             {
@@ -1126,13 +1144,27 @@ def test_validate_table_version(prev, curr, errors):
             },
             ["Cannot make changes to a discontinued table: 'test'."],
         ),
-        # Change metadata fail
+        # Changed object property fail
+        (
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "status": "discontinued",
+                "schema": {"properties": {"field": {"object": {"type": "object", "properties": {"element": {"type": "string"}}}}}},
+            },
+            {
+                "id": "test",
+                "version": "1.0.0",
+                "status": "discontinued",
+                "schema": {"properties": {"field": {"object": {"type": "object", "properties": {"element": {"type": "integer"}}}}}},
+            },
+            ["Cannot make changes to a discontinued table: 'test'."],
+        ),
+        # Change metadata success
         (
             {
                 "id": "test",
                 "title": "Title 1",
-                "description": "Description 1",
-                "shortname": "test",
                 "version": "1.0.0",
                 "status": "discontinued",
                 "schema": {"properties": {"field": {}}},
@@ -1140,13 +1172,11 @@ def test_validate_table_version(prev, curr, errors):
             {
                 "id": "test",
                 "title": "Title 2",
-                "description": "Description 2",
-                "shortname": "test2",
                 "version": "1.0.1",
                 "status": "discontinued",
                 "schema": {"properties": {"field": {}}},
             },
-            ["Cannot make changes to a discontinued table: 'test'."],
+            [],
         ),
         # Change version number on table fail
         (
@@ -1184,8 +1214,8 @@ def test_validate_table_version(prev, curr, errors):
         ),
     ],
 )
-def test_update_table_with_discontinued_status(prev, curr, errors):
-    table_errors = validate_table_version(prev, curr)
+def test_validate_table_status_change(prev, curr, errors):
+    table_errors = validate_table_status_change(prev, curr)
     assert table_errors == errors
 
 
@@ -1273,3 +1303,54 @@ def test_update_table_with_discontinued_status(prev, curr, errors):
 def test_validate_dataset_versions_version(prev, curr, errors):
     dataset_version_errors = validate_dataset_versions_version("dataset", prev, curr)
     assert dataset_version_errors == errors
+
+@pytest.mark.parametrize(
+    "prev,curr,errors",
+    [
+        # No changes
+        (
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            []
+        ),
+        # Change status fail
+        (
+            {"id": "dataset", "versions": {"v1": {"status": "deprecated", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            {"id": "dataset", "versions": {"v1": {"status": "under_development", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            ["Cannot change status of dataset version 'v1' from 'deprecated' to 'under_development' in dataset 'dataset'."]
+        ),
+        # Change status success
+        (
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            {"id": "dataset", "versions": {"v1": {"status": "deprecated", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            []
+        ),
+        # Added table
+        (
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}]}}},
+            ["Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."],
+        ),
+        # Removed table
+        (
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}]}}},
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            ["Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."],
+        ),
+        # Changed table version
+        (
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v2"}]}}},
+            ["Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."],
+        ),
+        # Multiple errors
+        (
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}]}}},
+            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v2"}]}}},
+            ["Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."],
+        ),
+    ],
+)
+def test_validate_version_status_change(prev, curr, errors):
+    table_errors = validate_version_status_change(prev, curr)
+    assert table_errors == errors

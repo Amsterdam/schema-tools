@@ -1045,10 +1045,6 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
     current_version = SemVer(current["version"])
     table_id = previous["id"]
 
-    # Check that there are no changes made to a table with a status 'discontinued'
-    if previous.get("status") == "discontinued" and previous != current:
-        return [f"Cannot make changes to a discontinued table: '{table_id}'."]
-
     # Check if major version hasn't changed in the file. Major version bumps
     # should result in a new file
     if current_version.major != SemVer(previous["version"]).major:
@@ -1101,5 +1097,50 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
                         f"Property '{prop}' on field '{field_name}' in table '{table_id}' "
                         f"has changed, expecting new version to be {expected_version}."
                     )
+
+    return table_errors
+
+def validate_version_status_change(previous: dict, current: dict) -> list[str]:
+    errors = []
+    dataset_id = previous["id"]
+
+    for version_id, previous_version in previous["versions"].items():
+        current_version = current["versions"].get(version_id)
+
+        if (previous_version["status"] in {"discontinued", "deprecated"} and
+            current_version["status"] in {"stable", "under_development"}):
+            errors.append(
+                f"Cannot change status of dataset version '{version_id}' "
+                f"from '{previous_version['status']}' to '{current_version['status']}' "
+                f"in dataset '{dataset_id}'."
+            )
+
+        if (previous_version["status"] == "discontinued" and
+            previous_version["tables"] != current_version["tables"]):
+                errors.append(
+                    f"Cannot make changes to a discontinued dataset version '{version_id}' in "
+                    f"dataset '{dataset_id}'."
+                )
+
+    return errors
+
+def validate_table_status_change(previous: dict, current: dict) -> list[str]:
+    table_errors = []
+    table_id = previous["id"]
+
+    previous_fields = previous["schema"]["properties"]
+    current_fields = current["schema"]["properties"]
+
+    if (previous["status"] in {"discontinued", "deprecated"} and
+        current["status"] in {"stable", "under_development"}):
+        table_errors.append(
+            f"Cannot change status of table '{table_id}' from "
+            f"'{previous['status']}' to '{current['status']}'."
+        )
+
+    if previous["status"] == "discontinued" and previous_fields != current_fields:
+        table_errors.append(
+            f"Cannot make changes to a discontinued table: '{table_id}'."
+        )
 
     return table_errors

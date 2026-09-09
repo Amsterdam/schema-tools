@@ -683,6 +683,12 @@ def validate_datasets(paths: tuple[str], prefix: str):
                     previous["id"], previous_version, current_version
                 )
             )
+            dataset_errors.extend(
+                ValidationIssue.from_string(ve)
+                for ve in validation.validate_version_status_change(
+                    previous_version, current_version
+                )
+            )
             if dataset_errors:
                 errors[path].extend(dataset_errors)
                 click.echo("FAIL")
@@ -834,6 +840,11 @@ def validate_tables(paths: tuple[str], prefix: str):
             table_errors.extend(
                 ValidationIssue.from_string(ve)
                 for ve in validation.validate_table_version(previous, current)
+            )
+
+            table_errors.extend(
+                ValidationIssue.from_string(ve)
+                for ve in validation.validate_table_status_change(previous, current)
             )
 
             if table_errors:
