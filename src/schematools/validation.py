@@ -1102,21 +1102,23 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
 
 def validate_version_status_change(previous: dict, current: dict) -> list[str]:
     errors = []
-    dataset_id = previous["id"]
+    dataset_id = previous.get("id")
 
-    for version_id, previous_version in previous["versions"].items():
-        current_version = current["versions"].get(version_id)
+    for version_id, previous_version in (previous.get("versions") or {}).items():
+        current_version = current.get("versions").get(version_id)
+        previous_status = previous_version.get("status")
+        current_status = current_version.get("status")
 
-        if (previous_version["status"] in {"discontinued", "deprecated"} and
-            current_version["status"] in {"stable", "under_development"}):
+        if (previous_status in {"discontinued", "deprecated"} and
+            current_status in {"stable", "under_development"}):
             errors.append(
                 f"Cannot change status of dataset version '{version_id}' "
-                f"from '{previous_version['status']}' to '{current_version['status']}' "
+                f"from '{previous_status}' to '{current_status}' "
                 f"in dataset '{dataset_id}'."
             )
 
-        if (previous_version["status"] == "discontinued" and
-            previous_version["tables"] != current_version["tables"]):
+        if (previous_status == "discontinued" and
+            previous_version.get("tables") != current_version.get("tables")):
                 errors.append(
                     f"Cannot make changes to a discontinued dataset version '{version_id}' in "
                     f"dataset '{dataset_id}'."
@@ -1126,19 +1128,22 @@ def validate_version_status_change(previous: dict, current: dict) -> list[str]:
 
 def validate_table_status_change(previous: dict, current: dict) -> list[str]:
     table_errors = []
-    table_id = previous["id"]
+    table_id = previous.get("id")
 
     previous_fields = previous["schema"]["properties"]
     current_fields = current["schema"]["properties"]
 
-    if (previous["status"] in {"discontinued", "deprecated"} and
-        current["status"] in {"stable", "under_development"}):
+    previous_status = previous.get("status")
+    current_status = current.get("status")
+
+    if (previous_status in {"discontinued", "deprecated"} and
+        current_status in {"stable", "under_development"}):
         table_errors.append(
             f"Cannot change status of table '{table_id}' from "
-            f"'{previous['status']}' to '{current['status']}'."
+            f"'{previous_status}' to '{current_status}'."
         )
 
-    if previous["status"] == "discontinued" and previous_fields != current_fields:
+    if previous_status == "discontinued" and previous_fields != current_fields:
         table_errors.append(
             f"Cannot make changes to a discontinued table: '{table_id}'."
         )
