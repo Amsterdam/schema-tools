@@ -412,13 +412,12 @@ def test_datasetversion_status_choices(meetbouten_dataset):
 @pytest.mark.django_db
 def test_update_version_status_to_discontinued(fietspaaltjes_dataset):
     """Prove that the status field of DatasetVersion can be updated to 'discontinued'."""
-    fp_dataset = Dataset.objects.get(name="fietspaaltjes")
-
-    assert fp_dataset.versions.first().status == DatasetVersion.Status.STABLE
+    assert fietspaaltjes_dataset.versions.first().status == DatasetVersion.Status.STABLE
 
     # update version to discontinued
-    version = fp_dataset.versions.first()
+    version = fietspaaltjes_dataset.versions.first()
     version.status = DatasetVersion.Status.DISCONTINUED
     version.save(update_fields=["status"])
+    version.refresh_from_db()
 
-    assert fp_dataset.versions.first().status == DatasetVersion.Status.DISCONTINUED
+    assert fietspaaltjes_dataset.versions.first().status == DatasetVersion.Status.DISCONTINUED

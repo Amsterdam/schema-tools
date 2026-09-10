@@ -1178,7 +1178,7 @@ def test_validate_table_version(prev, curr, errors):
             },
             [],
         ),
-        # Change version number on table fail
+        # Change field title on table fail
         (
             {
                 "id": "test",
@@ -1197,15 +1197,15 @@ def test_validate_table_version(prev, curr, errors):
             },
             {
                 "id": "test",
-                "version": "2.0.0",
+                "version": "1.0.0",
                 "status": "discontinued",
                 "schema": {
                     "properties": {
                         "field": {
                             "title": "field2",
-                            "unit": "cm2",
-                            "shortname": "field2",
-                            "description": "Field2",
+                            "unit": "m2",
+                            "shortname": "field",
+                            "description": "Field1",
                         }
                     }
                 },
@@ -1346,8 +1346,11 @@ def test_validate_dataset_versions_version(prev, curr, errors):
         # Multiple errors
         (
             {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}]}}},
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v2"}]}}},
-            ["Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."],
+            {"id": "dataset", "versions": {"v1": {"status": "under_development", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v2"}]}}},
+            [
+                "Cannot change status of dataset version 'v1' from 'discontinued' to 'under_development' in dataset 'dataset'.",
+                "Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."
+            ],
         ),
     ],
 )
