@@ -56,6 +56,24 @@ class BaseExporter:
         self.sa_tables = tables_factory(
             self.dataset_schema, metadata, version=context.export.version
         )
+        self._related_sa_tables: dict[str, dict[str, Table]] = {}
+
+    def _get_sa_table(self, table_schema: DatasetTableSchema) -> Table:
+        dataset_id = table_schema.dataset.id
+
+        # If table is in the same dataset as the export
+        if dataset_id == self.dataset_schema.id:
+            return self.sa_tables[table_schema.id]
+
+        # Related table from another dataset (default version)
+        if dataset_id not in self._related_sa_tables:
+            self._related_sa_tables[dataset_id] = tables_factory(
+                table_schema.dataset,
+                metadata,
+                version=table_schema.dataset.default_version,
+            )
+
+        return self._related_sa_tables[dataset_id][table_schema.id]
 
     def _get_fields(self, table: DatasetTableSchema):
         dataset = self.dataset_schema
@@ -155,6 +173,7 @@ class BaseExporter:
                     last_exc = None
                     break
                 except Exception as exc:  # noqa: BLE001
+                    print(exc)
                     last_exc = exc
                     if attempt < max_attempts:
                         time.sleep(delay_seconds)

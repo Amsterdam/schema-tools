@@ -104,6 +104,32 @@ class TestExports:
         importer.load_file(ndjson_path)
 
     @pytest.fixture
+    def maingeo_relation_content(self, here, engine, maingeo_relation_export_schema):
+        ndjson_path = here / "files" / "data" / "maingeo_relation.ndjson"
+        importer = NDJSONImporter(maingeo_relation_export_schema, engine)
+        importer.generate_db_objects("maingeo_relation", truncate=True, ind_extra_index=False)
+        importer.load_file(ndjson_path)
+
+    @pytest.fixture
+    def related_geometry_content(self, here, engine, related_geometry_export_schema):
+        ndjson_path = here / "files" / "data" / "related_geometry.ndjson"
+        importer = NDJSONImporter(related_geometry_export_schema, engine)
+        importer.generate_db_objects("related_geometry", truncate=True, ind_extra_index=False)
+        importer.load_file(ndjson_path)
+
+    @pytest.fixture
+    def maingeo_local_with_related_geometry_content(self, here, engine, maingeo_local_export_schema):
+        importer = NDJSONImporter(maingeo_local_export_schema, engine)
+        maingeo_path = here / "files" / "data" / "maingeo_local.ndjson"
+        local_geometry_path = here / "files" / "data" / "local_geometry.ndjson"
+
+        importer.generate_db_objects("maingeo_local", truncate=True, ind_extra_index=False)
+        importer.load_file(maingeo_path)
+
+        importer.generate_db_objects("local_geometry", truncate=False, ind_extra_index=False)
+        importer.load_file(local_geometry_path)
+
+    @pytest.fixture
     def tmp_folder(self):
         """Creates a temporary folder for exports and cleans it up after the test."""
         path = Path("tmp")
@@ -585,6 +611,86 @@ class TestExports:
                 },
                 "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
             }
+
+
+    def test_geojson_export_maingeometry_relation_diff_dataset(
+        self,
+        maingeo_relation_export_schema,
+        related_geometry_export_schema,
+        maingeo_relation_content,
+        related_geometry_content,
+        create_context,
+    ):
+        # Export maingeo_relation table
+        export_definition = next(
+            exp
+            for exp in maingeo_relation_export_schema.versions["v1"].exports
+            if exp.filetype == "geojson"
+        )
+        context = create_context(maingeo_relation_export_schema, export_definition)
+        GeoJsonExporter(context).export_tables()
+        with open(
+            context.folder / "maingeo_relation_v1_maingeo_relation_openbaar.geojson"
+        ) as out_file:
+            result = orjson.loads(out_file.read())
+
+            feature_mr = result["features"][0]
+            feature_mr["geometry"]["coordinates"][1] = round(feature_mr["geometry"]["coordinates"][1], 5)
+            feature_mr["geometry"]["coordinates"][0] = round(feature_mr["geometry"]["coordinates"][0], 5)
+
+        # Export related table (to compare the geometry value)
+        export_definition = next(
+            exp
+            for exp in related_geometry_export_schema.versions["v1"].exports
+            if exp.filetype == "geojson"
+        )
+        context = create_context(related_geometry_export_schema, export_definition)
+        GeoJsonExporter(context).export_tables()
+        with open(
+            context.folder / "related_geometry_v1_related_geometry_openbaar.geojson"
+        ) as out_file:
+            result = orjson.loads(out_file.read())
+
+            feature_rg = result["features"][0]
+            feature_rg["geometry"]["coordinates"][1] = round(feature_rg["geometry"]["coordinates"][1], 5)
+            feature_rg["geometry"]["coordinates"][0] = round(feature_rg["geometry"]["coordinates"][0], 5)
+
+        # First table should have geometry field from related table
+        # and geometry values should be the same
+        assert "geometry" in feature_mr
+        assert feature_mr["geometry"] == feature_rg["geometry"]
+
+    def test_geojson_export_maingeometry_relation_same_dataset(
+        self,
+        maingeo_local_export_schema,
+        maingeo_local_with_related_geometry_content,
+        create_context,
+    ):
+        export_definition = next(
+            exp
+            for exp in maingeo_local_export_schema.versions["v1"].exports
+            if exp.filetype == "geojson"
+        )
+        context = create_context(maingeo_local_export_schema, export_definition)
+        GeoJsonExporter(context).export_tables()
+
+        with open(
+            context.folder / "maingeo_local_v1_maingeo_local_openbaar.geojson"
+        ) as out_file:
+            result = orjson.loads(out_file.read())
+            feature_ml = result["features"][0]
+
+        with open(
+            context.folder / "maingeo_local_v1_local_geometry_openbaar.geojson"
+        ) as out_file:
+            result = orjson.loads(out_file.read())
+            feature_lg = result["features"][0]
+
+        # First table should have geometry field from related table
+        # and geometry values should be the same
+        assert "geometry" in feature_ml
+        assert feature_ml["geometry"] == feature_lg["geometry"]
+
 
     def test_export_cli(self, engine, meetbouten_content):
         """Test the export CLI command."""
