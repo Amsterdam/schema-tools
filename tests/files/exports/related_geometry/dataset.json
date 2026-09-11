@@ -1,6 +1,6 @@
 {
   "type": "dataset",
-  "id": "maingeo_relation",
+  "id": "related_geometry",
   "publisher": "unknown",
   "crs": "EPSG:28992",
   "defaultVersion": "v1",
@@ -14,13 +14,13 @@
           "name": "all",
           "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
           "scopes": ["openbaar"],
-          "tables": ["maingeo_relation"]
+          "tables": ["related_geometry"]
         }
       ],
       "tables": [
       {
-        "id": "maingeo_relation",
-        "title": "Table with relation as main geometry ",
+        "id": "related_geometry",
+        "title": "Related table with geometry",
         "type": "table",
         "version": "1.0.0",
         "schema": {
@@ -28,7 +28,7 @@
           "identifier": "id",
           "type": "object",
           "additionalProperties": false,
-          "mainGeometry": "related_geometry",
+          "mainGeometry": "geometrie",
           "required": [
             "id",
             "schema"
@@ -43,11 +43,10 @@
               "type": "string",
               "description": "Unieke identificatie"
             },
-            "related_geometry": {
-              "title": "related table",
-              "description": "The geometry of the related table",
-              "type": "string",
-              "relation": "related_geometry:related_geometry"
+            "geometrie": {
+              "$ref": "https://geojson.org/schema/Point.json",
+              "title": "Geometrie",
+              "description": "Aanduiding voor de geometrie van het object. Bevat punt-geometrie."
             }
           }
         }
