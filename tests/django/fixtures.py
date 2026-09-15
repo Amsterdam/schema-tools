@@ -111,6 +111,11 @@ def meetbouten_dataset(meetbouten_schema: DatasetSchema) -> Dataset:
     """Create Meetbouten dataset."""
     return Dataset.create_for_schema(meetbouten_schema)
 
+@pytest.fixture
+def fietspaaltjes_dataset(fietspaaltjes_schema: DatasetSchema) -> Dataset:
+    """Create Fietspaaltjes dataset."""
+    return Dataset.create_for_schema(fietspaaltjes_schema)
+
 
 @pytest.fixture
 def meldingen_dataset(meldingen_schema: DatasetSchema) -> Dataset:

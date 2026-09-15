@@ -1,3 +1,7 @@
+# 2026-09-09 (9.13.0)
+
+* Add discontinued version and table status with validation.
+
 # 2026-08-18 (9.12.7)
 
 * Bump some dependencies.

@@ -1,0 +1,79 @@
+{
+  "id": "fietspaaltjes",
+  "type": "dataset",
+  "title": "Fietspaaltjes",
+  "crs": "EPSG:28992",
+  "publisher": "unknown",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": true,
+      "status": "stable",
+      "version": "1.0.0",
+      "tables": [
+        {
+          "id": "fietspaaltjes",
+          "title": "Fietspaaltjes title",
+          "type": "table",
+          "version": "1.0.0",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "identifier": [
+              "id"
+            ],
+            "required": [
+              "id",
+              "schema"
+            ],
+            "display": "id",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "Fietspaaltje-ID"
+              },
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "geometry": {
+                "$ref": "https://geojson.org/schema/Point.json",
+                "description": "Geometrie"
+              }
+            }
+          },
+          "status": "stable"
+        },
+        {
+          "id": "paaltjes",
+          "type": "table",
+          "version": "1.0.0",
+          "auth": "BAG/R",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "schema"
+            ],
+            "display": "id",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3.1.0#/definitions/schema"
+              },
+              "status": {
+                "type": "string",
+                "description": "Status"
+              }
+            }
+          },
+          "status": "stable"
+        }
+      ]
+    }
+  }
+}

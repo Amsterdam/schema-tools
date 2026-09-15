@@ -893,6 +893,7 @@ class DatasetVersionSchema(SchemaType):
         under_development = "under_development"
         superseded = "superseded"
         deprecated = "deprecated"
+        discontinued = "discontinued"
 
     def __init__(
         self,
@@ -1223,6 +1224,7 @@ class DatasetTableSchema(SchemaType):
         # Temporary fix to allow migration to Amsterdam Schema v4, used in v9.0.0-rc1
         beschikbaar = "beschikbaar"
         niet_beschikbaar = "niet_beschikbaar"
+        discontinued = "discontinued"
 
     def __init__(
         self,
@@ -1265,7 +1267,7 @@ class DatasetTableSchema(SchemaType):
             element["auth"] = self.schema.loader.get_scope(element["auth"]["$ref"]).json_data()
         if isinstance(element.get("auth"), list):
             element["auth"] = [
-                self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a
+                (self.schema.loader.get_scope(a["$ref"]).json_data() if "$ref" in a else a)
                 for a in element["auth"]
             ]
         if element.get("type") == "object":

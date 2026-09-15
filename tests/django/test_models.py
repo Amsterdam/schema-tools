@@ -408,3 +408,16 @@ def test_datasetversion_status_choices(meetbouten_dataset):
     assert schema.versions["v2"]["status"] == DatasetVersionSchema.Status.deprecated.value
     assert meetbouten_dataset.versions.first().status == DatasetVersion.Status.STABLE
     assert meetbouten_dataset.versions.last().status == DatasetVersion.Status.DEPRECATED
+
+@pytest.mark.django_db
+def test_update_version_status_to_discontinued(fietspaaltjes_dataset):
+    """Prove that the status field of DatasetVersion can be updated to 'discontinued'."""
+    assert fietspaaltjes_dataset.versions.first().status == DatasetVersion.Status.STABLE
+
+    # update version to discontinued
+    version = fietspaaltjes_dataset.versions.first()
+    version.status = DatasetVersion.Status.DISCONTINUED
+    version.save(update_fields=["status"])
+    version.refresh_from_db()
+
+    assert fietspaaltjes_dataset.versions.first().status == DatasetVersion.Status.DISCONTINUED

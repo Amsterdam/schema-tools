@@ -1090,3 +1090,53 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
                     )
 
     return table_errors
+
+def validate_version_status_change(previous: dict, current: dict) -> list[str]:
+    errors = []
+    dataset_id = previous.get("id")
+
+    for version_id, previous_version in (previous.get("versions") or {}).items():
+        current_version = current.get("versions").get(version_id)
+        previous_status = previous_version.get("status")
+        current_status = current_version.get("status")
+
+        if (previous_status in {"discontinued", "deprecated"} and
+            current_status in {"stable", "under_development"}):
+            errors.append(
+                f"Cannot change status of dataset version '{version_id}' "
+                f"from '{previous_status}' to '{current_status}' "
+                f"in dataset '{dataset_id}'."
+            )
+
+        if (previous_status == "discontinued" and
+            previous_version.get("tables") != current_version.get("tables")):
+                errors.append(
+                    f"Cannot make changes to a discontinued dataset version '{version_id}' in "
+                    f"dataset '{dataset_id}'."
+                )
+
+    return errors
+
+def validate_table_status_change(previous: dict, current: dict) -> list[str]:
+    table_errors = []
+    table_id = previous.get("id")
+
+    previous_fields = previous["schema"]["properties"]
+    current_fields = current["schema"]["properties"]
+
+    previous_status = previous.get("status")
+    current_status = current.get("status")
+
+    if (previous_status in {"discontinued", "deprecated"} and
+        current_status in {"stable", "under_development"}):
+        table_errors.append(
+            f"Cannot change status of table '{table_id}' from "
+            f"'{previous_status}' to '{current_status}'."
+        )
+
+    if previous_status == "discontinued" and previous_fields != current_fields:
+        table_errors.append(
+            f"Cannot make changes to a discontinued table: '{table_id}'."
+        )
+
+    return table_errors

@@ -374,6 +374,7 @@ class DatasetVersion(models.Model):
         STABLE = "S", "stable"
         SUPERSEDED = "U", "superseded"
         DEPRECATED = "X", "deprecated"
+        DISCONTINUED = "F", "discontinued"
 
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="versions")
     version = models.CharField(default="v1", max_length=3)
