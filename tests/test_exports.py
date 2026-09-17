@@ -831,3 +831,59 @@ class TestExports:
         assert len(calls) == 3  # aborts before merge
         consolidated = context.folder / export_definition.filename_without_zip
         assert not consolidated.exists()
+
+
+    def test_geopackage_export_maingeometry_relation_diff_dataset(
+        self,
+        maingeo_relation_export_schema,
+        related_geometry_export_schema,
+        maingeo_relation_content,
+        related_geometry_content,
+        create_context,
+    ):
+        # Make maingeo relation export
+        export_definition = next(
+            exp
+            for exp in maingeo_relation_export_schema.versions["v1"].exports
+            if exp.filetype == "gpkg"
+        )
+        context = create_context(maingeo_relation_export_schema, export_definition)
+        GeopackageExporter(context).export_tables()
+
+        # Related geometry export
+        export_definition = next(
+            exp
+            for exp in related_geometry_export_schema.versions["v1"].exports
+            if exp.filetype == "gpkg"
+        )
+        context = create_context(related_geometry_export_schema, export_definition)
+        GeopackageExporter(context).export_tables()
+
+        # Fetch geometry and related instance from export
+        with closing(
+            sqlite3.connect(context.folder / "maingeo_relation_v1_all_openbaar.gpkg")
+        ) as sqlite3_conn:
+            cursor = sqlite3_conn.cursor()
+            cursor.execute("SELECT * FROM maingeo_relation_v1")
+            column_names = [column[0] for column in cursor.description]
+            assert "geometry" in column_names
+
+            row = cursor.fetchone()
+            assert row is not None
+
+            # Field names are hardcoded now, they could be derived from the schema if needed
+            exported_geometry = row[column_names.index("geometry")]
+            related_id = row[column_names.index("related_geometry_id")]
+
+        # Compare geometry from above with geometry of the related tables instance
+        with closing(
+            sqlite3.connect(context.folder / "related_geometry_v1_all_openbaar.gpkg")
+        ) as sqlite3_conn:
+            cursor = sqlite3_conn.cursor()
+            cursor.execute(
+                "SELECT geometrie FROM related_geometry_v1 WHERE id = ?",
+                (related_id,),
+            )
+            related_geometry = cursor.fetchone()[0]
+
+        assert exported_geometry == related_geometry
