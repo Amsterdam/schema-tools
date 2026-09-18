@@ -268,6 +268,23 @@ def meetbouten_export_schema(export_schema_loader) -> DatasetSchema:
     """A dataset schema for export tests."""
     return export_schema_loader.get_dataset_from_file("meetbouten/dataset.json")
 
+@pytest.fixture()
+def maingeo_relation_export_schema(export_schema_loader) -> DatasetSchema:
+    """A dataset schema for export tests."""
+    return export_schema_loader.get_dataset_from_file("maingeo_relation/dataset.json")
+
+
+@pytest.fixture()
+def related_geometry_export_schema(export_schema_loader) -> DatasetSchema:
+    """Separate dataset holding the table that maingeo_relation points its mainGeometry at."""
+    return export_schema_loader.get_dataset_from_file("related_geometry/dataset.json")
+
+
+@pytest.fixture()
+def maingeo_local_export_schema(export_schema_loader) -> DatasetSchema:
+    """A dataset whose mainGeometry relation points at a table in that same dataset."""
+    return export_schema_loader.get_dataset_from_file("maingeo_local/dataset.json")
+
 
 @pytest.fixture()
 def fietspaaltjes_export_schema(export_schema_loader) -> DatasetSchema:

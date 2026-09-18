@@ -6,7 +6,8 @@ from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import IO
 
-from sqlalchemy import Column, MetaData, Table
+from sqlalchemy import Column, MetaData, Table, select
+from sqlalchemy.sql import Select
 from sqlalchemy.sql.elements import ColumnElement
 
 from schematools.factories import tables_factory
@@ -56,6 +57,24 @@ class BaseExporter:
         self.sa_tables = tables_factory(
             self.dataset_schema, metadata, version=context.export.version
         )
+        self._related_sa_tables: dict[str, dict[str, Table]] = {}
+
+    def _get_sa_table(self, table_schema: DatasetTableSchema) -> Table:
+        dataset_id = table_schema.dataset.id
+
+        # If table is in the same dataset as the export
+        if dataset_id == self.dataset_schema.id:
+            return self.sa_tables[table_schema.id]
+
+        # Related table from another dataset (default version)
+        if dataset_id not in self._related_sa_tables:
+            self._related_sa_tables[dataset_id] = tables_factory(
+                table_schema.dataset,
+                metadata,
+                version=table_schema.dataset.default_version,
+            )
+
+        return self._related_sa_tables[dataset_id][table_schema.id]
 
     def _get_fields(self, table: DatasetTableSchema):
         dataset = self.dataset_schema
@@ -104,6 +123,42 @@ class BaseExporter:
                 & ((end > self.temporal_date) | (end == None))  # noqa: E711
             )
         return None
+
+    def _get_query(
+        self,
+        table: DatasetTableSchema,
+        columns: Iterable[Column],
+        temporal_clause: ColumnElement[bool] | None,
+    ) -> tuple[list[Column], Select]:
+        query_columns = list(columns)
+        query: Select = select(*query_columns)
+
+        if table.has_main_geometry and (rel_table := table.main_geometry_field.related_table):
+            sa_table = self._get_sa_table(table)
+            sa_related_table = self._get_sa_table(rel_table)
+
+            related_geo_col = self._get_column(
+                sa_related_table,
+                rel_table.main_geometry_field,
+            ).label("geometry")
+            query_columns.append(related_geo_col)
+
+            right_pk_field = rel_table.get_field_by_id(rel_table.identifier[0])
+            left_fk = getattr(sa_table.c, table.main_geometry_field.db_name)
+            right_pk = getattr(sa_related_table.c, right_pk_field.db_name)
+
+            query = select(*query_columns).select_from(sa_table).join(
+                sa_related_table,
+                left_fk == right_pk,
+                isouter=True,
+            )
+
+        if temporal_clause is not None:
+            query = query.where(temporal_clause)
+        if self.size is not None:
+            query = query.limit(self.size)
+
+        return query_columns, query
 
     def export_tables(
         self,
@@ -155,6 +210,7 @@ class BaseExporter:
                     last_exc = None
                     break
                 except Exception as exc:  # noqa: BLE001
+                    print(exc)
                     last_exc = exc
                     if attempt < max_attempts:
                         time.sleep(delay_seconds)

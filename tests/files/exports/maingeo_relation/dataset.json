@@ -1,0 +1,58 @@
+{
+  "type": "dataset",
+  "id": "maingeo_relation",
+  "publisher": "unknown",
+  "crs": "EPSG:28992",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": false,
+      "status": "stable",
+      "version": "1.0.0",
+      "exports": [
+        {
+          "name": "all",
+          "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
+          "scopes": ["openbaar"],
+          "tables": ["maingeo_relation"]
+        }
+      ],
+      "tables": [
+      {
+        "id": "maingeo_relation",
+        "title": "Table with relation as main geometry ",
+        "type": "table",
+        "version": "1.0.0",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "identifier": "id",
+          "type": "object",
+          "additionalProperties": false,
+          "mainGeometry": "related_geometry",
+          "required": [
+            "id",
+            "schema"
+          ],
+          "display": "id",
+          "properties": {
+            "schema": {
+              "$ref": "https://schemas.data.amsterdam.nl/schema@v4#/definitions/schema"
+            },
+            "id": {
+              "title": "id",
+              "type": "string",
+              "description": "Unieke identificatie"
+            },
+            "related_geometry": {
+              "title": "related table",
+              "description": "The geometry of the related table",
+              "type": "string",
+              "relation": "related_geometry:related_geometry"
+            }
+          }
+        }
+      }
+      ]
+    }
+  }
+}

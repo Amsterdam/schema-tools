@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import IO, Any
 
 import orjson
-from sqlalchemy import Column, MetaData, select
+from sqlalchemy import Column, MetaData
 from sqlalchemy.sql.elements import ColumnElement
 
 from schematools.exports.base import BaseExporter
@@ -39,11 +39,8 @@ class GeoJsonExporter(BaseExporter):
         temporal_clause: ColumnElement[bool] | None,
         srid: str | None,
     ):
-        query = select(*columns)
-        if temporal_clause is not None:
-            query = query.where(temporal_clause)
-        if self.size is not None:
-            query = query.limit(self.size)
+        _, query = self._get_query(table, columns, temporal_clause)
+
 
         try:
             # Write header
@@ -94,7 +91,6 @@ class GeoJsonExporter(BaseExporter):
                                     continue  # Skip features that can't be serialized
                         except OSError:
                             raise  # Re-raise file writing errors
-
             file_handle.write("]}")
         except OSError as e:
             raise OSError(f"Failed to write GeoJSON file: {e!s}") from e

@@ -1,0 +1,91 @@
+{
+  "type": "dataset",
+  "id": "maingeo_local",
+  "publisher": "unknown",
+  "crs": "EPSG:28992",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": false,
+      "status": "stable",
+      "version": "1.0.0",
+      "exports": [
+        {
+          "name": "all",
+          "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
+          "scopes": ["openbaar"],
+          "tables": ["maingeo_local", "local_geometry"]
+        }
+      ],
+      "tables": [
+      {
+        "id": "maingeo_local",
+        "title": "Table with a same-dataset relation as main geometry",
+        "type": "table",
+        "version": "1.0.0",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "identifier": "id",
+          "type": "object",
+          "additionalProperties": false,
+          "mainGeometry": "has_local_geometry",
+          "required": [
+            "id",
+            "schema"
+          ],
+          "display": "id",
+          "properties": {
+            "schema": {
+              "$ref": "https://schemas.data.amsterdam.nl/schema@v4#/definitions/schema"
+            },
+            "id": {
+              "title": "id",
+              "type": "string",
+              "description": "Unieke identificatie"
+            },
+            "has_local_geometry": {
+              "title": "related table",
+              "description": "The geometry of the related table in the same dataset",
+              "type": "string",
+              "relation": "maingeo_local:local_geometry"
+            }
+          }
+        }
+      },
+      {
+        "id": "local_geometry",
+        "title": "Related table with geometry, in the same dataset",
+        "type": "table",
+        "version": "1.0.0",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "identifier": "id",
+          "type": "object",
+          "additionalProperties": false,
+          "mainGeometry": "geometrie",
+          "required": [
+            "id",
+            "schema"
+          ],
+          "display": "id",
+          "properties": {
+            "schema": {
+              "$ref": "https://schemas.data.amsterdam.nl/schema@v4#/definitions/schema"
+            },
+            "id": {
+              "title": "id",
+              "type": "string",
+              "description": "Unieke identificatie"
+            },
+            "geometrie": {
+              "$ref": "https://geojson.org/schema/Polygon.json",
+              "title": "Geometrie",
+              "description": "Aanduiding voor de geometrie van het object. Bevat vlak-geometrie."
+            }
+          }
+        }
+      }
+      ]
+    }
+  }
+}

@@ -15,6 +15,58 @@ logger = logging.getLogger(__name__)
 class GeopackageExporter(BaseExporter):
     extension = "gpkg"
 
+    def _build_query(self, table) -> sql.SQL | None:
+
+        field_names = sql.SQL(",").join(
+            sql.Identifier(field.db_name)
+            for field in self._get_fields(table)
+            if field.db_name != "schema"
+        )
+        if not next(field_names.__iter__(), None):
+            return None
+
+        table_name = sql.Identifier(table.db_name)
+
+        # Join related table when mainGeometry is a relation
+        if table.has_main_geometry and (rel_table := table.main_geometry_field.related_table):
+            field_names = sql.SQL(",").join(
+                sql.SQL("current_table.{field_name}").format(
+                    field_name=sql.Identifier(field.db_name)
+                )
+                for field in self._get_fields(table)
+                if field.db_name != "schema"
+            )
+
+            right_pk = rel_table.get_field_by_id(rel_table.identifier[0])
+
+            query = sql.SQL(
+                "SELECT {field_names}, related_table.{related_geometry} AS geometry "
+                "FROM {table_name} AS current_table "
+                "LEFT JOIN {related_table} AS related_table "
+                "ON current_table.{left_fk} = related_table.{right_pk}"
+            ).format(
+                field_names=field_names,
+                related_geometry=sql.Identifier(rel_table.main_geometry_field.db_name),
+                table_name=sql.Identifier(table.db_name),
+                related_table=sql.Identifier(rel_table.db_name),
+                left_fk=sql.Identifier(table.main_geometry_field.db_name),
+                right_pk=sql.Identifier(right_pk.db_name),
+            )
+
+        else:
+            query = sql.SQL("SELECT {field_names} from {table_name}").format(
+                field_names=field_names,
+                table_name=table_name,
+            )
+
+        if self.size is not None:
+            query = sql.SQL("{query} LIMIT {size}").format(
+                query=query,
+                size=sql.Literal(self.size),
+            )
+
+        return query
+
     def export_tables(
         self,
         *,
@@ -44,22 +96,10 @@ class GeopackageExporter(BaseExporter):
                 # Remove zero-byte/partial artifacts from previous runs.
                 output_path.unlink()
             logger.info("Exporting %s.", filename)
-            field_names = sql.SQL(",").join(
-                sql.Identifier(field.db_name)
-                for field in self._get_fields(table)
-                if field.db_name != "schema"
-            )
-            if not next(field_names.__iter__(), None):
-                continue
 
-            table_name = sql.Identifier(table.db_name)
-            query = sql.SQL("SELECT {field_names} from {table_name}").format(
-                field_names=field_names, table_name=table_name
-            )
-            if self.size is not None:
-                query = sql.SQL("{query} LIMIT {size}").format(
-                    query=query, size=sql.Literal(self.size)
-                )
+            query = self._build_query(table)
+            if query is None:
+                continue
 
             query_string = query.as_string()
             last_exc: Exception | None = None

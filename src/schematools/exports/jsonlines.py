@@ -6,8 +6,7 @@ from typing import IO, Any
 
 import jsonlines
 import orjson
-from sqlalchemy import Column, MetaData, select
-from sqlalchemy.sql import Select
+from sqlalchemy import Column, MetaData
 from sqlalchemy.sql.elements import ColumnElement
 
 from schematools.exports.base import BaseExporter
@@ -48,6 +47,8 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
                 if field.is_geo or field.is_nested_object
                 else lambda v: v
             )
+        if table.has_main_geometry and table.main_geometry_field.related_table:
+            lookup["geometry"] = lambda v: orjson.loads(v) if v else v
         return lookup
 
     def write_rows(  # noqa: D102
@@ -60,11 +61,7 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
     ):
         writer = jsonlines.Writer(file_handle, dumps=_dumps)  # ty:ignore[unknown-argument]
         row_modifier = self._get_row_modifier(table)
-        query: Select = select(*columns)
-        if temporal_clause is not None:
-            query = query.where(temporal_clause)
-        if self.size is not None:
-            query = query.limit(self.size)
+        _, query = self._get_query(table, columns, temporal_clause)
 
         with self.engine.execution_options(yield_per=1000).connect() as conn:
             result = conn.execute(query)
