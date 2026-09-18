@@ -4,7 +4,7 @@ import csv
 from collections.abc import Iterable
 from typing import IO
 
-from sqlalchemy import Column, MetaData, select
+from sqlalchemy import Column, MetaData
 from sqlalchemy.sql.elements import ColumnElement
 
 from schematools.exports.base import BaseExporter
@@ -42,17 +42,13 @@ class CsvExporter(BaseExporter):  # noqa: D101
         temporal_clause: ColumnElement[bool] | None,
         srid: str | None,
     ):
-        field_names = [c.name for c in columns]
+        query_columns, query = self._get_query(table, columns, temporal_clause)
+        field_names = [c.name for c in query_columns]
         writer = csv.DictWriter(file_handle, field_names, extrasaction="ignore")
         # Use capitalize() on headers, because csv export does the same
         writer.writerow({fn: toCamelCase(fn).capitalize() for fn in field_names})
 
         array_fields = {to_snake_case(field.id) for field in table.fields if field.is_array}
-        query = select(*columns)
-        if temporal_clause is not None:
-            query = query.where(temporal_clause)
-        if self.size is not None:
-            query = query.limit(self.size)
 
         # Use server-side cursor with small batches
         with (

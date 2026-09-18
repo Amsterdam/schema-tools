@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import IO, Any
 
 import orjson
-from sqlalchemy import Column, MetaData, select
+from sqlalchemy import Column, MetaData
 from sqlalchemy.sql.elements import ColumnElement
 
 from schematools.exports.base import BaseExporter
@@ -39,39 +39,7 @@ class GeoJsonExporter(BaseExporter):
         temporal_clause: ColumnElement[bool] | None,
         srid: str | None,
     ):
-
-        query = select(*columns)
-        if temporal_clause is not None:
-            query = query.where(temporal_clause)
-        if self.size is not None:
-            query = query.limit(self.size)
-
-
-        # if table.main geo = relation
-        if table.has_main_geometry and (rel_table := table.main_geometry_field.related_table):
-                # Get the sa tables for current and related
-                sa_table = self._get_sa_table(table)
-                sa_related_table = self._get_sa_table(rel_table)
-
-                # Get main geo sa column from related table
-                related_geo_col = self._get_column(sa_related_table, rel_table.main_geometry_field)
-                related_geo_col = related_geo_col.label("geometry")
-
-                # Get all columns for query
-                query_columns = list(columns)
-                query_columns.append(related_geo_col)
-
-                # Construct join on clause
-                left_fk = getattr(sa_table.c, table.main_geometry_field.db_name)
-                right_pk_field_id = rel_table.identifier[0]
-                right_pk_field = rel_table.get_field_by_id(right_pk_field_id)
-                right_pk = getattr(sa_related_table.c, right_pk_field.db_name)
-
-                query = select(*query_columns).select_from(sa_table).join(
-                    sa_related_table,
-                    left_fk == right_pk,
-                    isouter=True,
-                )
+        _, query = self._get_query(table, columns, temporal_clause)
 
 
         try:
