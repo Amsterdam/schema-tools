@@ -130,17 +130,24 @@ class BaseExporter:
         columns: Iterable[Column],
         temporal_clause: ColumnElement[bool] | None,
     ) -> tuple[list[Column], Select]:
+
+        # Construct query for SQAlchemy
         query_columns = list(columns)
         query: Select = select(*query_columns)
 
-        if table.has_main_geometry and (rel_table := table.main_geometry_field.related_table):
+        # Exception: if mainGeometry is a relation, we also need the related table
+        if table.has_relation_as_main_geometry:
+            rel_table = table.main_geometry_field.related_table
             sa_table = self._get_sa_table(table)
             sa_related_table = self._get_sa_table(rel_table)
 
+            # Create a synthetic field 'geometry' for the current table
             related_geo_col = self._get_column(
                 sa_related_table,
                 rel_table.main_geometry_field,
             ).label("geometry")
+
+            # Add the mainGeometry field of the related table to the SA query
             query_columns.append(related_geo_col)
 
             right_pk_field = rel_table.get_field_by_id(rel_table.identifier[0])

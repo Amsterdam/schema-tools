@@ -1,0 +1,96 @@
+{
+  "type": "dataset",
+  "id": "related_geometry",
+  "publisher": "unknown",
+  "crs": "EPSG:28992",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": false,
+      "status": "stable",
+      "version": "1.0.0",
+      "exports": [
+        {
+          "name": "all",
+          "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
+          "scopes": ["openbaar"],
+          "tables": ["related_geometry"]
+        }
+      ],
+      "tables": [
+      {
+        "id": "related_geometry",
+        "title": "Related table with geometry",
+        "type": "table",
+        "version": "1.0.0",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "identifier": "id",
+          "type": "object",
+          "additionalProperties": false,
+          "mainGeometry": "geometrie",
+          "required": [
+            "id",
+            "schema"
+          ],
+          "display": "id",
+          "properties": {
+            "schema": {
+              "$ref": "https://schemas.data.amsterdam.nl/schema@v4#/definitions/schema"
+            },
+            "id": {
+              "title": "id",
+              "type": "string",
+              "description": "Unieke identificatie"
+            },
+            "geometrie": {
+              "$ref": "https://geojson.org/schema/Point.json",
+              "title": "Geometrie",
+              "description": "Aanduiding voor de geometrie van het object. Bevat punt-geometrie."
+            },
+            "geometrieRelatie": {
+              "title": "Geometrie relatie",
+              "description": "Relatieveld naar het geometrieveld uit andere tabel",
+              "type": "string",
+              "relation": "related_geometry:geometrie_relatie"
+            }
+          }
+        }
+      },
+      {
+        "id": "geometrie_relatie",
+        "title": "Related table with geometry",
+        "type": "table",
+        "version": "1.0.0",
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "identifier": "id",
+          "type": "object",
+          "additionalProperties": false,
+          "mainGeometry": "geometrie",
+          "required": [
+            "id",
+            "schema"
+          ],
+          "display": "id",
+          "properties": {
+            "schema": {
+              "$ref": "https://schemas.data.amsterdam.nl/schema@v4#/definitions/schema"
+            },
+            "id": {
+              "title": "id",
+              "type": "string",
+              "description": "Unieke identificatie"
+            },
+            "geometrie": {
+              "$ref": "https://geojson.org/schema/Point.json",
+              "title": "Geometrie",
+              "description": "Aanduiding voor de geometrie van het object. Bevat punt-geometrie."
+            }
+          }
+        }
+      }
+      ]
+    }
+  }
+}
