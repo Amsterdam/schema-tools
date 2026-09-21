@@ -217,7 +217,6 @@ class BaseExporter:
                     last_exc = None
                     break
                 except Exception as exc:  # noqa: BLE001
-                    print(exc)
                     last_exc = exc
                     if attempt < max_attempts:
                         time.sleep(delay_seconds)
