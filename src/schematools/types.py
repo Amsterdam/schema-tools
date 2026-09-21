@@ -1582,8 +1582,13 @@ class DatasetTableSchema(SchemaType):
         return "mainGeometry" in self["schema"]
 
     @property
+    def has_relation_as_main_geometry(self) -> bool:
+        """Indicates if this table has a relation as main geometry field."""
+        return self.has_main_geometry and self.main_geometry_field.related_table
+
+    @property
     def main_geometry(self) -> str:
-        """The main geometry field, if there is a geometry field available.
+        """The main geometry field name, if there is a geometry field available.
         Default to "geometry" for existing schemas without a mainGeometry field.
         """
         return str(self["schema"].get("mainGeometry", "geometry"))
@@ -1591,16 +1596,12 @@ class DatasetTableSchema(SchemaType):
     @property
     def main_geometry_field(self) -> DatasetFieldSchema:
         """The main geometry as field object"""
-        field = self.get_field_by_id(self.main_geometry)
+        return self.get_field_by_id(self.main_geometry)
 
-        """
-        # if main geo is a relation, get that field from related table
-        if field.related_table:
-            return field.related_table.get_field_by_id(
-                field.related_table.main_geometry
-            )
-        """
-        return field
+    @property
+    def related_main_geometry_field(self) -> DatasetFieldSchema:
+        """Main geometry field of the related table."""
+        return self.main_geometry_field.related_table.main_geometry_field
 
     @property
     def identifier(self) -> list[str]:

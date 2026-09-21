@@ -379,10 +379,7 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
 
     # If mainGeometry is defined:
     try:
-
-        # We don't use main_geometry_field here, because that directly takes the mainGeometry of
-        # a possible related table, and we want to validate it first
-        field = table.get_field_by_id(table.main_geometry)
+        field = table.main_geometry_field
 
         # If mainGeoField is a relation
         if rel_table := field.related_table:

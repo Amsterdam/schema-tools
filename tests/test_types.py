@@ -49,14 +49,15 @@ def test_geo_and_id_when_not_configured(schema_loader, afvalwegingen_schema) -> 
     id_field = [field for field in table.fields if [field.name] == table.identifier][0]
     assert id_field.is_primary
 
-def test_main_geometry_is_relation(schema_loader) -> None:
-    monumenten = schema_loader.get_dataset_from_file("monumenten.json")
-    bag = schema_loader.get_dataset_from_file("bag.json")
+def test_main_geometry_is_relation_types(schema_loader) -> None:
+    maingeo_relation = schema_loader.get_dataset_from_file("maingeo_relation.json")
+    related_geometry = schema_loader.get_dataset_from_file("related_geometry.json")
 
-    monumenten_monumenten = monumenten.get_table_by_id("monumenten")
-    bag_panden = bag.get_table_by_id("panden")
+    maingeo_relation_table = maingeo_relation.get_table_by_id("maingeo_relation")
+    related_geometry_table = related_geometry.get_table_by_id("related_geometry")
 
-    assert monumenten_monumenten.main_geometry_field == bag_panden.main_geometry_field
+    assert maingeo_relation_table.has_relation_as_main_geometry
+    assert maingeo_relation_table.related_main_geometry_field == related_geometry_table.main_geometry_field
 
 
 def test_import_dataset_separate_table_files(schema_loader) -> None:
