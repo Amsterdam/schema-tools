@@ -269,21 +269,21 @@ def meetbouten_export_schema(export_schema_loader) -> DatasetSchema:
     return export_schema_loader.get_dataset_from_file("meetbouten/dataset.json")
 
 @pytest.fixture()
-def maingeo_relation_export_schema(export_schema_loader) -> DatasetSchema:
-    """A dataset schema for export tests."""
-    return export_schema_loader.get_dataset_from_file("maingeo_relation/dataset.json")
+def maingeo_receiver_export_schema(export_schema_loader) -> DatasetSchema:
+    """A dataset with a table that has a relation field as mainGeometry."""
+    return export_schema_loader.get_dataset_from_file("maingeo_relation/maingeo_receiver.json")
 
 
 @pytest.fixture()
-def related_geometry_export_schema(export_schema_loader) -> DatasetSchema:
-    """Separate dataset holding the table that maingeo_relation points its mainGeometry at."""
-    return export_schema_loader.get_dataset_from_file("related_geometry/dataset.json")
+def geo_source_export_schema(export_schema_loader) -> DatasetSchema:
+    """Separate dataset with the table that maingeo_receiver points its mainGeometry at."""
+    return export_schema_loader.get_dataset_from_file("maingeo_relation/geo_source.json")
 
 
 @pytest.fixture()
-def maingeo_local_export_schema(export_schema_loader) -> DatasetSchema:
+def maingeo_receiver_local_export_schema(export_schema_loader) -> DatasetSchema:
     """A dataset whose mainGeometry relation points at a table in that same dataset."""
-    return export_schema_loader.get_dataset_from_file("maingeo_local/dataset.json")
+    return export_schema_loader.get_dataset_from_file("maingeo_relation/maingeo_receiver_local.json")
 
 
 @pytest.fixture()

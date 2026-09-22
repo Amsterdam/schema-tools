@@ -1,6 +1,6 @@
 {
   "type": "dataset",
-  "id": "maingeo_relation",
+  "id": "maingeo_receiver",
   "publisher": "unknown",
   "crs": "EPSG:28992",
   "defaultVersion": "v1",
@@ -14,12 +14,12 @@
           "name": "all",
           "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
           "scopes": ["openbaar"],
-          "tables": ["maingeo_relation"]
+          "tables": ["maingeo_receiver"]
         }
       ],
       "tables": [
       {
-        "id": "maingeo_relation",
+        "id": "maingeo_receiver",
         "title": "Table with relation as main geometry ",
         "type": "table",
         "version": "1.0.0",
@@ -28,7 +28,7 @@
           "identifier": "id",
           "type": "object",
           "additionalProperties": false,
-          "mainGeometry": "relatedGeometry",
+          "mainGeometry": "geo_source",
           "required": [
             "id",
             "schema"
@@ -43,11 +43,11 @@
               "type": "string",
               "description": "Unieke identificatie"
             },
-            "relatedGeometry": {
+            "geo_source": {
               "title": "related table",
               "description": "The geometry of the related table",
               "type": "string",
-              "relation": "related_geometry:related_geometry"
+              "relation": "geo_source:geo_source"
             }
           }
         }

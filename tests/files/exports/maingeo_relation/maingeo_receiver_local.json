@@ -1,6 +1,6 @@
 {
   "type": "dataset",
-  "id": "maingeo_local",
+  "id": "maingeo_receiver_local",
   "publisher": "unknown",
   "crs": "EPSG:28992",
   "defaultVersion": "v1",
@@ -14,12 +14,12 @@
           "name": "all",
           "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
           "scopes": ["openbaar"],
-          "tables": ["maingeo_local", "local_geometry"]
+          "tables": ["maingeo_receiver_local", "geo_source_local"]
         }
       ],
       "tables": [
       {
-        "id": "maingeo_local",
+        "id": "maingeo_receiver_local",
         "title": "Table with a same-dataset relation as main geometry",
         "type": "table",
         "version": "1.0.0",
@@ -47,14 +47,14 @@
               "title": "related table",
               "description": "The geometry of the related table in the same dataset",
               "type": "string",
-              "relation": "maingeo_local:local_geometry"
+              "relation": "maingeo_receiver_local:geo_source_local"
             }
           }
         }
       },
       {
-        "id": "local_geometry",
-        "title": "Related table with geometry, in the same dataset",
+        "id": "geo_source_local",
+        "title": "Table with source geometry for maingeo_receiver_local table, in the same dataset",
         "type": "table",
         "version": "1.0.0",
         "schema": {

@@ -28,7 +28,8 @@ class GeopackageExporter(BaseExporter):
         table_name = sql.Identifier(table.db_name)
 
         # Join related table when mainGeometry is a relation
-        if table.has_main_geometry and (rel_table := table.main_geometry_field.related_table):
+        if table.has_relation_as_main_geometry:
+            rel_table = table.main_geometry_field.related_table
             field_names = sql.SQL(",").join(
                 sql.SQL("current_table.{field_name}").format(
                     field_name=sql.Identifier(field.db_name)
@@ -40,13 +41,13 @@ class GeopackageExporter(BaseExporter):
             right_pk = rel_table.get_field_by_id(rel_table.identifier[0])
 
             query = sql.SQL(
-                "SELECT {field_names}, related_table.{related_geometry} AS geometry "
+                "SELECT {field_names}, related_table.{geo_source} AS geometry "
                 "FROM {table_name} AS current_table "
                 "LEFT JOIN {related_table} AS related_table "
                 "ON current_table.{left_fk} = related_table.{right_pk}"
             ).format(
                 field_names=field_names,
-                related_geometry=sql.Identifier(rel_table.main_geometry_field.db_name),
+                geo_source=sql.Identifier(rel_table.main_geometry_field.db_name),
                 table_name=sql.Identifier(table.db_name),
                 related_table=sql.Identifier(rel_table.db_name),
                 left_fk=sql.Identifier(table.main_geometry_field.db_name),
