@@ -1,6 +1,6 @@
 {
   "type": "dataset",
-  "id": "related_geometry",
+  "id": "geo_source",
   "publisher": "unknown",
   "crs": "EPSG:28992",
   "defaultVersion": "v1",
@@ -9,18 +9,10 @@
       "enableAPI": false,
       "status": "stable",
       "version": "1.0.0",
-      "exports": [
-        {
-          "name": "all",
-          "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
-          "scopes": ["openbaar"],
-          "tables": ["related_geometry"]
-        }
-      ],
       "tables": [
       {
-        "id": "related_geometry",
-        "title": "Related table with geometry",
+        "id": "geo_source",
+        "title": "Table with source geometry for maingeo_receiver",
         "type": "table",
         "version": "1.0.0",
         "schema": {
@@ -52,7 +44,7 @@
               "title": "Geometrie relatie",
               "description": "Relatieveld naar het geometrieveld uit andere tabel",
               "type": "string",
-              "relation": "related_geometry:geometrie_relatie"
+              "relation": "geo_source:geometrie_relatie"
             }
           }
         }

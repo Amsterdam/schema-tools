@@ -1,6 +1,6 @@
 {
   "type": "dataset",
-  "id": "maingeo_relation",
+  "id": "maingeo_receiver",
   "publisher": "unknown",
   "crs": "EPSG:28992",
   "defaultVersion": "v1",
@@ -9,18 +9,10 @@
       "enableAPI": false,
       "status": "stable",
       "version": "1.0.0",
-      "exports": [
-        {
-          "name": "all",
-          "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
-          "scopes": ["openbaar"],
-          "tables": ["maingeo_relation"]
-        }
-      ],
       "tables": [
       {
-        "id": "maingeo_relation",
-        "title": "Table with relation as main geometry ",
+        "id": "maingeo_receiver",
+        "title": "Test table with relation as main geometry",
         "type": "table",
         "version": "1.0.0",
         "schema": {
@@ -28,7 +20,7 @@
           "identifier": "id",
           "type": "object",
           "additionalProperties": false,
-          "mainGeometry": "related_geometry",
+          "mainGeometry": "relatedGeometry",
           "required": [
             "id",
             "schema"
@@ -43,11 +35,16 @@
               "type": "string",
               "description": "Unieke identificatie"
             },
-            "related_geometry": {
+            "relatedGeometry": {
               "title": "related table",
               "description": "The geometry of the related table",
               "type": "string",
-              "relation": "related_geometry:related_geometry"
+              "relation": "geo_source:geo_source"
+            },
+            "tableWithoutGeometry": {
+              "title": "table with no geometry fields",
+              "type": "string",
+              "relation": "meldingen:statistieken"
             }
           }
         }

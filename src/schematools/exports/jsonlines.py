@@ -47,7 +47,7 @@ class JsonLinesExporter(BaseExporter):  # noqa: D101
                 if field.is_geo or field.is_nested_object
                 else lambda v: v
             )
-        if table.has_main_geometry and table.main_geometry_field.related_table:
+        if table.has_relation_as_main_geometry:
             lookup["geometry"] = lambda v: orjson.loads(v) if v else v
         return lookup
 

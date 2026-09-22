@@ -1704,7 +1704,7 @@ class DatasetTableSchema(SchemaType):
 
     @cached_property
     def has_geometry_fields(self) -> bool:
-        return any(field.is_geo for field in self.fields) or self.has_main_geometry
+        return any(field.is_geo for field in self.fields) or self.has_relation_as_main_geometry
 
     @cached_property
     def db_name(self) -> str:

@@ -49,15 +49,20 @@ def test_geo_and_id_when_not_configured(schema_loader, afvalwegingen_schema) -> 
     id_field = [field for field in table.fields if [field.name] == table.identifier][0]
     assert id_field.is_primary
 
-def test_main_geometry_is_relation_types(schema_loader) -> None:
-    maingeo_relation = schema_loader.get_dataset_from_file("maingeo_relation.json")
-    related_geometry = schema_loader.get_dataset_from_file("related_geometry.json")
+def test_main_geometry_is_relation(schema_loader) -> None:
+    maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
+    geo_source = schema_loader.get_dataset_from_file("geo_source.json")
 
-    maingeo_relation_table = maingeo_relation.get_table_by_id("maingeo_relation")
-    related_geometry_table = related_geometry.get_table_by_id("related_geometry")
+    # maingeo_receiver has a a relation to the meldingen dataset, to test a
+    # validation case. So it is not used here, but without it, this fails
+    schema_loader.get_dataset_from_file("meldingen.json")
 
-    assert maingeo_relation_table.has_relation_as_main_geometry
-    assert maingeo_relation_table.related_main_geometry_field == related_geometry_table.main_geometry_field
+    maingeo_receiver_table = maingeo_receiver.get_table_by_id("maingeo_receiver")
+    geo_source_table = geo_source.get_table_by_id("geo_source")
+
+    assert maingeo_receiver_table.has_relation_as_main_geometry
+    assert maingeo_receiver_table.has_geometry_fields
+    assert maingeo_receiver_table.related_main_geometry_field == geo_source_table.main_geometry_field
 
 
 def test_import_dataset_separate_table_files(schema_loader) -> None:

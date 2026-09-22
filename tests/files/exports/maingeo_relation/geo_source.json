@@ -1,6 +1,6 @@
 {
   "type": "dataset",
-  "id": "related_geometry",
+  "id": "geo_source",
   "publisher": "unknown",
   "crs": "EPSG:28992",
   "defaultVersion": "v1",
@@ -14,13 +14,13 @@
           "name": "all",
           "filetypes": ["csv", "geojson", "gpkg", "jsonl"],
           "scopes": ["openbaar"],
-          "tables": ["related_geometry"]
+          "tables": ["geo_source"]
         }
       ],
       "tables": [
       {
-        "id": "related_geometry",
-        "title": "Related table with geometry",
+        "id": "geo_source",
+        "title": "Table containing the source geometry for maingeo_receiver",
         "type": "table",
         "version": "1.0.0",
         "schema": {

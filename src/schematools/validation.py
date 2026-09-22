@@ -358,12 +358,13 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
 
 @_register_validator("mainGeometry")
 def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
+    """"Validate mainGeometry field of all tables in dataset"""
     for table in dataset.get_all_tables():
         yield from _check_maingeometry_table(table)
 
 
 def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
-    """"""
+    """Validate the mainGeometry field of a table."""
     if not table.has_main_geometry:
         # mainGeometry should exist if a geometry field exists
         # but none of the geometry fields is called "geometry"
@@ -383,17 +384,10 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
 
         # If mainGeoField is a relation
         if rel_table := field.related_table:
-            if not rel_table.has_main_geometry:
-                # mainGeometry should exist if a geometry field exists
-                # but none of the geometry fields is called "geometry"
-                if rel_table.has_geometry_fields and not any(
-                    field.is_geo and field.id == "geometry"
-                    for field in rel_table.fields
-                ):
-                    yield (
-                        f"'mainGeometry' is required but not defined in table {rel_table.id}. "
-                        f"This table has fields of type geometry, "
-                        f"but none of these fields is called 'geometry'."
+            if not rel_table.has_geometry_fields:
+                yield (
+                        f"'mainGeometry' refers to table {rel_table.id}, but this table "
+                        f"doesn't have geometry fields. "
                     )
                 return
 
@@ -405,12 +399,6 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
                     yield (
                         f"mainGeometry of related table {rel_table} is a relation too: "
                         f"{rel_rel_table}. Please refer to that relation directly."
-                    )
-
-                if not rel_field.is_geo:
-                    yield (
-                        f"mainGeometry = {rel_field.id!r} is not a geometry field, "
-                        f"type = {rel_field.type!r}"
                     )
 
             except SchemaObjectNotFound as e:

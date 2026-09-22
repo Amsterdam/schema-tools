@@ -218,34 +218,22 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     )
 
 
-def test_main_geometry_is_relation_validation(schema_loader) -> None:
-    maingeo_relation = schema_loader.get_dataset_from_file("maingeo_relation.json")
-    related_geometry = schema_loader.get_dataset_from_file("related_geometry.json")
-
-    # Remove mainGeo of related table
-    related_geometry.get_table_by_id("related_geometry")["schema"].pop("mainGeometry")
-    error = next(validation.run(maingeo_relation))
-    assert "'mainGeometry' is required but not defined in table" in error.message
-
-    # Set mainGeo of related table to a non-existent field
-    related_geometry.get_table_by_id("related_geometry")["schema"]["mainGeometry"] = "non_existent_field"
-    error = next(validation.run(maingeo_relation))
-    assert "mainGeometry = 'non_existent_field'" in error.message
-    assert "Field 'non_existent_field' does not exist" in error.message
-
-    # Set mainGeo of related table to a non-geo type
-    related_geometry.get_table_by_id("related_geometry")["schema"]["mainGeometry"] = "id"
-    error = next(validation.run(maingeo_relation))
-    assert error.message == (
-        "mainGeometry = 'id' is not a geometry field, type = 'string'"
-    )
+def test_main_geometry_is_relation(schema_loader) -> None:
+    maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
+    geo_source = schema_loader.get_dataset_from_file("geo_source.json")
+    schema_loader.get_dataset_from_file("meldingen.json")
 
     # Set mainGeo of related table to a relation too
-    related_geometry.get_table_by_id("related_geometry")["schema"]["mainGeometry"] = "geometrieRelatie"
-    error = next(validation.run(maingeo_relation))
+    geo_source.get_table_by_id("geo_source")["schema"]["mainGeometry"] = "geometrieRelatie"
+    error = next(validation.run(maingeo_receiver))
     assert error.message == ("mainGeometry of related table <DatasetTableSchema: "
-    "related_geometry.related_geometry.v1> is a relation too: <DatasetTableSchema: "
-    "related_geometry.geometrie_relatie.v1>. Please refer to that relation directly.")
+    "geo_source.geo_source.v1> is a relation too: <DatasetTableSchema: "
+    "geo_source.geometrie_relatie.v1>. Please refer to that relation directly.")
+
+    # Set mainGeo to related table without geometry
+    maingeo_receiver.get_table_by_id("maingeo_receiver")["schema"]["mainGeometry"] = "tableWithoutGeometry"
+    error = next(validation.run(maingeo_receiver))
+    assert "but this table doesn't have geometry fields." in error.message
 
 
 def test_display(here: Path, schema_loader) -> None:

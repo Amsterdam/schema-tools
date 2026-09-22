@@ -94,7 +94,7 @@ class BaseExporter:
                     yield field
 
     def _get_column(self, sa_table: Table, field: DatasetFieldSchema) -> Column:
-        column = getattr(sa_table.c, field.db_name)
+        column = getattr(sa_table.columns, field.db_name)
         # apply all processors
         for processor in self.processors:
             column = processor(field, column)
@@ -115,8 +115,8 @@ class BaseExporter:
             return None
         temporal = table.temporal
         for dimension in temporal.dimensions.values():
-            start: Column = getattr(sa_table.c, dimension.start.db_name)
-            end: Column = getattr(sa_table.c, dimension.end.db_name)
+            start: Column = getattr(sa_table.columns, dimension.start.db_name)
+            end: Column = getattr(sa_table.columns, dimension.end.db_name)
             return (
                 # This is an SQLAlchemy statement, hence the &, | and == operators:
                 (start <= self.temporal_date)
@@ -151,7 +151,7 @@ class BaseExporter:
             query_columns.append(related_geo_col)
 
             right_pk_field = rel_table.get_field_by_id(rel_table.identifier[0])
-            left_fk = getattr(sa_table.c, table.main_geometry_field.db_name)
+            left_fk = getattr(sa_table.columns, table.main_geometry_field.db_name)
             right_pk = getattr(sa_related_table.c, right_pk_field.db_name)
 
             query = select(*query_columns).select_from(sa_table).join(
