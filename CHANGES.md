@@ -1,3 +1,7 @@
+# 2026-09-22 (9.14.0)
+
+* Allow mainGeometry to be relation to another table
+
 # 2026-09-09 (9.13.0)
 
 * Add discontinued version and table status with validation.
