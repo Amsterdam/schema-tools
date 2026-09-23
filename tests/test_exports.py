@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import io
 import logging
 import shlex
 import sqlite3
 from contextlib import closing
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -17,11 +19,61 @@ from sqlalchemy.sql import text
 from schematools.cli import export as export_cli
 from schematools.exports import export, logger
 from schematools.exports.csv import CsvExporter
-from schematools.exports.geojson import GeoJsonExporter
+from schematools.exports.geojson import GeoJsonExporter, _default, _dumps
 from schematools.exports.geopackage import GeopackageExporter
 from schematools.exports.jsonlines import JsonLinesExporter
 from schematools.importer.ndjson import NDJSONImporter
 from schematools.types import Export, ExportContext
+
+
+class _ResultStub:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def mappings(self):
+        return self
+
+    def partitions(self, size):
+        assert size == 1000
+        yield self._rows
+
+
+class _ConnectionStub:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def execute(self, query):
+        assert query == "query"
+        return _ResultStub(self._rows)
+
+
+class _EngineStub:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def execution_options(self, **kwargs):
+        assert kwargs == {"stream_results": True, "max_row_buffer": 1000}
+        return self
+
+    def connect(self):
+        return _ConnectionStub(self._rows)
+
+
+class _FailingWriter:
+    def write(self, _value):
+        raise OSError("disk full")
 
 
 class TestExports:
@@ -90,6 +142,16 @@ class TestExports:
         return DummyStorageClient()
 
     @pytest.fixture
+    def make_geojson_exporter(self):
+        def factory(rows):
+            exporter = GeoJsonExporter.__new__(GeoJsonExporter)
+            exporter.engine = _EngineStub(rows)
+            exporter._get_query = lambda table, columns, temporal_clause: (None, "query")
+            return exporter
+
+        return factory
+
+    @pytest.fixture
     def meetbouten_content(self, here, engine, meetbouten_export_schema):
         ndjson_path = here / "files" / "data" / "meetbouten.ndjson"
         importer = NDJSONImporter(meetbouten_export_schema, engine)
@@ -123,7 +185,9 @@ class TestExports:
         maingeo_path = here / "files" / "data" / "maingeo_receiver_local.ndjson"
         local_geometry_path = here / "files" / "data" / "geo_source_local.ndjson"
 
-        importer.generate_db_objects("maingeo_receiver_local", truncate=True, ind_extra_index=False)
+        importer.generate_db_objects(
+            "maingeo_receiver_local", truncate=True, ind_extra_index=False
+        )
         importer.load_file(maingeo_path)
 
         importer.generate_db_objects("geo_source_local", truncate=False, ind_extra_index=False)
@@ -612,6 +676,74 @@ class TestExports:
                 "geometry": {"type": "Point", "coordinates": [4.86497, 52.37055]},
             }
 
+    def test_geojson_default_and_dumps_handle_decimals(self):
+        assert _default(Decimal("1.25")) == "1.25"
+        assert _dumps({"value": Decimal("1.25")}) == '{"value":"1.25"}'
+
+        with pytest.raises(TypeError):
+            _default(object())
+
+    def test_geojson_write_rows_skips_invalid_features_and_writes_commas(
+        self, make_geojson_exporter
+    ):
+        exporter = make_geojson_exporter(
+            [
+                {"valid_name": "first", "geometry": '{"type":"Point","coordinates":[1,2]}'},
+                {"geometry": '{"coordinates":[3,4]}'},
+                {"geometry": '{"type": invalid json}'},
+                {"bad_value": object(), "geometry": b'{"type":"Point","coordinates":[5,6]}'},
+                {"valid_name": "second", "geometry": b'{"type":"Point","coordinates":[7,8]}'},
+            ]
+        )
+
+        output = io.StringIO()
+
+        exporter.write_rows(output, table=None, columns=[], temporal_clause=None, srid=None)
+
+        result = orjson.loads(output.getvalue())
+        assert result == {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {"validName": "first"},
+                    "geometry": {"type": "Point", "coordinates": [1, 2]},
+                },
+                {
+                    "type": "Feature",
+                    "properties": {"validName": "second"},
+                    "geometry": {"type": "Point", "coordinates": [7, 8]},
+                },
+            ],
+        }
+
+    def test_geojson_write_rows_wraps_oserror(self, make_geojson_exporter):
+        exporter = make_geojson_exporter([])
+
+        with pytest.raises(OSError, match="Failed to write GeoJSON file: disk full"):
+            exporter.write_rows(
+                _FailingWriter(), table=None, columns=[], temporal_clause=None, srid=None
+            )
+
+    def test_geojson_process_row_uses_bytes_geometry(self, make_geojson_exporter):
+        exporter = make_geojson_exporter([])
+        features = []
+
+        exporter._process_row(
+            {
+                "display_name": "cafes",
+                "geometry": b'{"type":"Point","coordinates":[4.9,52.3]}',
+            },
+            features,
+        )
+
+        assert features == [
+            {
+                "type": "Feature",
+                "properties": {"displayName": "cafes"},
+                "geometry": {"type": "Point", "coordinates": [4.9, 52.3]},
+            }
+        ]
 
     def test_export_cli(self, engine, meetbouten_content):
         """Test the export CLI command."""
@@ -754,20 +886,22 @@ class TestExports:
         assert not consolidated.exists()
 
     def test_csv_export_maingeometry_relation_diff_dataset(
-            self,
-            maingeo_receiver_export_schema,
-            geo_source_export_schema,
-            maingeo_receiver_content,
-            geo_source_content,
-            create_context,
-        ):
+        self,
+        maingeo_receiver_export_schema,
+        geo_source_export_schema,
+        maingeo_receiver_content,
+        geo_source_content,
+        create_context,
+    ):
 
         # Export maingeo_receiver table
         export_definition = maingeo_receiver_export_schema.versions["v1"].exports[0]
         context = create_context(maingeo_receiver_export_schema, export_definition)
         CsvExporter(context).export_tables()
 
-        with open(context.folder / "maingeo_receiver_v1_maingeo_receiver_openbaar.csv") as out_file:
+        with open(
+            context.folder / "maingeo_receiver_v1_maingeo_receiver_openbaar.csv"
+        ) as out_file:
             result = out_file.read().split("\n")
             headers = result[0].split(",")
             assert "Geometry" in headers
@@ -787,13 +921,13 @@ class TestExports:
             assert geometry == expected_geometry
 
     def test_jsonlines_export_maingeometry_relation_diff_dataset(
-            self,
-            maingeo_receiver_export_schema,
-            geo_source_export_schema,
-            maingeo_receiver_content,
-            geo_source_content,
-            create_context,
-        ):
+        self,
+        maingeo_receiver_export_schema,
+        geo_source_export_schema,
+        maingeo_receiver_content,
+        geo_source_content,
+        create_context,
+    ):
 
         # Export maingeo_receiver table
         export_definition = next(
@@ -804,11 +938,12 @@ class TestExports:
         context = create_context(maingeo_receiver_export_schema, export_definition)
         JsonLinesExporter(context).export_tables()
 
-        with open(context.folder / "maingeo_receiver_v1_maingeo_receiver_openbaar.jsonl") as out_file:
+        with open(
+            context.folder / "maingeo_receiver_v1_maingeo_receiver_openbaar.jsonl"
+        ) as out_file:
             result = orjson.loads(out_file.read())
-            assert 'geometry' in result
+            assert "geometry" in result
             geometry = result["geometry"]
-
 
         # Export the related table to verify geometry value is the same
         export_definition = next(
@@ -824,135 +959,140 @@ class TestExports:
             assert geometry == result["geometrie"]
 
     def test_geojson_export_maingeometry_relation_diff_dataset(
-            self,
-            maingeo_receiver_export_schema,
-            geo_source_export_schema,
-            maingeo_receiver_content,
-            geo_source_content,
-            create_context,
-        ):
-            # Export maingeo_receiver table
-            export_definition = next(
-                exp
-                for exp in maingeo_receiver_export_schema.versions["v1"].exports
-                if exp.filetype == "geojson"
+        self,
+        maingeo_receiver_export_schema,
+        geo_source_export_schema,
+        maingeo_receiver_content,
+        geo_source_content,
+        create_context,
+    ):
+        # Export maingeo_receiver table
+        export_definition = next(
+            exp
+            for exp in maingeo_receiver_export_schema.versions["v1"].exports
+            if exp.filetype == "geojson"
+        )
+        context = create_context(maingeo_receiver_export_schema, export_definition)
+        GeoJsonExporter(context).export_tables()
+        with open(
+            context.folder / "maingeo_receiver_v1_maingeo_receiver_openbaar.geojson"
+        ) as out_file:
+            result = orjson.loads(out_file.read())
+
+            feature_mr = result["features"][0]
+            feature_mr["geometry"]["coordinates"][1] = round(
+                feature_mr["geometry"]["coordinates"][1], 5
             )
-            context = create_context(maingeo_receiver_export_schema, export_definition)
-            GeoJsonExporter(context).export_tables()
-            with open(
-                context.folder / "maingeo_receiver_v1_maingeo_receiver_openbaar.geojson"
-            ) as out_file:
-                result = orjson.loads(out_file.read())
-
-                feature_mr = result["features"][0]
-                feature_mr["geometry"]["coordinates"][1] = round(feature_mr["geometry"]["coordinates"][1], 5)
-                feature_mr["geometry"]["coordinates"][0] = round(feature_mr["geometry"]["coordinates"][0], 5)
-
-            # Export related table (to compare the geometry value)
-            export_definition = next(
-                exp
-                for exp in geo_source_export_schema.versions["v1"].exports
-                if exp.filetype == "geojson"
+            feature_mr["geometry"]["coordinates"][0] = round(
+                feature_mr["geometry"]["coordinates"][0], 5
             )
-            context = create_context(geo_source_export_schema, export_definition)
-            GeoJsonExporter(context).export_tables()
-            with open(
-                context.folder / "geo_source_v1_geo_source_openbaar.geojson"
-            ) as out_file:
-                result = orjson.loads(out_file.read())
 
-                feature_rg = result["features"][0]
-                feature_rg["geometry"]["coordinates"][1] = round(feature_rg["geometry"]["coordinates"][1], 5)
-                feature_rg["geometry"]["coordinates"][0] = round(feature_rg["geometry"]["coordinates"][0], 5)
+        # Export related table (to compare the geometry value)
+        export_definition = next(
+            exp
+            for exp in geo_source_export_schema.versions["v1"].exports
+            if exp.filetype == "geojson"
+        )
+        context = create_context(geo_source_export_schema, export_definition)
+        GeoJsonExporter(context).export_tables()
+        with open(context.folder / "geo_source_v1_geo_source_openbaar.geojson") as out_file:
+            result = orjson.loads(out_file.read())
 
-            # First table should have geometry field from related table
-            # and geometry values should be the same
-            assert "geometry" in feature_mr
-            assert feature_mr["geometry"] == feature_rg["geometry"]
+            feature_rg = result["features"][0]
+            feature_rg["geometry"]["coordinates"][1] = round(
+                feature_rg["geometry"]["coordinates"][1], 5
+            )
+            feature_rg["geometry"]["coordinates"][0] = round(
+                feature_rg["geometry"]["coordinates"][0], 5
+            )
+
+        # First table should have geometry field from related table
+        # and geometry values should be the same
+        assert "geometry" in feature_mr
+        assert feature_mr["geometry"] == feature_rg["geometry"]
 
     def test_geojson_export_maingeometry_relation_same_dataset(
-            self,
-            maingeo_receiver_local_export_schema,
-            maingeo_receiver_local_content,
-            create_context,
-        ):
-            export_definition = next(
-                exp
-                for exp in maingeo_receiver_local_export_schema.versions["v1"].exports
-                if exp.filetype == "geojson"
-            )
-            context = create_context(maingeo_receiver_local_export_schema, export_definition)
-            GeoJsonExporter(context).export_tables()
+        self,
+        maingeo_receiver_local_export_schema,
+        maingeo_receiver_local_content,
+        create_context,
+    ):
+        export_definition = next(
+            exp
+            for exp in maingeo_receiver_local_export_schema.versions["v1"].exports
+            if exp.filetype == "geojson"
+        )
+        context = create_context(maingeo_receiver_local_export_schema, export_definition)
+        GeoJsonExporter(context).export_tables()
 
-            with open(
-                context.folder / "maingeo_receiver_local_v1_maingeo_receiver_local_openbaar.geojson"
-            ) as out_file:
-                result = orjson.loads(out_file.read())
-                feature_ml = result["features"][0]
+        with open(
+            context.folder / "maingeo_receiver_local_v1_maingeo_receiver_local_openbaar.geojson"
+        ) as out_file:
+            result = orjson.loads(out_file.read())
+            feature_ml = result["features"][0]
 
-            with open(
-                context.folder / "maingeo_receiver_local_v1_geo_source_local_openbaar.geojson"
-            ) as out_file:
-                result = orjson.loads(out_file.read())
-                feature_lg = result["features"][0]
+        with open(
+            context.folder / "maingeo_receiver_local_v1_geo_source_local_openbaar.geojson"
+        ) as out_file:
+            result = orjson.loads(out_file.read())
+            feature_lg = result["features"][0]
 
-            # First table should have geometry field from related table
-            # and geometry values should be the same
-            assert "geometry" in feature_ml
-            assert feature_ml["geometry"] == feature_lg["geometry"]
-
+        # First table should have geometry field from related table
+        # and geometry values should be the same
+        assert "geometry" in feature_ml
+        assert feature_ml["geometry"] == feature_lg["geometry"]
 
     def test_geopackage_export_maingeometry_relation_diff_dataset(
-            self,
-            maingeo_receiver_export_schema,
-            geo_source_export_schema,
-            maingeo_receiver_content,
-            geo_source_content,
-            create_context,
-        ):
-            # Make maingeo relation export
-            export_definition = next(
-                exp
-                for exp in maingeo_receiver_export_schema.versions["v1"].exports
-                if exp.filetype == "gpkg"
+        self,
+        maingeo_receiver_export_schema,
+        geo_source_export_schema,
+        maingeo_receiver_content,
+        geo_source_content,
+        create_context,
+    ):
+        # Make maingeo relation export
+        export_definition = next(
+            exp
+            for exp in maingeo_receiver_export_schema.versions["v1"].exports
+            if exp.filetype == "gpkg"
+        )
+        context = create_context(maingeo_receiver_export_schema, export_definition)
+        GeopackageExporter(context).export_tables()
+
+        # Related geometry export
+        export_definition = next(
+            exp
+            for exp in geo_source_export_schema.versions["v1"].exports
+            if exp.filetype == "gpkg"
+        )
+        context = create_context(geo_source_export_schema, export_definition)
+        GeopackageExporter(context).export_tables()
+
+        # Fetch geometry and related instance from export
+        with closing(
+            sqlite3.connect(context.folder / "maingeo_receiver_v1_all_openbaar.gpkg")
+        ) as sqlite3_conn:
+            cursor = sqlite3_conn.cursor()
+            cursor.execute("SELECT * FROM maingeo_receiver_v1")
+            column_names = [column[0] for column in cursor.description]
+            assert "geometry" in column_names
+
+            row = cursor.fetchone()
+            assert row is not None
+
+            # Field names are hardcoded now, they could be derived from the schema if needed
+            exported_geometry = row[column_names.index("geometry")]
+            related_id = row[column_names.index("geo_source_id")]
+
+        # Compare geometry from above with geometry of the related tables instance
+        with closing(
+            sqlite3.connect(context.folder / "geo_source_v1_all_openbaar.gpkg")
+        ) as sqlite3_conn:
+            cursor = sqlite3_conn.cursor()
+            cursor.execute(
+                "SELECT geometrie FROM geo_source_v1 WHERE id = ?",
+                (related_id,),
             )
-            context = create_context(maingeo_receiver_export_schema, export_definition)
-            GeopackageExporter(context).export_tables()
+            geo_source = cursor.fetchone()[0]
 
-            # Related geometry export
-            export_definition = next(
-                exp
-                for exp in geo_source_export_schema.versions["v1"].exports
-                if exp.filetype == "gpkg"
-            )
-            context = create_context(geo_source_export_schema, export_definition)
-            GeopackageExporter(context).export_tables()
-
-            # Fetch geometry and related instance from export
-            with closing(
-                sqlite3.connect(context.folder / "maingeo_receiver_v1_all_openbaar.gpkg")
-            ) as sqlite3_conn:
-                cursor = sqlite3_conn.cursor()
-                cursor.execute("SELECT * FROM maingeo_receiver_v1")
-                column_names = [column[0] for column in cursor.description]
-                assert "geometry" in column_names
-
-                row = cursor.fetchone()
-                assert row is not None
-
-                # Field names are hardcoded now, they could be derived from the schema if needed
-                exported_geometry = row[column_names.index("geometry")]
-                related_id = row[column_names.index("geo_source_id")]
-
-            # Compare geometry from above with geometry of the related tables instance
-            with closing(
-                sqlite3.connect(context.folder / "geo_source_v1_all_openbaar.gpkg")
-            ) as sqlite3_conn:
-                cursor = sqlite3_conn.cursor()
-                cursor.execute(
-                    "SELECT geometrie FROM geo_source_v1 WHERE id = ?",
-                    (related_id,),
-                )
-                geo_source = cursor.fetchone()[0]
-
-            assert exported_geometry == geo_source
+        assert exported_geometry == geo_source
