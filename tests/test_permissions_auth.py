@@ -81,7 +81,6 @@ class TestProfileActivation:
 
 
 class TestTableAccess:
-
     def test_has_table_fields_access(self, id_auth_schema):
         """Prove that a table with one protected field cannot be accessed with OPENBAAR scope."""
 
