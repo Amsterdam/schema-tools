@@ -12,6 +12,7 @@ from schematools.contrib.django.models import (
     Dataset,
     DatasetTable,
     DatasetVersion,
+    DynamicModel,
     LooseRelationField,
     LooseRelationManyToManyField,
 )
@@ -369,6 +370,88 @@ class TestDjangoModelFactory:
         assert isinstance(model_fields["soort_grootte"], models.JSONField)
 
 
+@pytest.mark.django_db
+def test_dynamic_model_accessors_and_str_use_model_metadata(afval_dataset):
+    factory = DjangoModelFactory(afval_dataset)
+    model_cls = {cls._meta.model_name: cls for cls in factory.build_models()}["containers"]
+    instance = model_cls(pk=12)
+
+    display_field = model_cls.get_display_field()
+    assert display_field is not None
+    setattr(instance, display_field, "Shown value")
+
+    assert str(instance) == "Shown value"
+    assert model_cls.get_dataset() is afval_dataset
+    assert model_cls.get_dataset_id() == afval_dataset.schema.id
+    assert model_cls.get_dataset_path() == afval_dataset.path
+    assert model_cls.get_dataset_schema() is afval_dataset.schema
+    assert model_cls.table_schema() is model_cls._table_schema
+    assert model_cls.get_table_id() == model_cls._table_schema.id
+    assert model_cls.has_parent_table() is model_cls._table_schema.has_parent_table
+    assert model_cls.has_display_field() is True
+    assert model_cls.is_temporal() is model_cls._is_temporal
+
+
+@pytest.mark.django_db
+def test_dynamic_model_str_falls_back_without_display_field(afval_dataset):
+    factory = DjangoModelFactory(afval_dataset)
+    model_cls = {cls._meta.model_name: cls for cls in factory.build_models()}["containers"]
+    instance = model_cls(pk=99)
+    original_display_field = model_cls._display_field
+
+    try:
+        model_cls._display_field = None
+        assert str(instance) == f"(no title: {model_cls._meta.object_name} #99)"
+        assert model_cls.has_display_field() is False
+        assert model_cls.get_display_field() is None
+    finally:
+        model_cls._display_field = original_display_field
+
+
+@pytest.mark.django_db
+def test_get_field_schema_returns_schema_for_forward_and_reverse_relations(afval_dataset):
+    factory = DjangoModelFactory(afval_dataset)
+    model_cls = {cls._meta.model_name: cls for cls in factory.build_models()}["containers"]
+    cluster_field = model_cls._meta.get_field("cluster")
+
+    schema_field = model_cls.get_field_schema(cluster_field)
+    reverse_schema_field = model_cls.get_field_schema(cluster_field.remote_field)
+
+    assert schema_field is cluster_field.field_schema
+    assert reverse_schema_field is cluster_field.field_schema
+
+
+@pytest.mark.django_db
+def test_get_field_schema_rejects_non_dynamic_and_auto_created_fields(afval_dataset):
+    factory = DjangoModelFactory(afval_dataset)
+    model_cls = {cls._meta.model_name: cls for cls in factory.build_models()}["containers"]
+
+    with pytest.raises(
+        ValueError,
+        match="only usable on fields from on DynamicModel instances",
+    ):
+        DynamicModel.get_field_schema(Dataset._meta.get_field("name"))
+
+    auto_created_field = type(
+        "FieldStub",
+        (),
+        {"model": model_cls, "auto_created": True, "name": "generated_relation"},
+    )()
+    with pytest.raises(
+        ValueError,
+        match=r"can't be used on 'containers.generated_relation'",
+    ):
+        DynamicModel.get_field_schema(auto_created_field)
+
+    missing_schema_field = type(
+        "FieldStub",
+        (),
+        {"model": model_cls, "auto_created": False, "name": "broken_field"},
+    )()
+    with pytest.raises(AttributeError):
+        DynamicModel.get_field_schema(missing_schema_field)
+
+
 def dictfetchall(cursor):
     """Return all rows from a cursor as a dict"""
     # Django's connection.cursor() doesn't offer a way to pass RealDictCursor.
@@ -409,6 +492,7 @@ def test_datasetversion_status_choices(meetbouten_dataset):
     assert meetbouten_dataset.versions.first().status == DatasetVersion.Status.STABLE
     assert meetbouten_dataset.versions.last().status == DatasetVersion.Status.DEPRECATED
 
+
 @pytest.mark.django_db
 def test_update_version_status_to_discontinued(fietspaaltjes_dataset):
     """Prove that the status field of DatasetVersion can be updated to 'discontinued'."""
@@ -421,3 +505,44 @@ def test_update_version_status_to_discontinued(fietspaaltjes_dataset):
     version.refresh_from_db()
 
     assert fietspaaltjes_dataset.versions.first().status == DatasetVersion.Status.DISCONTINUED
+
+
+@pytest.mark.django_db
+def test_dataset_create_models_returns_empty_when_db_disabled(afval_dataset):
+    afval_dataset.enable_db = False
+
+    assert afval_dataset.create_models() == []
+
+
+@pytest.mark.django_db
+def test_dataset_create_models_uses_django_model_factory(monkeypatch, afval_dataset):
+    factory_calls = []
+
+    class FactoryStub:
+        def __init__(self, dataset, base_app_name=None, base_model=None):
+            factory_calls.append(
+                {
+                    "dataset": dataset,
+                    "base_app_name": base_app_name,
+                    "base_model": base_model,
+                }
+            )
+
+        def build_models(self):
+            return ["built-model"]
+
+    monkeypatch.setattr(
+        "schematools.contrib.django.factories.DjangoModelFactory",
+        FactoryStub,
+    )
+
+    result = afval_dataset.create_models(base_app_name="tests.app", base_model=LooseRelationField)
+
+    assert result == ["built-model"]
+    assert factory_calls == [
+        {
+            "dataset": afval_dataset,
+            "base_app_name": "tests.app",
+            "base_model": LooseRelationField,
+        }
+    ]
