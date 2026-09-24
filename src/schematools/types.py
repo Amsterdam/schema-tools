@@ -1584,7 +1584,7 @@ class DatasetTableSchema(SchemaType):
     @property
     def has_relation_as_main_geometry(self) -> bool:
         """Indicates if this table has a relation as main geometry field."""
-        return self.has_main_geometry and self.main_geometry_field.related_table
+        return self.has_main_geometry and self.main_geometry_field.related_table is not None
 
     @property
     def main_geometry(self) -> str:
