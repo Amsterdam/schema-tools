@@ -1,3 +1,7 @@
+# 2026-09-24 (9.14.1)
+
+* Fix mistake in return of `table_schema.has_relation_as_main_geometry`
+
 # 2026-09-22 (9.14.0)
 
 * Allow mainGeometry to be relation to another table
