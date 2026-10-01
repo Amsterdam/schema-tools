@@ -44,8 +44,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff==0.16.8",
-    "ty==0.0.82",
+    "ruff==0.16.9",
+    "ty==0.0.84",
     "types-requests==2.33.0.20260906",
     "types-click==7.1.8",
     "types-python-dateutil==2.9.0.20260807",
@@ -68,7 +68,7 @@ django = [
     "factory_boy==3.3.3",
 ]
 databricks = [
-    "databricks-sdk==0.140.0"
+    "databricks-sdk==0.143.0"
 ]
 
 [project.scripts]
