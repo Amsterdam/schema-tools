@@ -1,3 +1,7 @@
+# 2026-10-06 (9.14.2)
+
+* Fix export scope access checks so tables and fields are filtered correctly when multiple scopes are used.
+
 # 2026-09-24 (9.14.1)
 
 * Fix mistake in return of `table_schema.has_relation_as_main_geometry`
