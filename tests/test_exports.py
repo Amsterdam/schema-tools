@@ -23,7 +23,7 @@ from schematools.exports.geojson import GeoJsonExporter, _default, _dumps
 from schematools.exports.geopackage import GeopackageExporter
 from schematools.exports.jsonlines import JsonLinesExporter
 from schematools.importer.ndjson import NDJSONImporter
-from schematools.types import Export, ExportContext
+from schematools.types import DatasetSchema, Export, ExportContext, Scope
 
 
 class _ResultStub:
@@ -74,6 +74,12 @@ class _EngineStub:
 class _FailingWriter:
     def write(self, _value):
         raise OSError("disk full")
+
+
+# Export fixture datasets do not define full scope files; map scope ids directly in tests.
+@pytest.fixture(autouse=True)
+def patch_find_scope_by_id(monkeypatch):
+    monkeypatch.setattr(DatasetSchema, "_find_scope_by_id", Scope.from_string)
 
 
 class TestExports:

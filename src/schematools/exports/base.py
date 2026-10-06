@@ -78,14 +78,22 @@ class BaseExporter:
 
     def _get_fields(self, table: DatasetTableSchema):
         dataset = self.dataset_schema
-        public_scope = Scope.from_string(_PUBLIC_SCOPE)
-        parent_scopes = set(dataset.scopes | table.scopes) - {public_scope}
+        public_scope = frozenset({Scope.from_string(_PUBLIC_SCOPE)})
+        has_dataset_access = dataset.scopes == public_scope or any(
+            scope in self.scopes for scope in dataset.scopes
+        )
+        has_table_access = table.scopes == public_scope or any(
+            scope in self.scopes for scope in table.scopes
+        )
+        if not has_dataset_access or not has_table_access:
+            # This should not happen, as export definition validation should check this.
+            raise PermissionError(f"Access to table {table.id} is denied.")
         for field in table.fields:
             if field.is_array and self.extension == "gpkg":
                 continue
             if field.is_internal:
                 continue
-            if parent_scopes | set(field.scopes) - {public_scope} <= self.scopes:
+            if field.scopes == public_scope or any(scope in self.scopes for scope in field.scopes):
                 # Nested fields are handled by the jsonlines exporter, other exporters need
                 # them to be flattened.
                 if field.is_nested_object and self.extension != "jsonl":
@@ -119,8 +127,7 @@ class BaseExporter:
             end: Column = getattr(sa_table.columns, dimension.end.db_name)
             return (
                 # This is an SQLAlchemy statement, hence the &, | and == operators:
-                (start <= self.temporal_date)
-                & ((end > self.temporal_date) | (end == None))  # noqa: E711
+                (start <= self.temporal_date) & ((end > self.temporal_date) | (end == None))  # noqa: E711
             )
         return None
 
@@ -154,10 +161,14 @@ class BaseExporter:
             left_fk = getattr(sa_table.columns, table.main_geometry_field.db_name)
             right_pk = getattr(sa_related_table.c, right_pk_field.db_name)
 
-            query = select(*query_columns).select_from(sa_table).join(
-                sa_related_table,
-                left_fk == right_pk,
-                isouter=True,
+            query = (
+                select(*query_columns)
+                .select_from(sa_table)
+                .join(
+                    sa_related_table,
+                    left_fk == right_pk,
+                    isouter=True,
+                )
             )
 
         if temporal_clause is not None:
