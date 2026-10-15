@@ -201,6 +201,16 @@ class Command(BaseCommand):
 
         return real_apps
 
+    def _get_table_errors(self, current_schema: dict, updated_schema: dict) -> list[str]:
+        """Checks if the identifier has changed, or any of the fields has breaking changes."""
+        previous_identifier: str | list[str] | None = current_schema.get("identifier")
+        next_identifier: str | list[str] | None = updated_schema.get("identifier")
+        table_errors = validation.validate_schema_identifier(previous_identifier, next_identifier)
+        previous_fields = current_schema["properties"]
+        next_fields = updated_schema["properties"]
+        table_errors.extend(validation.validate_table(previous_fields, next_fields))
+        return table_errors
+
     def _migrate_tables(
         self,
         current_datasets: dict[str, Dataset],
@@ -253,9 +263,10 @@ class Command(BaseCommand):
                     # If the table is under_development and there are breaking changes to
                     # the table, drop the table
                     if current_table.status == DatasetTableSchema.Status.under_development:
-                        previous_fields = current_table.json_data()["schema"]["properties"]
-                        next_fields = updated_table.json_data()["schema"]["properties"]
-                        table_errors = validation.validate_table(previous_fields, next_fields)
+                        table_errors = self._get_table_errors(
+                            current_table.json_data()["schema"],
+                            updated_table.json_data()["schema"],
+                        )
                         if len(table_errors) > 0:
                             for error in table_errors:
                                 self.stdout.write(f"  [ERROR]: {error}")
