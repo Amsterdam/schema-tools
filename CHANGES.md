@@ -1,3 +1,7 @@
+# 2026-10-15 (9.14.3)
+
+* Drop and recreate under-dev tables when a dataset identifier is changed.
+
 # 2026-10-06 (9.14.2)
 
 * Fix export scope access checks so tables and fields are filtered correctly when multiple scopes are used.
