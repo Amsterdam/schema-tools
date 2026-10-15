@@ -1,0 +1,44 @@
+{
+  "type": "dataset",
+  "id": "experimental",
+  "title": "Schema experimental drop table Test",
+  "description": "Schema for unit testing that experimental tables are dropped and replaced when the identifier changes",
+  "defaultVersion": "v1",
+  "versions": {
+    "v1": {
+      "enableAPI": true,
+      "version": "1.0.0",
+      "status": "under_development",
+      "tables": [
+        {
+          "id": "experimentaltable",
+          "title": "Table to test experimental tables in a stable version",
+          "type": "table",
+          "version": "1.1.0",
+          "status": "under_development",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "identifier": "other",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "other",
+              "schema"
+            ],
+            "display": "other",
+            "properties": {
+              "schema": {
+                "$ref": "https://schemas.data.amsterdam.nl/schema@v3#/definitions/schema"
+              },
+              "other": {
+                "title": "other_field",
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "publisher": "unknown"
+}
