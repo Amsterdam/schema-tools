@@ -358,7 +358,7 @@ def _identifier_properties(dataset: DatasetSchema) -> Iterator[str]:
 
 @_register_validator("mainGeometry")
 def _check_maingeometry(dataset: DatasetSchema) -> Iterator[str]:
-    """"Validate mainGeometry field of all tables in dataset"""
+    """ "Validate mainGeometry field of all tables in dataset"""
     for table in dataset.get_all_tables():
         yield from _check_maingeometry_table(table)
 
@@ -386,9 +386,9 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
         if rel_table := field.related_table:
             if not rel_table.has_geometry_fields:
                 yield (
-                        f"'mainGeometry' refers to table {rel_table.id}, but this table "
-                        f"doesn't have geometry fields. "
-                    )
+                    f"'mainGeometry' refers to table {rel_table.id}, but this table "
+                    f"doesn't have geometry fields. "
+                )
                 return
 
             try:
@@ -405,9 +405,7 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
                 yield (f"mainGeometry = {rel_table.main_geometry!r}, but: {e}")
 
         if not field.is_geo:
-            yield (
-                f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}"
-            )
+            yield (f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}")
     except SchemaObjectNotFound as e:
         yield (f"mainGeometry = {table.main_geometry!r}, but: {e}")
 
@@ -961,7 +959,9 @@ PROPERTIES_INTRODUCING_BREAKING_CHANGES = ["type", "$ref", "format", "relation",
 IGNORED_FIELDS = ["schema"]  # This is not a database column.
 
 
-def validate_schema_identifier(prev_id_field: dict, curr_id_field: dict) -> list[str]:
+def validate_schema_identifier(
+    prev_id_field: str | list[str] | None, curr_id_field: str | list[str] | None
+) -> list[str]:
     """
     Validates that the identifier of a table schema is not modified.
     This identifier is used as the primary key for the database table,
@@ -1126,6 +1126,7 @@ def validate_table_version(previous: dict, current: dict) -> list[str]:
 
     return table_errors
 
+
 def validate_version_status_change(previous: dict, current: dict) -> list[str]:
     errors = []
     dataset_id = previous.get("id")
@@ -1135,22 +1136,26 @@ def validate_version_status_change(previous: dict, current: dict) -> list[str]:
         previous_status = previous_version.get("status")
         current_status = current_version.get("status")
 
-        if (previous_status in {"discontinued", "deprecated"} and
-            current_status in {"stable", "under_development"}):
+        if previous_status in {"discontinued", "deprecated"} and current_status in {
+            "stable",
+            "under_development",
+        }:
             errors.append(
                 f"Cannot change status of dataset version '{version_id}' "
                 f"from '{previous_status}' to '{current_status}' "
                 f"in dataset '{dataset_id}'."
             )
 
-        if (previous_status == "discontinued" and
-            previous_version.get("tables") != current_version.get("tables")):
-                errors.append(
-                    f"Cannot make changes to a discontinued dataset version '{version_id}' in "
-                    f"dataset '{dataset_id}'."
-                )
+        if previous_status == "discontinued" and previous_version.get(
+            "tables"
+        ) != current_version.get("tables"):
+            errors.append(
+                f"Cannot make changes to a discontinued dataset version '{version_id}' in "
+                f"dataset '{dataset_id}'."
+            )
 
     return errors
+
 
 def validate_table_status_change(previous: dict, current: dict) -> list[str]:
     table_errors = []
@@ -1162,16 +1167,16 @@ def validate_table_status_change(previous: dict, current: dict) -> list[str]:
     previous_status = previous.get("status")
     current_status = current.get("status")
 
-    if (previous_status in {"discontinued", "deprecated"} and
-        current_status in {"stable", "under_development"}):
+    if previous_status in {"discontinued", "deprecated"} and current_status in {
+        "stable",
+        "under_development",
+    }:
         table_errors.append(
             f"Cannot change status of table '{table_id}' from "
             f"'{previous_status}' to '{current_status}'."
         )
 
     if previous_status == "discontinued" and previous_fields != current_fields:
-        table_errors.append(
-            f"Cannot make changes to a discontinued table: '{table_id}'."
-        )
+        table_errors.append(f"Cannot make changes to a discontinued table: '{table_id}'.")
 
     return table_errors
