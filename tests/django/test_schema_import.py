@@ -397,6 +397,22 @@ def test_import_schema_drops_experimental_table_with_breaking_changes_in_table_w
 
 
 @pytest.mark.django_db
+def test_import_schema_drops_experimental_table_with_changed_identifier(here, capsys):
+    original = here / "files/datasets/experimental/original.json"
+    call_command("import_schemas", original, create_tables=1)
+    assert models.Dataset.objects.count() == 1
+
+    updated = here / "files/datasets/experimental/changed_identifier.json"
+    call_command("import_schemas", updated, create_tables=1, verbosity=3)
+    captured = capsys.readouterr()
+    assert """Identifier field would be changed from id to other.""" in captured.out
+    assert (
+        """Dropped table experimental_experimentaltable_v1 due to breaking changes while under development."""
+        in captured.out
+    )
+
+
+@pytest.mark.django_db
 def test_import_schema_updates_experimental_table_with_non_breaking_change(here):
     original = here / "files/datasets/experimental/original.json"
     call_command("import_schemas", original, create_tables=1)
