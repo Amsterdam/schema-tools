@@ -26,6 +26,25 @@ def test_toCamelCase() -> None:
         toCamelCase("")
 
 
+def test_toCamelCase_first_upper() -> None:
+    """Confirm that first_upper=True upper cases the first letter (PascalCase).
+
+    This is the form used to build class names from dataset and table ids
+    (see schematools.types).
+    """
+    assert toCamelCase("dataset_table_schema", first_upper=True) == "DatasetTableSchema"
+    assert toCamelCase("test name magic", first_upper=True) == "TestNameMagic"
+    assert toCamelCase("testNameMagic", first_upper=True) == "TestNameMagic"
+    assert toCamelCase("TestNameMagic", first_upper=True) == "TestNameMagic"
+    assert toCamelCase("per_jaar_per_m2", first_upper=True) == "PerJaarPerM2"
+    assert toCamelCase("eerste_h_n_id", first_upper=True) == "EersteHNId"
+    # a leading number has no letter to upper case, so it is left unchanged
+    assert toCamelCase("33_fu_bar", first_upper=True) == "33FuBar"
+
+    with pytest.raises(ValueError):
+        toCamelCase("", first_upper=True)
+
+
 def test_to_snake_case() -> None:
     """Confirm that:
     - space separated name converted to snake_case
