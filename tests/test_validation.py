@@ -218,7 +218,7 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     )
 
 
-def test_main_geometry_is_relation(schema_loader) -> None:
+def test_maingeo_relation_cannot_be_relation_too(schema_loader) -> None:
     maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
     geo_source = schema_loader.get_dataset_from_file("geo_source.json")
     schema_loader.get_dataset_from_file("meldingen.json")
@@ -232,6 +232,12 @@ def test_main_geometry_is_relation(schema_loader) -> None:
         "geo_source.geometrie_relatie.v1>. Please refer to that relation directly."
     )
 
+
+def test_maingeo_relation_needs_geometry(schema_loader) -> None:
+    maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
+    schema_loader.get_dataset_from_file("geo_source.json")
+    schema_loader.get_dataset_from_file("meldingen.json")
+
     # Set mainGeo to related table without geometry
     maingeo_receiver.get_table_by_id("maingeo_receiver")["schema"]["mainGeometry"] = (
         "tableWithoutGeometry"
@@ -239,9 +245,11 @@ def test_main_geometry_is_relation(schema_loader) -> None:
     error = next(validation.run(maingeo_receiver))
     assert "but that table doesn't have geometry fields." in error.message
 
-    # Reload dataset fixtures for the next validation case
+
+def test_maingeo_relation_cannot_have_geometry_field(schema_loader) -> None:
     maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
-    geo_source = schema_loader.get_dataset_from_file("geo_source.json")
+    schema_loader.get_dataset_from_file("geo_source.json")
+    schema_loader.get_dataset_from_file("meldingen.json")
 
     # Add a field 'geometry' when mainGeo is a relation
     maingeo_receiver.get_table_by_id("maingeo_receiver")["schema"]["properties"]["geometry"] = {

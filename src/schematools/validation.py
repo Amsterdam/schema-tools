@@ -384,6 +384,12 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
 
         # mainGeometry is a relation
         if rel_table := field.related_table:
+            if any(field.id == "geometry" for field in table.fields):
+                yield (
+                    f"'mainGeometry' of the current table {table.id} refers to another table: "
+                    "{rel_table.id}. {table.id} cannot also have a field called 'geometry'."
+                )
+
             if not rel_table.has_geometry_fields:
                 yield (
                     f"'mainGeometry' refers to table {rel_table.id}, but that table "
@@ -399,12 +405,6 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
                     yield (
                         f"mainGeometry of related table {rel_table} is a relation too: "
                         f"{rel_rel_table}. Please refer to that relation directly."
-                    )
-
-                if any(field.id == "geometry" for field in table.fields):
-                    yield (
-                        f"'mainGeometry' of the current table {table.id} refers to another table: "
-                        "{rel_table.id}. {table.id} cannot also have a field called 'geometry'."
                     )
 
             except SchemaObjectNotFound as e:
