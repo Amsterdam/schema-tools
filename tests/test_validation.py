@@ -226,14 +226,31 @@ def test_main_geometry_is_relation(schema_loader) -> None:
     # Set mainGeo of related table to a relation too
     geo_source.get_table_by_id("geo_source")["schema"]["mainGeometry"] = "geometrieRelatie"
     error = next(validation.run(maingeo_receiver))
-    assert error.message == ("mainGeometry of related table <DatasetTableSchema: "
-    "geo_source.geo_source.v1> is a relation too: <DatasetTableSchema: "
-    "geo_source.geometrie_relatie.v1>. Please refer to that relation directly.")
+    assert error.message == (
+        "mainGeometry of related table <DatasetTableSchema: "
+        "geo_source.geo_source.v1> is a relation too: <DatasetTableSchema: "
+        "geo_source.geometrie_relatie.v1>. Please refer to that relation directly."
+    )
 
     # Set mainGeo to related table without geometry
-    maingeo_receiver.get_table_by_id("maingeo_receiver")["schema"]["mainGeometry"] = "tableWithoutGeometry"
+    maingeo_receiver.get_table_by_id("maingeo_receiver")["schema"]["mainGeometry"] = (
+        "tableWithoutGeometry"
+    )
     error = next(validation.run(maingeo_receiver))
-    assert "but this table doesn't have geometry fields." in error.message
+    assert "but that table doesn't have geometry fields." in error.message
+
+    # Reload dataset fixtures for the next validation case
+    maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
+    geo_source = schema_loader.get_dataset_from_file("geo_source.json")
+
+    # Add a field 'geometry' when mainGeo is a relation
+    maingeo_receiver.get_table_by_id("maingeo_receiver")["schema"]["properties"]["geometry"] = {
+        "$ref": "https://geojson.org/schema/Point.json"
+    }
+    # reload the fields from the updated schema
+    del maingeo_receiver.get_table_by_id("maingeo_receiver").fields
+    error = next(validation.run(maingeo_receiver))
+    assert "cannot also have a field called 'geometry'." in error.message
 
 
 def test_display(here: Path, schema_loader) -> None:
@@ -373,7 +390,6 @@ def test_schema_ref(schema_loader) -> None:
     assert """Incorrect `$ref` for""" in error.message
 
     assert list(errors) == []
-
 
 
 def test_check_default_version_is_experimental(schema_loader) -> None:
@@ -1147,13 +1163,31 @@ def test_validate_table_version(prev, curr, errors):
                 "id": "test",
                 "version": "1.0.0",
                 "status": "discontinued",
-                "schema": {"properties": {"field": {"object": {"type": "object", "properties": {"element": {"type": "string"}}}}}},
+                "schema": {
+                    "properties": {
+                        "field": {
+                            "object": {
+                                "type": "object",
+                                "properties": {"element": {"type": "string"}},
+                            }
+                        }
+                    }
+                },
             },
             {
                 "id": "test",
                 "version": "1.0.0",
                 "status": "discontinued",
-                "schema": {"properties": {"field": {"object": {"type": "object", "properties": {"element": {"type": "integer"}}}}}},
+                "schema": {
+                    "properties": {
+                        "field": {
+                            "object": {
+                                "type": "object",
+                                "properties": {"element": {"type": "integer"}},
+                            }
+                        }
+                    }
+                },
             },
             ["Cannot make changes to a discontinued table: 'test'."],
         ),
@@ -1301,52 +1335,190 @@ def test_validate_dataset_versions_version(prev, curr, errors):
     dataset_version_errors = validate_dataset_versions_version("dataset", prev, curr)
     assert dataset_version_errors == errors
 
+
 @pytest.mark.parametrize(
     "prev,curr,errors",
     [
         # No changes
         (
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
-            []
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
+            [],
         ),
         # Change status fail
         (
-            {"id": "dataset", "versions": {"v1": {"status": "deprecated", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
-            {"id": "dataset", "versions": {"v1": {"status": "under_development", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
-            ["Cannot change status of dataset version 'v1' from 'deprecated' to 'under_development' in dataset 'dataset'."]
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "deprecated",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "under_development",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
+            [
+                "Cannot change status of dataset version 'v1' from 'deprecated' to 'under_development' in dataset 'dataset'."
+            ],
         ),
         # Change status success
         (
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
-            {"id": "dataset", "versions": {"v1": {"status": "deprecated", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
-            []
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "deprecated",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
+            [],
         ),
         # Added table
         (
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}]}}},
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [
+                            {"id": "table", "$ref": "table/v1"},
+                            {"id": "table2", "$ref": "table2/v1"},
+                        ],
+                    }
+                },
+            },
             ["Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."],
         ),
         # Removed table
         (
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}]}}},
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [
+                            {"id": "table", "$ref": "table/v1"},
+                            {"id": "table2", "$ref": "table2/v1"},
+                        ],
+                    }
+                },
+            },
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
             ["Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."],
         ),
         # Changed table version
         (
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}]}}},
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v2"}]}}},
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v1"}],
+                    }
+                },
+            },
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v2"}],
+                    }
+                },
+            },
             ["Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."],
         ),
         # Multiple errors
         (
-            {"id": "dataset", "versions": {"v1": {"status": "discontinued", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v1"}, {"id": "table2", "$ref": "table2/v1"}]}}},
-            {"id": "dataset", "versions": {"v1": {"status": "under_development", "version": "0.0.1", "tables": [{"id": "table", "$ref": "table/v2"}]}}},
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "discontinued",
+                        "version": "0.0.1",
+                        "tables": [
+                            {"id": "table", "$ref": "table/v1"},
+                            {"id": "table2", "$ref": "table2/v1"},
+                        ],
+                    }
+                },
+            },
+            {
+                "id": "dataset",
+                "versions": {
+                    "v1": {
+                        "status": "under_development",
+                        "version": "0.0.1",
+                        "tables": [{"id": "table", "$ref": "table/v2"}],
+                    }
+                },
+            },
             [
                 "Cannot change status of dataset version 'v1' from 'discontinued' to 'under_development' in dataset 'dataset'.",
-                "Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'."
+                "Cannot make changes to a discontinued dataset version 'v1' in dataset 'dataset'.",
             ],
         ),
     ],
