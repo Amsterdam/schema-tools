@@ -1,5 +1,9 @@
 # 2026-10-29 (9.14.5)
 
+* Fix bug in enable_api for datasets with delete_date
+
+# 2026-10-29 (9.14.5)
+
 * Fix bug in mainGeometry is a relation
 
 # 2026-10-15 (9.14.4)
