@@ -35,4 +35,4 @@ class DatasetQuerySet(QuerySet):
 
     def api_enabled(self):
         """Return only datasets that should get an API."""
-        return self.filter(enable_api=True)
+        return self.filter(enable_api=True, delete_date=None)
