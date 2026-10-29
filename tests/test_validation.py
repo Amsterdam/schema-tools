@@ -218,6 +218,13 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     )
 
 
+def test_maingeo_relation(schema_loader) -> None:
+    maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
+    schema_loader.get_dataset_from_file("geo_source.json")
+    schema_loader.get_dataset_from_file("meldingen.json")
+    assert list(_check_maingeometry(maingeo_receiver)) == []
+
+
 def test_maingeo_relation_cannot_be_relation_too(schema_loader) -> None:
     maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
     geo_source = schema_loader.get_dataset_from_file("geo_source.json")

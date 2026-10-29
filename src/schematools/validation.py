@@ -410,8 +410,11 @@ def _check_maingeometry_table(table: DatasetTableSchema) -> Iterator[str]:
             except SchemaObjectNotFound as e:
                 yield (f"mainGeometry = {rel_table.main_geometry!r}, but: {e}")
 
-        if not field.is_geo:
-            yield (f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}")
+        else:
+            if not field.is_geo:
+                yield (
+                    f"mainGeometry = {field.id!r} is not a geometry field, type = {field.type!r}"
+                )
     except SchemaObjectNotFound as e:
         yield (f"mainGeometry = {table.main_geometry!r}, but: {e}")
 
