@@ -203,14 +203,14 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     assert list(_check_maingeometry(dataset)) == []
 
 
-def test_main_geometry_is_required(schema_loader) -> None:
+def test_main_geometry_is_required(schema_loader, gebieden_schema) -> None:
     dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     dataset.get_table_by_id("meetbouten")["schema"].pop("mainGeometry")
     error = next(validation.run(dataset))
     assert "'mainGeometry' is required but not defined in table" in error.message
 
 
-def test_main_geometry_nonexisting_field(schema_loader) -> None:
+def test_main_geometry_nonexisting_field(schema_loader, gebieden_schema) -> None:
     dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "not_a_geometry"
     error = next(validation.run(dataset))
@@ -218,7 +218,7 @@ def test_main_geometry_nonexisting_field(schema_loader) -> None:
     assert "Field 'not_a_geometry' does not exist" in error.message
 
 
-def test_main_geometry_field_is_not_geometry(schema_loader) -> None:
+def test_main_geometry_field_is_not_geometry(schema_loader, gebieden_schema) -> None:
     dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "merkOmschrijving"
     error = next(validation.run(dataset))
@@ -227,17 +227,14 @@ def test_main_geometry_field_is_not_geometry(schema_loader) -> None:
     )
 
 
-def test_maingeo_relation(schema_loader) -> None:
+def test_maingeo_relation(schema_loader, geo_source_schema, meldingen_schema) -> None:
     maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
-    schema_loader.get_dataset_from_file("geo_source.json")
-    schema_loader.get_dataset_from_file("meldingen.json")
     assert list(_check_maingeometry(maingeo_receiver)) == []
 
 
-def test_maingeo_relation_cannot_be_relation_too(schema_loader) -> None:
+def test_maingeo_relation_cannot_be_relation_too(schema_loader, meldingen_schema) -> None:
     maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
     geo_source = schema_loader.get_dataset_from_file("geo_source.json")
-    schema_loader.get_dataset_from_file("meldingen.json")
 
     # Set mainGeo of related table to a relation too
     geo_source.get_table_by_id("geo_source")["schema"]["mainGeometry"] = "geometrieRelatie"
@@ -249,10 +246,10 @@ def test_maingeo_relation_cannot_be_relation_too(schema_loader) -> None:
     )
 
 
-def test_maingeo_relation_needs_geometry(schema_loader) -> None:
+def test_maingeo_relation_needs_geometry(
+    schema_loader, geo_source_schema, meldingen_schema
+) -> None:
     maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
-    schema_loader.get_dataset_from_file("geo_source.json")
-    schema_loader.get_dataset_from_file("meldingen.json")
 
     # Set mainGeo to related table without geometry
     maingeo_receiver.get_table_by_id("maingeo_receiver")["schema"]["mainGeometry"] = (
@@ -262,10 +259,10 @@ def test_maingeo_relation_needs_geometry(schema_loader) -> None:
     assert "but that table doesn't have geometry fields." in error.message
 
 
-def test_maingeo_relation_cannot_have_geometry_field(schema_loader) -> None:
+def test_maingeo_relation_cannot_have_geometry_field(
+    schema_loader, geo_source_schema, meldingen_schema
+) -> None:
     maingeo_receiver = schema_loader.get_dataset_from_file("maingeo_receiver.json")
-    schema_loader.get_dataset_from_file("geo_source.json")
-    schema_loader.get_dataset_from_file("meldingen.json")
 
     # Add a field 'geometry' when mainGeo is a relation
     maingeo_receiver.get_table_by_id("maingeo_receiver")["schema"]["properties"]["geometry"] = {

@@ -268,6 +268,7 @@ def meetbouten_export_schema(export_schema_loader) -> DatasetSchema:
     """A dataset schema for export tests."""
     return export_schema_loader.get_dataset_from_file("meetbouten/dataset.json")
 
+
 @pytest.fixture()
 def maingeo_receiver_export_schema(export_schema_loader) -> DatasetSchema:
     """A dataset with a table that has a relation field as mainGeometry."""
@@ -283,7 +284,9 @@ def geo_source_export_schema(export_schema_loader) -> DatasetSchema:
 @pytest.fixture()
 def maingeo_receiver_local_export_schema(export_schema_loader) -> DatasetSchema:
     """A dataset whose mainGeometry relation points at a table in that same dataset."""
-    return export_schema_loader.get_dataset_from_file("maingeo_relation/maingeo_receiver_local.json")
+    return export_schema_loader.get_dataset_from_file(
+        "maingeo_relation/maingeo_receiver_local.json"
+    )
 
 
 @pytest.fixture()
@@ -369,6 +372,11 @@ def parkeervakken_schema(schema_loader) -> DatasetSchema:
 @pytest.fixture
 def gebieden_schema(schema_loader) -> DatasetSchema:
     return schema_loader.get_dataset_from_file("gebieden.json")
+
+
+@pytest.fixture
+def geo_source_schema(schema_loader) -> DatasetSchema:
+    return schema_loader.get_dataset_from_file("geo_source.json")
 
 
 @pytest.fixture
