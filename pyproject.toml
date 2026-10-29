@@ -28,7 +28,7 @@ dependencies = [
     "jsonschema[format]==4.26.0",
     "mappyfile==1.2.0",
     "more-ds==0.0.6",
-    "more-itertools==11.1.0",
+    "more-itertools==11.2.1",
     "orjson==3.13.0",
     "pg-grant==0.4.0",
     "psycopg==3.3.6",
@@ -36,19 +36,19 @@ dependencies = [
     "python-string-utils==1.0.0",
     "remote-pdb==2.1.0",
     "requests==2.34.2",
-    "shapely==2.1.2",
-    "sqlalchemy==2.0.55",
+    "shapely==2.2.0",
+    "sqlalchemy==2.1.6",
     "sqlparse==0.6.0",
 ]
 
 [dependency-groups]
 dev = [
     "ruff==0.17.2",
-    "ty==0.0.91",
+    "ty==0.0.92",
     "types-requests==2.33.0.20261006",
     "types-click==7.1.8",
     "types-python-dateutil==2.9.0.20260807",
-    "pre-commit==4.6.2",
+    "pre-commit==4.7.0",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "pytest-django==4.14.0",
@@ -67,7 +67,7 @@ django = [
     "factory_boy==3.3.3",
 ]
 databricks = [
-    "databricks-sdk==0.156.0"
+    "databricks-sdk==0.157.0"
 ]
 
 [project.scripts]
