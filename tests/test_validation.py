@@ -202,15 +202,24 @@ def test_main_geometry(schema_loader, gebieden_schema) -> None:
     dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     assert list(_check_maingeometry(dataset)) == []
 
+
+def test_main_geometry_is_required(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     dataset.get_table_by_id("meetbouten")["schema"].pop("mainGeometry")
     error = next(validation.run(dataset))
     assert "'mainGeometry' is required but not defined in table" in error.message
 
+
+def test_main_geometry_nonexisting_field(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "not_a_geometry"
     error = next(validation.run(dataset))
     assert "mainGeometry = 'not_a_geometry'" in error.message
     assert "Field 'not_a_geometry' does not exist" in error.message
 
+
+def test_main_geometry_field_is_not_geometry(schema_loader) -> None:
+    dataset = schema_loader.get_dataset_from_file("meetbouten.json")
     dataset.get_table_by_id("meetbouten")["schema"]["mainGeometry"] = "merkOmschrijving"
     error = next(validation.run(dataset))
     assert error.message == (
