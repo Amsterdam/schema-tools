@@ -202,10 +202,24 @@ class Command(BaseCommand):
         return real_apps
 
     def _get_table_errors(self, current_schema: dict, updated_schema: dict) -> list[str]:
-        """Checks if the identifier has changed, or any of the fields has breaking changes."""
+        """
+        Check whether the identifier and required fields have changed or any fields have
+        breaking changes.
+        """
+
+        # Identifier
         previous_identifier: str | list[str] | None = current_schema.get("identifier")
         next_identifier: str | list[str] | None = updated_schema.get("identifier")
         table_errors = validation.validate_schema_identifier(previous_identifier, next_identifier)
+
+        # Required fields
+        previous_required: str | list[str] | None = current_schema.get("required")
+        next_required: str | list[str] | None = updated_schema.get("required")
+        table_errors.extend(
+            validation.validate_schema_required_fields(previous_required, next_required)
+        )
+
+        # Other fields
         previous_fields = current_schema["properties"]
         next_fields = updated_schema["properties"]
         table_errors.extend(validation.validate_table(previous_fields, next_fields))
