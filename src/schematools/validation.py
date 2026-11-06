@@ -985,6 +985,23 @@ def validate_schema_identifier(
     return table_errors
 
 
+def validate_schema_required_fields(
+    prev_required_fields: str | list[str] | None, required_fields: str | list[str] | None
+) -> list[str]:
+    """
+    Validates that no extra fields are added to the required fields field of a table schema.
+    If a new field is added, pre-existing rows would not have a value for this new field,
+    and therefore it should not be possible to make it required.
+    """
+    table_errors = []
+    if any(field not in prev_required_fields for field in required_fields):
+        table_errors.append(
+            f"Required fields would be changed from {prev_required_fields} to {required_fields}. "
+            f"Adding a field to the required fields is a breaking change."
+        )
+    return table_errors
+
+
 def validate_table(
     previous_fields: dict,
     current_fields: dict,
