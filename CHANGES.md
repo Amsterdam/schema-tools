@@ -1,3 +1,7 @@
+# 2026-11-10 (9.14.7)
+
+* Treat adding fields to required_fields as a breaking change
+
 # 2026-10-29 (9.14.6)
 
 * Fix bug in enable_api for datasets with delete_date
