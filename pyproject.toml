@@ -37,7 +37,8 @@ dependencies = [
     "remote-pdb==2.1.0",
     "requests==2.34.2",
     "shapely==2.2.0",
-    "sqlalchemy==2.1.6",
+    # Keep sqlalchemy pinned to 2.0.x untill underlying fixes have been made, see comment at sqlalchemy-utils
+    "sqlalchemy>=2.0.55, <2.1",
     "sqlparse==0.6.1",
 ]
 
