@@ -1,3 +1,7 @@
+# 2026-11-18 (9.14.8)
+
+* Fixed relative path resolution for self.root to an absolute path
+
 # 2026-11-10 (9.14.7)
 
 * Treat adding fields to required_fields as a breaking change

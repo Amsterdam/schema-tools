@@ -448,7 +448,9 @@ class FileSystemSchemaLoader(_FileBasedSchemaLoader):
                     f"Schema root '{self.root}' contains multiple datasets that named '{id_}', "
                     f"this will break relating datasets!"
                 )
-            id_to_path[id_] = str(path.parent.resolve().relative_to(self.root))
+            id_to_path[id_] = str(
+                path.parent.resolve().relative_to(Path(self.root).resolve())
+            )
         return id_to_path
 
     def _read_dataset(self, dataset_id):
