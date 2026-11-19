@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest #ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update -y
-          sudo apt install -y libgdal34t64 gdal-bin
+          sudo apt install -y libgdal38 gdal-bin
           uv sync --extra django --extra databricks
       - name: Test
         run: |
