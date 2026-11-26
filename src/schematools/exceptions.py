@@ -31,8 +31,16 @@ class DatasetTableNotFound(SchemaObjectNotFound):
     """The table could not be found."""
 
 
+class PublisherNotFound(SchemaObjectNotFound):
+    """The publisher could not be found."""
+
+
 class DatasetFieldNotFound(SchemaObjectNotFound):
     """The field could not be found."""
+
+
+class IncompleteDatasetGraph(ValueError):
+    """The materialized graph has missing or inconsistent edges."""
 
 
 class IncompatibleMetaschema(Exception):
