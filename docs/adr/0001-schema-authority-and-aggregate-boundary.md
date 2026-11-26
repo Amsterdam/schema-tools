@@ -16,18 +16,18 @@ always enough for runtime use.
 
 ## Decision
 
-`amsterdam-schema` is the authority for schema definitions and the structural
-rules used to validate them. `schema-tools` contains further semantic validation
-`schema-tools` also turns those definitions into the runtime graph. Persisted
-metadata and generated models are useful projections of that graph, but they do
-not belong in the domain model.
+The decision is to encapsulate schema-domain logic in the domain objects, with
+`DatasetGraph` as the root aggregate. `Dataset` owns dataset-local concepts;
+`DatasetGraph` owns the complete resolved graph and the shared identities of its
+objects. Objects express schema meaning and behavior through their own state and
+direct relationships, rather than relying on consumers to reimplement that
+logic or asking the graph to resolve relationships at runtime.
 
-The graph includes the full set of datasets needed to follow their relationships.
-Each `Dataset` owns its own concepts, while `DatasetGraph` holds the resolved
-collection and the shared objects those relationships point to. Consumers can
-look up an object in the graph, but objects navigate through their existing
-references; they do not use the overarching graph to look up the objects they
-relate to.
+`amsterdam-schema` remains the authority for authored definitions and their
+validation contracts. `schema-tools` materializes those definitions and their
+dependencies into the domain graph. Persisted metadata and generated models are
+projections for consumers; they do not define domain behavior or become
+independent sources of schema meaning.
 
 Repository adapters load and prepare the graph before making it available to
 consumers. They resolve references, normalize values, and finish wiring
@@ -42,17 +42,16 @@ builds the runtime representation without repeating schema or graph-wide
 validation. Adapters must report retrieval and resolution failures clearly, and
 their tests must establish that the graph is assembled correctly.
 
-Finally, the domain describes what the schema means—its identity, relationships,
-structure, and rules. The modules that use it decide how to store, name,
-serialize, present, or execute that information. A helper does not belong in
-the domain just because it is convenient or purely computational; its
-responsibility matters.
+The domain describes what the schema means—its identity, relationships,
+structure, and rules. Consumers decide how to store, name, serialize, present,
+or execute based on that information. A helper belongs in the domain when it
+expresses that meaning, not merely because it is convenient or purely computational.
 
 ## Consequences
 
 - Consumers receive a ready-to-use graph, rather than triggering dependency
-  loading through individual objects. The work of assembling that graph stays
-  in repositories.
+  loading through individual objects. Repository adapters assemble the graph;
+  domain objects encapsulate the behavior consumers need from it.
 - Persisted metadata and generated models remain projections that can be traced
   back to the authored definitions.
 - The refactor preserves domain behavior, not every detail of the legacy object
